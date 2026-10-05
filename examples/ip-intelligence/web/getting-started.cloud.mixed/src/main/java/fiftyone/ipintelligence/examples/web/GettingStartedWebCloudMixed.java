@@ -84,7 +84,8 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * The configuration file for the pipeline is at
  * src/main/webapp/WEB-INF/51Degrees-CloudMixed.xml. The resource key is taken from the
  * environment variable or system property "TestResourceKey" unless supplied as a command
- * line argument.
+ * line argument. The server listens on the port in the PORT environment variable, or on
+ * 8084 when PORT is not set.
  */
 public class GettingStartedWebCloudMixed extends HttpServlet {
     private static final long serialVersionUID = 1734154705981153543L;
@@ -99,8 +100,15 @@ public class GettingStartedWebCloudMixed extends HttpServlet {
         // which is interpolated in the pipeline configuration file.
         KeyHelper.getOrSetTestResourceKey(args.length > 0 ? args[0] : null, true);
 
-        // Start Jetty with this WebApp
-        EmbedJetty.runWebApp(getResourceBase(), 8084);
+        String portEnv = System.getenv("PORT");
+        if (portEnv != null) {
+            // An automated run sets PORT and has no console input, so keep
+            // the server running by joining it rather than waiting on Enter.
+            EmbedJetty.startWebApp(getResourceBase(), Integer.parseInt(portEnv)).join();
+        } else {
+            // Start Jetty with this WebApp
+            EmbedJetty.runWebApp(getResourceBase(), 8084);
+        }
     }
 
     public static String getResourceBase() {
