@@ -50,7 +50,7 @@
         <junit.version>4.13.2</junit.version>
         <maven.deploy.skip>true</maven.deploy.skip>
         <snakeyaml.version>1.30</snakeyaml.version>
-        <ip-intelligence.version>4.5.95</ip-intelligence.version>
+        <ip-intelligence.version>4.5.96</ip-intelligence.version>
         <device-detection.version>4.5.126</device-detection.version>
         <maven-surefire-plugin.version>2.22.2</maven-surefire-plugin.version>
 
