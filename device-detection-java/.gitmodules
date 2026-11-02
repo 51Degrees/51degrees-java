@@ -1,3 +1,0 @@
-[submodule "device-detection.hash.engine.on-premise/src/main/cxx/device-detection-cxx"]
-	path = device-detection.hash.engine.on-premise/src/main/cxx/device-detection-cxx
-	url = ../device-detection-cxx
