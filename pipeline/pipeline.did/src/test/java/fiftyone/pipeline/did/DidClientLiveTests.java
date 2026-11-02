@@ -474,7 +474,7 @@ public class DidClientLiveTests {
      * assertions about how the permission was obtained, so a receiver has
      * to be able to tell them apart.
      * <p>
-     * The strings are the ones the cloud's own IabTcfElement tests use,
+     * The strings are the ones the cloud service's own consent element tests use,
      * repeated here rather than shared, for the same reason as the address
      * above. The first grants all twelve purposes and the second the
      * Appendix 1 standard set of 1, 2, 7, 8 and 11.
