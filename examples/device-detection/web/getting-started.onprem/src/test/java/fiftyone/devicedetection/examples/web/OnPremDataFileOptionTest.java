@@ -43,7 +43,7 @@ public class OnPremDataFileOptionTest {
     private static final String DD_PATH = "51DEGREES_DD_PATH";
     private static final String TEST_DATA_FILE = "TestDataFile";
     private static final String LITE =
-            "device-detection-data/51Degrees-LiteV4.1.hash";
+            "cxx/device-detection-data/51Degrees-LiteV4.1.hash";
 
     private String savedDdPath;
     private String savedTestDataFile;
