@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  ~ This Original Work is copyright of 51 Degrees Mobile Experts Limited.
+  ~ Copyright 2022 51 Degrees Mobile Experts Limited, Davidson House,
+  ~ Forbury Square, Reading, Berkshire, United Kingdom RG1 3EU.
+  ~
+  ~ This Original Work is licensed under the European Union Public Licence
+  ~  (EUPL) v.1.2 and is subject to its terms as set out below.
+  ~
+  ~  If a copy of the EUPL was not distributed with this file, You can obtain
+  ~  one at https://opensource.org/licenses/EUPL-1.2.
+  ~
+  ~  The 'Compatible Licences' set out in the Appendix to the EUPL (as may be
+  ~  amended by the European Commission) shall be deemed incompatible for
+  ~  the purposes of the Work and the provisions of the compatibility
+  ~  clause in Article 5 of the EUPL shall not apply.
+  ~
+  ~   If using the Work as, or as part of, a network application, by
+  ~   including the attribution notice(s) required under Article 5 of the EUPL
+  ~   in the end user terms of the application under an appropriate heading,
+  ~   such notice(s) shall fulfill the requirements of that article.
+  -->
+
+<PipelineOptions>
+    <Elements>
+        <Element>
+            <BuildParameters>
+                <EndPoint>${TestCloudEndpoint:-http://cloud.51degrees.com/api/v4}</EndPoint>
+                <!-- A free resource key configured with the
+                properties required by this example may be obtained from
+                https://configure.51degrees.com/jqz435Nc?utm_source=code&amp;utm_medium=example&amp;utm_campaign=device-detection-java-examples&amp;utm_content=web-getting-started.cloud-src-main-webapp-web-inf-51degrees-cloud.xml&amp;utm_term=buildparameters
+
+                You can paste the resource key here, or set an environment
+                variable or System property called "TestResourceKey"
+                which will get inserted as the value.-->
+                <ResourceKey>${TestResourceKey}</ResourceKey>
+            </BuildParameters>
+            <BuilderName>CloudRequestEngine</BuilderName>
+        </Element>
+        <Element>
+            <BuilderName>DeviceDetectionCloudEngine</BuilderName>
+        </Element>
+        <Element>
+            <!-- 
+            Needed to obtain additional information from 51Degrees.core.json
+            -->
+            <BuilderName>JsonBuilderElement</BuilderName>
+        </Element>
+        <Element>
+            <!-- Needed to provide customized JS from 51Degrees.core.js -->
+            <BuilderName>JavaScriptBuilderElement</BuilderName>
+            <BuildParameters>
+                <!-- 
+                Set based on the origin being used. Remember in secure origins 
+                won't be able to run some features like GetHighEntropyValues. 
+                -->
+                <Protocol>http</Protocol>
+                <!-- <Protocol>https</Protocol> -->
+            </BuildParameters>
+        </Element>
+    </Elements>
+    <!-- Suppress and log exceptions thrown from within (Web)Pipeline.process().
+         Set to `true` here so a device-detection failure degrades gracefully instead of
+         returning a 500 for every request. Use `false` while developing to surface mistakes loudly.
+         Note: the element name is singular - it matches Java's setSuppressProcessException. -->
+    <BuildParameters>
+        <SuppressProcessException>true</SuppressProcessException>
+    </BuildParameters>
+</PipelineOptions>
