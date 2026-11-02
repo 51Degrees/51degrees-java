@@ -94,14 +94,8 @@ public class EngineHashSwig extends EngineDeviceDetectionSwig {
     return (cPtr == 0) ? null : new ResultsHashSwig(cPtr, true);
   }
 
-  public ResultsHashSwig process(EvidenceDeviceDetectionSwig evidence, SWIGTYPE_p_int requiredPropertyIndexes, int requiredPropertyIndexesCount) {
-    long cPtr = DeviceDetectionHashEngineModuleJNI.EngineHashSwig_process__SWIG_2(swigCPtr, this, EvidenceDeviceDetectionSwig.getCPtr(evidence), evidence, SWIGTYPE_p_int.getCPtr(requiredPropertyIndexes), requiredPropertyIndexesCount);
-    return (cPtr == 0) ? null : new ResultsHashSwig(cPtr, true);
-  }
-
-  public ResultsHashSwig process(String userAgent, SWIGTYPE_p_int requiredPropertyIndexes, int requiredPropertyIndexesCount) {
-    long cPtr = DeviceDetectionHashEngineModuleJNI.EngineHashSwig_process__SWIG_3(swigCPtr, this, userAgent, SWIGTYPE_p_int.getCPtr(requiredPropertyIndexes), requiredPropertyIndexesCount);
-    return (cPtr == 0) ? null : new ResultsHashSwig(cPtr, true);
+  public VectorUInt32Swig getProfileIdsForPropertyValue(String propertyName, String valueName) {
+    return new VectorUInt32Swig(DeviceDetectionHashEngineModuleJNI.EngineHashSwig_getProfileIdsForPropertyValue(swigCPtr, this, propertyName, valueName), true);
   }
 
   public ResultsBaseSwig processBase(EvidenceBaseSwig evidence) {
