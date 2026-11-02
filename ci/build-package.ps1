@@ -45,6 +45,14 @@ $examples = foreach ($package in $Packages | Where-Object { -not $_.Publish }) {
         ForEach-Object { '!' + [IO.Path]::GetRelativePath($repoPath, $_.DirectoryName).Replace('\', '/') }
 }
 
+# The publishing plugin writes the one bundle for the whole reactor under the
+# first tree that publishes. common-ci copies the bundle from where a single
+# tree puts it, below target at the root, so a link at that path leads to the
+# bundle. The link is made before the deploy, which Linux allows.
+$firstPublishing = ($Packages | Where-Object { $_.Publish } | Select-Object -First 1).Path
+New-Item -ItemType Directory -Force -Path "$RepoName/target" | Out-Null
+New-Item -ItemType SymbolicLink -Force -Path "$RepoName/target/central-publishing" -Target "../$firstPublishing/target/central-publishing" | Out-Null
+
 # common-ci sets the version of the root pom.xml, deploys from the root to a
 # local staging folder with signing, and copies the result and the publishing
 # bundle into the package folder.
