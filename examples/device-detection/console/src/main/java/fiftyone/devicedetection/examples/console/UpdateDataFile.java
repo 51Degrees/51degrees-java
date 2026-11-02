@@ -58,9 +58,9 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * </ol>
  * ## License Key
  * In order to test this example you will need a 51Degrees Enterprise license which can be
- * purchased from our [pricing page](https://51degrees.com/pricing/annual?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&utm_term=updatedatafile).
+ * purchased from our [pricing page](https://51degrees.com/pricing/annual?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&utm_term=updatedatafile).
  * # Data Files
- * You can find out more about data files, licenses etc. at our [FAQ page](https://51degrees.com/resources/faqs?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&utm_term=updatedatafile)
+ * You can find out more about data files, licenses etc. at our [FAQ page](https://51degrees.com/resources/faqs?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&utm_term=updatedatafile)
  * ## Enterprise Data File
  * Enterprise (fully-featured) data files are typically released by 51Degrees five days a week
  * (Mon-Fri) and on-premise deployments can fetch and download those files automatically. Equally,
@@ -180,7 +180,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * </ol>
  * <p>
  * To run this example you must obtain a license key purchased from our
- * <a href="https://51degrees.com/pricing/annual?utm_source=code&amp;utm_medium=example&amp;utm_campaign=device-detection-java-examples&amp;utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&amp;utm_term=updatedatafile-2">pricing page</a>. Look for our "Bigger" or
+ * <a href="https://51degrees.com/pricing/annual?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&amp;utm_term=updatedatafile-2">pricing page</a>. Look for our "Bigger" or
  * "Biggest" options. This license key must be supplied as a command line argument or by setting
  * an environment variable or system property called {@link UpdateDataFile#UPDATE_EXAMPLE_LICENSE_KEY_NAME}
  */
@@ -223,7 +223,7 @@ public class UpdateDataFile {
         if (Objects.isNull(licenseKey) || KeyUtils.isInvalidKey(licenseKey)) {
             logger.error("In order to test this example you will need a 51Degrees Enterprise " +
                     "license which can be obtained on a trial basis or purchased from our\n" +
-                    "pricing page https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&utm_term=license-key-required. You must supply the license " +
+                    "pricing page https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&utm_term=license-key-required. You must supply the license " +
                     "key as an argument to this program, or as an environment or system variable " +
                     "named '{}'", UPDATE_EXAMPLE_LICENSE_KEY_NAME);
             throw new IllegalArgumentException("No license key available");
@@ -304,7 +304,7 @@ public class UpdateDataFile {
                     // to notify when update complete
                     .setDataUpdateService(dataUpdateService)
                     // For automatic updates to work you will need to provide a license key.
-                    // A license key can be obtained with a subscription from https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&utm_term=run
+                    // A license key can be obtained with a subscription from https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&utm_term=run
                     .setDataUpdateLicenseKey(licenseKey)
                     // Enable update on startup, the auto update system
                     // will be used to check for an update before the

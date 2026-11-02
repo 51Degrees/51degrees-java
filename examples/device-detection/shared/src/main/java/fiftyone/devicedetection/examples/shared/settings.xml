@@ -45,7 +45,7 @@ your IDE launch configuration or your operating system shell.
             <properties>
                 <!-- a resource key configured for executing the tests and
                 examples in this source distribution may be configured at
-                https://configure.51degrees.com/jqz435Nc?utm_source=code&amp;utm_medium=example&amp;utm_campaign=device-detection-java-examples&amp;utm_content=shared-src-main-java-fiftyone-devicedetection-examples-shared-settings.xml&amp;utm_term=properties -->
+                https://configure.51degrees.com/jqz435Nc?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=shared-src-main-java-fiftyone-devicedetection-examples-shared-settings.xml&amp;utm_term=properties -->
                 <TestResourceKey><!-- your resource key --></TestResourceKey>
             </properties>
         </profile>

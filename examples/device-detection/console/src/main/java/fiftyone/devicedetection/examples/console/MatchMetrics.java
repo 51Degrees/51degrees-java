@@ -108,13 +108,13 @@ public class MatchMetrics {
                 // in the device ID value.
                 //.setProperty("BrowserName")
                 // If using the full on-premise data file this property will be
-                // present in the data file. See https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-matchmetrics.java&utm_term=run
+                // present in the data file. See https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-matchmetrics.java&utm_term=run
                 .setProperty("HardwareName")
                 // Only use the predictive graph to better handle variances
                 // between the training data and the target User-Agent string.
                 // For a more detailed description of the differences between
                 // performance and predictive, see
-                // https://51degrees.com/documentation/_device_detection__hash.html?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-matchmetrics.java&utm_term=run#DeviceDetection_Hash_DataSetProduction_Performance
+                // https://51degrees.com/documentation/_device_detection__hash.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-matchmetrics.java&utm_term=run#DeviceDetection_Hash_DataSetProduction_Performance
                 .setUsePredictiveGraph(true)
                 .setUsePerformanceGraph(false)
                 .build()) {
@@ -154,7 +154,7 @@ public class MatchMetrics {
                         "name ---");
                 writer.println("For a discussion of what the match properties mean, see: " +
                         "https://51degrees.com/documentation/_device_detection__hash" +
-                        ".html?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-matchmetrics.java&utm_term=run-2#DeviceDetection_Hash_DataSetProduction_Performance\n");
+                        ".html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-matchmetrics.java&utm_term=run-2#DeviceDetection_Hash_DataSetProduction_Performance\n");
 
                 // get the properties available from the DeviceDetection engine
                 // which has the key "device". For the sake of illustration we will

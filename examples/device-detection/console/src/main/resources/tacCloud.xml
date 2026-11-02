@@ -27,10 +27,10 @@
                 <!-- TAC lookup and Native Model are not available as a free service.
 
                 This means that you will first need a license key, which can be purchased
-                from our pricing page: https://51degrees.com/pricing?utm_source=code&amp;utm_medium=example&amp;utm_campaign=device-detection-java-examples&amp;utm_content=console-src-main-resources-taccloud.xml&amp;utm_term=buildparameters.
+                from our pricing page: https://51degrees.com/pricing?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=console-src-main-resources-taccloud.xml&amp;utm_term=buildparameters.
 
                 Once this is done, a resource key with the properties required by this example
-                can be created at https://configure.51degrees.com/QKyYH5XT?utm_source=code&amp;utm_medium=example&amp;utm_campaign=device-detection-java-examples&amp;utm_content=console-src-main-resources-taccloud.xml&amp;utm_term=buildparameters.
+                can be created at https://configure.51degrees.com/QKyYH5XT?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=console-src-main-resources-taccloud.xml&amp;utm_term=buildparameters.
 
                 You can paste the resource key here, or set an environment
                 variable or System property called "SuperResourceKey"

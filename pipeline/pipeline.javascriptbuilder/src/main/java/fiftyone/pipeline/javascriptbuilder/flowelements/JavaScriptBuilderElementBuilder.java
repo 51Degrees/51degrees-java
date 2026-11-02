@@ -157,7 +157,7 @@ public class JavaScriptBuilderElementBuilder {
      * <p>
      * This can also be set per request, using the "query.fod-js-enable-cookies"
      * evidence key. For more details on personal data policy, see
-     * https://51degrees.com/terms/client-services-privacy-policy/?utm_source=code&utm_medium=comment&utm_campaign=pipeline-java&utm_content=pipeline.javascriptbuilder-src-main-java-fiftyone-pipeline-javascriptbuilder-flowelements-javascriptbuilderelementbuilder.java&utm_term=setenablecookies
+     * https://51degrees.com/terms/client-services-privacy-policy/?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=pipeline.javascriptbuilder-src-main-java-fiftyone-pipeline-javascriptbuilder-flowelements-javascriptbuilderelementbuilder.java&utm_term=setenablecookies
      * <p>
      * Default is true
      * @param enableCookies should enable cookies?

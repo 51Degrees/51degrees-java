@@ -125,14 +125,14 @@ public class CombiningServices {
             "/11D167 Safari/9537.53";
 
     public static void main(String[] args) throws Exception {
-        // Obtain a resource key for free at https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=location-java&utm_content=geo-location.shell.examples-src-main-java-fiftyone-geolocation-examples-combiningservices.java&utm_term=main
+        // Obtain a resource key for free at https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-src-main-java-fiftyone-geolocation-examples-combiningservices.java&utm_term=main
         // Make sure to include the 'Country' and 'IsMobile' properties as they
         // are used by this example.
         String resourceKey = "!!Your resource license key!!";
 
         if (resourceKey.startsWith("!!")) {
             System.out.println("You need to create a resource key at " +
-                "https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=location-java&utm_content=geo-location.shell.examples-src-main-java-fiftyone-geolocation-examples-combiningservices.java&utm_term=resource-key-required and paste it into this example.");
+                "https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-src-main-java-fiftyone-geolocation-examples-combiningservices.java&utm_term=resource-key-required and paste it into this example.");
             System.out.println("Make sure to include the 'Country' and " +
                 "'IsMobile' properties as they are used by this example.");
         }

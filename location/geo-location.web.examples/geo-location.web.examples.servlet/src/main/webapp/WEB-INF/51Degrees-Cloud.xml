@@ -27,7 +27,7 @@
             <BuildParameters>
                 <EndPoint>https://cloud.51degrees.com/api/v4</EndPoint>
                 <!-- Obtain a resource key for free at
-                https://configure.51degrees.com?utm_source=code&amp;utm_medium=example&amp;utm_campaign=location-java&amp;utm_content=geo-location.web.examples-geo-location.web.examples.servlet-src-main-webapp-web-inf-51degrees-cloud.xml&amp;utm_term=buildparameters
+                https://configure.51degrees.com?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=geo-location.web.examples-geo-location.web.examples.servlet-src-main-webapp-web-inf-51degrees-cloud.xml&amp;utm_term=buildparameters
                 Make sure to include the 'Country','State',
                 'County','Town' properties as they are used
                 by this example. -->

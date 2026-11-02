@@ -48,7 +48,7 @@ public class KeyHelper {
         return getOrSetResourceKey(value, TEST_RESOURCE_KEY,
             "A free resource key configured with the " +
                 "properties required by this example may be obtained from " +
-                "https://configure.51degrees.com/jqz435Nc?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=shared-src-main-java-fiftyone-devicedetection-examples-shared-keyhelper.java&utm_term=resource-key-required ",
+                "https://configure.51degrees.com/jqz435Nc?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-devicedetection-examples-shared-keyhelper.java&utm_term=resource-key-required ",
             shouldThrow);
     }
     public static String getOrSetTestResourceKey(String value) {
@@ -90,9 +90,9 @@ public class KeyHelper {
         return getOrSetResourceKey(value, variablename, "TAC lookup and Native Model are not " +
                 "available as a free service.\nThis means " +
                 "that you will first need a license key, which can be purchased " +
-                "from our pricing page: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=shared-src-main-java-fiftyone-devicedetection-examples-shared-keyhelper.java&utm_term=license-key-required. \nOnce this is " +
+                "from our pricing page: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-devicedetection-examples-shared-keyhelper.java&utm_term=license-key-required. \nOnce this is " +
                 "done, a resource key with the properties required by this example " +
-                "can be created at https://configure.51degrees.com/QKyYH5XT?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=shared-src-main-java-fiftyone-devicedetection-examples-shared-keyhelper.java&utm_term=license-key-required. ",
+                "can be created at https://configure.51degrees.com/QKyYH5XT?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-devicedetection-examples-shared-keyhelper.java&utm_term=license-key-required. ",
             shouldThrow);
     }
 }

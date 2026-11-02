@@ -82,7 +82,7 @@ public class HtmlContentHelper {
                 "<a href=\"https://github.com/51Degrees/ip-intelligence-data\">ip-intelligence-data " +
                 "repository on GitHub</a>. Find out about the full Enterprise data file, " +
                 "which includes automatic daily updates, on our " +
-                "<a href=\"https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=web-shared-src-main-java-fiftyone-ipintelligence-examples-web-htmlcontenthelper.java&utm_term=data-file-age-warning\">pricing page</a>.\n" +
+                "<a href=\"https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-shared-src-main-java-fiftyone-ipintelligence-examples-web-htmlcontenthelper.java&utm_term=data-file-age-warning\">pricing page</a>.\n" +
                 "</div>";
     }
 
@@ -102,12 +102,12 @@ public class HtmlContentHelper {
             return "";
         }
         String text = variant == ContactMessageVariant.CLOUD
-                ? "Want to try on-premise? <a href=\"https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=web-shared-src-main-java-fiftyone-ipintelligence-examples-web-htmlcontenthelper.java&utm_term=contact-us\">Contact us</a> to discuss requirements."
-                : "Need more on-premise properties and features? <a href=\"https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=web-shared-src-main-java-fiftyone-ipintelligence-examples-web-htmlcontenthelper.java&utm_term=contact-us\">Contact us</a> to explore the options.";
+                ? "Want to try on-premise? <a href=\"https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-shared-src-main-java-fiftyone-ipintelligence-examples-web-htmlcontenthelper.java&utm_term=contact-us\">Contact us</a> to discuss requirements."
+                : "Need more on-premise properties and features? <a href=\"https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-shared-src-main-java-fiftyone-ipintelligence-examples-web-htmlcontenthelper.java&utm_term=contact-us\">Contact us</a> to explore the options.";
         // language=html
         return "<div class=\"c-eg-message\">\n" +
                 "  <p class=\"c-eg-message__text\">" + text + "</p>\n" +
-                "  <a class=\"b-btn c-eg-message__cta\" href=\"https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=web-shared-src-main-java-fiftyone-ipintelligence-examples-web-htmlcontenthelper.java&utm_term=contact-us\">Contact us</a>\n" +
+                "  <a class=\"b-btn c-eg-message__cta\" href=\"https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-shared-src-main-java-fiftyone-ipintelligence-examples-web-htmlcontenthelper.java&utm_term=contact-us\">Contact us</a>\n" +
                 "</div>";
     }
 }

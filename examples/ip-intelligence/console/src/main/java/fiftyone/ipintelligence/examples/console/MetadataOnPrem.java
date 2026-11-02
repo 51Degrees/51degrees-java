@@ -56,7 +56,7 @@ import static fiftyone.ipintelligence.examples.shared.DataFileHelper.ENTERPRISE_
  * - [com.51degrees:ip-intelligence](https://central.sonatype.com/artifact/com.51degrees/ip-intelligence)
  *
  * This example requires an enterprise IP Intelligence data file (.ipi).
- * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metadataonprem.java&utm_term=header).
+ * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metadataonprem.java&utm_term=header).
  */
 public class MetadataOnPrem {
     private static final Logger logger = LoggerFactory.getLogger(GettingStartedOnPrem.class);
@@ -64,7 +64,7 @@ public class MetadataOnPrem {
     /* In this example, by default, the 51degrees IP Intelligence data file needs to be somewhere in the project
     space, or you may specify another file as a command line parameter.
 
-    For testing, contact us to obtain an enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metadataonprem.java&utm_term=main */
+    For testing, contact us to obtain an enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metadataonprem.java&utm_term=main */
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));

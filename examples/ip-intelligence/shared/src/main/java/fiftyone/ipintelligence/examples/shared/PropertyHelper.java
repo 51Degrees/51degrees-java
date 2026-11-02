@@ -46,7 +46,7 @@ public class PropertyHelper {
      */
     public static final String PRICING_MESSAGE = "Some properties used " +
             "by this example are not available with a free resource key. " +
-            "See https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-propertyhelper.java&utm_term=pricing_message to get a paid subscription " +
+            "See https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-propertyhelper.java&utm_term=pricing_message to get a paid subscription " +
             "with more properties.";
 
     static Logger logger = LoggerFactory.getLogger(PropertyHelper.class);
@@ -112,7 +112,7 @@ public class PropertyHelper {
             String message =
                     "The property '" + e.getPropertyName() + "' is not " +
                     "available in this data file. See data file options " +
-                    "<a href=\"https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-propertyhelper.java&utm_term=property-missing\">here</a>";
+                    "<a href=\"https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-propertyhelper.java&utm_term=property-missing\">here</a>";
             AspectPropertyValue<T> result = new AspectPropertyValueDefault<>();
             result.setNoValueMessage(message);
             return result;

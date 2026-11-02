@@ -45,7 +45,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * <p>
  * To use this example you must obtain a resource key. A resource key suitable for
  * use with the example can be obtained here:
- * <a href="https://configure.51degrees.com/jqz435Nc?utm_source=code&amp;utm_medium=example&amp;utm_campaign=device-detection-java-examples&amp;utm_content=web-getting-started.cloud-src-main-java-fiftyone-devicedetection-examples-web-gettingstartedwebcloud.java&amp;utm_term=gettingstartedwebcloud">https://configure.51degrees.com/jqz435Nc?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=web-getting-started.cloud-src-main-java-fiftyone-devicedetection-examples-web-gettingstartedwebcloud.java&utm_term=gettingstartedwebcloud-2</a>.
+ * <a href="https://configure.51degrees.com/jqz435Nc?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=web-getting-started.cloud-src-main-java-fiftyone-devicedetection-examples-web-gettingstartedwebcloud.java&amp;utm_term=gettingstartedwebcloud">https://configure.51degrees.com/jqz435Nc?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-getting-started.cloud-src-main-java-fiftyone-devicedetection-examples-web-gettingstartedwebcloud.java&utm_term=gettingstartedwebcloud-2</a>.
  * <p>
  * The configuration file for the pipeline is at src/main/webapp/WEB-INF/51Degrees-Cloud.xml
  */

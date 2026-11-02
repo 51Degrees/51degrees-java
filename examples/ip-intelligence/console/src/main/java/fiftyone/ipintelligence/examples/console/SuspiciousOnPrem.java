@@ -36,7 +36,7 @@
  * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-java-examples/blob/main/console/src/main/java/fiftyone/ipintelligence/examples/console/SuspiciousOnPrem.java).
  *
  * This example requires an enterprise IP Intelligence data file (.ipi).
- * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=contact-us).
+ * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=contact-us).
  *
  * Required Maven Dependencies:
  * - [com.51degrees:ip-intelligence](https://central.sonatype.com/artifact/com.51degrees/ip-intelligence)
@@ -83,7 +83,7 @@ public class SuspiciousOnPrem {
     /* In this example, by default, the 51degrees IP Intelligence data file needs to be somewhere
     in the project space, or you may specify another file as a command line parameter.
 
-    For testing, contact us to obtain an enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=contact-us */
+    For testing, contact us to obtain an enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=contact-us */
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
@@ -113,14 +113,14 @@ public class SuspiciousOnPrem {
             logger.error("Failed to find IP Intelligence data file at '{}'. " +
                     "Please provide a valid path to an IP Intelligence data file (.ipi). " +
                     "For testing, you can obtain an enterprise data file by contacting us at " +
-                    "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=contact-us", dataFile);
+                    "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=contact-us", dataFile);
             throw e;
         }
 
         /* In this example, we use the IPIntelligencePipelineBuilder and configure it in code.
 
         For more information about builders in general see the documentation at
-        https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=configuration-builders
+        https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=configuration-builders
 
         Note that we wrap the creation of a pipeline in a try/resources to control its lifecycle */
         try (Pipeline pipeline = new IPIntelligencePipelineBuilder()
@@ -128,8 +128,8 @@ public class SuspiciousOnPrem {
                 // We use the max performance profile for optimal lookup speed in this
                 // example. See the documentation for more detail on this and other
                 // configuration options.
-                // https://51degrees.com/documentation/_features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=automatic-datafile-updates
-                // https://51degrees.com/documentation/_features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=usage-sharing
+                // https://51degrees.com/documentation/_features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=automatic-datafile-updates
+                // https://51degrees.com/documentation/_features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=usage-sharing
                 .setPerformanceProfile(Constants.PerformanceProfiles.MaxPerformance)
                 // inhibit sharing usage for this example, usually this should be set to "true"
                 .setShareUsage(false)

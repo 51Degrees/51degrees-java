@@ -1,8 +1,8 @@
 # 51Degrees IP Intelligence Engines
 
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-java&utm_content=readme.md&utm_term=51degrees-ip-intelligence-engines "Data rewards the curious") **Java IP Intelligence**
+![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-ip-intelligence-engines "Data rewards the curious") **Java IP Intelligence**
 
-[Developer Documentation](https://51degrees.com/ip-intelligence-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-java&utm_content=readme.md&utm_term=51degrees-ip-intelligence-engines "developer documentation")
+[Developer Documentation](https://51degrees.com/ip-intelligence-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-ip-intelligence-engines "developer documentation")
 
 ## Introduction
 
@@ -10,8 +10,8 @@ This repository contains Java implementation of the IP Intelligence [specificati
 
 ## Dependencies
 
-For runtime dependencies, see our [dependencies](https://51degrees.com/documentation/_info__dependencies.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-java&utm_content=readme.md&utm_term=dependencies) page.
-The [tested versions](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-java&utm_content=readme.md&utm_term=dependencies) page shows 
+For runtime dependencies, see our [dependencies](https://51degrees.com/documentation/_info__dependencies.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=dependencies) page.
+The [tested versions](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=dependencies) page shows 
 the JDK versions that we currently test against. The software may run fine against other versions, 
 but additional caution should be applied.
 
@@ -23,9 +23,9 @@ The Java API can either use our cloud service to get its data or it can use a lo
 
 The cloud service for IP Intelligence is currently in development.
 
-You will require [resource keys](https://51degrees.com/documentation/_info__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-java&utm_content=readme.md&utm_term=cloud-coming-soon)
+You will require [resource keys](https://51degrees.com/documentation/_info__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon)
 to use the Cloud API, as described on our website. Get resource keys from
-our [configurator](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-java&utm_content=readme.md&utm_term=cloud-coming-soon), see our [documentation](https://51degrees.com/documentation/_concepts__configurator.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-java&utm_content=readme.md&utm_term=cloud-coming-soon) on 
+our [configurator](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon), see our [documentation](https://51degrees.com/documentation/_concepts__configurator.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon) on 
 how to use this.
 
 #### On-Premise
@@ -33,7 +33,7 @@ how to use this.
 In order to perform IP intelligence on-premise, you will need to use a
 data file.
 
-[ip-intelligence-data](https://github.com/51Degrees/ip-intelligence-data/) repository instructs how to obtain a 'Lite' data file, otherwise [contact us](https://51degrees.com/contact-us?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-java&utm_content=readme.md&utm_term=on-premise) to obtain an 'Enterprise' data file.
+[ip-intelligence-data](https://github.com/51Degrees/ip-intelligence-data/) repository instructs how to obtain a 'Lite' data file, otherwise [contact us](https://51degrees.com/contact-us?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=on-premise) to obtain an 'Enterprise' data file.
 
 For tests, the data file can be supplied explicitly by setting the
 `51DEGREES_IPI_PATH` environment variable or system property to the path of
@@ -109,7 +109,7 @@ repository.
 
 ## Tests
 
-You will need [resource keys](https://51degrees.com/documentation/_info__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-java&utm_content=readme.md&utm_term=tests)
+You will need [resource keys](https://51degrees.com/documentation/_info__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=tests)
 (see above) to complete the tests and run examples which include exercising the cloud API.
 
 The tests look for a resource key in the following order:

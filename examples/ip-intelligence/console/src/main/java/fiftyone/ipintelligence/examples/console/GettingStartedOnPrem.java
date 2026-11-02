@@ -34,7 +34,7 @@
  * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-java-examples/blob/main/console/src/main/java/fiftyone/ipintelligence/examples/console/GettingStartedOnPrem.java).
  * 
  * This example requires an enterprise IP Intelligence data file (.ipi).
- * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedonprem.java&utm_term=header).
+ * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedonprem.java&utm_term=header).
  * 
  * Required Maven Dependencies:
  * - [com.51degrees:ip-intelligence](https://central.sonatype.com/artifact/com.51degrees/ip-intelligence)
@@ -96,7 +96,7 @@ public class GettingStartedOnPrem {
     For production use, you will eventually need to use a Distributor service and license key
     to keep your data file updated.
     
-    To obtain access to enterprise data files for hosting, please contact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedonprem.java&utm_term=main */
+    To obtain access to enterprise data files for hosting, please contact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedonprem.java&utm_term=main */
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
@@ -130,7 +130,7 @@ public class GettingStartedOnPrem {
                     "Please provide a valid path to an IP Intelligence data file (.ipi). " +
                     "An explicit path can be supplied via the {} environment variable. " +
                     "For testing, you can obtain an enterprise data file by contacting us at " +
-                    "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedonprem.java&utm_term=data-file-not-found",
+                    "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedonprem.java&utm_term=data-file-not-found",
                     dataFile, DataFileHelper.IPI_PATH_ENV_VAR);
             throw e;
         }
@@ -139,7 +139,7 @@ public class GettingStartedOnPrem {
         options contained in the file "gettingStartedOnPrem.xml".
 
         For more information about pipelines in general see the documentation at
-        https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedonprem.java&utm_term=run
+        https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedonprem.java&utm_term=run
 
         Note that we wrap the creation of a pipeline in a try/resources to control its lifecycle */
         // the configuration file is in the resources directory
@@ -207,7 +207,7 @@ public class GettingStartedOnPrem {
             IPIntelligenceData ipData = data.get(IPIntelligenceData.class);
 
             /* Display the results of the lookup, which are called IP Intelligence properties. See the
-            property dictionary at https://51degrees.com/developers/property-dictionary?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedonprem.java&utm_term=analyzeevidence for
+            property dictionary at https://51degrees.com/developers/property-dictionary?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedonprem.java&utm_term=analyzeevidence for
             details of all available properties. */
             
             // Output all the properties using shared PropertyHelper methods

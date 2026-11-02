@@ -271,13 +271,13 @@ public class HtmlContentHelper {
         // language=html
         if (cloud) {
             out.append("<div class=\"c-eg-message\">\n" +
-                    "  <p class=\"c-eg-message__text\">Want to try on-premise? <a href=\"https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=web-shared-src-main-java-fiftyone-devicedetection-examples-web-htmlcontenthelper.java&utm_term=contact-us\">Contact us</a> to discuss requirements.</p>\n" +
-                    "  <a class=\"b-btn c-eg-message__cta\" href=\"https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=web-shared-src-main-java-fiftyone-devicedetection-examples-web-htmlcontenthelper.java&utm_term=contact-us\">Contact us</a>\n" +
+                    "  <p class=\"c-eg-message__text\">Want to try on-premise? <a href=\"https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-shared-src-main-java-fiftyone-devicedetection-examples-web-htmlcontenthelper.java&utm_term=contact-us\">Contact us</a> to discuss requirements.</p>\n" +
+                    "  <a class=\"b-btn c-eg-message__cta\" href=\"https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-shared-src-main-java-fiftyone-devicedetection-examples-web-htmlcontenthelper.java&utm_term=contact-us\">Contact us</a>\n" +
                     "</div>\n");
         } else {
             out.append("<div class=\"c-eg-message\">\n" +
-                    "  <p class=\"c-eg-message__text\">The paid data file adds daily automatic updates, non-human identification and IP intelligence. <a href=\"https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=web-shared-src-main-java-fiftyone-devicedetection-examples-web-htmlcontenthelper.java&utm_term=contact-us\">Contact us</a> to explore the options.</p>\n" +
-                    "  <a class=\"b-btn c-eg-message__cta\" href=\"https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=web-shared-src-main-java-fiftyone-devicedetection-examples-web-htmlcontenthelper.java&utm_term=contact-us\">Contact us</a>\n" +
+                    "  <p class=\"c-eg-message__text\">The paid data file adds daily automatic updates, non-human identification and IP intelligence. <a href=\"https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-shared-src-main-java-fiftyone-devicedetection-examples-web-htmlcontenthelper.java&utm_term=contact-us\">Contact us</a> to explore the options.</p>\n" +
+                    "  <a class=\"b-btn c-eg-message__cta\" href=\"https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-shared-src-main-java-fiftyone-devicedetection-examples-web-htmlcontenthelper.java&utm_term=contact-us\">Contact us</a>\n" +
                     "</div>\n");
         }
     }

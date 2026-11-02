@@ -1,8 +1,8 @@
 # 51Degrees Pipeline
 
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=pipeline-java&utm_content=readme.md&utm_term=top "Data rewards the curious") **Java Pipeline**
+![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=top "Data rewards the curious") **Java Pipeline**
 
-[Developer Documentation](https://51degrees.com/pipeline-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=pipeline-java&utm_content=readme.md&utm_term=top "developer documentation")
+[Developer Documentation](https://51degrees.com/pipeline-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=top "developer documentation")
 
 ## Introduction
 This repository contains all the projects required to build the Java implementation of the 51Degrees Pipeline API.
@@ -12,11 +12,11 @@ is also available on GitHub and is recommended reading if you wish to understand
 the concepts and design of this API.
 
 Reference documentation for the Java implementation can be found on the
-[Java API documentation](https://51degrees.com/pipeline-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=pipeline-java&utm_content=readme.md&utm_term=introduction) page.
+[Java API documentation](https://51degrees.com/pipeline-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=introduction) page.
 
 ## Pre-requisites
 
-The [tested versions](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=pipeline-java&utm_content=readme.md&utm_term=pre-requisites) page shows 
+The [tested versions](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=pre-requisites) page shows 
 the JDK versions that we currently test against. The software may run fine against other versions, 
 but additional caution should be applied.
 
@@ -123,7 +123,7 @@ There are several examples available in the `pipeline.developer-examples` folder
 how to make use of the Pipeline API in isolation. These are described in the table below.
 If you want examples that demonstrate how to use 51Degrees products such as device detection, 
 then these are available in the corresponding [repository](https://github.com/51Degrees/device-detection-java) 
-and on our [website](https://51degrees.com/documentation/_examples__device_detection__index.html?utm_source=github&utm_medium=readme&utm_campaign=pipeline-java&utm_content=readme.md&utm_term=examples).
+and on our [website](https://51degrees.com/documentation/_examples__device_detection__index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=examples).
 
 | Example                                            | Description |
 |----------------------------------------------------|-------------|
