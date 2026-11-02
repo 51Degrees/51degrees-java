@@ -56,7 +56,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  */
 public class GettingStartedWebOnPrem extends HttpServlet {
     private static final long serialVersionUID = 1734154705981153540L;
-    public static String resourceBase = "web/getting-started.onprem/src/main/webapp";
+    public static String resourceBase = "examples/device-detection/web/getting-started.onprem/src/main/webapp";
     public static Logger logger = LoggerFactory.getLogger(GettingStartedWebOnPrem.class);
 
     public static void main(String[] args) throws Exception {
