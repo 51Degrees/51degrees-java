@@ -52,9 +52,9 @@ public class KeyHelper {
     public static String getOrSetTestResourceKey(String value, boolean shouldThrow) {
         return getOrSetResourceKey(value, TEST_RESOURCE_KEY,
             "A free resource key may be obtained from " +
-                "https://configure.51degrees.com/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-keyhelper.java&utm_term=resource-key-required. A free key " +
+                "https://configure.51degrees.com/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-keyhelper.java&utm_term=resource-key-required. A free key " +
                 "populates the free tier properties only. See " +
-                "https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-keyhelper.java&utm_term=resource-key-required to get a paid subscription " +
+                "https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-keyhelper.java&utm_term=resource-key-required to get a paid subscription " +
                 "with more properties.",
             shouldThrow);
     }
@@ -102,11 +102,11 @@ public class KeyHelper {
     public static String getOrSetSuperResourceKey(String value, String variablename, boolean shouldThrow) {
         return getOrSetResourceKey(value, variablename, "TAC lookup and native model are not " +
                 "available with a free resource key. " +
-                "See https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-keyhelper.java&utm_term=super-resource-key-required to get a paid subscription " +
+                "See https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-keyhelper.java&utm_term=super-resource-key-required to get a paid subscription " +
                 "with more properties. " +
                 "Once subscribed, a resource key with the properties required " +
                 "by this example can be created at " +
-                "https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-keyhelper.java&utm_term=super-resource-key-required.",
+                "https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-keyhelper.java&utm_term=super-resource-key-required.",
             shouldThrow);
     }
 }

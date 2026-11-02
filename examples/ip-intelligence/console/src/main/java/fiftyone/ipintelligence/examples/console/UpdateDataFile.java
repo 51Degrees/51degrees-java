@@ -70,7 +70,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * to keep your data file updated. However, for now this example requires a custom URL where
  * an updated data file will be hosted.
  * 
- * To obtain access to enterprise data files, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-updatedatafile.java&utm_term=header).
+ * To obtain access to enterprise data files, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-updatedatafile.java&utm_term=header).
  *
  * ## Configuration
  * - the pipeline must be configured to use a temp file
@@ -161,7 +161,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * For production use, you will eventually need to use a Distributor service and license key
  * to keep your data file updated.
  * 
- * To obtain access to enterprise data files for hosting, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-updatedatafile.java&utm_term=header-2).
+ * To obtain access to enterprise data files for hosting, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-updatedatafile.java&utm_term=header-2).
  *
  */
 
@@ -181,7 +181,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * to keep your data file updated. However, for now this example requires a custom URL where
  * an updated data file will be hosted.
  * 
- * To obtain access to enterprise data files, please <a href="https://51degrees.com/contact-us?utm_source=code&amp;utm_medium=example&amp;utm_campaign=ip-intelligence-java-examples&amp;utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-updatedatafile.java&amp;utm_term=updatedatafile">contact us</a>.
+ * To obtain access to enterprise data files, please <a href="https://51degrees.com/contact-us?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-updatedatafile.java&amp;utm_term=updatedatafile">contact us</a>.
  * This license key must be supplied as a command line argument or by setting
  * an environment variable or system property called {@link UpdateDataFile#UPDATE_EXAMPLE_LICENSE_KEY_NAME}
  */
@@ -225,7 +225,7 @@ public class UpdateDataFile {
             logger.error("For production use, you will eventually need to use a Distributor service and " +
                     "license key to keep your data file updated. However, for now this example requires " +
                     "a custom URL where an updated data file will be hosted. To obtain access to enterprise " +
-                    "data files, please contact us at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-updatedatafile.java&utm_term=license-key-required. You must supply the " +
+                    "data files, please contact us at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-updatedatafile.java&utm_term=license-key-required. You must supply the " +
                     "license key as an argument to this program, or as an environment or system variable " +
                     "named '{}'", UPDATE_EXAMPLE_LICENSE_KEY_NAME);
             throw new IllegalArgumentException("No license key available");
@@ -308,7 +308,7 @@ public class UpdateDataFile {
                     // For production use, you will eventually need to use a Distributor service and
                     // license key to keep your data file updated. However, for now this example
                     // requires a custom URL where an updated data file will be hosted.
-                    // To obtain access to enterprise data files, please contact us at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-updatedatafile.java&utm_term=run
+                    // To obtain access to enterprise data files, please contact us at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-updatedatafile.java&utm_term=run
                     .setDataUpdateLicenseKey(licenseKey)
                     // Enable update on startup, the auto update system
                     // will be used to check for an update before the

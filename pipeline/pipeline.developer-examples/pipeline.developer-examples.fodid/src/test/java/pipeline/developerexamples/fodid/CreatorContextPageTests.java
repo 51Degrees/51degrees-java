@@ -302,7 +302,7 @@ public class CreatorContextPageTests {
     public void The_Page_Ends_With_Find_Out_More() throws Exception {
         String page = pageText();
         assertTrue(page.contains("Find out more"), "the page says where next");
-        assertTrue(page.contains("utm_campaign=pipeline-java"), "campaign tag");
+        assertTrue(page.contains("utm_campaign=51degrees-java"), "campaign tag");
         assertTrue(page.contains("https://github.com/51Degrees/pipeline-java"),
             "the repository is linked");
     }

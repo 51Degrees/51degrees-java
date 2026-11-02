@@ -57,7 +57,7 @@
  * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-java-examples/blob/main/console/src/main/java/fiftyone/ipintelligence/examples/console/CompareOnPrem.java).
  *
  * This example requires an enterprise IP Intelligence data file (.ipi).
- * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-compareonprem.java&utm_term=contact-us).
+ * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-compareonprem.java&utm_term=contact-us).
  *
  * Required Maven Dependencies:
  * - [com.51degrees:ip-intelligence](https://central.sonatype.com/artifact/com.51degrees/ip-intelligence)
@@ -202,7 +202,7 @@ public class CompareOnPrem {
                 // We use the max performance profile for optimal lookup
                 // speed in this example. See the documentation for more detail
                 // on this and other configuration options.
-                // https://51degrees.com/documentation/_features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-compareonprem.java&utm_term=automatic-datafile-updates
+                // https://51degrees.com/documentation/_features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-compareonprem.java&utm_term=automatic-datafile-updates
                 .setPerformanceProfile(Constants.PerformanceProfiles.MaxPerformance)
                 // inhibit sharing usage for this example
                 .setShareUsage(false)

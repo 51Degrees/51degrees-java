@@ -62,7 +62,7 @@ public class GettingStartedOnPrem {
     space, or you may specify another file as a command line parameter.
 
     Note that the Lite data file is only used for illustration, and has limited accuracy and
-    capabilities. Find out about the Enterprise data file here: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-gettingstartedonprem.java&utm_term=lite_v_4_1_hash */
+    capabilities. Find out about the Enterprise data file here: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-gettingstartedonprem.java&utm_term=lite_v_4_1_hash */
     public static String LITE_V_4_1_HASH = "51Degrees-LiteV4.1.hash";
     public static String ENTERPRISE_HASH = "TAC-HashV41.hash";
 
@@ -100,7 +100,7 @@ public class GettingStartedOnPrem {
         options contained in the file "gettingStartedOnPrem.xml".
 
         For more information about pipelines in general see the documentation at
-        https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-gettingstartedonprem.java&utm_term=run
+        https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-gettingstartedonprem.java&utm_term=run
 
         Note that we wrap the creation of a pipeline in a try/resources to control its lifecycle */
         // the configuration file is in the resources directory
@@ -168,7 +168,7 @@ public class GettingStartedOnPrem {
             DeviceData device = data.get(DeviceData.class);
 
             /* Display the results of the detection, which are called device properties. See the
-            property dictionary at https://51degrees.com/developers/property-dictionary?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-gettingstartedonprem.java&utm_term=analyzeevidence for
+            property dictionary at https://51degrees.com/developers/property-dictionary?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-gettingstartedonprem.java&utm_term=analyzeevidence for
             details of all available properties. */
             writer.println("\tMobile Device: " + asString(device.getIsMobile()));
             writer.println("\tPlatform Name: " + asString(device.getPlatformName()));

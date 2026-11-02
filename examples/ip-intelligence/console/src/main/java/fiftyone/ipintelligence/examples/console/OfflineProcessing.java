@@ -32,7 +32,7 @@
  * This example demonstrates the integration in a simplified form. It intentionally outputs only a
  * small subset of the available properties (the registered network details) to keep the illustration
  * clear. Many more IP Intelligence properties can be enabled - refer to the
- * [Property Dictionary](https://51degrees.com/developers/property-dictionary?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-offlineprocessing.java&utm_term=header)
+ * [Property Dictionary](https://51degrees.com/developers/property-dictionary?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-offlineprocessing.java&utm_term=header)
  * for the complete list. The commented-out `getPopulatedProperties` call further down shows how to
  * output every populated property instead of the fixed subset.
  *
@@ -45,7 +45,7 @@
  * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-java-examples/blob/main/console/src/main/java/fiftyone/ipintelligence/examples/console/OfflineProcessing.java).
  *
  * This example requires an enterprise IP Intelligence data file (.ipi).
- * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-offlineprocessing.java&utm_term=header).
+ * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-offlineprocessing.java&utm_term=header).
  *
  * Required Maven Dependencies:
  * - [com.51degrees:ip-intelligence](https://central.sonatype.com/artifact/com.51degrees/ip-intelligence)
@@ -98,7 +98,7 @@ public class OfflineProcessing {
     // This 51degrees IP Intelligence data file (distributed with the source) needs to
     // be somewhere in the project space
     //
-    // For testing, contact us to obtain an enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-offlineprocessing.java&utm_term=datadir
+    // For testing, contact us to obtain an enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-offlineprocessing.java&utm_term=datadir
     private static final String dataDir = "ip-intelligence-data";
     // This 51degrees file of 20,000 examples (distributed with the source)
     // needs to be somewhere in the project space. Additional evidence files
@@ -224,7 +224,7 @@ public class OfflineProcessing {
                         // registered network details below). Many more IP Intelligence
                         // properties can be enabled - for the complete list, see the
                         // property dictionary at
-                        // https://51degrees.com/developers/property-dictionary?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-offlineprocessing.java&utm_term=run
+                        // https://51degrees.com/developers/property-dictionary?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-offlineprocessing.java&utm_term=run
                         Map<String, ? super Object> resultMap = new HashMap<>();
                         resultMap.put("ip.RegisteredName", asStringProperty(ipData.getRegisteredName()));
                         resultMap.put("ip.RegisteredOwner", asStringProperty(ipData.getRegisteredOwner()));
@@ -252,7 +252,7 @@ public class OfflineProcessing {
                             "limited properties and is of limited accuracy");
                     logger.info("The example requires an Enterprise data file " +
                             "to work fully. Find out about the Enterprise " +
-                            "data file here: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-offlineprocessing.java&utm_term=enterprise-data-file");
+                            "data file here: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-offlineprocessing.java&utm_term=enterprise-data-file");
                 }
             }
         }

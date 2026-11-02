@@ -125,7 +125,7 @@ public class GettingStartedCloud {
         /* In this example, we use the IPIntelligencePipelineBuilder and configure it in code.
 
         For more information about pipelines in general see the documentation at
-        https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedcloud.java&utm_term=configuration-builders
+        https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedcloud.java&utm_term=configuration-builders
 
         Note that we wrap the creation of a pipeline in a try/resources to control its lifecycle */
         IPIntelligenceCloudPipelineBuilder builder = new IPIntelligencePipelineBuilder()
@@ -188,7 +188,7 @@ public class GettingStartedCloud {
             IPIntelligenceData ipData = data.get(IPIntelligenceData.class);
 
             /* Display the results of the lookup, which are called IP Intelligence properties.
-            See the property dictionary at https://51degrees.com/developers/property-dictionary?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedcloud.java&utm_term=property-dictionary
+            See the property dictionary at https://51degrees.com/developers/property-dictionary?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedcloud.java&utm_term=property-dictionary
             for details of all available properties. */
             writer.println("\tRegisteredName: " + asStringProperty(tryGet(ipData::getRegisteredName)));
             writer.println("\tRegisteredOwner: " + asStringProperty(tryGet(ipData::getRegisteredOwner)));

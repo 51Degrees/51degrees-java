@@ -74,7 +74,7 @@ public class EvidenceHelper {
          * -
          * [getHighEntropyValues()](https://developer.mozilla.org/en-US/docs/Web/API/NavigatorUAData/getHighEntropyValues)
          * -
-         * [device.sua](https://51degrees.com/blog/openrtb-structured-user-agent-and-user-agent-client-hints?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=shared-src-main-java-fiftyone-devicedetection-examples-shared-evidencehelper.java&utm_term=setupevidence)
+         * [device.sua](https://51degrees.com/blog/openrtb-structured-user-agent-and-user-agent-client-hints?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-devicedetection-examples-shared-evidencehelper.java&utm_term=setupevidence)
          * - [OpenRTB 2.6
          * spec](https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#objectuseragent)
          *

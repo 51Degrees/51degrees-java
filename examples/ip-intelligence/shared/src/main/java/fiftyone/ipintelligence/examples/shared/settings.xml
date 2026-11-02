@@ -45,10 +45,10 @@ your IDE launch configuration or your operating system shell.
             <properties>
                 <!-- a free resource key for executing the tests and
                 examples in this source distribution may be created at
-                https://configure.51degrees.com/Wkqxf3Bs?utm_source=code&amp;utm_medium=example&amp;utm_campaign=ip-intelligence-java-examples&amp;utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-settings.xml&amp;utm_term=properties. A free key
+                https://configure.51degrees.com/Wkqxf3Bs?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-settings.xml&amp;utm_term=properties. A free key
                 populates the free tier properties only. A key that also
                 includes the paid properties used by the examples may be
-                created at https://configure.51degrees.com/hYzn3TV3?utm_source=code&amp;utm_medium=example&amp;utm_campaign=ip-intelligence-java-examples&amp;utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-settings.xml&amp;utm_term=properties. -->
+                created at https://configure.51degrees.com/hYzn3TV3?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-settings.xml&amp;utm_term=properties. -->
                 <TestResourceKey><!-- your resource key --></TestResourceKey>
             </properties>
         </profile>

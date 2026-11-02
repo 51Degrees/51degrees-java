@@ -148,7 +148,7 @@ public static class DatafileInfo {
                     "This is used for illustration, and has limited " +
                     "accuracy and capabilities. Find out about the " +
                     "Enterprise data file on our pricing page: " +
-                    "https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-java-examples&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-datafilehelper.java&utm_term=lite-data-file");
+                    "https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-datafilehelper.java&utm_term=lite-data-file");
         }
         if (daysOld > 28) {
             logger.warn("This example is using a data file that is more " +

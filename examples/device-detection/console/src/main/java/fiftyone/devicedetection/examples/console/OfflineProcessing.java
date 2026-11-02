@@ -72,7 +72,7 @@ public class OfflineProcessing {
     //
     // Note that the Lite data file is only used for illustration, and has
     // limited accuracy and capabilities. Find out about the Enterprise data
-    // file here: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-offlineprocessing.java&utm_term=lite_v_4_1_hash
+    // file here: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-offlineprocessing.java&utm_term=lite_v_4_1_hash
     public static final String LITE_V_4_1_HASH =
             "device-detection-data/51Degrees-LiteV4.1.hash";
     // This 51degrees file of 20,000 examples (distributed with the source)
@@ -136,7 +136,7 @@ public class OfflineProcessing {
                 .setAutoUpdate(false)
                 // -- Setting the Profile
                 // For information on profiles see
-                // https://51degrees.com/documentation/_device_detection__features__performance_options.html?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-offlineprocessing.java&utm_term=run
+                // https://51degrees.com/documentation/_device_detection__features__performance_options.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-offlineprocessing.java&utm_term=run
                 //.setPerformanceProfile(Constants.PerformanceProfiles.MaxPerformance)
                 //.setPerformanceProfile(Constants.PerformanceProfiles.HighPerformance)
                 // Low memory profile has detection data streamed from disk on
@@ -145,11 +145,11 @@ public class OfflineProcessing {
                 .setPerformanceProfile(Constants.PerformanceProfiles.LowMemory)
                 //.setPerformanceProfile(Constants.PerformanceProfiles.Balanced)
                 // -- Setting the Graph
-                // see https://51degrees.com/documentation/_device_detection__hash.html?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-offlineprocessing.java&utm_term=run#DeviceDetection_Hash_DataSetProduction
+                // see https://51degrees.com/documentation/_device_detection__hash.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-offlineprocessing.java&utm_term=run#DeviceDetection_Hash_DataSetProduction
                 //.setUsePerformanceGraph(false)
                 //.setUsePredictiveGraph(true)
                 // -- Setting Predictive Power
-                // see https://51degrees.com/documentation/_device_detection__hash.html?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-offlineprocessing.java&utm_term=run#DeviceDetection_Hash_PredictivePower
+                // see https://51degrees.com/documentation/_device_detection__hash.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-offlineprocessing.java&utm_term=run#DeviceDetection_Hash_PredictivePower
                 //.setDifference(0)
                 //.setDrift(0)
                 .build()) {
@@ -220,7 +220,7 @@ public class OfflineProcessing {
                             "limited properties and is of limited accuracy");
                     logger.info("The example requires an Enterprise data file " +
                             "to work fully. Find out about the Enterprise " +
-                            "data file here: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=device-detection-java-examples&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-offlineprocessing.java&utm_term=lite-data-file");
+                            "data file here: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-offlineprocessing.java&utm_term=lite-data-file");
                 }
             }
         }

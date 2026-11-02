@@ -33,7 +33,7 @@
     <packaging>pom</packaging>
 
     <name>51Degrees :: IP Intelligence :: Examples</name>
-    <url>https://51degrees.com?utm_source=maven&amp;utm_medium=package&amp;utm_campaign=ip-intelligence-java-examples&amp;utm_content=pom.xml&amp;utm_term=url</url>
+    <url>https://51degrees.com?utm_source=maven&amp;utm_medium=package&amp;utm_campaign=51degrees-java&amp;utm_content=pom.xml&amp;utm_term=url</url>
     <description>IP Intelligence examples</description>
 
     <modules>

@@ -1,8 +1,8 @@
 # 51Degrees IP Intelligence Engines - Examples
 
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-java-examples&utm_content=readme.md&utm_term=51degrees-ip-intelligence-engines-examples "Data rewards the curious") **Java IP Intelligence**
+![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-ip-intelligence-engines-examples "Data rewards the curious") **Java IP Intelligence**
 
-[Developer Documentation](https://51degrees.com/ip-intelligence-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-java-examples&utm_content=readme.md&utm_term=51degrees-ip-intelligence-engines-examples "developer documentation")
+[Developer Documentation](https://51degrees.com/ip-intelligence-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-ip-intelligence-engines-examples "developer documentation")
 
 ## Introduction
 
@@ -90,9 +90,9 @@ documentation now reflect what is free and what needs a paid subscription.
   and AccuracyRadiusMin.
 
 A free resource key selecting the free tier properties can be created at
-https://configure.51degrees.com/Wkqxf3Bs?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-java-examples&utm_content=readme.md&utm_term=cloud-coming-soon. A resource key that also includes
+https://configure.51degrees.com/Wkqxf3Bs?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon. A resource key that also includes
 the paid properties used by the examples can be created at
-https://configure.51degrees.com/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-java-examples&utm_content=readme.md&utm_term=cloud-coming-soon. See https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-java-examples&utm_content=readme.md&utm_term=cloud-coming-soon
+https://configure.51degrees.com/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon. See https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon
 to get a paid subscription with more properties.
 
 ### On-Premise
@@ -106,7 +106,7 @@ to get a paid subscription with more properties.
 | CompareOnPrem            | Compares the results of IP intelligence lookups across multiple data files or configurations for the same set of IP addresses.                                                                                                |
 | SuspiciousOnPrem         | How to use IP intelligence results to identify potentially suspicious traffic, using geometric calculations on the location areas returned.                                                                                   |
 | GettingStartedApi (Web)  | Hosts a local HTTP API mirroring the endpoints of the 51Degrees cloud service, backed by the on-premise engine. Cloud examples can be pointed at it as a custom endpoint.                                                      |
-| OfflineProcessing        | Example showing how to ingest a file containing IP addresses and perform IP intelligence processing against the entries. It is intentionally minimal and outputs only a small subset of properties; see the [Property Dictionary](https://51degrees.com/developers/property-dictionary?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-java-examples&utm_content=readme.md&utm_term=offline-processing) for the full set you can enable. |
+| OfflineProcessing        | Example showing how to ingest a file containing IP addresses and perform IP intelligence processing against the entries. It is intentionally minimal and outputs only a small subset of properties; see the [Property Dictionary](https://51degrees.com/developers/property-dictionary?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=offline-processing) for the full set you can enable. |
 | PerformanceBenchmark     | How to configure the various performance options and run some simple performance tests for IP intelligence.                                                                                                                    |
 | UpdateDataFile           | How to configure the Pipeline to automatically update the IP intelligence data file on startup. Also illustrates 'file watcher'. This will refresh the IP intelligence engine if the specified data file is updated on disk. |
 
