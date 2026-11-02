@@ -1,0 +1,116 @@
+/* *********************************************************************
+ * This Original Work is copyright of 51 Degrees Mobile Experts Limited.
+ * Copyright 2026 51 Degrees Mobile Experts Limited, Davidson House,
+ * Forbury Square, Reading, Berkshire, United Kingdom RG1 3EU.
+ *
+ * This Original Work is licensed under the European Union Public Licence
+ * (EUPL) v.1.2 and is subject to its terms as set out below.
+ *
+ * If a copy of the EUPL was not distributed with this file, You can obtain
+ * one at https://opensource.org/licenses/EUPL-1.2.
+ *
+ * The 'Compatible Licences' set out in the Appendix to the EUPL (as may be
+ * amended by the European Commission) shall be deemed incompatible for
+ * the purposes of the Work and the provisions of the compatibility
+ * clause in Article 5 of the EUPL shall not apply.
+ *
+ * If using the Work as, or as part of, a network application, by
+ * including the attribution notice(s) required under Article 5 of the EUPL
+ * in the end user terms of the application under an appropriate heading,
+ * such notice(s) shall fulfill the requirements of that article.
+ * ********************************************************************* */
+
+package fiftyone.devicedetection.hash.engine.onpremise.data;
+
+import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
+import fiftyone.devicedetection.shared.DeviceData;
+import fiftyone.devicedetection.shared.testhelpers.Constants;
+import fiftyone.devicedetection.shared.testhelpers.data.DataValidator;
+import fiftyone.pipeline.core.data.FlowData;
+import fiftyone.pipeline.engines.data.AspectPropertyValue;
+import fiftyone.pipeline.engines.exceptions.NoValueException;
+import fiftyone.pipeline.engines.fiftyone.data.ComponentMetaData;
+import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+import static org.junit.Assert.*;
+
+public class DataValidatorHash implements DataValidator {
+
+    private DeviceDetectionHashEngine engine;
+
+    public DataValidatorHash(DeviceDetectionHashEngine engine) {
+        this.engine = engine;
+    }
+
+    private boolean shouldSkipProperty(String propertyName) {
+        return Arrays.asList(Constants.PropertiesWithoutValuesForAllDeviceTypes).contains(propertyName);
+    }
+
+    @Override
+    public void validateData(FlowData data, boolean validEvidence) throws NoValueException {
+        DeviceData elementData = data.getFromElement(engine);
+        Map<String, Object> map = elementData.asKeyMap();
+        for (FiftyOneAspectPropertyMetaData property :
+                engine.getProperties()) {
+            if (property.isAvailable()) {
+                assertTrue("Property " + property.getName() + " not in map", map.containsKey(property.getName()));
+                AspectPropertyValue<?> value = (AspectPropertyValue<?>)map.get(property.getName());
+                if (validEvidence) {
+                    // Skip properties that may legitimately not have values for all device types
+                    if (!shouldSkipProperty(property.getName())) {
+                        assertTrue("Property " + property.getName() + " should have value but doesn't", value.hasValue());
+                    }
+                }
+                else {
+                    if (property.getCategory().equals("Device Metrics")) {
+                        assertTrue(value.hasValue());
+                    }
+                    else {
+                        assertFalse(value.hasValue());
+                    }
+                }
+
+            }
+        }
+        assertNotNull(elementData.getDeviceId());
+        assertFalse(elementData.getDeviceId().getValue().isEmpty());
+        if (validEvidence == false) {
+            assertEquals("0-0-0-0", elementData.getDeviceId().getValue());
+        }
+        // Since the detection result shape was unified in device-detection-cxx
+        // (issue #362), the number of results - and therefore the number of
+        // matched User-Agents - is determined by the components the engine can
+        // populate, not by how many evidence keys were supplied. Supplying
+        // redundant evidence no longer changes it. The exact number depends on
+        // which components the data file makes available, so assert the bound
+        // rather than a fixed value, and that valid evidence produces at least
+        // one result.
+        int componentCount = 0;
+        for (ComponentMetaData component : engine.getComponents()) {
+            componentCount++;
+        }
+        int matchedUserAgents = elementData.getUserAgents().getValue().size();
+        assertTrue(
+            "There should be no more matched User-Agents (" + matchedUserAgents +
+                ") than components populated by the engine (" + componentCount + ")",
+            matchedUserAgents <= componentCount);
+        if (validEvidence) {
+            assertTrue(
+                "Valid evidence should produce at least one result",
+                matchedUserAgents >= 1);
+        }
+    }
+
+    @Override
+    public void validateProfileIds(FlowData data, List<String> profileIds) throws NoValueException {
+        DeviceData elementData = data.getFromElement(engine);
+        List<String> matchedProfiles = Arrays.asList(elementData.getDeviceId().getValue().split("-"));
+        assertTrue("One or more profiles were not set in the result",
+                matchedProfiles.containsAll(profileIds));
+    }
+}

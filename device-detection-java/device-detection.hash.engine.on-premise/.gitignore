@@ -1,0 +1,8 @@
+*.dat*
+*.trie*
+*.hash*
+obj/
+target
+src/main/resources
+.idea/
+nbactions.xml
