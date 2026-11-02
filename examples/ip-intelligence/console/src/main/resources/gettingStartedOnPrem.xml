@@ -6,7 +6,7 @@
             <BuildParameters>
                 <AutoUpdate>false</AutoUpdate>
                 <CreateTempDataCopy>false</CreateTempDataCopy>
-                <DataFile>${TestDataFile:-ip-intelligence-data/51Degrees-LiteV41.ipi}</DataFile>
+                <DataFile>${TestDataFile:-cxx/ip-intelligence-data/51Degrees-LiteV41.ipi}</DataFile>
                 <PerformanceProfile>LowMemory</PerformanceProfile>
             </BuildParameters>
         </Element>

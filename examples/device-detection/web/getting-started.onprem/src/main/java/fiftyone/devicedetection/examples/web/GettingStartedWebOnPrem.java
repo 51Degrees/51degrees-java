@@ -67,10 +67,10 @@ public class GettingStartedWebOnPrem extends HttpServlet {
         if (portEnv != null) {
             // Automated runs (e.g. the unified Selenium suite) inject a port and have no
             // interactive stdin, so keep the server alive by joining it instead of waiting on Enter.
-            EmbedJetty.startWebApp(resourceBase, Integer.parseInt(portEnv)).join();
+            EmbedJetty.startWebApp(getFilePath(resourceBase).getAbsolutePath(), Integer.parseInt(portEnv)).join();
         } else {
             // start Jetty with this WebApp
-            EmbedJetty.runWebApp(resourceBase, 8081);
+            EmbedJetty.runWebApp(getFilePath(resourceBase).getAbsolutePath(), 8081);
         }
     }
 
