@@ -13,11 +13,8 @@ on:
       common-ci-ref:
         type: string
         default: ''
-  # Off until this repository takes over from the separate Java repositories
-  # it replaces. Their schedules are turned off then, so the same jobs never
-  # run in both.
-  # schedule:
-  #   - cron: '0 3 * * 1'
+  schedule:
+    - cron: '0 3 * * 1'
 
 jobs:
   Example_Assets_Update:
