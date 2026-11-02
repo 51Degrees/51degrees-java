@@ -96,11 +96,5 @@
     "Name": "MacOS_X64_Java_11",
     "JavaSDKEnvVar": "JAVA_HOME_11_X64",
     "RunPerformance": true
-  },
-  {
-    "Image": "macos-15-intel",
-    "Name": "MacOS_X64_Java_8",
-    "JavaSDKEnvVar": "JAVA_HOME_8_X64",
-    "RunPerformance": true
   }
 ]
