@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- Builds every 51Degrees Java package in this repository in one reactor.
+         It is an aggregator only: the packages do not inherit from it, so
+         nothing here reaches Maven Central and the published poms are the
+         same shape as before the packages shared a repository.
+
+         Every module carries the same version. CI sets it on all of them
+         before a release with versions:set and processAllModules. The
+         libraries reference each other through ${project.version}, so a
+         change in pipeline-java is seen by device-detection-java in the same
+         build. The examples reference the packages published to Maven Central
+         unless the dev profile is active, which points them at the libraries
+         here instead. -->
+    <groupId>com.51degrees</groupId>
+    <artifactId>51degrees-java</artifactId>
+    <version>4.5.127-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>51Degrees :: Java</name>
+    <description>The 51Degrees Java packages for the Pipeline API, Device Detection, IP Intelligence and Location.</description>
+    <url>https://github.com/51Degrees/51degrees-java</url>
+
+    <modules>
+        <module>pipeline</module>
+        <module>device-detection</module>
+        <module>ip-intelligence</module>
+        <module>location</module>
+        <module>examples/device-detection</module>
+        <module>examples/ip-intelligence</module>
+    </modules>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- This pom is never published. -->
+        <maven.deploy.skip>true</maven.deploy.skip>
+    </properties>
+</project>

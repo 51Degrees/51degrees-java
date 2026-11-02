@@ -3,7 +3,7 @@ param (
 )
 $ErrorActionPreference = "Stop"
 
-$ipIntelligenceData = "$PSSCriptRoot/../ip-intelligence.engine.on-premise/src/main/cxx/ip-intelligence-cxx/ip-intelligence-data"
+$ipIntelligenceData = "$PSScriptRoot/../../cxx/ip-intelligence-data"
 
 # The Lite hash file is not used by this repo, but the integration tests clone
 # ip-intelligence-java-examples and run its fetch-assets, which needs it. Listing

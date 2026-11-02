@@ -143,7 +143,7 @@ public class GettingStartedOnPrem {
 
         Note that we wrap the creation of a pipeline in a try/resources to control its lifecycle */
         // the configuration file is in the resources directory
-        File optionsFile = getFilePath("gettingStartedOnPrem.xml");
+        File optionsFile = getFilePath("examples/ip-intelligence/console/src/main/resources/gettingStartedOnPrem.xml");
         // load the options and if no resource key has been set in the file
         // use the one supplied to this method
         PipelineOptions pipelineOptions = PipelineOptionsFactory.getOptionsFromFile(optionsFile);

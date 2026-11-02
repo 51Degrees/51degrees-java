@@ -5,7 +5,7 @@
     <parent>
         <artifactId>pipeline.ip-intelligence</artifactId>
         <groupId>com.51degrees</groupId>
-        <version>4.4.21-SNAPSHOT</version>
+        <version>4.5.127-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -78,13 +78,13 @@
                             <outputDirectory>${project.build.outputDirectory}/fiftyone/ipintelligence/translation</outputDirectory>
                             <resources>
                                 <resource>
-                                    <directory>${project.basedir}/../ip-intelligence.engine.on-premise/src/main/cxx/ip-intelligence-cxx/ip-intelligence-data/Translations</directory>
+                                    <directory>${project.basedir}/../../cxx/ip-intelligence-data/Translations</directory>
                                     <includes>
                                         <include>countrycodes.en_GB.yml</include>
                                     </includes>
                                 </resource>
                                 <resource>
-                                    <directory>${project.basedir}/../ip-intelligence.engine.on-premise/src/main/cxx/ip-intelligence-cxx/ip-intelligence-data/Translations/OSM</directory>
+                                    <directory>${project.basedir}/../../cxx/ip-intelligence-data/Translations/OSM</directory>
                                     <includes>
                                         <include>countries.*.yml</include>
                                     </includes>

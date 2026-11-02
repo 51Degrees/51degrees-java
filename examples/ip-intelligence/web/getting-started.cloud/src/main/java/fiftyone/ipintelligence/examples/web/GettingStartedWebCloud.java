@@ -117,7 +117,7 @@ public class GettingStartedWebCloud extends HttpServlet {
     public static String getResourceBase() {
         // Use the unique pipeline config file to locate this example's webapp directory.
         // Cannot use "WEB-INF/web.xml" because FileFinder may find another example's web.xml.
-        java.io.File configXml = getFilePath("WEB-INF/51Degrees-Cloud.xml");
+        java.io.File configXml = getFilePath("examples/ip-intelligence/web/getting-started.cloud/src/main/webapp/WEB-INF/51Degrees-Cloud.xml");
         // 51Degrees-Cloud.xml is in WEB-INF/, so parent is webapp directory
         return configXml.getParentFile().getParent();
     }

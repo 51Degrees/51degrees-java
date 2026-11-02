@@ -37,19 +37,21 @@ if %count% lss %argCount% (
     goto while
 )
 
-rem Construct build flags
+rem Construct build flags. A value of "auto" (the pom default) or an empty
+rem value means let CMake pick the toolset and SDK from the installed Visual
+rem Studio, so the corresponding flag is omitted.
 set additionalFlags=
-if %toolsetVersion% neq "" (
+if /I not "%toolsetVersion%"=="auto" if not "%toolsetVersion%"=="" (
     set additionalFlags=%additionalFlags% -DCMAKE_GENERATOR_TOOLSET=%toolsetVersion%
 )
 
-if %winSDKVersion% neq "" (
+if /I not "%winSDKVersion%"=="auto" if not "%winSDKVersion%"=="" (
     set additionalFlags=%additionalFlags% -DCMAKE_SYSTEM_VERSION=%winSDKVersion%
 )
 
 rem Build binaries
 :build
-if %additionalFlags neq "" (
+if not "%additionalFlags%"=="" (
     echo Build additional options: "%additionalFlags%"
 )
 

@@ -5,7 +5,7 @@
 
     <groupId>com.51degrees</groupId>
     <artifactId>pipeline.device-detection</artifactId>
-    <version>4.4.21-SNAPSHOT</version>
+    <version>4.5.127-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>51Degrees :: Pipeline :: Device Detection</name>
@@ -31,7 +31,7 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <maven.compiler.source>1.8</maven.compiler.source>
 
-        <pipeline.version>4.5.48</pipeline.version>
+        <pipeline.version>${project.version}</pipeline.version>
 
         <junit.version>4.13.2</junit.version>
         <slf4j-api.version>2.0.20</slf4j-api.version>

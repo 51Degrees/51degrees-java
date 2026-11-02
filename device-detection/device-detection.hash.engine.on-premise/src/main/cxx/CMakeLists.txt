@@ -56,7 +56,12 @@ elseif (APPLE)
 endif()
 message(STATUS "OS name: ${OS}")
 
-include(${CMAKE_CURRENT_LIST_DIR}/device-detection-cxx/CMakeLists.txt NO_POLICY_SCOPE)
+# The C and C++ code is the 51degrees-cxx submodule at the root of this
+# repository. Only Device Detection is built here, without its tests.
+get_filename_component(FIFTYONE_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../../../.." ABSOLUTE)
+set(FIFTYONE_BUILD_IP_INTELLIGENCE OFF CACHE BOOL "" FORCE)
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+include(${FIFTYONE_ROOT}/cxx/CMakeLists.txt NO_POLICY_SCOPE)
 
 set(SRCOUT ${CMAKE_CURRENT_LIST_DIR}/../java/fiftyone/devicedetection/hash/engine/onpremise)
 set(RES ${CMAKE_CURRENT_LIST_DIR}/../../../target/classes)
@@ -72,7 +77,7 @@ if (RebuildSwig)
         message(WARNING "SWIG does not include Java support so will not be run")
     else()
         message(STATUS "Rebuilding SWIG interfaces")
-        execute_process(COMMAND ${SWIG_EXECUTABLE} -c++ -java -package fiftyone.devicedetection.hash.engine.onpremise.interop.swig -outdir ${SRCOUT}/interop/swig -o ${CMAKE_CURRENT_LIST_DIR}/Java_Hash_Engine.cpp ${CMAKE_CURRENT_LIST_DIR}/hash_java.i)
+        execute_process(COMMAND ${SWIG_EXECUTABLE} -c++ -java -I${FIFTYONE_ROOT} -package fiftyone.devicedetection.hash.engine.onpremise.interop.swig -outdir ${SRCOUT}/interop/swig -o ${CMAKE_CURRENT_LIST_DIR}/Java_Hash_Engine.cpp ${CMAKE_CURRENT_LIST_DIR}/hash_java.i)
     endif()
 endif()
 message(STATUS "Done SWIG interfaces")
@@ -107,6 +112,8 @@ else()
 	target_compile_options(fiftyone-hash-java PRIVATE ${COMPILE_OPTION_DEBUG} "-Werror")
 endif()
 
+# The wrapper includes through cxx/, so the folder that holds it is on the path.
+target_include_directories(fiftyone-hash-java PRIVATE ${FIFTYONE_ROOT})
 target_include_directories(fiftyone-hash-java PUBLIC ${JAVA_INCLUDE_PATH})
 if(WIN32)
     target_include_directories(fiftyone-hash-java PUBLIC ${JAVA_INCLUDE_PATH}/win32)

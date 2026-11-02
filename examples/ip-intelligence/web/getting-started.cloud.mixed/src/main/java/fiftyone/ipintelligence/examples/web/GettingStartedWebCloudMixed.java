@@ -106,7 +106,7 @@ public class GettingStartedWebCloudMixed extends HttpServlet {
     public static String getResourceBase() {
         // Use the unique pipeline config file to locate this example's webapp directory.
         // Cannot use "WEB-INF/web.xml" because FileFinder may find another example's web.xml.
-        java.io.File configXml = getFilePath("WEB-INF/51Degrees-CloudMixed.xml");
+        java.io.File configXml = getFilePath("examples/ip-intelligence/web/getting-started.cloud.mixed/src/main/webapp/WEB-INF/51Degrees-CloudMixed.xml");
         return configXml.getParentFile().getParent();
     }
 

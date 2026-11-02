@@ -823,7 +823,7 @@ INPUT                  = ../device-detection/src/main \
                          ../device-detection.shell.examples/src/main \
                          ../device-detection.hash.engine.on-premise/src/main \
                          ../device-detection.shared/src/main \
-                         ../device-detection-java-examples \
+                         ../examples/device-detection \
                          ../README.md \
 
 # This tag can be used to specify the character encoding of the source files
@@ -899,7 +899,7 @@ EXCLUDE_SYMBOLS        =
 
 EXAMPLE_PATH           = ../device-detection.shell.examples \
                          ../device-detection.web.examples \
-                         ../device-detection-java-examples \
+                         ../examples/device-detection \
                          ../../../src/snippets
 
 # If the value of the EXAMPLE_PATH tag contains directories, you can use the
@@ -2177,7 +2177,7 @@ SKIP_FUNCTION_MACROS   = NO
 # the path). If a tag file is not located in the directory in which doxygen is
 # run, you must also specify the path to the tagfile here.
 
-TAGFILES               = ../pipeline-java/docs/tagfile=../../pipeline-java/4.4/
+TAGFILES               = ../pipeline/docs/tagfile=../../pipeline-java/4.4/
 
 # When a file name is specified after GENERATE_TAGFILE, doxygen will create a
 # tag file that is based on the input files it reads. See section "Linking to

@@ -21,13 +21,13 @@
  * ********************************************************************* */
 
 
-%include "../device-detection-cxx/src/common-cxx/JavaTypes.i"
+%include "cxx/src/common/JavaTypes.i"
 
 nofinalize(EvidenceDeviceDetection);
 nofinalize(ResultsDeviceDetection);
 nofinalize(ResultsHash);
 
-%include "../device-detection-cxx/src/hash/hash.i"
+%include "cxx/src/dd/hash/hash.i"
 
 /* Avoid copying the key and value character by character and pass a pointer instead. */
 %apply (char *STRING, size_t LENGTH) { (const char propertyName[], size_t propertyNameLength) }

@@ -5,7 +5,7 @@
     <parent>
         <artifactId>pipeline.device-detection</artifactId>
         <groupId>com.51degrees</groupId>
-        <version>4.4.21-SNAPSHOT</version>
+        <version>4.5.127-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -64,7 +64,7 @@
 				</property>
             </activation>
             <properties>
-				<toolset.version>v142</toolset.version>
+				<toolset.version>auto</toolset.version>
             </properties>
         </profile>
 		<profile>
@@ -78,7 +78,7 @@
 				</property>
             </activation>
             <properties>
-				<windows.sdk.version>10.0.18362.0</windows.sdk.version>
+				<windows.sdk.version>auto</windows.sdk.version>
             </properties>
         </profile>
 		<profile>

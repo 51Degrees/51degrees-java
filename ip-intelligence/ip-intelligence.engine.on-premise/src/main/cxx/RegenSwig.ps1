@@ -14,6 +14,7 @@ Write-Debug "Invoking SWIG executable..."
 
 & $swigExec `
     -c++ -java `
+    -I../../../../.. `
     -package fiftyone.ipintelligence.engine.onpremise.interop.swig `
     -module IpIntelligenceOnPremiseEngineModule `
     -outdir ../java/fiftyone/ipintelligence/engine/onpremise/interop/swig `

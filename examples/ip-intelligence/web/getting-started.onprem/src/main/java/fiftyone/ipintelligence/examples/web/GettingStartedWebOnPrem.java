@@ -135,7 +135,7 @@ public class GettingStartedWebOnPrem extends HttpServlet {
     public static String getResourceBase() {
         // Use the unique pipeline config file to locate this example's webapp directory.
         // Cannot use "WEB-INF/web.xml" because FileFinder may find another example's web.xml.
-        java.io.File configXml = getFilePath("WEB-INF/51Degrees-OnPrem.xml");
+        java.io.File configXml = getFilePath("examples/ip-intelligence/web/getting-started.onprem/src/main/webapp/WEB-INF/51Degrees-OnPrem.xml");
         // 51Degrees-OnPrem.xml is in WEB-INF/, so parent is webapp directory
         return configXml.getParentFile().getParent();
     }

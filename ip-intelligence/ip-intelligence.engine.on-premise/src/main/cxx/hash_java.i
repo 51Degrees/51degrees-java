@@ -21,12 +21,12 @@
  * ********************************************************************* */
 
 
-%include "./ip-intelligence-cxx/src/common-cxx/JavaTypes.i"
+%include "cxx/src/common/JavaTypes.i"
 
 nofinalize(EvidenceIpi);
 nofinalize(ResultsIpi);
 
-%include "./ip-intelligence-cxx/src/ipi.i"
+%include "cxx/src/ipi/ipi.i"
 
 /* Avoid copying the key and value character by character and pass a pointer instead. */
 %apply (char *STRING, size_t LENGTH) { (const char propertyName[], size_t propertyNameLength) }

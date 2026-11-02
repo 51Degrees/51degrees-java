@@ -27,11 +27,11 @@
         <groupId>com.51degrees</groupId>
         <artifactId>
             geo-location.web.examples</artifactId>
-        <version>4.4.8-SNAPSHOT</version>
+        <version>4.5.127-SNAPSHOT</version>
     </parent>
 
     <artifactId>geo-location.web.examples.servlet</artifactId>
-    <version>4.4.8-SNAPSHOT</version>
+    <version>4.5.127-SNAPSHOT</version>
     <packaging>war</packaging>
     <name>51Degrees :: Geo Location :: Web :: Examples :: Servlet</name>
 

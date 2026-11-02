@@ -308,7 +308,7 @@ template <typename T> T SwigValueInit() {
 #include <string>
 
 
-#include "ip-intelligence-cxx/src/EngineIpi.hpp"
+#include "cxx/src/ipi/EngineIpi.hpp"
 
 using namespace FiftyoneDegrees::Common;
 using namespace FiftyoneDegrees::IpIntelligence;
