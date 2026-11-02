@@ -6,12 +6,9 @@ on:
       dryrun:
         type: boolean
         default: false
-  # Off until this repository takes over from the separate Java repositories
-  # it replaces. Their schedules are turned off then, so the same jobs never
-  # run in both.
-  # schedule:
-  #   # * is a special character in YAML so quote this string
-  #   - cron: '0 0 1 * *'
+  schedule:
+    # * is a special character in YAML so quote this string
+    - cron: '0 0 1 * *'
 
 jobs:
   Monthly_Copyright_Update:
