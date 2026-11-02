@@ -2,9 +2,9 @@
 	path = cxx
 	url = ../51degrees-cxx
 [submodule "pipeline-java/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates"]
-	path = pipeline-java/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates
+	path = pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates
 	url = ../javascript-templates
 [submodule "pipeline-java/owid-java"]
-	path = pipeline-java/owid-java
+	path = pipeline/owid-java
 	url = https://github.com/SWAN-community/owid-java.git
 	branch = main
