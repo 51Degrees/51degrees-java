@@ -46,9 +46,11 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.stubbing.Answer;
+import org.junit.jupiter.api.Assumptions;
 import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.remote.NoSuchDriverException;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 
@@ -138,7 +140,15 @@ public class JavaScriptBuilderTests {
      */
     @BeforeAll
     public static void ClassInit() {
-        createDriver();
+        try {
+            createDriver();
+        } catch (NoSuchDriverException e) {
+            // Selenium Manager has no build for some platforms, Linux on ARM
+            // among them, so there is no browser to drive there and these
+            // tests are skipped rather than failed.
+            Assumptions.assumeTrue(false,
+                "No browser driver on this platform: " + e.getMessage());
+        }
     }
 
     @AfterAll
