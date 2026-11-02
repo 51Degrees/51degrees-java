@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ This Original Work is copyright of 51 Degrees Mobile Experts Limited.
+  ~ Copyright 2022 51 Degrees Mobile Experts Limited, Davidson House,
+  ~ Forbury Square, Reading, Berkshire, United Kingdom RG1 3EU.
+  ~
+  ~ This Original Work is licensed under the European Union Public Licence
+  ~  (EUPL) v.1.2 and is subject to its terms as set out below.
+  ~
+  ~  If a copy of the EUPL was not distributed with this file, You can obtain
+  ~  one at https://opensource.org/licenses/EUPL-1.2.
+  ~
+  ~  The 'Compatible Licences' set out in the Appendix to the EUPL (as may be
+  ~  amended by the European Commission) shall be deemed incompatible for
+  ~  the purposes of the Work and the provisions of the compatibility
+  ~  clause in Article 5 of the EUPL shall not apply.
+  ~
+  ~   If using the Work as, or as part of, a network application, by
+  ~   including the attribution notice(s) required under Article 5 of the EUPL
+  ~   in the end user terms of the application under an appropriate heading,
+  ~   such notice(s) shall fulfill the requirements of that article.
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>pipeline.geo-location</artifactId>
+        <groupId>com.51degrees</groupId>
+        <version>4.4.8-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>geo-location.web.examples</artifactId>
+    <name>51Degrees :: Geo Location :: Web :: Examples</name>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>geo-location.web.examples.mvc</module>
+        <module>geo-location.web.examples.servlet</module>
+        <module>geo-location.web.examples.shared</module>
+    </modules>
+
+    <properties>
+        <maven.deploy.skip>true</maven.deploy.skip>
+
+        <tomcat.version>8.5.100</tomcat.version>
+        <javax.servlet-api.version>4.0.1</javax.servlet-api.version>
+        <spring-webmvc.version>5.2.25.RELEASE</spring-webmvc.version>
+        <jstl.version>1.2</jstl.version>
+
+        <maven-war-plugin.version>3.3.2</maven-war-plugin.version>
+        <maven-dependency-plugin.version>3.2.0</maven-dependency-plugin.version>
+        <javaee-endorsed-api.version>7.0</javaee-endorsed-api.version>
+
+        <endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-webmvc</artifactId>
+                <version>${spring-webmvc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>javax.servlet</groupId>
+                <artifactId>jstl</artifactId>
+                <version>${jstl.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>javax.servlet</groupId>
+                <artifactId>javax.servlet-api</artifactId>
+                <version>${javax.servlet-api.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-core</artifactId>
+                <version>${tomcat.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-jasper</artifactId>
+                <version>${tomcat.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat</groupId>
+                <artifactId>tomcat-jasper</artifactId>
+                <version>${tomcat.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat</groupId>
+                <artifactId>tomcat-jasper-el</artifactId>
+                <version>${tomcat.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat</groupId>
+                <artifactId>tomcat-jsp-api</artifactId>
+                <version>${tomcat.version}</version>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-war-plugin</artifactId>
+                    <version>${maven-war-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <version>${maven-dependency-plugin.version}</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <useSystemClassLoader>false</useSystemClassLoader>
+                    <systemPropertyVariables>
+                        <logback.configurationFile>${maven.multiModuleProjectDirectory}/logback.xml</logback.configurationFile>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <licenses>
+        <license>
+            <name>European Union Public License 1.2</name>
+            <url>https://opensource.org/licenses/EUPL-1.2</url>
+        </license>
+    </licenses>
+</project>
