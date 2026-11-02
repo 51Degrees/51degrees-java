@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>IP Intelligence Web Integration Example</title>
+    <link rel="stylesheet" href="css/site.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+    <h2>IP Intelligence Web Integration Example</h2>
+    
+    <p>
+        This example demonstrates the use of the Pipeline API to perform IP Intelligence lookups within a
+        simple Java web project.
+    </p>
+    
+    <noscript>
+        <div class="example-alert">
+            WARNING: JavaScript is disabled in your browser.
+        </div>
+    </noscript>
+    
+    ${DATA_FILE_WARNING}
+    
+    <div id="content">
+        <form method="get" action="" style="margin-bottom: 25px;">
+            <div>
+                <label for="client-ip" style="font-weight: bold;">IP Address Lookup:</label>
+                <input type="text" id="client-ip" name="client-ip" value="${INPUT_IP_ADDRESS}"
+                       placeholder="e.g., 8.8.8.8" style="margin-left: 10px; padding: 8px; width: 200px; border: 1px solid #ccc; border-radius: 4px;">
+                <button type="submit" style="margin-left: 10px; padding: 8px 20px; background-color: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer;">Look Up</button>
+            </div>
+        </form>
+        
+        <h3>IP Intelligence Results</h3>
+
+        <table>
+            <tr>
+                <th>Property</th>
+                <th>Value</th>
+            </tr>
+            <tr class="lightyellow"><td><b>Registered Name:</b></td><td>${REGISTERED_NAME}</td></tr>
+            <tr class="lightgreen"><td><b>Registered Owner:</b></td><td>${REGISTERED_OWNER}</td></tr>
+            <tr class="lightyellow"><td><b>Registered Country:</b></td><td>${REGISTERED_COUNTRY}</td></tr>
+            <tr class="lightgreen"><td><b>IP Range Start:</b></td><td>${IP_RANGE_START}</td></tr>
+            <tr class="lightyellow"><td><b>IP Range End:</b></td><td>${IP_RANGE_END}</td></tr>
+            <tr class="lightgreen"><td><b>Country:</b></td><td>${COUNTRY}</td></tr>
+            <tr class="lightyellow"><td><b>Country Code:</b></td><td>${COUNTRY_CODE}</td></tr>
+            <tr class="lightgreen"><td><b>Country Code 3:</b></td><td>${COUNTRY_CODE3}</td></tr>
+            <tr class="lightyellow"><td><b>Region:</b></td><td>${REGION}</td></tr>
+            <tr class="lightgreen"><td><b>State:</b></td><td>${STATE}</td></tr>
+            <tr class="lightyellow"><td><b>Town:</b></td><td>${TOWN}</td></tr>
+            <tr class="lightgreen"><td><b>Latitude:</b></td><td>${LATITUDE}</td></tr>
+            <tr class="lightyellow"><td><b>Longitude:</b></td><td>${LONGITUDE}</td></tr>
+            <tr class="lightgreen"><td><b>Areas:</b></td><td>${AREAS}</td></tr>
+            <tr class="lightyellow"><td><b>Accuracy Radius:</b></td><td>${ACCURACY_RADIUS}</td></tr>
+            <tr class="lightgreen"><td><b>Time Zone Offset:</b></td><td>${TIME_ZONE_OFFSET}</td></tr>
+        </table>
+
+        <br />
+
+        <div id="evidence">
+            <h3>Evidence Used</h3>
+            <p class="smaller">Evidence collected from the current request</p>
+            <details>
+                <summary>Click to view evidence details</summary>
+                <table style="margin-top: 10px;">
+                    <tr>
+                        <th>Key</th>
+                        <th>Value</th>
+                    </tr>
+                    ${EVIDENCE_ROWS}
+                </table>
+            </details>
+        </div>
+        
+        <br />
+        <div id="map-section" style="display: none;">
+            <h3 id="map-title">Location Map</h3>
+            <div id="map" style="height: 400px; width: 100%; border: 1px solid #ccc;"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/wellknown@0.5.0/wellknown.js"></script>
+
+    <script>
+        // Map configuration
+        var mapConfig = {
+            title: 'Location Map',
+            ipLocationLabel: 'IP Location',
+            latitudeLabel: 'Lat',
+            longitudeLabel: 'Lng'
+        };
+        
+        // Constants
+        var UNKNOWN_VALUE = 'Unknown';
+        var EMPTY_POLYGON = 'POLYGON EMPTY';
+        
+        // Helper function to check if a value is valid (not unknown or empty)
+        function isValidValue(value) {
+            return value && !value.includes(UNKNOWN_VALUE) && value !== '0' && value !== '';
+        }
+        
+        // Get the Areas value from the model
+        var areasWkt = '${AREAS_JS}';
+        var latitude = '${LATITUDE}';
+        var longitude = '${LONGITUDE}';
+        
+        if (isValidValue(areasWkt) && areasWkt !== EMPTY_POLYGON) {
+            // Show the map section
+            document.getElementById('map-section').style.display = 'block';
+            
+            // Initialize the map
+            var map = L.map('map');
+            
+            // Add CartoDB Positron tile layer - shows all place names in English
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© OpenStreetMap contributors © CARTO',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(map);
+            
+            try {
+                // Parse WKT to GeoJSON using wellknown library
+                var geoJson = wellknown.parse(areasWkt);
+                
+                if (geoJson) {
+                    // Add the polygon to the map
+                    var polygon = L.geoJSON(geoJson, {
+                        style: {
+                            color: '#ff0000',
+                            weight: 2,
+                            opacity: 0.8,
+                            fillColor: '#ff0000',
+                            fillOpacity: 0.2
+                        }
+                    }).addTo(map);
+                    
+                    // Fit the map to the polygon bounds
+                    map.fitBounds(polygon.getBounds());
+                    
+                    // If we have valid coordinates, add a marker for the IP location
+                    if (isValidValue(latitude) && isValidValue(longitude)) {
+                        var lat = parseFloat(latitude);
+                        var lng = parseFloat(longitude);
+                        if (!isNaN(lat) && !isNaN(lng)) {
+                            L.marker([lat, lng])
+                                .addTo(map)
+                                .bindPopup(mapConfig.ipLocationLabel + '<br>' + mapConfig.latitudeLabel + ': ' + lat + '<br>' + mapConfig.longitudeLabel + ': ' + lng)
+                                .openPopup();
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Error parsing polygon:', e);
+                document.getElementById('map-section').style.display = 'none';
+            }
+        } else if (isValidValue(latitude) && isValidValue(longitude)) {
+            // If no polygon but we have coordinates, show just the marker
+            document.getElementById('map-section').style.display = 'block';
+            
+            var lat = parseFloat(latitude);
+            var lng = parseFloat(longitude);
+            
+            if (!isNaN(lat) && !isNaN(lng)) {
+                var map = L.map('map').setView([lat, lng], 10);
+                
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '© OpenStreetMap contributors © CARTO',
+                    subdomains: 'abcd',
+                    maxZoom: 19
+                }).addTo(map);
+                
+                L.marker([lat, lng])
+                    .addTo(map)
+                    .bindPopup(mapConfig.ipLocationLabel + '<br>' + mapConfig.latitudeLabel + ': ' + lat + '<br>' + mapConfig.longitudeLabel + ': ' + lng)
+                    .openPopup();
+            }
+        }
+    </script>
+</body>
+</html>

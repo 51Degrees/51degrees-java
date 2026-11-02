@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Detection + IP Intelligence Example</title>
+    <link rel="stylesheet" href="css/site.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+    <h2>Combined Device Detection and IP Intelligence Example</h2>
+
+    <p>
+        This example demonstrates the use of the Pipeline API to perform both device detection and
+        IP intelligence lookups within a single Java web project. It highlights:
+    </p>
+    <ol>
+        <li>Device detection using User-Agent and Client Hints</li>
+        <li>IP-based geolocation and network information</li>
+        <li>Client-side evidence collection for enhanced detection</li>
+        <li>Parallel processing of both engines for optimal performance</li>
+    </ol>
+
+    <noscript>
+        <div class="example-alert">
+            WARNING: JavaScript is disabled in your browser. This means that client-side evidence
+            collection will not work and some device properties may not be accurately detected.
+        </div>
+    </noscript>
+
+    ${DATA_FILE_WARNING}
+
+    <div id="content">
+        <!-- IP Address Input Form -->
+        <form method="get" action="" style="margin-bottom: 25px;">
+            <div>
+                <label for="client-ip" style="font-weight: bold;">IP Address Lookup:</label>
+                <input type="text" id="client-ip" name="client-ip" value="${INPUT_IP_ADDRESS}"
+                       placeholder="e.g., 8.8.8.8" style="margin-left: 10px; padding: 8px; width: 200px; border: 1px solid #ccc; border-radius: 4px;">
+                <button type="submit" style="margin-left: 10px; padding: 8px 20px; background-color: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer;">Look Up</button>
+            </div>
+        </form>
+
+        <div class="results-columns">
+            <!-- Device Detection Results Column -->
+            <div>
+                <h3>Device Detection Results</h3>
+                <table>
+                    <tr>
+                        <th>Property</th>
+                        <th>Value</th>
+                    </tr>
+                    <tr class="lightyellow"><td><b>Hardware Vendor:</b></td><td>${HARDWARE_VENDOR}</td></tr>
+                    <tr class="lightgreen"><td><b>Hardware Name:</b></td><td>${HARDWARE_NAME}</td></tr>
+                    <tr class="lightyellow"><td><b>Device Type:</b></td><td>${DEVICE_TYPE}</td></tr>
+                    <tr class="lightgreen"><td><b>Platform Name:</b></td><td>${PLATFORM_NAME}</td></tr>
+                    <tr class="lightyellow"><td><b>Platform Version:</b></td><td>${PLATFORM_VERSION}</td></tr>
+                    <tr class="lightgreen"><td><b>Browser Name:</b></td><td>${BROWSER_NAME}</td></tr>
+                    <tr class="lightyellow"><td><b>Browser Version:</b></td><td>${BROWSER_VERSION}</td></tr>
+                    <tr class="lightgreen"><td><b>Screen Width (pixels):</b></td><td>${SCREEN_WIDTH}</td></tr>
+                    <tr class="lightyellow"><td><b>Screen Height (pixels):</b></td><td>${SCREEN_HEIGHT}</td></tr>
+                    <tr class="lightgreen"><td><b>Device Id:</b></td><td>${DEVICE_ID}</td></tr>
+                </table>
+            </div>
+
+            <!-- IP Intelligence Results Column -->
+            <div>
+                <h3>IP Intelligence Results</h3>
+                <table>
+                    <tr>
+                        <th>Property</th>
+                        <th>Value</th>
+                    </tr>
+                    <tr class="lightyellow"><td><b>Registered Name:</b></td><td>${REGISTERED_NAME}</td></tr>
+                    <tr class="lightgreen"><td><b>Registered Owner:</b></td><td>${REGISTERED_OWNER}</td></tr>
+                    <tr class="lightyellow"><td><b>Registered Country:</b></td><td>${REGISTERED_COUNTRY}</td></tr>
+                    <tr class="lightgreen"><td><b>IP Range Start:</b></td><td>${IP_RANGE_START}</td></tr>
+                    <tr class="lightyellow"><td><b>IP Range End:</b></td><td>${IP_RANGE_END}</td></tr>
+                    <tr class="lightgreen"><td><b>Country:</b></td><td>${COUNTRY}</td></tr>
+                    <tr class="lightyellow"><td><b>Country Code:</b></td><td>${COUNTRY_CODE}</td></tr>
+                    <tr class="lightgreen"><td><b>Country Code 3:</b></td><td>${COUNTRY_CODE3}</td></tr>
+                    <tr class="lightyellow"><td><b>Region:</b></td><td>${REGION}</td></tr>
+                    <tr class="lightgreen"><td><b>State:</b></td><td>${STATE}</td></tr>
+                    <tr class="lightyellow"><td><b>Town:</b></td><td>${TOWN}</td></tr>
+                    <tr class="lightgreen"><td><b>Latitude:</b></td><td>${LATITUDE}</td></tr>
+                    <tr class="lightyellow"><td><b>Longitude:</b></td><td>${LONGITUDE}</td></tr>
+                    <tr class="lightgreen"><td><b>Areas:</b></td><td>${AREAS}</td></tr>
+                    <tr class="lightyellow"><td><b>Accuracy Radius:</b></td><td>${ACCURACY_RADIUS}</td></tr>
+                    <tr class="lightgreen"><td><b>Time Zone Offset:</b></td><td>${TIME_ZONE_OFFSET}</td></tr>
+                    <tr class="lightgreen"><td><b>Location Confidence:</b></td><td>${LocationConfidence}</td></tr>
+                    <tr class="lightgreen"><td><b>Connection Type:</b></td><td>${ConnectionType}</td></tr>
+                    <tr class="lightgreen"><td><b>Human Probability:</b></td><td>${HumanProbability}</td></tr>
+                    <tr class="lightgreen"><td><b>Hardware Diversity:</b></td><td>${HardwareDiversity}</td></tr>
+                    <tr class="lightgreen"><td><b>Browser Diversity:</b></td><td>${BrowserDiversity}</td></tr>
+                    <tr class="lightgreen"><td><b>Platform Diversity:</b></td><td>${PlatformDiversity}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <br />
+
+        <!-- Client-side enhanced detection results.
+             This section is populated by JavaScript after client-side evidence
+             has been collected and processed. This provides more accurate
+             detection for properties like screen size and Apple device models. -->
+        <div id="client-side-results">
+            <h3>Client-Side Enhanced Detection</h3>
+            <p class="smaller">Results will appear here after client-side evidence collection completes.</p>
+        </div>
+
+        <br />
+
+        <div id="map-section" style="display: none;">
+            <h3 id="map-title">Location Map</h3>
+            <div id="map" style="height: 400px; width: 100%; border: 1px solid #ccc;"></div>
+        </div>
+
+        <br />
+
+        <div id="evidence">
+            <h3>Evidence Used</h3>
+            <p class="smaller">Evidence collected from the current request</p>
+            <details>
+                <summary>Click to view evidence details</summary>
+                <table style="margin-top: 10px;">
+                    <tr>
+                        <th>Key</th>
+                        <th>Value</th>
+                    </tr>
+                    ${EVIDENCE_ROWS}
+                </table>
+            </details>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/wellknown@0.5.0/wellknown.js"></script>
+
+    <script>
+        (function() {
+            var UNKNOWN_VALUE = 'Unknown';
+            var EMPTY_POLYGON = 'POLYGON EMPTY';
+
+            function isValidValue(value) {
+                return value && !value.includes(UNKNOWN_VALUE) && value !== '0' && value !== '';
+            }
+
+            var areasWkt = '${AREAS_JS}';
+            var latitude = '${LATITUDE}';
+            var longitude = '${LONGITUDE}';
+
+            if (isValidValue(areasWkt) && areasWkt !== EMPTY_POLYGON) {
+                document.getElementById('map-section').style.display = 'block';
+                var map = L.map('map');
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+                    subdomains: 'abcd',
+                    maxZoom: 19
+                }).addTo(map);
+                try {
+                    var geoJson = wellknown.parse(areasWkt);
+                    if (geoJson) {
+                        var polygon = L.geoJSON(geoJson, {
+                            style: { color: '#ff0000', weight: 2, opacity: 0.8, fillColor: '#ff0000', fillOpacity: 0.2 }
+                        }).addTo(map);
+                        map.fitBounds(polygon.getBounds());
+                        if (isValidValue(latitude) && isValidValue(longitude)) {
+                            var lat = parseFloat(latitude);
+                            var lng = parseFloat(longitude);
+                            if (!isNaN(lat) && !isNaN(lng)) {
+                                L.marker([lat, lng]).addTo(map)
+                                    .bindPopup('IP Location<br>Lat: ' + lat + '<br>Lng: ' + lng).openPopup();
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error parsing polygon:', e);
+                    document.getElementById('map-section').style.display = 'none';
+                }
+            } else if (isValidValue(latitude) && isValidValue(longitude)) {
+                document.getElementById('map-section').style.display = 'block';
+                var lat = parseFloat(latitude);
+                var lng = parseFloat(longitude);
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    var map = L.map('map').setView([lat, lng], 10);
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+                        subdomains: 'abcd',
+                        maxZoom: 19
+                    }).addTo(map);
+                    L.marker([lat, lng]).addTo(map)
+                        .bindPopup('IP Location<br>Lat: ' + lat + '<br>Lng: ' + lng).openPopup();
+                }
+            }
+        })();
+    </script>
+
+    <!-- 51Degrees client-side JavaScript for evidence collection.
+         This script is dynamically generated by the JavaScriptBuilderElement
+         and served by the PipelineFilter. It collects client-side evidence
+         (screen size, hardware capabilities, etc.) for enhanced device detection. -->
+    <script src="51Degrees.core.js"></script>
+
+    <script>
+        window.onload = function () {
+            // Subscribe to the 'complete' event which fires when client-side
+            // evidence has been collected and processed.
+            fod.complete(function (data) {
+                // When the event fires, use the supplied data to update the
+                // device detection results with client-side enhanced values.
+                var fieldValues = [];
+
+                var hardwareName = typeof data.device.hardwarename == "undefined" ?
+                    "Unknown" : data.device.hardwarename.join(", ");
+                fieldValues.push(["Hardware Name", hardwareName]);
+                fieldValues.push(["Platform",
+                    data.device.platformname + " " + data.device.platformversion]);
+                fieldValues.push(["Browser",
+                    data.device.browsername + " " + data.device.browserversion]);
+                fieldValues.push(["Screen width (pixels)", data.device.screenpixelswidth]);
+                fieldValues.push(["Screen height (pixels)", data.device.screenpixelsheight]);
+
+                displayClientSideValues(fieldValues);
+            });
+        }
+
+        function displayClientSideValues(fieldValues) {
+            var container = document.getElementById("client-side-results");
+            if (!container) return;
+
+            var table = document.createElement("table");
+            var headerRow = document.createElement("tr");
+            addToRow(headerRow, "th", "Property", false);
+            addToRow(headerRow, "th", "Value", false);
+            table.appendChild(headerRow);
+
+            fieldValues.forEach(function (entry, index) {
+                var tr = document.createElement("tr");
+                tr.className = index % 2 === 0 ? "lightyellow" : "lightgreen";
+                addToRow(tr, "td", entry[0], true);
+                addToRow(tr, "td", entry[1], false);
+                table.appendChild(tr);
+            });
+            container.appendChild(table);
+        }
+
+        function addToRow(row, elementName, text, bold) {
+            var entry = document.createElement(elementName);
+            var textNode = document.createTextNode(text);
+            if (bold) {
+                var boldNode = document.createElement("b");
+                boldNode.appendChild(textNode);
+                textNode = boldNode;
+            }
+            entry.appendChild(textNode);
+            row.appendChild(entry);
+        }
+    </script>
+</body>
+</html>
