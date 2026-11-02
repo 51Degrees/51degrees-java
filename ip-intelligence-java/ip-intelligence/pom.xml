@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <artifactId>pipeline.ip-intelligence</artifactId>
+        <groupId>com.51degrees</groupId>
+        <version>4.4.21-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>ip-intelligence</artifactId>
+    <name>51Degrees :: IP Intelligence</name>
+    <description>Provides IP Intelligence for the 51Degrees Pipeline API. This can be used as an alternative to legacy IP Intelligence services such as MaxMind or IPinfo.</description>
+    <url>https://51degrees.com?utm_source=maven&amp;utm_medium=package&amp;utm_campaign=ip-intelligence-java&amp;utm_content=ip-intelligence-pom.xml&amp;utm_term=url</url>
+
+    <dependencies>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>ip-intelligence.engine.on-premise</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>ip-intelligence.cloud</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>pipeline-aggregate</artifactId>
+            <version>${pipeline.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
+        <!-- test -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>ip-intelligence.shared</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+        </dependency>
+    </dependencies>
+</project>

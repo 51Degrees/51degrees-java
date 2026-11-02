@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>pipeline.ip-intelligence</artifactId>
+        <groupId>com.51degrees</groupId>
+        <version>4.4.21-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>ip-intelligence.cloud</artifactId>
+    <name>51Degrees :: IP Intelligence :: Cloud</name>
+    <description>Provides IP Intelligence for the 51Degrees Pipeline API using the 51Degrees Cloud service. This can be used as an alternative to legacy IP Intelligence services such as MaxMind or IPinfo.</description>
+    <url>https://51degrees.com?utm_source=maven&amp;utm_medium=package&amp;utm_campaign=ip-intelligence-java&amp;utm_content=ip-intelligence.cloud-pom.xml&amp;utm_term=url</url>
+
+    <dependencies>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>ip-intelligence.shared</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>pipeline.cloudrequestengine</artifactId>
+            <version>${pipeline.version}</version>
+        </dependency>
+
+        <!-- test dependencies -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>ip-intelligence.shared</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+        </dependency>
+    </dependencies>
+</project>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="51Degrees Unused Code"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+    <description>
+        Reports unused code as part of the build. The Java compiler's -Xlint
+        cannot detect unused local variables, private fields, private methods or
+        private/constructor parameters.
+
+        Note: there is no reliable rule for "unused public class/method" as those may
+        form part of the published API and cannot be judged from this codebase alone,
+        so they are intentionally out of scope.
+    </description>
+
+    <!-- Unused local variables, e.g. `Path tempPath = ...;` that is never read. -->
+    <rule ref="category/java/bestpractices.xml/UnusedLocalVariable"/>
+
+    <!-- Private fields that are never read. -->
+    <rule ref="category/java/bestpractices.xml/UnusedPrivateField"/>
+
+    <!-- Private methods that are never called. -->
+    <rule ref="category/java/bestpractices.xml/UnusedPrivateMethod"/>
+
+    <!-- Parameters of private methods/constructors that are never used.
+         (Restricted to private members by default so overrides and interface
+         implementations are not flagged.) -->
+    <rule ref="category/java/bestpractices.xml/UnusedFormalParameter"/>
+
+    <!-- Imports that are not referenced (also covers duplicate/unnecessary imports). -->
+    <rule ref="category/java/codestyle.xml/UnnecessaryImport"/>
+
+</ruleset>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>pipeline.ip-intelligence</artifactId>
+        <groupId>com.51degrees</groupId>
+        <version>4.4.21-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>ip-intelligence.shared</artifactId>
+    <name>51Degrees :: IP Intelligence :: Shared</name>
+    <description>Shared code used by 51Degrees IP Intelligence modules for the Pipeline API.</description>
+    <url>https://51degrees.com?utm_source=maven&amp;utm_medium=package&amp;utm_campaign=ip-intelligence-java&amp;utm_content=ip-intelligence.shared-pom.xml&amp;utm_term=url</url>
+
+    <dependencies>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>pipeline.engines.fiftyone</artifactId>
+            <version>${pipeline.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>Jar Tests Package</id>
+                        <phase>test-compile</phase>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
+</project>

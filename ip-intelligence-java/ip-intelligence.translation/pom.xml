@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>pipeline.ip-intelligence</artifactId>
+        <groupId>com.51degrees</groupId>
+        <version>4.4.21-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>ip-intelligence.translation</artifactId>
+    <name>51Degrees :: IP Intelligence :: Translation</name>
+    <description>Translation engines that turn the weighted ISO country codes
+        from 51Degrees IP Intelligence into localized, ordered country name and
+        code lists.</description>
+    <url>https://51degrees.com?utm_source=maven&amp;utm_medium=package&amp;utm_campaign=ip-intelligence-java&amp;utm_content=ip-intelligence.translation-pom.xml&amp;utm_term=url</url>
+
+    <dependencies>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>ip-intelligence.shared</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>pipeline.translation</artifactId>
+            <version>${pipeline.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>ip-intelligence.shared</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <!-- Used only by the integration test, which drives the real
+             on-premise engine end to end. Skipped when no data file is
+             present. -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>ip-intelligence.engine.on-premise</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- The country translation YAML files are not shipped as new data;
+                 they are wired in at build time from the IP Intelligence data
+                 submodule (mirroring the .NET project, which links the same
+                 files from ip-intelligence-data/Translations). -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-translation-data</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/fiftyone/ipintelligence/translation</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../ip-intelligence.engine.on-premise/src/main/cxx/ip-intelligence-cxx/ip-intelligence-data/Translations</directory>
+                                    <includes>
+                                        <include>countrycodes.en_GB.yml</include>
+                                    </includes>
+                                </resource>
+                                <resource>
+                                    <directory>${project.basedir}/../ip-intelligence.engine.on-premise/src/main/cxx/ip-intelligence-cxx/ip-intelligence-data/Translations/OSM</directory>
+                                    <includes>
+                                        <include>countries.*.yml</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
