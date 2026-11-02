@@ -23,7 +23,7 @@ $failed = @()
 # Pointing them at the version the publish workflow installed tests the
 # packages as a project of your own would use them. For a pull request the
 # dev profile points them at the reactor build-project.ps1 installed.
-$versionArgs = if ($Version) {
+[string[]]$versionArgs = if ($Version) {
     "-Ddevice-detection.version=$Version", "-Dip-intelligence.version=$Version"
 } else {
     , '-Pdev'
