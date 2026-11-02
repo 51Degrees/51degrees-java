@@ -1,0 +1,29 @@
+name: Data File Change
+
+# ci/generate-accessors.ps1 generates the accessors of both Device Detection
+# and IP Intelligence in one run, so one job covers both products and their
+# changes arrive in one pull request.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dryrun:
+        type: boolean
+        default: false
+      common-ci-ref:
+        type: string
+        default: ''
+
+jobs:
+  DataFileChange:
+    name: Data File Change
+    uses: 51Degrees/common-ci/.github/workflows/nightly-data-file-change.yml@main
+    with:
+      repo-name: ${{ github.event.repository.name }}
+      org-name: ${{ github.event.repository.owner.login }}
+      dryrun: ${{ inputs.dryrun || false }}
+      common-ci-ref: ${{ inputs.common-ci-ref || '' }}
+    secrets:
+      token: ${{ secrets.ACCESS_TOKEN }}
+      data-key: ${{ secrets.DEVICE_DETECTION_KEY }}
+      data-url: ${{ secrets.DEVICE_DETECTION_URL }}
