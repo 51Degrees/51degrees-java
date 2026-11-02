@@ -21,7 +21,7 @@ $summary = @{ HigherIsBetter = [ordered]@{}; LowerIsBetter = [ordered]@{} }
 $results = "$RepoName/test-results/performance"
 $failed = @()
 
-$versionArgs = if ($Version) {
+[string[]]$versionArgs = if ($Version) {
     "-Ddevice-detection.version=$Version", "-Dip-intelligence.version=$Version"
 } else {
     , '-Pdev'
