@@ -29,10 +29,15 @@ nofinalize(ResultsHash);
 
 %include "cxx/src/dd/hash/hash.i"
 
-/* Avoid copying the key and value character by character and pass a pointer instead. */
-%apply (char *STRING, size_t LENGTH) { (const char propertyName[], size_t propertyNameLength) }
-%apply (char *STRING, size_t LENGTH) { (const char key[], size_t keyLength) }
-%apply (char *STRING, size_t LENGTH) { (const char value[], size_t valueLength) }
+/* Avoid copying the key and value character by character and pass a pointer instead.
+   SWIG presents the (const char *STRING, size_t LENGTH) pair to Java as a String
+   since version 4.1, converting to bytes on the Java side. The proxies below take
+   the bytes the engine already holds, so the Java side stays byte[]. */
+%typemap(jstype) (const char *STRING, size_t LENGTH) "byte[]"
+%typemap(javain) (const char *STRING, size_t LENGTH) "$javainput"
+%apply (const char *STRING, size_t LENGTH) { (const char propertyName[], size_t propertyNameLength) }
+%apply (const char *STRING, size_t LENGTH) { (const char key[], size_t keyLength) }
+%apply (const char *STRING, size_t LENGTH) { (const char value[], size_t valueLength) }
 %inline %{
   void Evidence_AddFromBytes(EvidenceBase *evidence, const char key[], size_t keyLength, const char value[], size_t valueLength) {
     (*evidence)[key] = value;
