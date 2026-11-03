@@ -820,7 +820,6 @@ WARN_LOGFILE           =
 
 INPUT                  = ../ip-intelligence/src/main \
                          ../ip-intelligence.cloud/src/main \
-                         ../ip-intelligence.shell.examples/src/main \
                          ../ip-intelligence.engine.on-premise/src/main \
                          ../ip-intelligence.shared/src/main \
                          ../../examples/ip-intelligence \
