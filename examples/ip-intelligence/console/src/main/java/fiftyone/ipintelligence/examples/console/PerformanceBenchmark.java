@@ -32,7 +32,7 @@
  * This can help you optimize your IP Intelligence configuration for your specific use case
  * and understand the performance characteristics of different settings.
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-java-examples/blob/main/console/src/main/java/fiftyone/ipintelligence/examples/console/PerformanceBenchmark.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/console/src/main/java/fiftyone/ipintelligence/examples/console/PerformanceBenchmark.java).
  *
  * This example requires an enterprise IP Intelligence data file (.ipi).
  * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-performancebenchmark.java&utm_term=header).

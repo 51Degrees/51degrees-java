@@ -50,7 +50,7 @@ import static fiftyone.ipintelligence.examples.shared.DataFileHelper.ENTERPRISE_
  * The example will output the available properties along with details about their data types and descriptions.
  * This helps you understand what IP Intelligence data you can access for your use case.
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-java-examples/blob/main/console/src/main/java/fiftyone/ipintelligence/examples/console/MetadataOnPrem.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/console/src/main/java/fiftyone/ipintelligence/examples/console/MetadataOnPrem.java).
  *
  * Required Maven Dependencies:
  * - [com.51degrees:ip-intelligence](https://central.sonatype.com/artifact/com.51degrees/ip-intelligence)

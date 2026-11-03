@@ -31,7 +31,7 @@
  * 2. How evidence from the web request is automatically passed to the Pipeline
  * 3. How to retrieve the results in your web application
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-java-examples/blob/main/web/getting-started.cloud/src/main/java/fiftyone/ipintelligence/examples/web/GettingStartedWebCloud.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/web/getting-started.cloud/src/main/java/fiftyone/ipintelligence/examples/web/GettingStartedWebCloud.java).
  *
  * To run this example, you will eventually need to create a Resource Key. A Resource Key is used as
  * shorthand to store the particular set of properties you are interested in as well as any

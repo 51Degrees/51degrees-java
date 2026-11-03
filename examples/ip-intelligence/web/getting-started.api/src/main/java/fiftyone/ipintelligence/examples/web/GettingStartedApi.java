@@ -38,7 +38,7 @@
  * A cloud example, such as GettingStartedCloud, can be pointed at this server as a
  * custom endpoint.
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-java-examples/blob/main/web/getting-started.api/src/main/java/fiftyone/ipintelligence/examples/web/GettingStartedApi.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/web/getting-started.api/src/main/java/fiftyone/ipintelligence/examples/web/GettingStartedApi.java).
  *
  * Required Maven Dependencies:
  * - [com.51degrees:ip-intelligence](https://central.sonatype.com/artifact/com.51degrees/ip-intelligence)

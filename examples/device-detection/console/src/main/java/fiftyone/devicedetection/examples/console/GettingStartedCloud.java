@@ -158,7 +158,7 @@ public class GettingStartedCloud {
  *
  * @include{doc} example-getting-started-cloud.txt
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/device-detection-java-examples/blob/main/console/src/main/java/fiftyone/devicedetection/examples/console/GettingStartedCloud.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/device-detection/console/src/main/java/fiftyone/devicedetection/examples/console/GettingStartedCloud.java).
  *
  * @include{doc} example-require-resourcekey.txt
  */

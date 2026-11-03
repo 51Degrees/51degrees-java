@@ -58,7 +58,7 @@ import java.util.Objects;
  * For details of what each setting does, see the 
  * [Share Usage reference](/documentation/4.5/_pipeline_api__features__usage_sharing.html) 
  * 
- * This example is available in full on [GitHub](https://github.com/51Degrees/pipeline-java/blob/main/pipeline.developer-examples/pipeline.developer-examples.usage-sharing/src/main/java/pipeline/developerexamples/usagesharing/Main.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/pipeline/pipeline.developer-examples/pipeline.developer-examples.usage-sharing/src/main/java/pipeline/developerexamples/usagesharing/Main.java).
  * 
  * Expected output:
  * ```

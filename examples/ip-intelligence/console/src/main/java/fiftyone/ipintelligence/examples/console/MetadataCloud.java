@@ -39,7 +39,7 @@
  * cloud. If you are only using a single product (for example, IP intelligence) then not all
  * of these keys will be relevant.
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-java-examples/blob/main/console/src/main/java/fiftyone/ipintelligence/examples/console/MetadataCloud.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/console/src/main/java/fiftyone/ipintelligence/examples/console/MetadataCloud.java).
  *
  * To run this example, you will eventually need to create a Resource Key. A Resource Key is used as
  * shorthand to store the particular set of properties you are interested in as well as any

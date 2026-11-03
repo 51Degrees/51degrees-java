@@ -235,7 +235,7 @@ public class MatchMetrics {
  * [performance options](/documentation/4.5/_device_detection__features__performance_options.html)
  * page.
  * # Location
- * This example is available in full on [GitHub](https://github.com/51Degrees/device-detection-java-examples/blob/master/console/src/main/java/fiftyone/devicedetection/examples/console/MatchMetrics.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/device-detection/console/src/main/java/fiftyone/devicedetection/examples/console/MatchMetrics.java).
  *
  */
 

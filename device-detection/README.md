@@ -212,14 +212,14 @@ or shaded.
 The names come from an `Automatic-Module-Name` manifest entry, so the jars remain
 ordinary non-modular jars, build identically on every JDK from 8 upwards, and nothing
 changes for consumers who stay on the classpath. See the
-[pipeline-java README](https://github.com/51Degrees/pipeline-java#native-library-access)
+[pipeline-java README](https://github.com/51Degrees/51degrees-java/blob/main/pipeline/README.md#native-library-access)
 for the pipeline module names and for how to configure element builders when a jar is on
 the module path.
 
 ## Examples
 
 Examples can be found in
-[device-detection-java-examples](https://github.com/51Degrees/device-detection-java-examples)
+[device-detection-java-examples](https://github.com/51Degrees/51degrees-java/tree/main/examples/device-detection)
 repository.
 
 ## Tests
