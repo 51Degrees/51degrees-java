@@ -547,6 +547,68 @@ SWIGINTERN void std_vector_Sl_uint8_t_Sg__doRemoveRange(std::vector< uint8_t > *
           throw std::out_of_range("vector index out of range");
         }
       }
+SWIGINTERN std::vector< uint32_t > *new_std_vector_Sl_uint32_t_Sg___SWIG_2(jint count,unsigned int const &value){
+        if (count < 0)
+          throw std::out_of_range("vector count must be positive");
+        return new std::vector< unsigned int >(static_cast<std::vector< unsigned int >::size_type>(count), value);
+      }
+SWIGINTERN jint std_vector_Sl_uint32_t_Sg__doCapacity(std::vector< uint32_t > *self){
+        return SWIG_VectorSize(self->capacity());
+      }
+SWIGINTERN void std_vector_Sl_uint32_t_Sg__doReserve(std::vector< uint32_t > *self,jint n){
+        if (n < 0)
+          throw std::out_of_range("vector reserve size must be positive");
+        self->reserve(n);
+      }
+SWIGINTERN jint std_vector_Sl_uint32_t_Sg__doSize(std::vector< uint32_t > const *self){
+        return SWIG_VectorSize(self->size());
+      }
+SWIGINTERN void std_vector_Sl_uint32_t_Sg__doAdd__SWIG_0(std::vector< uint32_t > *self,std::vector< unsigned int >::value_type const &x){
+        self->push_back(x);
+      }
+SWIGINTERN void std_vector_Sl_uint32_t_Sg__doAdd__SWIG_1(std::vector< uint32_t > *self,jint index,std::vector< unsigned int >::value_type const &x){
+        jint size = static_cast<jint>(self->size());
+        if (0 <= index && index <= size) {
+          self->insert(self->begin() + index, x);
+        } else {
+          throw std::out_of_range("vector index out of range");
+        }
+      }
+SWIGINTERN std::vector< unsigned int >::value_type std_vector_Sl_uint32_t_Sg__doRemove(std::vector< uint32_t > *self,jint index){
+        jint size = static_cast<jint>(self->size());
+        if (0 <= index && index < size) {
+          unsigned int const old_value = (*self)[index];
+          self->erase(self->begin() + index);
+          return old_value;
+        } else {
+          throw std::out_of_range("vector index out of range");
+        }
+      }
+SWIGINTERN std::vector< unsigned int >::value_type const &std_vector_Sl_uint32_t_Sg__doGet(std::vector< uint32_t > *self,jint index){
+        jint size = static_cast<jint>(self->size());
+        if (index >= 0 && index < size)
+          return (*self)[index];
+        else
+          throw std::out_of_range("vector index out of range");
+      }
+SWIGINTERN std::vector< unsigned int >::value_type std_vector_Sl_uint32_t_Sg__doSet(std::vector< uint32_t > *self,jint index,std::vector< unsigned int >::value_type const &val){
+        jint size = static_cast<jint>(self->size());
+        if (index >= 0 && index < size) {
+          unsigned int const old_value = (*self)[index];
+          (*self)[index] = val;
+          return old_value;
+        }
+        else
+          throw std::out_of_range("vector index out of range");
+      }
+SWIGINTERN void std_vector_Sl_uint32_t_Sg__doRemoveRange(std::vector< uint32_t > *self,jint fromIndex,jint toIndex){
+        jint size = static_cast<jint>(self->size());
+        if (0 <= fromIndex && fromIndex <= toIndex && toIndex <= size) {
+          self->erase(self->begin() + fromIndex, self->begin() + toIndex);
+        } else {
+          throw std::out_of_range("vector index out of range");
+        }
+      }
 
   void Evidence_AddFromBytes(EvidenceBase *evidence, const char key[], size_t keyLength, const char value[], size_t valueLength) {
     (*evidence)[key] = value;
@@ -7292,7 +7354,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (&arg1)->assign(arg1_pstr);
   jenv->ReleaseStringUTFChars(jarg1, arg1_pstr); 
   {
-    /*@SWIG:../../../../..\cxx\src\common\JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
+    /*@SWIG:cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
     if (jarg2 != NULL) {
       // Get the number of bytes in the byte array.
       arrSize = jenv->GetArrayLength(jarg2);
@@ -10305,7 +10367,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jarg1_;
   arg1 = *(EngineBase **)&jarg1; 
   {
-    /*@SWIG:../../../../..\cxx\src\common\JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
+    /*@SWIG:cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
     if (jarg2 != NULL) {
       // Get the number of bytes in the byte array.
       arrSize = jenv->GetArrayLength(jarg2);
@@ -14958,6 +15020,137 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
 }
 
 
+SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_ConfigHashSwig_1setPropertyValueIndex(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jboolean jarg2) {
+  ConfigHash *arg1 = 0 ;
+  bool arg2 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(ConfigHash **)&jarg1; 
+  arg2 = jarg2 ? true : false; 
+  {
+    try {
+      (arg1)->setPropertyValueIndex(arg2);;
+    }
+    catch(FatalException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(NotImplementedException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(InvalidPropertyException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(EvidenceException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(TooManyValuesException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(NoValuesAvailableException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }	
+    catch(StatusCodeException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(runtime_error& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(invalid_argument& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return ; 
+      };
+    }
+  }
+}
+
+
+SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_ConfigHashSwig_1setIndexedProperties(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2, jobject jarg2_) {
+  ConfigHash *arg1 = 0 ;
+  std::vector< std::string > arg2 ;
+  std::vector< std::string > *argp2 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  (void)jarg2_;
+  arg1 = *(ConfigHash **)&jarg1; 
+  argp2 = *(std::vector< std::string > **)&jarg2; 
+  if (!argp2) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Attempt to dereference null std::vector< std::string >");
+    return ;
+  }
+  arg2 = *argp2; 
+  {
+    try {
+      (arg1)->setIndexedProperties(SWIG_STD_MOVE(*(&arg2)));;
+    }
+    catch(FatalException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(NotImplementedException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(InvalidPropertyException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(EvidenceException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(TooManyValuesException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(NoValuesAvailableException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }	
+    catch(StatusCodeException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(runtime_error& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(invalid_argument& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return ; 
+      };
+    }
+  }
+}
+
+
 SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_ConfigHashSwig_1getStrings(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
   jlong jresult = 0 ;
   ConfigHash *arg1 = 0 ;
@@ -15726,12 +15919,1153 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
 }
 
 
+SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_ConfigHashSwig_1getPropertyValueIndex(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
+  jboolean jresult = 0 ;
+  ConfigHash *arg1 = 0 ;
+  bool result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(ConfigHash **)&jarg1; 
+  {
+    try {
+      result = (bool)(arg1)->getPropertyValueIndex();;
+    }
+    catch(FatalException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NotImplementedException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(InvalidPropertyException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(EvidenceException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(TooManyValuesException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NoValuesAvailableException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }	
+    catch(StatusCodeException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(runtime_error& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(invalid_argument& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return 0; 
+      };
+    }
+  }
+  jresult = (jboolean)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_ConfigHashSwig_1getIndexedProperties(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
+  jlong jresult = 0 ;
+  ConfigHash *arg1 = 0 ;
+  std::vector< std::string > result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(ConfigHash **)&jarg1; 
+  {
+    try {
+      result = (arg1)->getIndexedProperties();;
+    }
+    catch(FatalException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NotImplementedException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(InvalidPropertyException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(EvidenceException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(TooManyValuesException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NoValuesAvailableException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }	
+    catch(StatusCodeException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(runtime_error& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(invalid_argument& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return 0; 
+      };
+    }
+  }
+  *(std::vector< std::string > **)&jresult = new std::vector< std::string >(result); 
+  return jresult;
+}
+
+
 SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_delete_1ConfigHashSwig(JNIEnv *jenv, jclass jcls, jlong jarg1) {
   ConfigHash *arg1 = 0 ;
   
   (void)jenv;
   (void)jcls;
   arg1 = *(ConfigHash **)&jarg1; 
+  {
+    try {
+      delete arg1;;
+    }
+    catch(FatalException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(NotImplementedException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(InvalidPropertyException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(EvidenceException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(TooManyValuesException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(NoValuesAvailableException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }	
+    catch(StatusCodeException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(runtime_error& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(invalid_argument& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return ; 
+      };
+    }
+  }
+}
+
+
+SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_new_1VectorUInt32Swig_1_1SWIG_10(JNIEnv *jenv, jclass jcls) {
+  jlong jresult = 0 ;
+  std::vector< uint32_t > *result = 0 ;
+  
+  (void)jenv;
+  (void)jcls;
+  {
+    try {
+      result = (std::vector< uint32_t > *)new std::vector< uint32_t >();;
+    }
+    catch(FatalException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NotImplementedException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(InvalidPropertyException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(EvidenceException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(TooManyValuesException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NoValuesAvailableException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }	
+    catch(StatusCodeException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(runtime_error& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(invalid_argument& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return 0; 
+      };
+    }
+  }
+  *(std::vector< uint32_t > **)&jresult = result; 
+  return jresult;
+}
+
+
+SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_new_1VectorUInt32Swig_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
+  jlong jresult = 0 ;
+  std::vector< uint32_t > *arg1 = 0 ;
+  std::vector< uint32_t > *result = 0 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::vector< uint32_t > **)&jarg1;
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< uint32_t > const & is null");
+    return 0;
+  } 
+  {
+    try {
+      result = (std::vector< uint32_t > *)new std::vector< uint32_t >((std::vector< uint32_t > const &)*arg1);;
+    }
+    catch(FatalException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NotImplementedException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(InvalidPropertyException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(EvidenceException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(TooManyValuesException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NoValuesAvailableException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }	
+    catch(StatusCodeException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(runtime_error& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(invalid_argument& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return 0; 
+      };
+    }
+  }
+  *(std::vector< uint32_t > **)&jresult = result; 
+  return jresult;
+}
+
+
+SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_VectorUInt32Swig_1isEmpty(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
+  jboolean jresult = 0 ;
+  std::vector< uint32_t > *arg1 = 0 ;
+  bool result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  {
+    try {
+      result = (bool)((std::vector< uint32_t > const *)arg1)->empty();;
+    }
+    catch(FatalException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NotImplementedException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(InvalidPropertyException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(EvidenceException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(TooManyValuesException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NoValuesAvailableException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }	
+    catch(StatusCodeException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(runtime_error& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(invalid_argument& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return 0; 
+      };
+    }
+  }
+  jresult = (jboolean)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_VectorUInt32Swig_1clear(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
+  std::vector< uint32_t > *arg1 = 0 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  {
+    try {
+      (arg1)->clear();;
+    }
+    catch(FatalException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(NotImplementedException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(InvalidPropertyException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(EvidenceException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(TooManyValuesException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(NoValuesAvailableException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }	
+    catch(StatusCodeException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(runtime_error& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(invalid_argument& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return ; 
+      };
+    }
+  }
+}
+
+
+SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_new_1VectorUInt32Swig_1_1SWIG_12(JNIEnv *jenv, jclass jcls, jint jarg1, jlong jarg2) {
+  jlong jresult = 0 ;
+  jint arg1 ;
+  unsigned int *arg2 = 0 ;
+  unsigned int temp2 ;
+  std::vector< uint32_t > *result = 0 ;
+  
+  (void)jenv;
+  (void)jcls;
+  arg1 = jarg1; 
+  temp2 = (unsigned int)jarg2; 
+  arg2 = &temp2; 
+  {
+    try {
+      try {
+        result = (std::vector< uint32_t > *)new_std_vector_Sl_uint32_t_Sg___SWIG_2(SWIG_STD_MOVE(*(&arg1)),(unsigned int const &)*arg2);
+      } catch(std::out_of_range &_e) {
+        SWIG_JavaThrowException(jenv, SWIG_JavaIndexOutOfBoundsException, (&_e)->what());
+        return 0;
+      };
+    }
+    catch(FatalException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NotImplementedException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(InvalidPropertyException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(EvidenceException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(TooManyValuesException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NoValuesAvailableException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }	
+    catch(StatusCodeException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(runtime_error& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(invalid_argument& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return 0; 
+      };
+    }
+  }
+  *(std::vector< uint32_t > **)&jresult = result; 
+  return jresult;
+}
+
+
+SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_VectorUInt32Swig_1doCapacity(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
+  jint jresult = 0 ;
+  std::vector< uint32_t > *arg1 = 0 ;
+  jint result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  {
+    try {
+      try {
+        result = std_vector_Sl_uint32_t_Sg__doCapacity(arg1);
+      } catch(std::out_of_range &_e) {
+        SWIG_JavaThrowException(jenv, SWIG_JavaIndexOutOfBoundsException, (&_e)->what());
+        return 0;
+      };
+    }
+    catch(FatalException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NotImplementedException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(InvalidPropertyException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(EvidenceException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(TooManyValuesException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NoValuesAvailableException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }	
+    catch(StatusCodeException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(runtime_error& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(invalid_argument& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return 0; 
+      };
+    }
+  }
+  jresult = result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_VectorUInt32Swig_1doReserve(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jint jarg2) {
+  std::vector< uint32_t > *arg1 = 0 ;
+  jint arg2 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  arg2 = jarg2; 
+  {
+    try {
+      try {
+        std_vector_Sl_uint32_t_Sg__doReserve(arg1,SWIG_STD_MOVE(*(&arg2)));
+      } catch(std::length_error &_e) {
+        SWIG_JavaThrowException(jenv, SWIG_JavaIndexOutOfBoundsException, (&_e)->what());
+        return ;
+      } catch(std::out_of_range &_e) {
+        SWIG_JavaThrowException(jenv, SWIG_JavaIndexOutOfBoundsException, (&_e)->what());
+        return ;
+      };
+    }
+    catch(FatalException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(NotImplementedException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(InvalidPropertyException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(EvidenceException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(TooManyValuesException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(NoValuesAvailableException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }	
+    catch(StatusCodeException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(runtime_error& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(invalid_argument& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return ; 
+      };
+    }
+  }
+}
+
+
+SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_VectorUInt32Swig_1doSize(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
+  jint jresult = 0 ;
+  std::vector< uint32_t > *arg1 = 0 ;
+  jint result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  {
+    try {
+      try {
+        result = std_vector_Sl_uint32_t_Sg__doSize((std::vector< unsigned int > const *)arg1);
+      } catch(std::out_of_range &_e) {
+        SWIG_JavaThrowException(jenv, SWIG_JavaIndexOutOfBoundsException, (&_e)->what());
+        return 0;
+      };
+    }
+    catch(FatalException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NotImplementedException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(InvalidPropertyException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(EvidenceException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(TooManyValuesException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NoValuesAvailableException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }	
+    catch(StatusCodeException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(runtime_error& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(invalid_argument& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return 0; 
+      };
+    }
+  }
+  jresult = result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_VectorUInt32Swig_1doAdd_1_1SWIG_10(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2) {
+  std::vector< uint32_t > *arg1 = 0 ;
+  std::vector< unsigned int >::value_type *arg2 = 0 ;
+  std::vector< unsigned int >::value_type temp2 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  temp2 = (std::vector< unsigned int >::value_type)jarg2; 
+  arg2 = &temp2; 
+  {
+    try {
+      std_vector_Sl_uint32_t_Sg__doAdd__SWIG_0(arg1,(unsigned int const &)*arg2);;
+    }
+    catch(FatalException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(NotImplementedException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(InvalidPropertyException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(EvidenceException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(TooManyValuesException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(NoValuesAvailableException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }	
+    catch(StatusCodeException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(runtime_error& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(invalid_argument& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return ; 
+      };
+    }
+  }
+}
+
+
+SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_VectorUInt32Swig_1doAdd_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jint jarg2, jlong jarg3) {
+  std::vector< uint32_t > *arg1 = 0 ;
+  jint arg2 ;
+  std::vector< unsigned int >::value_type *arg3 = 0 ;
+  std::vector< unsigned int >::value_type temp3 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  arg2 = jarg2; 
+  temp3 = (std::vector< unsigned int >::value_type)jarg3; 
+  arg3 = &temp3; 
+  {
+    try {
+      try {
+        std_vector_Sl_uint32_t_Sg__doAdd__SWIG_1(arg1,SWIG_STD_MOVE(*(&arg2)),(unsigned int const &)*arg3);
+      } catch(std::out_of_range &_e) {
+        SWIG_JavaThrowException(jenv, SWIG_JavaIndexOutOfBoundsException, (&_e)->what());
+        return ;
+      };
+    }
+    catch(FatalException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(NotImplementedException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(InvalidPropertyException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(EvidenceException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(TooManyValuesException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(NoValuesAvailableException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }	
+    catch(StatusCodeException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(runtime_error& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(invalid_argument& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return ; 
+      };
+    }
+  }
+}
+
+
+SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_VectorUInt32Swig_1doRemove(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jint jarg2) {
+  jlong jresult = 0 ;
+  std::vector< uint32_t > *arg1 = 0 ;
+  jint arg2 ;
+  std::vector< unsigned int >::value_type result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  arg2 = jarg2; 
+  {
+    try {
+      try {
+        result = (std::vector< unsigned int >::value_type)std_vector_Sl_uint32_t_Sg__doRemove(arg1,SWIG_STD_MOVE(*(&arg2)));
+      } catch(std::out_of_range &_e) {
+        SWIG_JavaThrowException(jenv, SWIG_JavaIndexOutOfBoundsException, (&_e)->what());
+        return 0;
+      };
+    }
+    catch(FatalException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NotImplementedException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(InvalidPropertyException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(EvidenceException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(TooManyValuesException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NoValuesAvailableException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }	
+    catch(StatusCodeException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(runtime_error& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(invalid_argument& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return 0; 
+      };
+    }
+  }
+  jresult = (jlong)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_VectorUInt32Swig_1doGet(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jint jarg2) {
+  jlong jresult = 0 ;
+  std::vector< uint32_t > *arg1 = 0 ;
+  jint arg2 ;
+  std::vector< unsigned int >::value_type *result = 0 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  arg2 = jarg2; 
+  {
+    try {
+      try {
+        result = (std::vector< unsigned int >::value_type *) &std_vector_Sl_uint32_t_Sg__doGet(arg1,SWIG_STD_MOVE(*(&arg2)));
+      } catch(std::out_of_range &_e) {
+        SWIG_JavaThrowException(jenv, SWIG_JavaIndexOutOfBoundsException, (&_e)->what());
+        return 0;
+      };
+    }
+    catch(FatalException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NotImplementedException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(InvalidPropertyException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(EvidenceException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(TooManyValuesException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NoValuesAvailableException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }	
+    catch(StatusCodeException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(runtime_error& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(invalid_argument& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return 0; 
+      };
+    }
+  }
+  jresult = (jlong)*result; 
+  return jresult;
+}
+
+
+SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_VectorUInt32Swig_1doSet(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jint jarg2, jlong jarg3) {
+  jlong jresult = 0 ;
+  std::vector< uint32_t > *arg1 = 0 ;
+  jint arg2 ;
+  std::vector< unsigned int >::value_type *arg3 = 0 ;
+  std::vector< unsigned int >::value_type temp3 ;
+  std::vector< unsigned int >::value_type result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  arg2 = jarg2; 
+  temp3 = (std::vector< unsigned int >::value_type)jarg3; 
+  arg3 = &temp3; 
+  {
+    try {
+      try {
+        result = (std::vector< unsigned int >::value_type)std_vector_Sl_uint32_t_Sg__doSet(arg1,SWIG_STD_MOVE(*(&arg2)),(unsigned int const &)*arg3);
+      } catch(std::out_of_range &_e) {
+        SWIG_JavaThrowException(jenv, SWIG_JavaIndexOutOfBoundsException, (&_e)->what());
+        return 0;
+      };
+    }
+    catch(FatalException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NotImplementedException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(InvalidPropertyException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(EvidenceException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(TooManyValuesException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NoValuesAvailableException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }	
+    catch(StatusCodeException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(runtime_error& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(invalid_argument& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return 0; 
+      };
+    }
+  }
+  jresult = (jlong)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_VectorUInt32Swig_1doRemoveRange(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jint jarg2, jint jarg3) {
+  std::vector< uint32_t > *arg1 = 0 ;
+  jint arg2 ;
+  jint arg3 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  arg2 = jarg2; 
+  arg3 = jarg3; 
+  {
+    try {
+      try {
+        std_vector_Sl_uint32_t_Sg__doRemoveRange(arg1,SWIG_STD_MOVE(*(&arg2)),SWIG_STD_MOVE(*(&arg3)));
+      } catch(std::out_of_range &_e) {
+        SWIG_JavaThrowException(jenv, SWIG_JavaIndexOutOfBoundsException, (&_e)->what());
+        return ;
+      };
+    }
+    catch(FatalException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(NotImplementedException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(InvalidPropertyException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(EvidenceException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(TooManyValuesException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(NoValuesAvailableException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }	
+    catch(StatusCodeException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(runtime_error& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return ; 
+      };
+    }
+    catch(invalid_argument& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return ; 
+      };
+    }
+  }
+}
+
+
+SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_delete_1VectorUInt32Swig(JNIEnv *jenv, jclass jcls, jlong jarg1) {
+  std::vector< uint32_t > *arg1 = 0 ;
+  
+  (void)jenv;
+  (void)jcls;
+  arg1 = *(std::vector< uint32_t > **)&jarg1; 
   {
     try {
       delete arg1;;
@@ -15875,7 +17209,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jarg3_;
   (void)jarg4_;
   {
-    /*@SWIG:../../../../..\cxx\src\common\JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
+    /*@SWIG:cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
     if (jarg1 != NULL) {
       // Get the number of bytes in the byte array.
       arrSize = jenv->GetArrayLength(jarg1);
@@ -16362,7 +17696,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jarg1_;
   arg1 = *(EngineHash **)&jarg1; 
   {
-    /*@SWIG:../../../../..\cxx\src\common\JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
+    /*@SWIG:cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
     if (jarg2 != NULL) {
       // Get the number of bytes in the byte array.
       arrSize = jenv->GetArrayLength(jarg2);
@@ -16590,25 +17924,38 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
 }
 
 
-SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_EngineHashSwig_1process_1_1SWIG_12(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2, jobject jarg2_, jlong jarg3, jint jarg4) {
+SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_EngineHashSwig_1getProfileIdsForPropertyValue(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jstring jarg2, jstring jarg3) {
   jlong jresult = 0 ;
   EngineHash *arg1 = 0 ;
-  EvidenceDeviceDetection *arg2 = 0 ;
-  int *arg3 = 0 ;
-  int arg4 ;
-  ResultsHash *result = 0 ;
+  std::string *arg2 = 0 ;
+  std::string *arg3 = 0 ;
+  std::vector< uint32_t > result;
   
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  (void)jarg2_;
   arg1 = *(EngineHash **)&jarg1; 
-  arg2 = *(EvidenceDeviceDetection **)&jarg2; 
-  arg3 = *(int **)&jarg3; 
-  arg4 = (int)jarg4; 
+  if(!jarg2) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
+    return 0;
+  }
+  const char *arg2_pstr = jenv->GetStringUTFChars(jarg2, 0); 
+  if (!arg2_pstr) return 0;
+  std::string arg2_str(arg2_pstr);
+  arg2 = &arg2_str;
+  jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if(!jarg3) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
+    return 0;
+  }
+  const char *arg3_pstr = jenv->GetStringUTFChars(jarg3, 0); 
+  if (!arg3_pstr) return 0;
+  std::string arg3_str(arg3_pstr);
+  arg3 = &arg3_str;
+  jenv->ReleaseStringUTFChars(jarg3, arg3_pstr); 
   {
     try {
-      result = (ResultsHash *)(arg1)->process(arg2,(int const *)arg3,arg4);;
+      result = (arg1)->getProfileIdsForPropertyValue((std::string const &)*arg2,(std::string const &)*arg3);;
     }
     catch(FatalException& e) {
       {
@@ -16656,82 +18003,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ResultsHash **)&jresult = result; 
-  return jresult;
-}
-
-
-SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_EngineHashSwig_1process_1_1SWIG_13(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jstring jarg2, jlong jarg3, jint jarg4) {
-  jlong jresult = 0 ;
-  EngineHash *arg1 = 0 ;
-  char *arg2 = 0 ;
-  int *arg3 = 0 ;
-  int arg4 ;
-  ResultsHash *result = 0 ;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  arg1 = *(EngineHash **)&jarg1; 
-  arg2 = 0;
-  if (jarg2) {
-    arg2 = (char *)jenv->GetStringUTFChars(jarg2, 0);
-    if (!arg2) return 0;
-  }
-  arg3 = *(int **)&jarg3; 
-  arg4 = (int)jarg4; 
-  {
-    try {
-      result = (ResultsHash *)(arg1)->process((char const *)arg2,(int const *)arg3,arg4);;
-    }
-    catch(FatalException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(NotImplementedException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(InvalidPropertyException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(EvidenceException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(TooManyValuesException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(NoValuesAvailableException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }	
-    catch(StatusCodeException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(runtime_error& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(invalid_argument& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return 0; 
-      };
-    }
-  }
-  *(ResultsHash **)&jresult = result; 
-  if (arg2) jenv->ReleaseStringUTFChars(jarg2, (const char *)arg2);
+  *(std::vector< uint32_t > **)&jresult = new std::vector< uint32_t >(result); 
   return jresult;
 }
 

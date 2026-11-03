@@ -417,9 +417,6 @@ public class IpIntelligenceOnPremiseEngineModuleJNI {
   public final static native long EngineIpiSwig_process__SWIG_0(long jarg1, EngineIpiSwig jarg1_, long jarg2, EvidenceIpiSwig jarg2_);
   public final static native long EngineIpiSwig_process__SWIG_1(long jarg1, EngineIpiSwig jarg1_, String jarg2);
   public final static native long EngineIpiSwig_process__SWIG_2(long jarg1, EngineIpiSwig jarg1_, byte[] jarg2, int jarg4);
-  public final static native long EngineIpiSwig_process__SWIG_3(long jarg1, EngineIpiSwig jarg1_, long jarg2, EvidenceIpiSwig jarg2_, long jarg3, int jarg4);
-  public final static native long EngineIpiSwig_process__SWIG_4(long jarg1, EngineIpiSwig jarg1_, String jarg2, long jarg3, int jarg4);
-  public final static native long EngineIpiSwig_process__SWIG_5(long jarg1, EngineIpiSwig jarg1_, byte[] jarg2, int jarg4, long jarg5, int jarg6);
   public final static native long EngineIpiSwig_processBase(long jarg1, EngineIpiSwig jarg1_, long jarg2, EvidenceBaseSwig jarg2_);
   public final static native void delete_EngineIpiSwig(long jarg1);
   public final static native void Evidence_AddFromBytes(long jarg1, EvidenceBaseSwig jarg1_, byte[] jarg2, byte[] jarg4);

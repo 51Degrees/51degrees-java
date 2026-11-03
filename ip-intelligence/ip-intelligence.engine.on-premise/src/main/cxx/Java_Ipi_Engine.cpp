@@ -7726,7 +7726,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (&arg1)->assign(arg1_pstr);
   jenv->ReleaseStringUTFChars(jarg1, arg1_pstr); 
   {
-    /*@SWIG:../../../../..\cxx\src\common\JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
+    /*@SWIG:../../../../../cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
     if (jarg2 != NULL) {
       // Get the number of bytes in the byte array.
       arrSize = jenv->GetArrayLength(jarg2);
@@ -10739,7 +10739,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jarg1_;
   arg1 = *(EngineBase **)&jarg1; 
   {
-    /*@SWIG:../../../../..\cxx\src\common\JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
+    /*@SWIG:../../../../../cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
     if (jarg2 != NULL) {
       // Get the number of bytes in the byte array.
       arrSize = jenv->GetArrayLength(jarg2);
@@ -13550,7 +13550,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   {
-    /*@SWIG:../../../../..\cxx\src\common\JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
+    /*@SWIG:../../../../../cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
     if (jarg1 != NULL) {
       // Get the number of bytes in the byte array.
       arrSize = jenv->GetArrayLength(jarg1);
@@ -13720,7 +13720,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jarg1_;
   arg1 = *(IpAddress **)&jarg1; 
   {
-    /*@SWIG:../../../../..\cxx\src\common\JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
+    /*@SWIG:../../../../../cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
     if (jarg2 != NULL) {
       // Get the number of bytes in the byte array.
       arrSize = jenv->GetArrayLength(jarg2);
@@ -25272,7 +25272,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jarg3_;
   (void)jarg4_;
   {
-    /*@SWIG:../../../../..\cxx\src\common\JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
+    /*@SWIG:../../../../../cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
     if (jarg1 != NULL) {
       // Get the number of bytes in the byte array.
       arrSize = jenv->GetArrayLength(jarg1);
@@ -25759,7 +25759,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jarg1_;
   arg1 = *(EngineIpi **)&jarg1; 
   {
-    /*@SWIG:../../../../..\cxx\src\common\JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
+    /*@SWIG:../../../../../cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
     if (jarg2 != NULL) {
       // Get the number of bytes in the byte array.
       arrSize = jenv->GetArrayLength(jarg2);
@@ -26000,7 +26000,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jarg1_;
   arg1 = *(EngineIpi **)&jarg1; 
   {
-    /*@SWIG:../../../../..\cxx\src\common\JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
+    /*@SWIG:../../../../../cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
     if (jarg2 != NULL) {
       // Get the number of bytes in the byte array.
       arrSize = jenv->GetArrayLength(jarg2);
@@ -26040,262 +26040,6 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   {
     try {
       result = (ResultsIpi *)(arg1)->process(arg2,arg3,arg4);;
-    }
-    catch(FatalException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(NotImplementedException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(InvalidPropertyException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(EvidenceException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(TooManyValuesException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(NoValuesAvailableException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }	
-    catch(StatusCodeException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(runtime_error& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(invalid_argument& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return 0; 
-      };
-    }
-  }
-  *(ResultsIpi **)&jresult = result; 
-  
-  return jresult;
-}
-
-
-SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_swig_IpIntelligenceOnPremiseEngineModuleJNI_EngineIpiSwig_1process_1_1SWIG_13(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2, jobject jarg2_, jlong jarg3, jint jarg4) {
-  jlong jresult = 0 ;
-  EngineIpi *arg1 = 0 ;
-  EvidenceIpi *arg2 = 0 ;
-  int *arg3 = 0 ;
-  int arg4 ;
-  ResultsIpi *result = 0 ;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  (void)jarg2_;
-  arg1 = *(EngineIpi **)&jarg1; 
-  arg2 = *(EvidenceIpi **)&jarg2; 
-  arg3 = *(int **)&jarg3; 
-  arg4 = (int)jarg4; 
-  {
-    try {
-      result = (ResultsIpi *)(arg1)->process(arg2,(int const *)arg3,arg4);;
-    }
-    catch(FatalException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(NotImplementedException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(InvalidPropertyException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(EvidenceException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(TooManyValuesException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(NoValuesAvailableException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }	
-    catch(StatusCodeException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(runtime_error& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(invalid_argument& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return 0; 
-      };
-    }
-  }
-  *(ResultsIpi **)&jresult = result; 
-  return jresult;
-}
-
-
-SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_swig_IpIntelligenceOnPremiseEngineModuleJNI_EngineIpiSwig_1process_1_1SWIG_14(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jstring jarg2, jlong jarg3, jint jarg4) {
-  jlong jresult = 0 ;
-  EngineIpi *arg1 = 0 ;
-  char *arg2 = 0 ;
-  int *arg3 = 0 ;
-  int arg4 ;
-  ResultsIpi *result = 0 ;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  arg1 = *(EngineIpi **)&jarg1; 
-  arg2 = 0;
-  if (jarg2) {
-    arg2 = (char *)jenv->GetStringUTFChars(jarg2, 0);
-    if (!arg2) return 0;
-  }
-  arg3 = *(int **)&jarg3; 
-  arg4 = (int)jarg4; 
-  {
-    try {
-      result = (ResultsIpi *)(arg1)->process((char const *)arg2,(int const *)arg3,arg4);;
-    }
-    catch(FatalException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(NotImplementedException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(InvalidPropertyException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(EvidenceException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(TooManyValuesException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(NoValuesAvailableException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }	
-    catch(StatusCodeException& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(runtime_error& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
-      };
-    }
-    catch(invalid_argument& e) {
-      {
-        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return 0; 
-      };
-    }
-  }
-  *(ResultsIpi **)&jresult = result; 
-  if (arg2) jenv->ReleaseStringUTFChars(jarg2, (const char *)arg2);
-  return jresult;
-}
-
-
-SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_swig_IpIntelligenceOnPremiseEngineModuleJNI_EngineIpiSwig_1process_1_1SWIG_15(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jbyteArray jarg2, jint jarg4, jlong jarg5, jint jarg6) {
-  jlong jresult = 0 ;
-  EngineIpi *arg1 = 0 ;
-  unsigned char *arg2 = (unsigned char *)0 ;
-  long arg3 ;
-  fiftyoneDegreesIpType arg4 ;
-  int *arg5 = 0 ;
-  int arg6 ;
-  ResultsIpi *result = 0 ;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  arg1 = *(EngineIpi **)&jarg1; 
-  {
-    /*@SWIG:../../../../..\cxx\src\common\JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
-    if (jarg2 != NULL) {
-      // Get the number of bytes in the byte array.
-      arrSize = jenv->GetArrayLength(jarg2);
-      // Allocate memory for the destination byte array used internally by
-      // the data set. This memory is required for the lifetime of the data
-      // set.
-      arg2 = (unsigned char*)malloc(arrSize);
-      if (arg2 == NULL) {
-        SWIG_JavaThrowException(
-          jenv,
-          SWIG_JavaRuntimeException,
-          "Failed to allocate memory to copy the input byte array.");
-        return 0;
-      }
-      // Attempt to get a pointer to the data within the jbyteArray.
-      jbyte* data = jenv->GetByteArrayElements(jarg2, NULL);
-      if (data == NULL) {
-        SWIG_JavaThrowException(
-          jenv,
-          SWIG_JavaRuntimeException,
-          "Failed to obtain pointer to the input byte array.");
-        return 0;
-      }
-      // Copy the input byte array to the destination and release the
-      // reference to source pointer.
-      memcpy(arg2, data, arrSize);
-      jenv->ReleaseByteArrayElements(jarg2, data, JNI_ABORT);
-    }
-    else {
-      // Let the underlying C implementation throw the null pointer exception.
-      arg2 = (unsigned char*)NULL;
-    }
-    /*@SWIG@*/
-    arg3 = arrSize;
-  }
-  arg4 = (fiftyoneDegreesIpType)jarg4; 
-  arg5 = *(int **)&jarg5; 
-  arg6 = (int)jarg6; 
-  {
-    try {
-      result = (ResultsIpi *)(arg1)->process(arg2,arg3,arg4,(int const *)arg5,arg6);;
     }
     catch(FatalException& e) {
       {
