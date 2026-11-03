@@ -372,8 +372,8 @@
     </licenses>
 
     <scm>
-        <url>https://github.com/51Degrees/pipeline-java</url>
-        <connection>scm:git:git://github.com/51Degrees/pipeline-java.git</connection>
-        <developerConnection>scm:git:info@51degrees.com:51Degrees/pipeline-java.git</developerConnection>
+        <url>https://github.com/51Degrees/51degrees-java</url>
+        <connection>scm:git:git://github.com/51Degrees/51degrees-java.git</connection>
+        <developerConnection>scm:git:https://github.com/51Degrees/51degrees-java.git</developerConnection>
     </scm>
 </project>
