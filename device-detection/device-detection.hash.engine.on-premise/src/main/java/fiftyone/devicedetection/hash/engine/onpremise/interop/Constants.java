@@ -29,7 +29,7 @@ public class Constants {
         "possible, you may be able to use a different library by " +
         "rebuilding the binary on the target system using the source " +
         "code and instructions available on " +
-        "https://github.com/51degrees/device-detection-java.";
+        "https://github.com/51Degrees/51degrees-java/tree/main/device-detection.";
 
     /**
      * Message returned when the native library could not be loaded.
