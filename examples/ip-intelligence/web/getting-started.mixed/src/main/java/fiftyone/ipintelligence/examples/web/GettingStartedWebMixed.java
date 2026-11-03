@@ -32,7 +32,7 @@
  * 2. How evidence from the web request is automatically passed to both engines
  * 3. How to retrieve results from both engines in your web application
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-java-examples/blob/main/web/getting-started.mixed/src/main/java/fiftyone/ipintelligence/examples/web/GettingStartedWebMixed.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/web/getting-started.mixed/src/main/java/fiftyone/ipintelligence/examples/web/GettingStartedWebMixed.java).
  *
  * This example requires:
  * - A Device Detection data file (.hash format)

@@ -162,7 +162,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
             			.setUpdateRandomisationMax(10*60)
  * ```
  * # Location
- * This example is available in full on [GitHub](https://github.com/51Degrees/device-detection-java/blob/master/device-detection-java-examples/console/src/main/java/fiftyone/devicedetection/examples/console/UpdateDataFile.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/device-detection/console/src/main/java/fiftyone/devicedetection/examples/console/UpdateDataFile.java).
  *
  * @include{doc} example-require-licensekey.txt
  */

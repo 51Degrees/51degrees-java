@@ -151,7 +151,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
             			.setUpdateRandomisationMax(10*60)
  * ```
  * # Location
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-java-examples/blob/main/console/src/main/java/fiftyone/ipintelligence/examples/console/UpdateDataFile.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/console/src/main/java/fiftyone/ipintelligence/examples/console/UpdateDataFile.java).
  *
  * To test this example, you need to:
  * 1. Host an IP Intelligence data file (.ipi) at a custom URL accessible to this application

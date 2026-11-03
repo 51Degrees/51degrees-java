@@ -150,4 +150,4 @@ A fat jar cannot narrow this any further, because everything inside it is part o
 unnamed module. To grant native access to 51Degrees code alone you need the individual
 jars, with `pipeline.engines.fiftyone` and `device-detection.hash.engine.on-premise` on
 the module path - see the
-[device-detection-java README](https://github.com/51Degrees/device-detection-java#native-library-access).
+[device-detection-java README](https://github.com/51Degrees/51degrees-java/blob/main/device-detection/README.md#native-library-access).

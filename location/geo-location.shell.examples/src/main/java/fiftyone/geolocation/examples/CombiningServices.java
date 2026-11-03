@@ -53,7 +53,7 @@ import static fiftyone.pipeline.core.Constants.EVIDENCE_HEADER_USERAGENT_KEY;
  * Getting started example of using 51Degrees geo-location alongside 51Degrees
  * device detection.
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/location-java/blob/master/geo-location.shell.examples/src/main/java/fiftyone/geolocation/examples/CombiningServices.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/location/geo-location.shell.examples/src/main/java/fiftyone/geolocation/examples/CombiningServices.java).
  *
  * Required Maven Dependencies:
  * - [com.51degrees.geo-location](https://central.sonatype.com/artifact/com.51degrees/geo-location/)
