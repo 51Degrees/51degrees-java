@@ -119,7 +119,7 @@ public class NativeModelCloud {
     }
 }
 /*!
- * @example @example console/NativeModel.java
+ * @example console/NativeModelCloud.java
  *
  * This example shows how to use the 51Degrees Cloud service to look up the details of a device
  * based on a given 'native model name'. Native model name is a string of characters that are
