@@ -96,6 +96,14 @@ public class ConfigHashSwig extends ConfigDeviceDetectionSwig {
     DeviceDetectionHashEngineModuleJNI.ConfigHashSwig_setTraceRoute(swigCPtr, this, trace);
   }
 
+  public void setPropertyValueIndex(boolean index) {
+    DeviceDetectionHashEngineModuleJNI.ConfigHashSwig_setPropertyValueIndex(swigCPtr, this, index);
+  }
+
+  public void setIndexedProperties(VectorStringSwig names) {
+    DeviceDetectionHashEngineModuleJNI.ConfigHashSwig_setIndexedProperties(swigCPtr, this, VectorStringSwig.getCPtr(names), names);
+  }
+
   public CollectionConfigSwig getStrings() {
     return new CollectionConfigSwig(DeviceDetectionHashEngineModuleJNI.ConfigHashSwig_getStrings(swigCPtr, this), true);
   }
@@ -142,6 +150,14 @@ public class ConfigHashSwig extends ConfigDeviceDetectionSwig {
 
   public boolean getTraceRoute() {
     return DeviceDetectionHashEngineModuleJNI.ConfigHashSwig_getTraceRoute(swigCPtr, this);
+  }
+
+  public boolean getPropertyValueIndex() {
+    return DeviceDetectionHashEngineModuleJNI.ConfigHashSwig_getPropertyValueIndex(swigCPtr, this);
+  }
+
+  public VectorStringSwig getIndexedProperties() {
+    return new VectorStringSwig(DeviceDetectionHashEngineModuleJNI.ConfigHashSwig_getIndexedProperties(swigCPtr, this), true);
   }
 
 }

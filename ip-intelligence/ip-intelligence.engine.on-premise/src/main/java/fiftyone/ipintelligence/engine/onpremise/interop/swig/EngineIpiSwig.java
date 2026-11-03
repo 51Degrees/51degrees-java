@@ -99,21 +99,6 @@ public class EngineIpiSwig extends EngineBaseSwig {
     return (cPtr == 0) ? null : new ResultsIpiSwig(cPtr, true);
   }
 
-  public ResultsIpiSwig process(EvidenceIpiSwig evidence, SWIGTYPE_p_int requiredPropertyIndexes, int requiredPropertyIndexesCount) {
-    long cPtr = IpIntelligenceOnPremiseEngineModuleJNI.EngineIpiSwig_process__SWIG_3(swigCPtr, this, EvidenceIpiSwig.getCPtr(evidence), evidence, SWIGTYPE_p_int.getCPtr(requiredPropertyIndexes), requiredPropertyIndexesCount);
-    return (cPtr == 0) ? null : new ResultsIpiSwig(cPtr, true);
-  }
-
-  public ResultsIpiSwig process(String ipAddress, SWIGTYPE_p_int requiredPropertyIndexes, int requiredPropertyIndexesCount) {
-    long cPtr = IpIntelligenceOnPremiseEngineModuleJNI.EngineIpiSwig_process__SWIG_4(swigCPtr, this, ipAddress, SWIGTYPE_p_int.getCPtr(requiredPropertyIndexes), requiredPropertyIndexesCount);
-    return (cPtr == 0) ? null : new ResultsIpiSwig(cPtr, true);
-  }
-
-  public ResultsIpiSwig process(byte[] ipAddress, IpTypeSwig type, SWIGTYPE_p_int requiredPropertyIndexes, int requiredPropertyIndexesCount) {
-    long cPtr = IpIntelligenceOnPremiseEngineModuleJNI.EngineIpiSwig_process__SWIG_5(swigCPtr, this, ipAddress, type.swigValue(), SWIGTYPE_p_int.getCPtr(requiredPropertyIndexes), requiredPropertyIndexesCount);
-    return (cPtr == 0) ? null : new ResultsIpiSwig(cPtr, true);
-  }
-
   public ResultsBaseSwig processBase(EvidenceBaseSwig evidence) {
     long cPtr = IpIntelligenceOnPremiseEngineModuleJNI.EngineIpiSwig_processBase(swigCPtr, this, EvidenceBaseSwig.getCPtr(evidence), evidence);
     return (cPtr == 0) ? null : new ResultsBaseSwig(cPtr, true);
