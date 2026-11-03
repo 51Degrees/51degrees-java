@@ -1,10 +1,31 @@
-# 51Degrees Java
+# 51Degrees Device Detection and IP Intelligence for Java
 
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-java "Data rewards the curious") **Java packages for the Pipeline API, Device Detection, IP Intelligence and Location**
+<img src=".github/images/logo.png" alt="51Degrees" title="Data rewards the curious" width="160">
 
-This repository holds the 51Degrees Java packages. Each package is still
-published to Maven Central under its own coordinates, and the examples show
-how a project of your own uses them.
+**Java packages for the Pipeline API, Device Detection, IP Intelligence and Location**
+
+Our User-Agent parser for Java supports Device Detection, browser detection, mobile detection, and crawler detection on-premise or in the cloud. IP Intelligence adds IP geolocation, including IP to country data.
+
+It reads User-Agent and User-Agent Client Hints, HTTP request headers that carry browser and device information. For cloud bot detection, Human Confidence reports confidence that a person is viewing the page.
+
+## Install
+
+Each product is a separate Maven Central package. For Device Detection, cloud or on-premise:
+
+```xml
+<!-- Make sure to select the latest version from https://mvnrepository.com/artifact/com.51degrees/pipeline.device-detection -->
+<dependency>
+    <groupId>com.51degrees</groupId>
+    <artifactId>device-detection</artifactId>
+    <version>4.5.x</version>
+</dependency>
+```
+
+The product guides below list the other packages. To build from source, see [Getting the code](#getting-the-code).
+
+Try the [User-Agent tester](https://51degrees.com/developers/user-agent-tester?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=install) and [IP tester](https://51degrees.com/developers/ip-tester?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=install). For cloud use, [create a Resource Key](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=install).
+
+Created from `pipeline-java`, `device-detection-java`, `ip-intelligence-java`, `location-java`, `device-detection-java-examples`, and `ip-intelligence-java-examples`, this repository continues their work.
 
 | Product | Read first | Documentation |
 | --- | --- | --- |
@@ -67,9 +88,9 @@ mvn install -DskipTests -pl device-detection -am
 mvn surefire:test
 ```
 
-The cloud tests need a resource key, passed as `-DTestResourceKey=<key>`. The
+The cloud tests need a Resource Key, passed as `-DTestResourceKey=<key>`. The
 on-premise IP Intelligence tests need the Lite or Enterprise data file, which
-is not in the repository; see `ip-intelligence/README.md` for how to get it.
+is not in the repository. See `ip-intelligence/README.md` for how to get it.
 Tests find data files by searching from the root of this repository, so run
 Maven from here rather than from inside a package folder.
 
@@ -106,6 +127,16 @@ with the plain version, such as `4.5.127`.
 
 ## History
 
+| Earlier repository | What it held |
+| --- | --- |
+| [pipeline-java](https://github.com/51Degrees/pipeline-java) | The Pipeline API |
+| [device-detection-java](https://github.com/51Degrees/device-detection-java) | Device Detection |
+| [ip-intelligence-java](https://github.com/51Degrees/ip-intelligence-java) | IP Intelligence |
+| [location-java](https://github.com/51Degrees/location-java) | Location |
+| [device-detection-java-examples](https://github.com/51Degrees/device-detection-java-examples) | Device Detection examples |
+| [ip-intelligence-java-examples](https://github.com/51Degrees/ip-intelligence-java-examples) | IP Intelligence examples |
+
+
 The folders `pipeline`, `device-detection`, `ip-intelligence`, `location` and
 the two example folders were brought in from the separate repositories
 [pipeline-java](https://github.com/51Degrees/pipeline-java),
@@ -120,6 +151,14 @@ SHA. The history of a file before the import is under its old path, so read it
 from the imported commit, for example `git log aff7c544 -- pom.xml` for what is
 now `pipeline/pom.xml`.
 
-## Licence
+## License
 
 [European Union Public Licence v1.2](LICENSE)
+
+## Find out more
+
+- [Device Detection](https://51degrees.com/device-detection?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=find-out-more)
+- [IP Intelligence](https://51degrees.com/ip-intelligence?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=find-out-more)
+- [Bots and humans](https://51degrees.com/bots-and-humans?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=find-out-more)
+- [Documentation](https://51degrees.com/documentation/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=find-out-more)
+- https://github.com/51Degrees/51degrees-cxx
