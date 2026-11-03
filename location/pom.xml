@@ -309,9 +309,11 @@
             <url>https://opensource.org/licenses/EUPL-1.2</url>
         </license>
     </licenses>
-    <scm>
-        <url>https://github.com/51Degrees/location-java</url>
-        <connection>scm:git:git://github.com/51Degrees/location-java.git</connection>
-        <developerConnection>scm:git:info@51degrees.com:51Degrees/location-java.git</developerConnection>
+    <scm child.scm.connection.inherit.append.path="false"
+         child.scm.developerConnection.inherit.append.path="false"
+         child.scm.url.inherit.append.path="false">
+        <url>https://github.com/51Degrees/51degrees-java</url>
+        <connection>scm:git:https://github.com/51Degrees/51degrees-java.git</connection>
+        <developerConnection>scm:git:https://github.com/51Degrees/51degrees-java.git</developerConnection>
     </scm>
 </project>

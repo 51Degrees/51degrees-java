@@ -11,7 +11,7 @@
 
     <artifactId>ip-intelligence.cloud</artifactId>
     <name>51Degrees :: IP Intelligence :: Cloud</name>
-    <description>Provides IP Intelligence for the 51Degrees Pipeline API using the 51Degrees Cloud service. This can be used as an alternative to legacy IP Intelligence services such as MaxMind or IPinfo.</description>
+    <description>IP Intelligence and IP geolocation for Java, using the 51Degrees cloud service. Finds an IP address's likely location (country, region, town, and coordinates), connection type, and network. Needs a Resource Key that says which properties to return. Built on the 51Degrees Pipeline API. An alternative to MaxMind and IPinfo.</description>
     <url>https://51degrees.com?utm_source=maven&amp;utm_medium=package&amp;utm_campaign=51degrees-java&amp;utm_content=ip-intelligence.cloud-pom.xml&amp;utm_term=url</url>
 
     <dependencies>
