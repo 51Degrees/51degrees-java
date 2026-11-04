@@ -24,6 +24,7 @@ package fiftyone.ipintelligence.engine.onpremise.data;
 
 import fiftyone.ipintelligence.shared.testhelpers.Wrapper;
 import fiftyone.ipintelligence.shared.testhelpers.data.MetaDataHasher;
+import fiftyone.pipeline.engines.fiftyone.data.CloseableIterable;
 import fiftyone.pipeline.engines.fiftyone.data.ComponentMetaData;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
 import fiftyone.pipeline.engines.fiftyone.data.ProfileMetaData;
@@ -33,7 +34,7 @@ import fiftyone.pipeline.engines.fiftyone.data.ValueMetaData;
 public class MetaDataHasherHash implements MetaDataHasher {
 
     @Override
-    public int hashProperties(int hash, Wrapper wrapper) {
+    public int hashProperties(int hash, Wrapper wrapper) throws Exception {
         int i = 0;
         Iterable<FiftyOneAspectPropertyMetaData> properties = wrapper.getProperties();
         for (FiftyOneAspectPropertyMetaData property : properties) {
@@ -57,50 +58,56 @@ public class MetaDataHasherHash implements MetaDataHasher {
     }
 
     @Override
-    public int hashValues(int hash, Wrapper wrapper) {
+    public int hashValues(int hash, Wrapper wrapper) throws Exception {
         int i = 0;
-        for (ValueMetaData value : wrapper.getValues()) {
-            if (i % 100 == 0) {
-                hash ^= value.hashCode();
-                hash ^= value.getProperty().hashCode();
-            }
-            i++;
-        }
-        return hash;
-    }
-
-    @Override
-    public int hashComponents(int hash, Wrapper wrapper) {
-        for (ComponentMetaData component : wrapper.getComponents()) {
-            hash ^= component.hashCode();
-            int i = 0;
-            for (FiftyOneAspectPropertyMetaData property : component.getProperties()) {
-                if (i % 10 == 0) {
-                    hash ^= property.hashCode();
+        try (CloseableIterable<ValueMetaData> values = wrapper.getValues()) {
+            for (ValueMetaData value : values) {
+                if (i % 100 == 0) {
+                    hash ^= value.hashCode();
+                    hash ^= value.getProperty().hashCode();
                 }
                 i++;
             }
-            hash ^= component.getDefaultProfile().hashCode();
         }
         return hash;
     }
 
     @Override
-    public int hashProfiles(int hash, Wrapper wrapper) {
-        int i = 0;
-        for (ProfileMetaData profile : wrapper.getProfiles()) {
-            if (i % 100 == 0) {
-                hash ^= profile.hashCode();
-                hash ^= profile.getComponent().hashCode();
-                int j = 0;
-                for (ValueMetaData value : profile.getValues()) {
-                    if (j % 10 == 0) {
-                        hash ^= value.hashCode();
+    public int hashComponents(int hash, Wrapper wrapper) throws Exception {
+        try (CloseableIterable<ComponentMetaData> components = wrapper.getComponents()) {
+            for (ComponentMetaData component : components) {
+                hash ^= component.hashCode();
+                int i = 0;
+                for (FiftyOneAspectPropertyMetaData property : component.getProperties()) {
+                    if (i % 10 == 0) {
+                        hash ^= property.hashCode();
                     }
-                    j++;
+                    i++;
                 }
+                hash ^= component.getDefaultProfile().hashCode();
             }
-            i++;
+        }
+        return hash;
+    }
+
+    @Override
+    public int hashProfiles(int hash, Wrapper wrapper) throws Exception {
+        int i = 0;
+        try (CloseableIterable<ProfileMetaData> profiles = wrapper.getProfiles()) {
+            for (ProfileMetaData profile : profiles) {
+                if (i % 100 == 0) {
+                    hash ^= profile.hashCode();
+                    hash ^= profile.getComponent().hashCode();
+                    int j = 0;
+                    for (ValueMetaData value : profile.getValues()) {
+                        if (j % 10 == 0) {
+                            hash ^= value.hashCode();
+                        }
+                        j++;
+                    }
+                }
+                i++;
+            }
         }
         return hash;
     }

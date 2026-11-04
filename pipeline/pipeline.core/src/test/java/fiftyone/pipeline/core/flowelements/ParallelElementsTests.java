@@ -126,35 +126,36 @@ public class ParallelElementsTests {
             Arrays.asList(element1,
                 element2,
                 element3));
-        FlowData data = new FlowDataDefault(
+        try (FlowData data = new FlowDataDefault(
             mock(Logger.class),
             pipeline,
-            new EvidenceDefault(mock(Logger.class)));
-        data.process();
+            new EvidenceDefault(mock(Logger.class)))) {
+            data.process();
 
-        // Act
-        parallelElements.process(data);
+            // Act
+            parallelElements.process(data);
 
-        List<Date> startTimes = new ArrayList<>();
-        startTimes.add((Date) data.get("element1").get("start"));
-        startTimes.add((Date) data.get("element2").get("start"));
-        startTimes.add((Date) data.get("element3").get("start"));
-        List<Date> endTimes = new ArrayList<>();
-        endTimes.add((Date) data.get("element1").get("end"));
-        endTimes.add((Date) data.get("element2").get("end"));
-        endTimes.add((Date) data.get("element3").get("end"));
+            List<Date> startTimes = new ArrayList<>();
+            startTimes.add((Date) data.get("element1").get("start"));
+            startTimes.add((Date) data.get("element2").get("start"));
+            startTimes.add((Date) data.get("element3").get("start"));
+            List<Date> endTimes = new ArrayList<>();
+            endTimes.add((Date) data.get("element1").get("end"));
+            endTimes.add((Date) data.get("element2").get("end"));
+            endTimes.add((Date) data.get("element3").get("end"));
 
-        // Assert
-        assertTrue("Expected no errors",
-            data.getErrors() == null || data.getErrors().size() == 0);
-        for (Date start : startTimes) {
-            for (Date end : endTimes) {
-                assertTrue(
-                    "The elements were not processed sequentially. Times were: " +
-                        startTimes.get(0) + " => " + endTimes.get(0) + "\n" +
-                        startTimes.get(1) + " => " + endTimes.get(1) + "\n" +
-                        startTimes.get(2) + " => " + endTimes.get(2),
-                    start.before(end));
+            // Assert
+            assertTrue("Expected no errors",
+                data.getErrors() == null || data.getErrors().size() == 0);
+            for (Date start : startTimes) {
+                for (Date end : endTimes) {
+                    assertTrue(
+                        "The elements were not processed sequentially. Times were: " +
+                            startTimes.get(0) + " => " + endTimes.get(0) + "\n" +
+                            startTimes.get(1) + " => " + endTimes.get(1) + "\n" +
+                            startTimes.get(2) + " => " + endTimes.get(2),
+                        start.before(end));
+                }
             }
         }
     }

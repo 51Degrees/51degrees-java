@@ -26,6 +26,7 @@ import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetecti
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngineBuilder;
 import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import fiftyone.pipeline.engines.Constants;
+import fiftyone.pipeline.engines.fiftyone.data.CloseableIterable;
 import fiftyone.pipeline.engines.fiftyone.data.ComponentMetaData;
 import fiftyone.pipeline.engines.fiftyone.data.ProfileMetaData;
 import fiftyone.pipeline.engines.fiftyone.data.ValueMetaData;
@@ -132,23 +133,36 @@ public class MetadataOnPrem {
     }
 
     private static void outputProfileDetails(DeviceDetectionHashEngine ddEngine,
-                                            PrintWriter output) {
-        // Group the profiles by component and then output the number of profiles 
+                                            PrintWriter output) throws Exception {
+        // Group the profiles by component and then output the number of profiles
         // for each component.
-        Map<String, List<ProfileMetaData>> groups =
-                StreamSupport.stream(ddEngine.getProfiles().spliterator(), false)
-                                .collect(Collectors.groupingBy(p -> p.getComponent().getName()));
-        groups.forEach((k,v)->output.format("%s Profiles: %d\n", k , v.size()));
+        //
+        // A try-with-resource block MUST be used for the collections of
+        // metadata returned by the engine. Each one holds a reference to the
+        // engine's data set until it is closed, so if it is left open the
+        // data set cannot be freed when the engine is closed.
+        Map<String, Long> groups;
+        try (CloseableIterable<ProfileMetaData> profiles = ddEngine.getProfiles()) {
+            groups = StreamSupport.stream(profiles.spliterator(), false)
+                    .collect(Collectors.groupingBy(
+                            p -> p.getComponent().getName(),
+                            Collectors.counting()));
+        }
+        groups.forEach((k,v)->output.format("%s Profiles: %d\n", k , v));
     }
 
     // Output the component name as well as a list of all the associated properties.
     // If we're outputting to console then we also add some formatting to make it
     // more readable.
-    private static void outputComponents(DeviceDetectionHashEngine ddEngine, PrintWriter output){
-        ddEngine.getComponents().forEach(c -> {
-            output.println("Component - "+ c.getName());
-            outputProperties(c, output);
-        });
+    private static void outputComponents(DeviceDetectionHashEngine ddEngine, PrintWriter output)
+            throws Exception {
+        // See outputProfileDetails for why this is a try-with-resource block.
+        try (CloseableIterable<ComponentMetaData> components = ddEngine.getComponents()) {
+            components.forEach(c -> {
+                output.println("Component - "+ c.getName());
+                outputProperties(c, output);
+            });
+        }
     }
 
     private static void outputProperties(ComponentMetaData component, PrintWriter output) {

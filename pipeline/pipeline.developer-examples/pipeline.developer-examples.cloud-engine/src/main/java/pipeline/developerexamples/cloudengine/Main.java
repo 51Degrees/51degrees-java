@@ -105,33 +105,36 @@ public class Main {
                     loggerFactory)
                     .build();
 
-            Pipeline pipeline = new PipelineBuilder(loggerFactory)
+            // The pipeline closes the engines when it is closed.
+            try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
                 .addFlowElement(cloudRequestEngine)
                 .addFlowElement(ageElement)
-                .build();
+                .setAutoCloseElements(true)
+                .build()) {
 
-            String dob = "18/12/1992";
+                String dob = "18/12/1992";
 
-            try (FlowData flowData = pipeline.createFlowData()) {
-	            flowData
-	                .addEvidence("cookie.date-of-birth", dob)
-	                .process();
-	
-                String starSign =
-                    flowData.getFromElement(ageElement).getStarSign();
-                if (starSign == null) {
-                    // The service answered but offers no star sign
-                    // product, which is what the 51Degrees cloud says,
-                    // because star signs are only served by the example
-                    // service. The connection, the property and evidence
-                    // key negotiation and the request itself all worked.
-                    System.out.println("The cloud service at " + endpoint()
-                        + " does not offer the star sign product, so no "
-                        + "star sign is available for a date of birth of "
-                        + dob + ".");
-                } else {
-                    System.out.println("With a date of birth of " + dob
-                        + ", your star sign is " + starSign + ".");
+                try (FlowData flowData = pipeline.createFlowData()) {
+                    flowData
+                        .addEvidence("cookie.date-of-birth", dob)
+                        .process();
+
+                    String starSign =
+                        flowData.getFromElement(ageElement).getStarSign();
+                    if (starSign == null) {
+                        // The service answered but offers no star sign
+                        // product, which is what the 51Degrees cloud says,
+                        // because star signs are only served by the example
+                        // service. The connection, the property and evidence
+                        // key negotiation and the request itself all worked.
+                        System.out.println("The cloud service at " + endpoint()
+                            + " does not offer the star sign product, so no "
+                            + "star sign is available for a date of birth of "
+                            + dob + ".");
+                    } else {
+                        System.out.println("With a date of birth of " + dob
+                            + ", your star sign is " + starSign + ".");
+                    }
                 }
             }
 //! [usage]

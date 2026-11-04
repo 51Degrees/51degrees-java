@@ -144,10 +144,13 @@ public class GettingStartedCloudMixed {
         IPIntelligenceCloudEngine ipIntelligenceEngine =
                 new IPIntelligenceCloudEngineBuilder(loggerFactory).build();
 
+        // The engines are not closed anywhere else, so the pipeline is asked
+        // to close them when it is closed.
         try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
                 .addFlowElement(cloudRequestEngine)
                 .addFlowElement(deviceDetectionEngine)
                 .addFlowElement(ipIntelligenceEngine)
+                .setAutoCloseElements(true)
                 .build()) {
 
             // carry out some sample detections
