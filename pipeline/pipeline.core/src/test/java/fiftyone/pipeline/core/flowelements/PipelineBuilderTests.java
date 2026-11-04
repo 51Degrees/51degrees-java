@@ -42,6 +42,7 @@ import org.slf4j.Logger;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -231,6 +232,35 @@ public class PipelineBuilderTests {
 
         // Pass the configuration to the builder to create the pipeline.
         builder.buildFromConfiguration(opts);
+    }
+
+    /**
+     * When an element fails to build, the elements built before it are
+     * closed, and the failure reported is the original one.
+     */
+    @Test
+    public void PipelineBuilder_BuildFromConfiguration_SecondElementFails_FirstClosed() throws Exception {
+        RecordingElementBuilder.BUILT.clear();
+        PipelineOptions opts = new PipelineOptions();
+        ElementOptions first = new ElementOptions();
+        first.builderName = "RecordingElementBuilder";
+        opts.elements.add(first);
+        // The mandatory 'multiple' parameter is not set, so this one fails.
+        ElementOptions second = new ElementOptions();
+        second.builderName = "MultiplyByElementBuilder";
+        opts.elements.add(second);
+
+        maxErrors = 1;
+
+        try {
+            builder.buildFromConfiguration(opts);
+            fail("Expected the second element to fail to build");
+        } catch (PipelineConfigurationException e) {
+            assertEquals(0, e.getSuppressed().length);
+        }
+        assertEquals(1, RecordingElementBuilder.BUILT.size());
+        assertTrue("The first element should have been closed",
+            RecordingElementBuilder.BUILT.get(0).isClosed());
     }
 
     @Test(expected = PipelineConfigurationException.class)
