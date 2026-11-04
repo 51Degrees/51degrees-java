@@ -44,6 +44,14 @@ The Windows pre-build scripts take a toolset and SDK version from the pom.
 JavaScript templates and the OWID library are submodules inside `pipeline`,
 where the Pipeline API expects them.
 
+## Releases
+
+Pull requests go to `rc`, not `main`, and stay drafts until they have been
+reviewed, because the nightly merges any pull request into `rc` that is not a
+draft and has no review requested. When a release is wanted, one pull request
+merges `rc` into `main`, and the "Only rc into main" check fails a pull request
+into `main` from any other branch.
+
 ## Writing
 
 Plain words, no em dashes, sentence case headings. Nothing in this public
