@@ -118,7 +118,9 @@ public class GettingStartedWebCloudMixed extends HttpServlet {
         // Get the IP address parameter from the request for custom lookup
         String inputIpAddress = request.getParameter("client-ip");
 
-        // The detection has already been carried out by the PipelineFilter
+        // The detection has already been carried out by the PipelineFilter,
+        // which closes the FlowData at the end of the request, so it is not
+        // closed here.
         FlowData flowData = flowDataProvider.getFlowData(request);
 
         // Determine target IP for display.
@@ -149,14 +151,6 @@ public class GettingStartedWebCloudMixed extends HttpServlet {
             String htmlTemplate = loadTemplate(resourceBase + "/WEB-INF/html/index.html");
             String processedHtml = substituteTemplateValues(htmlTemplate, deviceData, ipiData, targetIp, flowData);
             out.println(processedHtml);
-        } finally {
-            if (flowData != null) {
-                try {
-                    flowData.close();
-                } catch (Exception e) {
-                    logger.warn("Error closing flow data", e);
-                }
-            }
         }
     }
 

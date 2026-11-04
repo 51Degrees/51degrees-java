@@ -137,9 +137,12 @@ public class ShareUsageExample {
                 // .setIncludedQueryStringParameter("campaign")
                 .build();
 
-        // Build a pipeline with only the ShareUsageElement
+        // Build a pipeline with only the ShareUsageElement. The pipeline is
+        // asked to close the element, which sends any data still queued, as
+        // it is not closed anywhere else.
         try (Pipeline pipeline = new PipelineBuilder()
                 .addFlowElement(shareUsageElement)
+                .setAutoCloseElements(true)
                 .build()) {
 
             logger.info("Pipeline built successfully with ShareUsageElement");

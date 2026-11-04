@@ -57,9 +57,10 @@ import static fiftyone.geolocation.core.Constants.EVIDENCE_GEO_LON_PARAM_KEY;
  * ```
  *
  * 2. Create a new FlowData instance ready to be populated with evidence for
- * the Pipeline.
+ * the Pipeline, in a try-with-resources block so that it is closed when it
+ * is finished with.
  * ```
- * FlowData data = pipeline.createFlowData();
+ * try (FlowData data = pipeline.createFlowData()) {
  * ```
  *
  * 3. Process a longitude and latitude to retrieve the values associated with
@@ -92,14 +93,13 @@ public class GettingStarted {
                 "property as it is used by this example.");
         }
         else {
-            Pipeline pipeline = new GeoLocationPipelineBuilder(loggerFactory)
+            try (Pipeline pipeline = new GeoLocationPipelineBuilder(loggerFactory)
                 .useCloud(resourceKey, Enums.GeoLocationProvider.FiftyOneDegrees)
                 .setEndPoint("https://cloud.51degrees.com/api/v4")
                 .useLazyLoading(1000)
                 .setAutoCloseElements(true)
                 .build();
-
-            try (FlowData flowData = pipeline.createFlowData()) {
+                FlowData flowData = pipeline.createFlowData()) {
                 flowData.addEvidence(EVIDENCE_GEO_LAT_PARAM_KEY, "51.458048")
                     .addEvidence(EVIDENCE_GEO_LON_PARAM_KEY, "-0.9822207999999999")
                     .process();
@@ -115,8 +115,7 @@ public class GettingStarted {
                 System.out.println("Country: " + country.toString());
 
                 System.out.println(flowData.get(GeoData.class).getRegion());
-            }          
-            pipeline.close();
+            }
         }
     }
 

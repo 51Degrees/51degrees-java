@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.web.mvc;
 
+import static org.junit.Assert.assertFalse;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -120,6 +121,20 @@ public class FiftyOneInterceptorTests {
                 response, 
                 handler, 
                 new Exception());
+        verify(flowData, times(1))
+            .close();
+    }
+
+    /**
+     * Check that the FlowData is closed when preHandle serves the JavaScript
+     * itself, as Spring does not call afterCompletion when preHandle returns
+     * false.
+     * @throws Exception
+     */
+    @Test
+    public void FiftyOneInterceptor_PreHandle_ServesJavaScript_ClosesFlowData()
+        throws Exception {
+        assertFalse(interceptor.preHandle(request, response, handler));
         verify(flowData, times(1))
             .close();
     }

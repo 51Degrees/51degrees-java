@@ -122,27 +122,30 @@ public class PipelineFilter implements Filter {
         // Populate the request properties and store against the
         // HttpContext.
         resultService.process((HttpServletRequest)request);
-        
-        // Get FlowData from the request.
-        FlowData flowData = flowDataProviderCore.getFlowData((HttpServletRequest)request);
-        
-        // Set UACH response headers.
-        uachServiceCore.setResponseHeaders(
-        	flowData, (HttpServletResponse)response);
-        
-        // If 51Degrees JavaScript or JSON is being requested then serve it.
-        // Otherwise continue down the filter Pipeline.
-        if (jsService.serveJS((HttpServletRequest)request, (HttpServletResponse) response) == false &&
-            jsService.serveJson((HttpServletRequest)request, (HttpServletResponse) response) == false) {
-            chain.doFilter(request, response);//sends request to next resource
-        }
 
-        // The rest of the filters in the chain have now been called. So it is
-        // time to dispose of the FlowData instance.
         try {
-            flowDataProviderCore.getFlowData((HttpServletRequest) request).close();
-        } catch (Exception e) {
-            throw new ServletException("FlowData could not be disposed of.", e);
+            // Get FlowData from the request.
+            FlowData flowData = flowDataProviderCore.getFlowData((HttpServletRequest)request);
+
+            // Set UACH response headers.
+            uachServiceCore.setResponseHeaders(
+                flowData, (HttpServletResponse)response);
+
+            // If 51Degrees JavaScript or JSON is being requested then serve it.
+            // Otherwise continue down the filter Pipeline.
+            if (jsService.serveJS((HttpServletRequest)request, (HttpServletResponse) response) == false &&
+                jsService.serveJson((HttpServletRequest)request, (HttpServletResponse) response) == false) {
+                chain.doFilter(request, response);//sends request to next resource
+            }
+        } finally {
+            // The rest of the filters in the chain have now been called, or
+            // one of them failed. Either way it is time to dispose of the
+            // FlowData instance.
+            try {
+                flowDataProviderCore.getFlowData((HttpServletRequest) request).close();
+            } catch (Exception e) {
+                throw new ServletException("FlowData could not be disposed of.", e);
+            }
         }
     }
 

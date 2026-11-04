@@ -62,9 +62,10 @@ public class EngineTests {
 			assumeTrue(e.getMessage(), false);
 		}
 		
-		DeviceDetectionHashEngine engine = createEngine(dataFile);
-		String tier = engine.getDataSourceTier();
-		engine.close();
+		String tier;
+		try (DeviceDetectionHashEngine engine = createEngine(dataFile)) {
+			tier = engine.getDataSourceTier();
+		}
 		
 		if (fileName.equals(LITE_HASH_DATA_FILE_PATH)) {
 			assertEquals("Lite", tier);

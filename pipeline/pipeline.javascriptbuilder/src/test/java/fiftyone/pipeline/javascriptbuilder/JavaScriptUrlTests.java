@@ -72,12 +72,12 @@ public class JavaScriptUrlTests {
             builder.setContextRoot(contextRoot);
         }
         JavaScriptBuilderElement jsElement = builder.build();
-        Pipeline pipeline = new PipelineBuilder(loggerFactory)
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
             .addFlowElement(new SequenceElementBuilder(loggerFactory).build())
             .addFlowElement(new JsonBuilderElementBuilder(loggerFactory).build())
             .addFlowElement(jsElement)
             .build();
-        try (FlowData flowData = pipeline.createFlowData()) {
+             FlowData flowData = pipeline.createFlowData()) {
             flowData.addEvidence("query.user-agent", "iPhone");
             flowData.addEvidence("query.id.usage", "non-marketing");
             flowData.process();
@@ -164,18 +164,19 @@ public class JavaScriptUrlTests {
             new JavaScriptBuilderElementBuilder(factory)
                 .setEndpoint("/json")
                 .build();
-        Pipeline pipeline = new PipelineBuilder(factory)
+        List<String> scripts = new ArrayList<>();
+        try (Pipeline pipeline = new PipelineBuilder(factory)
             .addFlowElement(new SequenceElementBuilder(factory).build())
             .addFlowElement(new JsonBuilderElementBuilder(factory).build())
             .addFlowElement(jsElement)
-            .build();
-        List<String> scripts = new ArrayList<>();
-        for (String host : hosts) {
-            try (FlowData flowData = pipeline.createFlowData()) {
-                flowData.addEvidence(Constants.EVIDENCE_HOST_KEY, host);
-                flowData.process();
-                scripts.add(
-                    flowData.getFromElement(jsElement).getJavaScript());
+            .build()) {
+            for (String host : hosts) {
+                try (FlowData flowData = pipeline.createFlowData()) {
+                    flowData.addEvidence(Constants.EVIDENCE_HOST_KEY, host);
+                    flowData.process();
+                    scripts.add(
+                        flowData.getFromElement(jsElement).getJavaScript());
+                }
             }
         }
         return scripts;

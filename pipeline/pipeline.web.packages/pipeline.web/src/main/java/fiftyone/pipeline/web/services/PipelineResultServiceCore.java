@@ -71,14 +71,29 @@ public interface PipelineResultServiceCore {
             this.pipeline = pipeline;
         }
 
+        /**
+         * The FlowData is kept in the request, and whatever handles the end
+         * of the request closes it. If processing fails it never reaches the
+         * request, so it is closed here instead.
+         */
         @Override
+        @SuppressWarnings("PMD.FlowDataInTryWithResources")
         public void process(HttpServletRequest request) {
             // Create the flowData
             FlowData flowData = pipeline.createFlowData();
-            // Extract the required pieces of evidence from the request
-            evidenceService.addEvidenceFromRequest(flowData, request);
-            // Start processing the data
-            flowData.process();
+            try {
+                // Extract the required pieces of evidence from the request
+                evidenceService.addEvidenceFromRequest(flowData, request);
+                // Start processing the data
+                flowData.process();
+            } catch (RuntimeException | Error e) {
+                try {
+                    flowData.close();
+                } catch (Exception closeException) {
+                    e.addSuppressed(closeException);
+                }
+                throw e;
+            }
             // Store the FlowData in the request
             request.setAttribute(HTTPCONTEXT_FLOWDATA, flowData);
         }

@@ -30,10 +30,12 @@ import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import fiftyone.pipeline.engines.fiftyone.flowelements.ShareUsageBuilder;
 import fiftyone.pipeline.engines.fiftyone.flowelements.ShareUsageElement;
 import fiftyone.pipeline.engines.flowelements.AspectEngine;
+import fiftyone.pipeline.engines.services.DataUploader;
 import fiftyone.pipeline.engines.services.HttpClient;
 import fiftyone.pipeline.engines.testhelpers.flowelements.EmptyEngineBuilder;
 import org.json.JSONObject;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -95,43 +97,50 @@ public class ShareUsageOverheadTests {
                 .setProcessCost(0)
                 .build();
 
+        // Closing the element sends what is still queued, so it is given an
+        // uploader that sends nothing anywhere.
         ShareUsageElement shareUsage =
-            new ShareUsageBuilder(loggerFactory)
+            new ShareUsageBuilder(loggerFactory, mock(DataUploader.class))
             .build();
 
         pipeline = new PipelineBuilder(loggerFactory)
             .addFlowElement(engine)
             .addFlowElement(shareUsage)
+            .setAutoCloseElements(true)
             .build();
     }
 
+    @AfterEach
+    public void cleanUp() throws Exception {
+        pipeline.close();
+    }
+
+    // The FlowData are all processed before any is closed, so that closing
+    // them is not part of the time measured. They are closed together in a
+    // finally block rather than one by one with try-with-resources.
     @Test
-    public void ShareUsageOverhead_SingleEvidence() {
+    @SuppressWarnings("PMD.FlowDataInTryWithResources")
+    public void ShareUsageOverhead_SingleEvidence() throws Exception {
         int iterations = 10_000;
         double maxOverheadPerCall = 0.1;
         List<FlowData> data = new ArrayList<>();
-        for (int i = 0; i < iterations; i++) {
-            FlowData flowData = pipeline.createFlowData();
-            flowData.addEvidence("header.user-agent", "Mozilla/5.0 (iPad; U; CPU OS 3_2_1 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Mobile/7B405");
-            data.add(flowData);
-        }
-
-        long start = System.currentTimeMillis();
-        for (FlowData entry : data) {
-            entry.process();
-        }
-        long end = System.currentTimeMillis();
-        
-        // It is not efficient to use try-with-resources
-        // in this scenario, so loop through and perform
-        // manual close on each FlowData
-        data.forEach((f) -> { 
-            try {
-                f.close();
-            } catch (Exception e) {
-                e.printStackTrace();
+        long start;
+        long end;
+        try {
+            for (int i = 0; i < iterations; i++) {
+                FlowData flowData = pipeline.createFlowData();
+                data.add(flowData);
+                flowData.addEvidence("header.user-agent", "Mozilla/5.0 (iPad; U; CPU OS 3_2_1 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Mobile/7B405");
             }
-        });
+
+            start = System.currentTimeMillis();
+            for (FlowData entry : data) {
+                entry.process();
+            }
+            end = System.currentTimeMillis();
+        } finally {
+            closeAll(data);
+        }
 
         double msOverheadPerCall = (double)(end - start) / iterations;
         overheadMillis.put("ShareUsageOverhead_SingleEvidence_ms", msOverheadPerCall);
@@ -142,36 +151,34 @@ public class ShareUsageOverheadTests {
                         msOverheadPerCall + "ms. Maximum permitted is " + maxOverheadPerCall);
     }
 
+    // See ShareUsageOverhead_SingleEvidence for why the FlowData are closed
+    // in a finally block.
     @Test
-    public void ShareUsageOverhead_ThousandEvidence() {
+    @SuppressWarnings("PMD.FlowDataInTryWithResources")
+    public void ShareUsageOverhead_ThousandEvidence() throws Exception {
         int iterations = 1_000;
         int evidenceCount = 1_000;
         int maxOverheadPerCallMillis = 10;
         List<FlowData> data = new ArrayList<>();
-        for (int i = 0; i < iterations; i++) {
-            FlowData flowData = pipeline.createFlowData();
-            for (int j = 0; j < evidenceCount; j++) {
-                flowData.addEvidence("header." + j, j);
+        long start;
+        long end;
+        try {
+            for (int i = 0; i < iterations; i++) {
+                FlowData flowData = pipeline.createFlowData();
+                data.add(flowData);
+                for (int j = 0; j < evidenceCount; j++) {
+                    flowData.addEvidence("header." + j, j);
+                }
+                flowData.addEvidence("header.user-agent", "Mozilla/5.0 (iPad; U; CPU OS 3_2_1 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Mobile/7B405");
             }
-            flowData.addEvidence("header.user-agent", "Mozilla/5.0 (iPad; U; CPU OS 3_2_1 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Mobile/7B405");
-            data.add(flowData);
-        }
-        long start = System.currentTimeMillis();
-        for (FlowData entry : data) {
-            entry.process();
-        }
-        long end = System.currentTimeMillis();
-        
-        // It is not efficient to use try-with-resources
-        // in this scenario, so loop through and perform
-        // manual close on each FlowData
-        data.forEach((f) -> { 
-            try {
-                f.close();
-            } catch (Exception e) {
-                e.printStackTrace();
+            start = System.currentTimeMillis();
+            for (FlowData entry : data) {
+                entry.process();
             }
-        });
+            end = System.currentTimeMillis();
+        } finally {
+            closeAll(data);
+        }
 
         double msOverheadPerCall = (double)(end - start) / iterations;
         overheadMillis.put("ShareUsageOverhead_HundredEvidence_ms", msOverheadPerCall);
@@ -180,5 +187,11 @@ public class ShareUsageOverheadTests {
         Assertions.assertTrue(msOverheadPerCall < maxOverheadPerCallMillis,
                 "Pipeline with share usage overhead per Process call was " +
                 msOverheadPerCall + "ms. Maximum permitted is " + maxOverheadPerCallMillis);
+    }
+
+    private static void closeAll(List<FlowData> data) throws Exception {
+        for (FlowData flowData : data) {
+            flowData.close();
+        }
     }
 }

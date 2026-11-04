@@ -33,6 +33,7 @@ import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
 import fiftyone.pipeline.engines.fiftyone.data.SetHeadersData;
 import fiftyone.pipeline.exceptions.AggregateException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -66,6 +67,13 @@ public class SetHeadersElementTests {
 		when(internalLogger.getLogger(anyString())).thenReturn(mock(Logger.class));
 		loggerFactory = new TestLoggerFactory(internalLogger);
 	}
+
+	@AfterEach
+	public void cleanUp() throws Exception {
+		if (pipeline != null) {
+			pipeline.close();
+		}
+	}
 	
 	/**
 	 * Check that SetHeaderElement handles both 'String' and
@@ -84,14 +92,15 @@ public class SetHeadersElementTests {
 			new HashMap<String, Object>();
 		propertyNameValues.put("SetHeaderBrowserAccept-CH", value);
 		createPipeline(propertyNameValues);
-		FlowData data = pipeline.createFlowData();
-		data.process();
+		try (FlowData data = pipeline.createFlowData()) {
+			data.process();
 		
-		// Verify the output
-		SetHeadersData typedOutput = getFromFlowData(data);
-		assertEquals(1,  typedOutput.getResponseHeaderDictionary().size());
-		assertTrue(typedOutput.getResponseHeaderDictionary().containsKey("Accept-CH"));
-		assertEquals("UA-Platform", typedOutput.getResponseHeaderDictionary().get("Accept-CH"));
+			// Verify the output
+			SetHeadersData typedOutput = getFromFlowData(data);
+			assertEquals(1,  typedOutput.getResponseHeaderDictionary().size());
+			assertTrue(typedOutput.getResponseHeaderDictionary().containsKey("Accept-CH"));
+			assertEquals("UA-Platform", typedOutput.getResponseHeaderDictionary().get("Accept-CH"));
+		}
 	}
 	
 	/**
@@ -104,12 +113,13 @@ public class SetHeadersElementTests {
 		Map<String, Object> propertyNameValues = new HashMap<String, Object>();
 		propertyNameValues.put("SetHeaderBrowserAccept-CH", sourcePropertyValue);
 		createPipeline(propertyNameValues);
-		FlowData data = pipeline.createFlowData();
-		data.process();
+		try (FlowData data = pipeline.createFlowData()) {
+			data.process();
 		
-		// Verify the output
-		SetHeadersData typedOutput = getFromFlowData(data);
-		assertEquals(0, typedOutput.getResponseHeaderDictionary().size());
+			// Verify the output
+			SetHeadersData typedOutput = getFromFlowData(data);
+			assertEquals(0, typedOutput.getResponseHeaderDictionary().size());
+		}
 	}
 	
 	/**
@@ -139,12 +149,13 @@ public class SetHeadersElementTests {
 		Map<String, Object> propertyNameValues = new HashMap<String, Object>();
 		propertyNameValues.put("SetHeaderBrowserAccept-CH", value);
 		createPipeline(propertyNameValues);
-		FlowData data = pipeline.createFlowData();
-		data.process();
+		try (FlowData data = pipeline.createFlowData()) {
+			data.process();
 		
-		// Verify the output
-		SetHeadersData typedOutput = getFromFlowData(data);
-		assertEquals(0, typedOutput.getResponseHeaderDictionary().size());
+			// Verify the output
+			SetHeadersData typedOutput = getFromFlowData(data);
+			assertEquals(0, typedOutput.getResponseHeaderDictionary().size());
+		}
 	}
 	
 	/**
@@ -167,10 +178,11 @@ public class SetHeadersElementTests {
 		Map<String, Object> propertyNameValues = new HashMap<String, Object>();
 		propertyNameValues.put(sourcePropertyName, "TEST");
 		createPipeline(propertyNameValues);
-		FlowData data = pipeline.createFlowData();
-		assertThrows(AggregateException.class, () -> {
-			data.process();
-		});
+		try (FlowData data = pipeline.createFlowData()) {
+			assertThrows(AggregateException.class, () -> {
+				data.process();
+			});
+		}
 	}
 	
 	/**
@@ -184,17 +196,18 @@ public class SetHeadersElementTests {
 		propertyNameValues.put("SetHeaderHardwareCritical-CH",
 			"Sec-CH-UA-Model,Sec-CH-UA-Mobile");
 		createPipeline(propertyNameValues);
-		FlowData data = pipeline.createFlowData();
-		data.process();
+		try (FlowData data = pipeline.createFlowData()) {
+			data.process();
 		
-		// Verify the output
-		SetHeadersData typedOutput = getFromFlowData(data);
-		assertEquals(2, typedOutput.getResponseHeaderDictionary().size());
-		assertTrue(typedOutput.getResponseHeaderDictionary().containsKey("Accept-CH"));
-		assertTrue(typedOutput.getResponseHeaderDictionary().containsKey("Critical-CH"));
-		assertEquals("Sec-CH-UA", typedOutput.getResponseHeaderDictionary().get("Accept-CH"));
-		assertEquals("Sec-CH-UA-Model,Sec-CH-UA-Mobile",
-			typedOutput.getResponseHeaderDictionary().get("Critical-CH"));
+			// Verify the output
+			SetHeadersData typedOutput = getFromFlowData(data);
+			assertEquals(2, typedOutput.getResponseHeaderDictionary().size());
+			assertTrue(typedOutput.getResponseHeaderDictionary().containsKey("Accept-CH"));
+			assertTrue(typedOutput.getResponseHeaderDictionary().containsKey("Critical-CH"));
+			assertEquals("Sec-CH-UA", typedOutput.getResponseHeaderDictionary().get("Accept-CH"));
+			assertEquals("Sec-CH-UA-Model,Sec-CH-UA-Mobile",
+				typedOutput.getResponseHeaderDictionary().get("Critical-CH"));
+		}
 	}
 
 	/**
@@ -207,17 +220,18 @@ public class SetHeadersElementTests {
 		propertyNameValues.put("SetHeaderBrowserAccept-CH", "Sec-CH-UA");
 		propertyNameValues.put("SetHeaderHardwareAccept-CH", "Sec-CH-UA-Model,Sec-CH-UA-Mobile");
 		createPipeline(propertyNameValues);
-		FlowData data = pipeline.createFlowData();
-		data.process();
+		try (FlowData data = pipeline.createFlowData()) {
+			data.process();
 		
-		// Verify the output
-		SetHeadersData typedOutput = getFromFlowData(data);
-		assertEquals(1, typedOutput.getResponseHeaderDictionary().size());
-		assertTrue(typedOutput.getResponseHeaderDictionary().containsKey("Accept-CH"));
-		String acceptCHValue = typedOutput.getResponseHeaderDictionary().get("Accept-CH");
-		assertTrue(acceptCHValue.contains("Sec-CH-UA"));
-		assertTrue(acceptCHValue.contains("Sec-CH-UA-Model,Sec-CH-UA-Mobile"));
-		assertTrue(acceptCHValue.matches("^Sec-CH-[a-zA-Z-]+,Sec-CH-[a-zA-Z-]+,Sec-CH-[a-zA-Z-]+$"));
+			// Verify the output
+			SetHeadersData typedOutput = getFromFlowData(data);
+			assertEquals(1, typedOutput.getResponseHeaderDictionary().size());
+			assertTrue(typedOutput.getResponseHeaderDictionary().containsKey("Accept-CH"));
+			String acceptCHValue = typedOutput.getResponseHeaderDictionary().get("Accept-CH");
+			assertTrue(acceptCHValue.contains("Sec-CH-UA"));
+			assertTrue(acceptCHValue.contains("Sec-CH-UA-Model,Sec-CH-UA-Mobile"));
+			assertTrue(acceptCHValue.matches("^Sec-CH-[a-zA-Z-]+,Sec-CH-[a-zA-Z-]+,Sec-CH-[a-zA-Z-]+$"));
+		}
 	}
 	
 	private void createPipeline(
