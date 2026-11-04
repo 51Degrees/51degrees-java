@@ -112,10 +112,10 @@ public class CompareOnPrem {
 
     /**
      * Relative path to the CSV file of truth records distributed with the
-     * ip-intelligence-data submodule.
+     * data repository, in cxx/data/ip-intelligence.
      */
     public static final String GEOIP_COMPARISON_EVIDENCE_REL_PATH =
-            "ip-intelligence-data/geoip_comparison_evidence.csv";
+            "ip-intelligence/geoip_comparison_evidence.csv";
 
     /**
      * Default name of the output file written to the working directory.

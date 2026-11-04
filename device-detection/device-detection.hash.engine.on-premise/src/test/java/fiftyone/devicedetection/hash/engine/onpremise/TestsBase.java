@@ -26,7 +26,7 @@ import fiftyone.devicedetection.shared.testhelpers.UserAgentGenerator;
 import fiftyone.devicedetection.shared.testhelpers.FileUtils;
 import fiftyone.pipeline.engines.Constants;
 
-import static fiftyone.devicedetection.shared.testhelpers.FileUtils.UA_FILE_NAME;
+import static fiftyone.devicedetection.shared.testhelpers.FileUtils.UA_FILE_PATH;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
 public class TestsBase {
@@ -47,7 +47,7 @@ public class TestsBase {
             FileUtils.getHashFile(),
             profile);
         userAgents = new UserAgentGenerator(
-            getFilePath(UA_FILE_NAME));
+            getFilePath(UA_FILE_PATH));
     }
 
     public void testCleanup() {

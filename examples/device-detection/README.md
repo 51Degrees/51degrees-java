@@ -21,6 +21,14 @@ Among other things, the examples illustrate:
 - use of device detection pipeline for off-line processing tasks
 - configuring device detection trade-offs between speed and conserving memory
 
+## Data files
+
+The on-premise examples use the free Lite data file and the evidence files in
+`cxx/data/device-detection`, a folder of the
+[data](https://github.com/51Degrees/data) repository. An example that cannot
+find one of these files runs the data repository's download script for it,
+and logs the command it runs.
+
 ## Cloud resource keys
 
 You will require [resource keys](https://51degrees.com/documentation/_info__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-resource-keys)
@@ -114,7 +122,8 @@ PORT=8100 java -jar ./web/getting-started.onprem/target/device-detection-java-ex
 
 The on-premise web example takes its data file from the `51DEGREES_DD_PATH`
 environment variable, then from `TestDataFile`, and otherwise uses the free Lite file
-in `device-detection-data`.
+in `cxx/data/device-detection`, which it downloads before the server starts if it is
+missing.
 
 ### Native library access
 

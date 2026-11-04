@@ -48,5 +48,3 @@ SESSIONS.ser
 51Degrees-IPIV4EnterpriseIpiV41.ipi.gz
 51Degrees-IPIV4AsnIpiV41.ipi
 51Degrees-IPIV4AsnIpiV41.ipi.gz
-# device detection data file used by the mixed examples
-device-detection-data/

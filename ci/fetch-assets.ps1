@@ -7,9 +7,11 @@ param (
 $ErrorActionPreference = "Stop"
 
 # Tests and examples find data files by searching below the repository root,
-# so every asset is linked into the data folders of the cxx submodule.
-$deviceDetectionData = "$PSScriptRoot/../cxx/device-detection-data"
-$ipIntelligenceData = "$PSScriptRoot/../cxx/ip-intelligence-data"
+# so every asset is linked into the folders of the data repository, which is
+# the data submodule of cxx.
+$data = "$PSScriptRoot/../cxx/data"
+$deviceDetectionData = "$data/device-detection"
+$ipIntelligenceData = "$data/ip-intelligence"
 
 $deviceDetectionAssets = 'TAC-HashV41.hash', '51Degrees-LiteV4.1.hash', '20000 Evidence Records.yml', '20000 User Agents.csv'
 ./steps/fetch-assets.ps1 -DeviceDetection:$DeviceDetection -DeviceDetectionUrl:$DeviceDetectionUrl -Assets $deviceDetectionAssets
@@ -23,6 +25,14 @@ New-Item -ItemType SymbolicLink -Force -Target "$PWD/assets/51Degrees-Enterprise
 # the data repository scripts use the unpacked name 51Degrees-LiteV41.ipi, so
 # link it as that.
 New-Item -ItemType SymbolicLink -Force -Target "$PWD/assets/51Degrees-LiteIpiV41.ipi" -Path "$ipIntelligenceData/51Degrees-LiteV41.ipi"
+
+# The data repository's script downloads every linked file that is not
+# already there. The files linked above are kept, so this gets the free files
+# that are not assets, which is the Asn file.
+& "$data/get-data-files.ps1"
+if (-not $?) {
+    throw "The data repository's get-data-files.ps1 could not download every file"
+}
 
 Write-Host "Assets hashes:"
 Get-FileHash -Algorithm MD5 -Path assets/*
