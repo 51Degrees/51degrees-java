@@ -507,11 +507,13 @@ public class MetricsOnPrem {
         String result = null;
         // Every value is closed, not only the first, as each one wraps a
         // native object of its own.
-        for (ValueMetaData value : profile.getValues(name)) {
-            if (result == null) {
-                result = value.getName();
+        try (CloseableIterable<ValueMetaData> values = profile.getValues(name)) {
+            for (ValueMetaData value : values) {
+                if (result == null) {
+                    result = value.getName();
+                }
+                value.close();
             }
-            value.close();
         }
         return result;
     }

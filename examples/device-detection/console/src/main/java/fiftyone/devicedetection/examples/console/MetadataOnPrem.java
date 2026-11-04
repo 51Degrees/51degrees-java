@@ -21,6 +21,7 @@
  * ********************************************************************* */
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
 import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngineBuilder;
@@ -158,59 +159,67 @@ public class MetadataOnPrem {
             throws Exception {
         // See outputProfileDetails for why this is a try-with-resource block.
         try (CloseableIterable<ComponentMetaData> components = ddEngine.getComponents()) {
-            components.forEach(c -> {
+            for (ComponentMetaData c : components) {
                 output.println("Component - "+ c.getName());
                 outputProperties(c, output);
-            });
+            }
         }
     }
 
-    private static void outputProperties(ComponentMetaData component, PrintWriter output) {
-        if (component.getProperties().iterator().hasNext() == false) {
-            output.println("    ... no properties");
-            return;
+    private static void outputProperties(ComponentMetaData component, PrintWriter output)
+            throws Exception {
+        // The properties of a component, and the values of a property, are
+        // collections that are closed in the same way.
+        try (CloseableIterable<FiftyOneAspectPropertyMetaData> properties =
+                     component.getProperties()) {
+            if (properties.iterator().hasNext() == false) {
+                output.println("    ... no properties");
+                return;
+            }
+            for (FiftyOneAspectPropertyMetaData property : properties) {
+                // Output some details about the property.
+                // If we're outputting to console then we also add some formatting to make it
+                // more readable.
+                output.format("    Property - %s [Category: %s] (%s)\n        " +
+                                "Description: %s\n",
+                        property.getName(),
+                        property.getCategory(),
+                        property.getType().getName(),
+                        property.getDescription());
+
+                // Next, output a list of the possible values this property can have.
+                // Most properties in the Device Metrics category do not have defined
+                // values so exclude them.
+                if (property.getCategory().equals("Device Metrics")==false) {
+                    StringBuilder values = new StringBuilder("        Possible " +
+                            "values: ");
+                    try (CloseableIterable<ValueMetaData> propertyValues =
+                                 property.getValues()) {
+                        Spliterator<ValueMetaData> spliterator2 =
+                                propertyValues.spliterator();
+                        StreamSupport.stream(spliterator2, false)
+                                .limit(20)
+                                .forEach(value -> {
+                                    // add value
+                                    values.append(truncateToNl(value.getName()));
+                                    // add description if exists
+                                    String d = value.getDescription();
+                                    if (Objects.nonNull(d) && d.isEmpty() == false) {
+                                        values.append("(")
+                                                .append(d)
+                                                .append(")");
+                                    }
+                                    values.append(",");
+                                });
+
+                        if (spliterator2.estimateSize() > 20) {
+                            values.append(" +  more ...");
+                        }
+                    }
+                    output.println(values);
+                }
+            }
         }
-        component.getProperties()
-                .forEach(property-> {
-                            // Output some details about the property.
-                            // If we're outputting to console then we also add some formatting to make it
-                            // more readable.
-                            output.format("    Property - %s [Category: %s] (%s)\n        " +
-                                            "Description: %s\n",
-                                    property.getName(),
-                                    property.getCategory(),
-                                    property.getType().getName(),
-                                    property.getDescription());
-
-                            // Next, output a list of the possible values this property can have.
-                            // Most properties in the Device Metrics category do not have defined
-                            // values so exclude them.
-                            if (property.getCategory().equals("Device Metrics")==false) {
-                                StringBuilder values = new StringBuilder("        Possible " +
-                                        "values: ");
-                                Spliterator<ValueMetaData> spliterator2 =
-                                        property.getValues().spliterator();
-                                StreamSupport.stream(spliterator2, false)
-                                        .limit(20)
-                                        .forEach(value -> {
-                                            // add value
-                                            values.append(truncateToNl(value.getName()));
-                                            // add description if exists
-                                            String d = value.getDescription();
-                                            if (Objects.nonNull(d) && d.isEmpty() == false) {
-                                                values.append("(")
-                                                        .append(d)
-                                                        .append(")");
-                                            }
-                                            values.append(",");
-                                        });
-
-                                if (spliterator2.estimateSize() > 20) {
-                                    values.append(" +  more ...");
-                                }
-                                output.println(values);
-                            }
-                        });
     }
 
 

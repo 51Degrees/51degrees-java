@@ -43,11 +43,13 @@ public class MetaDataHasherHash implements MetaDataHasher {
                 hash ^= property.hashCode();
 
                 int j = 0;
-                for (ValueMetaData value : property.getValues()) {
-                    if (j % 10 == 0) {
-                        hash ^= value.hashCode();
+                try (CloseableIterable<ValueMetaData> propertyValues = property.getValues()) {
+                    for (ValueMetaData value : propertyValues) {
+                        if (j % 10 == 0) {
+                            hash ^= value.hashCode();
+                        }
+                        j++;
                     }
-                    j++;
                 }
                 // Match metric property does not have component so don't include
                 if (!property.getCategory().equals(Constants.MatchMetrics.CATEGORY)) {
@@ -83,11 +85,13 @@ public class MetaDataHasherHash implements MetaDataHasher {
             for (ComponentMetaData component : components) {
                 hash ^= component.hashCode();
                 int i = 0;
-                for (FiftyOneAspectPropertyMetaData property : component.getProperties()) {
-                    if (i % 10 == 0) {
-                        hash ^= property.hashCode();
+                try (CloseableIterable<FiftyOneAspectPropertyMetaData> componentProperties = component.getProperties()) {
+                    for (FiftyOneAspectPropertyMetaData property : componentProperties) {
+                        if (i % 10 == 0) {
+                            hash ^= property.hashCode();
+                        }
+                        i++;
                     }
-                    i++;
                 }
                 hash ^= component.getDefaultProfile().hashCode();
             }
@@ -104,11 +108,13 @@ public class MetaDataHasherHash implements MetaDataHasher {
                     hash ^= profile.hashCode();
                     hash ^= profile.getComponent().hashCode();
                     int j = 0;
-                    for (ValueMetaData value : profile.getValues()) {
-                        if (j % 10 == 0) {
-                            hash ^= value.hashCode();
+                    try (CloseableIterable<ValueMetaData> profileValues = profile.getValues()) {
+                        for (ValueMetaData value : profileValues) {
+                            if (j % 10 == 0) {
+                                hash ^= value.hashCode();
+                            }
+                            j++;
                         }
-                        j++;
                     }
                 }
                 i++;
