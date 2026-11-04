@@ -133,7 +133,7 @@ public static class DatafileInfo {
     @SuppressWarnings("RedundantThrows")
     public static File getEvidenceFile(String evidenceFilename) throws Exception {
         if (Objects.isNull(evidenceFilename)) {
-            evidenceFilename = FileUtils.EVIDENCE_FILE_NAME;
+            evidenceFilename = FileUtils.EVIDENCE_FILE_PATH;
         }
 
         File evidenceFile;
@@ -159,7 +159,7 @@ public static class DatafileInfo {
             dataFilename = FileUtils.getHashFileName();
         }
         if (Objects.isNull(dataFilename)) {
-            dataFilename = FileUtils.LITE_HASH_DATA_FILE_NAME;
+            dataFilename = FileUtils.LITE_HASH_DATA_FILE_PATH;
         }
         String dataFileLocation;
         try {
