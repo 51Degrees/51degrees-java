@@ -202,7 +202,7 @@ public class CompareOnPrem {
                 // We use the max performance profile for optimal lookup
                 // speed in this example. See the documentation for more detail
                 // on this and other configuration options.
-                // https://51degrees.com/documentation/_features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-compareonprem.java&utm_term=automatic-datafile-updates
+                // https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-compareonprem.java&utm_term=automatic-datafile-updates
                 .setPerformanceProfile(Constants.PerformanceProfiles.MaxPerformance)
                 // inhibit sharing usage for this example
                 .setShareUsage(false)

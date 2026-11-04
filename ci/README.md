@@ -51,7 +51,7 @@ To run the on-premise tests:
 
 To run the cloud tests:
 
-- `_51DEGREES_RESOURCE_KEY_BESPOKE`: [resource key](https://51degrees.com/documentation/_info__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=ci-readme.md&utm_term=secrets)
+- `_51DEGREES_RESOURCE_KEY_BESPOKE`: [resource key](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=ci-readme.md&utm_term=secrets)
   passed to the tests as `TestResourceKey` and `SuperResourceKey`.
 - `_51DEGREES_LICENSE_KEY_51DID`: license key for the 51Did cloud tests,
   together with the `_51DEGREES_RESOURCE_KEY_BASIC` and
