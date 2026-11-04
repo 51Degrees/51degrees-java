@@ -71,12 +71,12 @@ public class JavaScriptUrlTests {
             builder.setContextRoot(contextRoot);
         }
         JavaScriptBuilderElement jsElement = builder.build();
-        Pipeline pipeline = new PipelineBuilder(loggerFactory)
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
             .addFlowElement(new SequenceElementBuilder(loggerFactory).build())
             .addFlowElement(new JsonBuilderElementBuilder(loggerFactory).build())
             .addFlowElement(jsElement)
             .build();
-        try (FlowData flowData = pipeline.createFlowData()) {
+             FlowData flowData = pipeline.createFlowData()) {
             flowData.addEvidence("query.user-agent", "iPhone");
             flowData.addEvidence("query.id.usage", "non-marketing");
             flowData.process();
