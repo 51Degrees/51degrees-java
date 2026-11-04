@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="51Degrees Resource Cleanup"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+    <description>
+        Fails the build when a FlowData, a Pipeline or a collection of
+        metadata is not closed on every path. The native results in a FlowData
+        and the native metadata collections each hold the engine's data set,
+        so if one is left open, closing the Pipeline cannot free the data set.
+        Java never frees the native results by itself.
+
+        Where something is closed by its owner elsewhere, such as the FlowData
+        the web integration closes at the end of a request, the code says so
+        with @SuppressWarnings and a comment naming the owner.
+    </description>
+
+    <rule name="FlowDataInTryWithResources"
+          language="java"
+          message="Create the FlowData in a try-with-resources statement, so its native results are freed on every path"
+          class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+        <description>
+            Every FlowData created is closed by a try-with-resources statement,
+            unless it is returned to the caller or kept in a field.
+        </description>
+        <priority>3</priority>
+        <properties>
+            <property name="xpath">
+                <value>
+<![CDATA[
+(//MethodCall[@MethodName = 'createFlowData']
+ | //ConstructorCall[pmd-java:typeIs('fiftyone.pipeline.core.data.FlowData')])
+    [not(ancestor::Resource)]
+    [not(parent::ReturnStatement)]
+    [not(parent::AssignmentExpression)]
+]]>
+                </value>
+            </property>
+        </properties>
+    </rule>
+
+    <rule name="CloseableIterableInTryWithResources"
+          language="java"
+          message="Use the metadata collection in a try-with-resources statement, so it releases the data set on every path"
+          class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+        <description>
+            Every CloseableIterable a method returns, such as the profiles or
+            the components of an engine, is closed by a try-with-resources
+            statement, unless it is returned to the caller.
+        </description>
+        <priority>3</priority>
+        <properties>
+            <property name="xpath">
+                <value>
+<![CDATA[
+//MethodCall[pmd-java:typeIs('fiftyone.pipeline.engines.fiftyone.data.CloseableIterable')]
+    [not(ancestor::Resource)]
+    [not(parent::ReturnStatement)]
+]]>
+                </value>
+            </property>
+        </properties>
+    </rule>
+
+    <!-- A Pipeline in a local variable is closed by a try-with-resources
+         statement or in a finally block. -->
+    <rule ref="category/java/errorprone.xml/CloseResource">
+        <properties>
+            <property name="types" value="fiftyone.pipeline.core.flowelements.Pipeline"/>
+        </properties>
+    </rule>
+
+</ruleset>

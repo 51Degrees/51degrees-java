@@ -127,15 +127,24 @@ public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
         HttpServletResponse response,
         Object handler) throws Exception {
         resultService.process(request);
-        
-        // Set the Client Hints request headers
-        uachService.setResponseHeaders(request, response);
-        
-        if (fiftyOneJsService.serveJS(request,  response) == false &&
-                fiftyOneJsService.serveJson(request, response) == false) {
-            return super.preHandle(request, response, handler);
+
+        boolean proceed = false;
+        try {
+            // Set the Client Hints request headers
+            uachService.setResponseHeaders(request, response);
+
+            proceed = fiftyOneJsService.serveJS(request,  response) == false &&
+                fiftyOneJsService.serveJson(request, response) == false &&
+                super.preHandle(request, response, handler);
+            return proceed;
+        } finally {
+            // Spring calls afterCompletion, which closes the FlowData, only
+            // when preHandle returns true. In every other case, serving the
+            // JavaScript or JSON included, the FlowData is closed here.
+            if (proceed == false) {
+                flowDataProvider.getFlowData(request).close();
+            }
         }
-        return false;
     }
 
     @Override
