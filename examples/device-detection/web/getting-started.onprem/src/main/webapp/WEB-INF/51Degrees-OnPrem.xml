@@ -32,7 +32,7 @@
                 variable, then from TestDataFile (an environment variable or
                 system property), and otherwise the free Lite file is used.
                 -->
-                <DataFile>${51DEGREES_DD_PATH:-${TestDataFile:-cxx/device-detection-data/51Degrees-LiteV4.1.hash}}</DataFile>
+                <DataFile>${51DEGREES_DD_PATH:-${TestDataFile:-cxx/data/device-detection/51Degrees-LiteV4.1.hash}}</DataFile>
                 <PerformanceProfile>LowMemory</PerformanceProfile>
             </BuildParameters>
             <BuilderName>DeviceDetectionHashEngine</BuilderName>

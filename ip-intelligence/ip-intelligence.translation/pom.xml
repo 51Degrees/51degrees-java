@@ -14,7 +14,7 @@
     <description>Translation engines that turn the weighted ISO country codes
         from 51Degrees IP Intelligence into localized, ordered country name and
         code lists.</description>
-    <url>https://51degrees.com?utm_source=maven&amp;utm_medium=package&amp;utm_campaign=51degrees-java&amp;utm_content=ip-intelligence.translation-pom.xml&amp;utm_term=url</url>
+    <url>https://github.com/51Degrees/51degrees-java</url>
 
     <dependencies>
         <dependency>
@@ -60,9 +60,11 @@
     <build>
         <plugins>
             <!-- The country translation YAML files are not shipped as new data;
-                 they are wired in at build time from the IP Intelligence data
-                 submodule (mirroring the .NET project, which links the same
-                 files from ip-intelligence-data/Translations). -->
+                 they are copied in at build time from the data repository in
+                 cxx/data/ip-intelligence/Translations, as the .NET project
+                 embeds the same files. A folder that is not there is skipped
+                 without an error, so TranslationTests, which read the files
+                 from the classpath, are what show they were copied. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
@@ -78,13 +80,13 @@
                             <outputDirectory>${project.build.outputDirectory}/fiftyone/ipintelligence/translation</outputDirectory>
                             <resources>
                                 <resource>
-                                    <directory>${project.basedir}/../../cxx/ip-intelligence-data/Translations</directory>
+                                    <directory>${project.basedir}/../../cxx/data/ip-intelligence/Translations</directory>
                                     <includes>
                                         <include>countrycodes.en_GB.yml</include>
                                     </includes>
                                 </resource>
                                 <resource>
-                                    <directory>${project.basedir}/../../cxx/ip-intelligence-data/Translations/OSM</directory>
+                                    <directory>${project.basedir}/../../cxx/data/ip-intelligence/Translations/OSM</directory>
                                     <includes>
                                         <include>countries.*.yml</include>
                                     </includes>

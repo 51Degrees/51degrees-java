@@ -21,8 +21,12 @@ repositories used to do for one package tree each.
   workflow instead tests the examples against the version it built, through
   [run-integration-tests.ps1](run-integration-tests.ps1).
 - [fetch-assets.ps1](fetch-assets.ps1) links every data file it downloads into
-  `cxx/device-detection-data` or `cxx/ip-intelligence-data`, where the tests
-  and examples find them.
+  `cxx/data/device-detection` or `cxx/data/ip-intelligence`, where the tests
+  and examples find them. Those are the folders of the
+  [data](https://github.com/51Degrees/data) repository, which is a submodule
+  of cxx. The script then runs the data repository's `get-data-files.ps1`,
+  which keeps the linked files and downloads the free files that are not
+  assets, which is the Asn file.
 - [run-performance-tests.ps1](run-performance-tests.ps1) measures the Pipeline
   API, Device Detection and IP Intelligence and writes one results file per
   configuration. The Device Detection and IP Intelligence metrics are prefixed
@@ -51,7 +55,7 @@ To run the on-premise tests:
 
 To run the cloud tests:
 
-- `_51DEGREES_RESOURCE_KEY_BESPOKE`: [resource key](https://51degrees.com/documentation/_info__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=ci-readme.md&utm_term=secrets)
+- `_51DEGREES_RESOURCE_KEY_BESPOKE`: [resource key](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=ci-readme.md&utm_term=secrets)
   passed to the tests as `TestResourceKey` and `SuperResourceKey`.
 - `_51DEGREES_LICENSE_KEY_51DID`: license key for the 51Did cloud tests,
   together with the `_51DEGREES_RESOURCE_KEY_BASIC` and

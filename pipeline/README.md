@@ -16,7 +16,7 @@ Reference documentation for the Java implementation can be found on the
 
 ## Pre-requisites
 
-The [tested versions](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=pre-requisites) page shows 
+The [tested versions](https://51degrees.com/documentation/_product_summaries__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=pre-requisites) page shows 
 the JDK versions that we currently test against. The software may run fine against other versions, 
 but additional caution should be applied.
 
@@ -123,7 +123,7 @@ There are several examples available in the `pipeline.developer-examples` folder
 how to make use of the Pipeline API in isolation. These are described in the table below.
 If you want examples that demonstrate how to use 51Degrees products such as device detection, 
 then these are available in the corresponding [repository](https://github.com/51Degrees/51degrees-java/tree/main/device-detection) 
-and on our [website](https://51degrees.com/documentation/_examples__device_detection__index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=examples).
+and on our [website](https://51degrees.com/documentation/_device_detection__examples__index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=examples).
 
 | Example                                            | Description |
 |----------------------------------------------------|-------------|

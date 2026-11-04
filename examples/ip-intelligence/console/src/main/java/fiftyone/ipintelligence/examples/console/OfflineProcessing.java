@@ -40,7 +40,7 @@
  * advanced operation this example can be used to experiment with tuning IP Intelligence for
  * performance using Performance Profile settings.
  *
- * Evidence files can be obtained from the [ip-intelligence-data repository](https://github.com/51Degrees/ip-intelligence-data).
+ * Evidence files can be obtained from the [data repository](https://github.com/51Degrees/data).
  *
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/console/src/main/java/fiftyone/ipintelligence/examples/console/OfflineProcessing.java).
  *
@@ -99,10 +99,10 @@ public class OfflineProcessing {
     // be somewhere in the project space
     //
     // For testing, contact us to obtain an enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-offlineprocessing.java&utm_term=datadir
-    private static final String dataDir = "ip-intelligence-data";
+    private static final String dataDir = "ip-intelligence";
     // This 51degrees file of 20,000 examples (distributed with the source)
     // needs to be somewhere in the project space. Additional evidence files
-    // can be obtained from the [ip-intelligence-data repository](https://github.com/51Degrees/ip-intelligence-data)
+    // can be obtained from the [data repository](https://github.com/51Degrees/data)
     public static final String HEADER_EVIDENCE_YML =
             dataDir + "/evidence.yml";
 

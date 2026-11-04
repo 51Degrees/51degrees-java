@@ -31,7 +31,7 @@ public class GettingStartedOnPremTest {
     @Test
     public void gettingStartedOnPremTest() throws Exception {
         GettingStartedOnPrem.run(FileUtils.getHashFileName() == null
-                        ? FileUtils.LITE_HASH_DATA_FILE_NAME
+                        ? FileUtils.LITE_HASH_DATA_FILE_PATH
                         : FileUtils.getHashFileName(),
                 EvidenceHelper.setUpEvidence(), System.out);
     }

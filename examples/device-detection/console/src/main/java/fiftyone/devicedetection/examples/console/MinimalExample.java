@@ -29,7 +29,7 @@ import fiftyone.pipeline.core.flowelements.Pipeline;
 
 /**
  * This is the code for the minimal example displayed in the configurator. Please see
- * <a href="https://51degrees.com/documentation/_examples__device_detection__getting_started__console__cloud.html?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-minimalexample.java&amp;utm_term=minimalexample">
+ * <a href="https://51degrees.com/documentation/_device_detection__examples__getting_started__console__cloud.html?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-minimalexample.java&amp;utm_term=minimalexample">
  * Getting Started Console Cloud</a> for a fuller example.
  */
 
