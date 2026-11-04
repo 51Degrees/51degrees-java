@@ -318,7 +318,7 @@ public class FlowDataTests {
     }
 
     @Test(expected = IllegalStateException.class)
-    public void FlowData_PipelineDisposed() {
+    public void FlowData_PipelineDisposed() throws Exception {
         when(pipeline.isClosed()).thenReturn(true);
         try (FlowData flowData = new FlowDataDefault(
             mock(Logger.class),
