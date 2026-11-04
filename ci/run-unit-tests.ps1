@@ -2,7 +2,11 @@ param(
     [Parameter(Mandatory)][string]$RepoName,
     [string]$Name,
     [string]$TestResourceKey,
-    [string]$DeviceDetection
+    [string]$DeviceDetection,
+    # How deeply a pull request is tested, as select-options.ps1 chose.
+    # standard leaves out the tests listed in standard-excludes.txt. Empty, for
+    # the branch itself or a release, runs every test.
+    [string]$Depth
 )
 $PSNativeCommandUseErrorActionPreference = $false
 
@@ -13,11 +17,14 @@ $PSNativeCommandUseErrorActionPreference = $false
 # Detection examples tests, and LicenseKey by the Device Detection data file
 # update example. The IP Intelligence update example's test is ignored, so it
 # does not need a key of its own.
+[string[]]$excludes = if ($Depth -eq 'standard') {
+    "-Dsurefire.excludesFile=$PSScriptRoot/standard-excludes.txt"
+}
 Write-Host "Entering '$RepoName'"
 Push-Location $RepoName
 try {
     Write-Host "Testing '$Name'"
-    mvn surefire:test @MavenOptions -Pdev -DfailIfNoTests=false `
+    mvn surefire:test @MavenOptions -Pdev -DfailIfNoTests=false @excludes `
         "-DTestResourceKey=$TestResourceKey" `
         "-DSuperResourceKey=$TestResourceKey" `
         "-DLicenseKey=$DeviceDetection"

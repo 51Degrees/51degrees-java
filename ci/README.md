@@ -20,6 +20,15 @@ repositories used to do for one package tree each.
   request tests the examples against the libraries it changes. The publish
   workflow instead tests the examples against the version it built, through
   [run-integration-tests.ps1](run-integration-tests.ps1).
+- [select-options.ps1](select-options.ps1) chooses the entries a pull request
+  runs. The standard set is JDK 17 and JDK 8 on Linux, without the three IP
+  Intelligence tests in [standard-excludes.txt](standard-excludes.txt) and
+  with the Selenium contract on JDK 17 alone. A change to a native module, IP
+  Intelligence, a `pom.xml` or a file outside the package trees adds to it.
+  macOS and performance run only when `rc` itself or the release pull request
+  is built, which
+  [release-pull-request.yml](../.github/workflows/release-pull-request.yml)
+  does on every entry.
 - [fetch-assets.ps1](fetch-assets.ps1) links every data file it downloads into
   `cxx/device-detection-data` or `cxx/ip-intelligence-data`, where the tests
   and examples find them.
