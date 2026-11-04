@@ -148,17 +148,25 @@ public class JavaScriptUrlTests {
     }
 
     /**
+     * Loggers for the tests that read what the element logged. No logger is
+     * behind them, so each one keeps the name it was created with.
+     */
+    private final TestLoggerFactory hostLoggerFactory =
+        new TestLoggerFactory(null);
+
+    /**
      * Renders one script for each host given, all through the same element,
      * with the host taken from the request's evidence.
      */
     private List<String> renderWithHosts(String... hosts) throws Exception {
+        TestLoggerFactory factory = hostLoggerFactory;
         JavaScriptBuilderElement jsElement =
-            new JavaScriptBuilderElementBuilder(loggerFactory)
+            new JavaScriptBuilderElementBuilder(factory)
                 .setEndpoint("/json")
                 .build();
-        Pipeline pipeline = new PipelineBuilder(loggerFactory)
-            .addFlowElement(new SequenceElementBuilder(loggerFactory).build())
-            .addFlowElement(new JsonBuilderElementBuilder(loggerFactory).build())
+        Pipeline pipeline = new PipelineBuilder(factory)
+            .addFlowElement(new SequenceElementBuilder(factory).build())
+            .addFlowElement(new JsonBuilderElementBuilder(factory).build())
             .addFlowElement(jsElement)
             .build();
         List<String> scripts = new ArrayList<>();
@@ -178,9 +186,9 @@ public class JavaScriptUrlTests {
      */
     private List<String> builderErrors() {
         List<String> errors = new ArrayList<>();
-        for (TestLogger logger : loggerFactory.loggers) {
-            if (logger.getName().equals(
-                    JavaScriptBuilderElement.class.getName())) {
+        for (TestLogger logger : hostLoggerFactory.loggers) {
+            if (JavaScriptBuilderElement.class.getName().equals(
+                    logger.getName())) {
                 errors.addAll(logger.errorsLogged);
             }
         }
