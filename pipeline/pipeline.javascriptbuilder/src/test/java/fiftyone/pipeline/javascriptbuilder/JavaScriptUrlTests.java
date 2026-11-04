@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.javascriptbuilder;
 
+import fiftyone.common.testhelpers.TestLogger;
 import fiftyone.common.testhelpers.TestLoggerFactory;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
@@ -71,12 +72,12 @@ public class JavaScriptUrlTests {
             builder.setContextRoot(contextRoot);
         }
         JavaScriptBuilderElement jsElement = builder.build();
-        Pipeline pipeline = new PipelineBuilder(loggerFactory)
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
             .addFlowElement(new SequenceElementBuilder(loggerFactory).build())
             .addFlowElement(new JsonBuilderElementBuilder(loggerFactory).build())
             .addFlowElement(jsElement)
             .build();
-        try (FlowData flowData = pipeline.createFlowData()) {
+             FlowData flowData = pipeline.createFlowData()) {
             flowData.addEvidence("query.user-agent", "iPhone");
             flowData.addEvidence("query.id.usage", "non-marketing");
             flowData.process();
@@ -144,5 +145,134 @@ public class JavaScriptUrlTests {
         for (String url : urls) {
             assertEquals("https://example.com/app/json", url);
         }
+    }
+
+    /**
+     * Loggers for the tests that read what the element logged. No logger is
+     * behind them, so each one keeps the name it was created with.
+     */
+    private final TestLoggerFactory hostLoggerFactory =
+        new TestLoggerFactory(null);
+
+    /**
+     * Renders one script for each host given, all through the same element,
+     * with the host taken from the request's evidence.
+     */
+    private List<String> renderWithHosts(String... hosts) throws Exception {
+        TestLoggerFactory factory = hostLoggerFactory;
+        JavaScriptBuilderElement jsElement =
+            new JavaScriptBuilderElementBuilder(factory)
+                .setEndpoint("/json")
+                .build();
+        List<String> scripts = new ArrayList<>();
+        try (Pipeline pipeline = new PipelineBuilder(factory)
+            .addFlowElement(new SequenceElementBuilder(factory).build())
+            .addFlowElement(new JsonBuilderElementBuilder(factory).build())
+            .addFlowElement(jsElement)
+            .build()) {
+            for (String host : hosts) {
+                try (FlowData flowData = pipeline.createFlowData()) {
+                    flowData.addEvidence(Constants.EVIDENCE_HOST_KEY, host);
+                    flowData.process();
+                    scripts.add(
+                        flowData.getFromElement(jsElement).getJavaScript());
+                }
+            }
+        }
+        return scripts;
+    }
+
+    /**
+     * The errors the JavaScript builder element logged.
+     */
+    private List<String> builderErrors() {
+        List<String> errors = new ArrayList<>();
+        for (TestLogger logger : hostLoggerFactory.loggers) {
+            if (JavaScriptBuilderElement.class.getName().equals(
+                    logger.getName())) {
+                errors.addAll(logger.errorsLogged);
+            }
+        }
+        return errors;
+    }
+
+    /**
+     * A host the check refuses gives a script with no callback, and the
+     * refusal is logged as an error the first time only, whatever the
+     * requests in between.
+     */
+    @Test
+    public void Url_RefusedHost_NoCallbackAndLoggedOnce() throws Exception {
+        List<String> scripts = renderWithHosts(
+            "exa mple.com", "exa mple.com", "example.com", "exa mple.com");
+
+        for (int i = 0; i < scripts.size(); i++) {
+            String script = scripts.get(i);
+            assertTrue(script.contains("new fiftyoneDegreesManager()"),
+                "The script was not rendered.");
+            if (i == 2) {
+                assertFalse(requestUrls(script).isEmpty(),
+                    "The valid host lost its callback.");
+            } else {
+                assertTrue(requestUrls(script).isEmpty(),
+                    "A refused URL reached the script.");
+                assertFalse(script.contains("exa mple.com"),
+                    "The refused host reached the script.");
+            }
+        }
+        List<String> errors = builderErrors();
+        assertEquals(1, errors.size(), String.join("\n", errors));
+        assertTrue(errors.get(0).contains("\"https://exa mple.com/json\""),
+            errors.get(0));
+    }
+
+    /**
+     * The URL is quoted and escaped in the log, so a line break in it cannot
+     * start a new log line.
+     */
+    @Test
+    public void Url_RefusedHost_LoggedOnOneLine() throws Exception {
+        renderWithHosts("a\nb.com\r\u2028");
+
+        List<String> errors = builderErrors();
+        assertEquals(1, errors.size(), String.join("\n", errors));
+        String error = errors.get(0);
+        for (char c : new char[] {'\n', '\r', '\u2028'}) {
+            assertTrue(error.indexOf(c) < 0, error);
+        }
+        assertTrue(error.contains("a\\nb.com\\r\\u2028"), error);
+    }
+
+    /**
+     * A host made only of whitespace is not set, so the script has no
+     * callback and nothing is logged.
+     */
+    @Test
+    public void Url_BlankHost_NoCallbackAndNothingLogged() throws Exception {
+        String script = renderWithHosts("  ").get(0);
+
+        assertTrue(requestUrls(script).isEmpty(),
+            "A blank host gave a callback.");
+        assertTrue(builderErrors().isEmpty(),
+            String.join("\n", builderErrors()));
+    }
+
+    /**
+     * A host from the request reaches the script as the check writes it,
+     * in lower case and with anything that could end the string the script
+     * holds it in percent-encoded.
+     */
+    @Test
+    public void Url_HostFromEvidence_WrittenAsChecked() throws Exception {
+        String script =
+            renderWithHosts("EXAMPLE.com/');alert(1);//").get(0);
+
+        List<String> urls = requestUrls(script);
+        assertFalse(urls.isEmpty(), "No request URL found in the script.");
+        for (String url : urls) {
+            assertEquals("https://example.com/%27);alert(1);//json", url);
+        }
+        assertFalse(script.contains("');alert(1)"),
+            "The host ended the string.");
     }
 }

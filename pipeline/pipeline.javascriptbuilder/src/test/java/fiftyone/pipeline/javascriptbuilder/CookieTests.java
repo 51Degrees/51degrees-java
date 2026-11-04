@@ -138,16 +138,15 @@ public class CookieTests {
         JavaScriptBuilderElement jsElement = new JavaScriptBuilderElementBuilder(loggerFactory)
             .setEnableCookies(enableInConfig)
             .build();
-        Pipeline pipeline = new PipelineBuilder(loggerFactory)
-            .addFlowElement(cookieElement)
-            .addFlowElement(sequenceElement)
-            .addFlowElement(jsonElement)
-            .addFlowElement(jsElement)
-            .build();
-
         // Act
         String javaScript = null;
-        try (FlowData flowData = pipeline.createFlowData())
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+                .addFlowElement(cookieElement)
+                .addFlowElement(sequenceElement)
+                .addFlowElement(jsonElement)
+                .addFlowElement(jsElement)
+                .build();
+            FlowData flowData = pipeline.createFlowData())
         {
             flowData.addEvidence(
                 Constants.EVIDENCE_ENABLE_COOKIES,

@@ -50,9 +50,10 @@ public interface ComponentMetaData extends Closeable {
 
     /**
      * List of the properties which come under the umbrella of this component.
+     * The caller closes the collection, which can hold native memory.
      * @return list of properties
      */
-    Iterable<FiftyOneAspectPropertyMetaData> getProperties();
+    CloseableIterable<FiftyOneAspectPropertyMetaData> getProperties();
 
     /**
      * Get the property from the component which has the name provided. Null is

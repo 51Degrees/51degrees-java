@@ -39,16 +39,18 @@ public interface ProfileMetaData extends Closeable {
     /**
      * Get the values which are defined in the profile (for some Engines
      * multiple profiles are required to build a full set of results).
+     * The caller closes the collection, which can hold the engine's data set.
      * @return values defined in the profile
      */
-    Iterable<ValueMetaData> getValues();
+    CloseableIterable<ValueMetaData> getValues();
 
     /**
      * Gets the values associated with the profile and the property name.
      * @param propertyName to get the values for
+     * The caller closes the collection, which can hold native memory.
      * @return values matching the property
      */
-    Iterable<ValueMetaData> getValues(String propertyName);
+    CloseableIterable<ValueMetaData> getValues(String propertyName);
 
     /**
      * If there is a value for the profile with the property name and value then

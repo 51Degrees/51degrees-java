@@ -21,11 +21,13 @@
  * ********************************************************************* */
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
 import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngineBuilder;
 import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import fiftyone.pipeline.engines.Constants;
+import fiftyone.pipeline.engines.fiftyone.data.CloseableIterable;
 import fiftyone.pipeline.engines.fiftyone.data.ComponentMetaData;
 import fiftyone.pipeline.engines.fiftyone.data.ProfileMetaData;
 import fiftyone.pipeline.engines.fiftyone.data.ValueMetaData;
@@ -45,12 +47,13 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
 public class MetadataOnPrem {
     private static final Logger logger = LoggerFactory.getLogger(GettingStartedOnPrem.class);
 
-    /* In this example, by default, the 51degrees "Lite" file needs to be somewhere in the project
-    space, or you may specify another file as a command line parameter.
+    /* In this example, by default, the 51degrees "Lite" file is used from the data repository in
+    cxx/data, and is downloaded if it is missing, or you may specify another file as a command line
+    parameter.
 
     Note that the Lite data file is only used for illustration, and has limited accuracy and
     capabilities. Find out about the Enterprise data file here: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-metadataonprem.java&utm_term=lite_v_4_1_hash */
-    public static String LITE_V_4_1_HASH = "51Degrees-LiteV4.1.hash";
+    public static String LITE_V_4_1_HASH = "device-detection/51Degrees-LiteV4.1.hash";
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
@@ -63,7 +66,8 @@ public class MetadataOnPrem {
         logger.info("Running MetadataOnPrem example");
         String dataFileLocation;
         try {
-            dataFileLocation = getFilePath(dataFile).getAbsolutePath();
+            dataFileLocation =
+                    DataFileHelper.findDataFile(dataFile).getAbsolutePath();
         } catch (Exception e) {
             DataFileHelper.cantFindDataFile(dataFile);
             throw e;
@@ -79,7 +83,7 @@ public class MetadataOnPrem {
                 // example. See the documentation for more detail on this and other
                 // configuration options:
                 // https://51degrees.com/documentation/_device_detection__features__performance_options.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-metadataonprem.java&utm_term=run
-                // https://51degrees.com/documentation/_features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-metadataonprem.java&utm_term=run
+                // https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-metadataonprem.java&utm_term=run
                 .setPerformanceProfile(Constants.PerformanceProfiles.LowMemory)
                 // inhibit auto-update of the data file for this test
                 .setAutoUpdate(false)
@@ -132,71 +136,92 @@ public class MetadataOnPrem {
     }
 
     private static void outputProfileDetails(DeviceDetectionHashEngine ddEngine,
-                                            PrintWriter output) {
-        // Group the profiles by component and then output the number of profiles 
+                                            PrintWriter output) throws Exception {
+        // Group the profiles by component and then output the number of profiles
         // for each component.
-        Map<String, List<ProfileMetaData>> groups =
-                StreamSupport.stream(ddEngine.getProfiles().spliterator(), false)
-                                .collect(Collectors.groupingBy(p -> p.getComponent().getName()));
-        groups.forEach((k,v)->output.format("%s Profiles: %d\n", k , v.size()));
+        //
+        // A try-with-resource block MUST be used for the collections of
+        // metadata returned by the engine. Each one holds a reference to the
+        // engine's data set until it is closed, so if it is left open the
+        // data set cannot be freed when the engine is closed.
+        Map<String, Long> groups;
+        try (CloseableIterable<ProfileMetaData> profiles = ddEngine.getProfiles()) {
+            groups = StreamSupport.stream(profiles.spliterator(), false)
+                    .collect(Collectors.groupingBy(
+                            p -> p.getComponent().getName(),
+                            Collectors.counting()));
+        }
+        groups.forEach((k,v)->output.format("%s Profiles: %d\n", k , v));
     }
 
     // Output the component name as well as a list of all the associated properties.
     // If we're outputting to console then we also add some formatting to make it
     // more readable.
-    private static void outputComponents(DeviceDetectionHashEngine ddEngine, PrintWriter output){
-        ddEngine.getComponents().forEach(c -> {
-            output.println("Component - "+ c.getName());
-            outputProperties(c, output);
-        });
+    private static void outputComponents(DeviceDetectionHashEngine ddEngine, PrintWriter output)
+            throws Exception {
+        // See outputProfileDetails for why this is a try-with-resource block.
+        try (CloseableIterable<ComponentMetaData> components = ddEngine.getComponents()) {
+            for (ComponentMetaData c : components) {
+                output.println("Component - "+ c.getName());
+                outputProperties(c, output);
+            }
+        }
     }
 
-    private static void outputProperties(ComponentMetaData component, PrintWriter output) {
-        if (component.getProperties().iterator().hasNext() == false) {
-            output.println("    ... no properties");
-            return;
+    private static void outputProperties(ComponentMetaData component, PrintWriter output)
+            throws Exception {
+        // The properties of a component, and the values of a property, are
+        // collections that are closed in the same way.
+        try (CloseableIterable<FiftyOneAspectPropertyMetaData> properties =
+                     component.getProperties()) {
+            if (properties.iterator().hasNext() == false) {
+                output.println("    ... no properties");
+                return;
+            }
+            for (FiftyOneAspectPropertyMetaData property : properties) {
+                // Output some details about the property.
+                // If we're outputting to console then we also add some formatting to make it
+                // more readable.
+                output.format("    Property - %s [Category: %s] (%s)\n        " +
+                                "Description: %s\n",
+                        property.getName(),
+                        property.getCategory(),
+                        property.getType().getName(),
+                        property.getDescription());
+
+                // Next, output a list of the possible values this property can have.
+                // Most properties in the Device Metrics category do not have defined
+                // values so exclude them.
+                if (property.getCategory().equals("Device Metrics")==false) {
+                    StringBuilder values = new StringBuilder("        Possible " +
+                            "values: ");
+                    try (CloseableIterable<ValueMetaData> propertyValues =
+                                 property.getValues()) {
+                        Spliterator<ValueMetaData> spliterator2 =
+                                propertyValues.spliterator();
+                        StreamSupport.stream(spliterator2, false)
+                                .limit(20)
+                                .forEach(value -> {
+                                    // add value
+                                    values.append(truncateToNl(value.getName()));
+                                    // add description if exists
+                                    String d = value.getDescription();
+                                    if (Objects.nonNull(d) && d.isEmpty() == false) {
+                                        values.append("(")
+                                                .append(d)
+                                                .append(")");
+                                    }
+                                    values.append(",");
+                                });
+
+                        if (spliterator2.estimateSize() > 20) {
+                            values.append(" +  more ...");
+                        }
+                    }
+                    output.println(values);
+                }
+            }
         }
-        component.getProperties()
-                .forEach(property-> {
-                            // Output some details about the property.
-                            // If we're outputting to console then we also add some formatting to make it
-                            // more readable.
-                            output.format("    Property - %s [Category: %s] (%s)\n        " +
-                                            "Description: %s\n",
-                                    property.getName(),
-                                    property.getCategory(),
-                                    property.getType().getName(),
-                                    property.getDescription());
-
-                            // Next, output a list of the possible values this property can have.
-                            // Most properties in the Device Metrics category do not have defined
-                            // values so exclude them.
-                            if (property.getCategory().equals("Device Metrics")==false) {
-                                StringBuilder values = new StringBuilder("        Possible " +
-                                        "values: ");
-                                Spliterator<ValueMetaData> spliterator2 =
-                                        property.getValues().spliterator();
-                                StreamSupport.stream(spliterator2, false)
-                                        .limit(20)
-                                        .forEach(value -> {
-                                            // add value
-                                            values.append(truncateToNl(value.getName()));
-                                            // add description if exists
-                                            String d = value.getDescription();
-                                            if (Objects.nonNull(d) && d.isEmpty() == false) {
-                                                values.append("(")
-                                                        .append(d)
-                                                        .append(")");
-                                            }
-                                            values.append(",");
-                                        });
-
-                                if (spliterator2.estimateSize() > 20) {
-                                    values.append(" +  more ...");
-                                }
-                                output.println(values);
-                            }
-                        });
     }
 
 

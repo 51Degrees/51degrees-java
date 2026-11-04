@@ -27,7 +27,6 @@ import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import fiftyone.devicedetection.examples.shared.EvidenceHelper;
 import fiftyone.devicedetection.hash.engine.onpremise.data.DeviceDataHash;
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
-import fiftyone.devicedetection.shared.testhelpers.FileUtils;
 import fiftyone.pipeline.core.data.ElementPropertyMetaData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
@@ -80,7 +79,7 @@ public class MatchMetrics {
                     boolean showDescs, OutputStream out) throws Exception {
         PrintWriter writer = new PrintWriter(out, true);
         if (Objects.isNull(dataFile)) {
-            dataFile = FileUtils.getHashFileName();
+            dataFile = DataFileHelper.getDataFileLocation(null);
         }
         logger.info("Constructing pipeline from file " + dataFile);
 

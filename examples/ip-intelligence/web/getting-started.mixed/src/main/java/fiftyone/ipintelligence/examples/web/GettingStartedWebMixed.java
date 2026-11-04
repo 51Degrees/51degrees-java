@@ -87,7 +87,7 @@ public class GettingStartedWebMixed extends HttpServlet {
     private static final long serialVersionUID = 1734154705981153541L;
     public static Logger logger = LoggerFactory.getLogger(GettingStartedWebMixed.class);
 
-    public static final String DD_DATA_FILE_DEFAULT = "device-detection-data/51Degrees-LiteV4.1.hash";
+    public static final String DD_DATA_FILE_DEFAULT = "device-detection/51Degrees-LiteV4.1.hash";
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
@@ -140,7 +140,9 @@ public class GettingStartedWebMixed extends HttpServlet {
         // Get the IP address parameter from the request for custom lookup
         String inputIpAddress = request.getParameter("client-ip");
 
-        // The detection has already been carried out by the PipelineFilter
+        // The detection has already been carried out by the PipelineFilter,
+        // which closes the FlowData at the end of the request, so it is not
+        // closed here.
         FlowData flowData = flowDataProvider.getFlowData(request);
 
         // Determine target IP for display.
@@ -171,14 +173,6 @@ public class GettingStartedWebMixed extends HttpServlet {
             String htmlTemplate = loadTemplate(resourceBase + "/WEB-INF/html/index.html");
             String processedHtml = substituteTemplateValues(htmlTemplate, deviceData, ipiData, targetIp, flowData);
             out.println(processedHtml);
-        } finally {
-            if (flowData != null) {
-                try {
-                    flowData.close();
-                } catch (Exception e) {
-                    logger.warn("Error closing flow data", e);
-                }
-            }
         }
     }
 
@@ -310,10 +304,13 @@ public class GettingStartedWebMixed extends HttpServlet {
         if (Files.exists(relativePath)) {
             return relativePath.toAbsolutePath().toString();
         }
+        // Search within the project directory, downloading the free Lite
+        // file if it is missing
         try {
-            return getFilePath(dataFile).getAbsolutePath();
+            return fiftyone.ipintelligence.examples.shared.DataFileHelper
+                    .findDataFile(dataFile).getAbsolutePath();
         } catch (Exception e) {
-            throw new IOException("Data file not found: " + dataFile);
+            throw new IOException("Data file not found: " + dataFile, e);
         }
     }
 }

@@ -30,6 +30,7 @@ import fiftyone.pipeline.core.data.ElementPropertyMetaData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.engines.exceptions.PropertyMissingException;
+import fiftyone.pipeline.engines.fiftyone.data.CloseableIterable;
 import fiftyone.pipeline.engines.fiftyone.data.ComponentMetaData;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
 
@@ -67,8 +68,10 @@ public class ValueTests {
             // depends on the data file, so assert the bound here and validate
             // every matched substring below.
             int componentCount = 0;
-            for (ComponentMetaData component : wrapper.getComponents()) {
-                componentCount++;
+            try (CloseableIterable<ComponentMetaData> components = wrapper.getComponents()) {
+                for (ComponentMetaData component : components) {
+                    componentCount++;
+                }
             }
             int matchedCount = device.getUserAgents().getValue().size();
             assertTrue(

@@ -460,13 +460,15 @@ public class JsonBuilderTests {
             .build();
         SequenceElement sequenceElement = new SequenceElementBuilder(loggerFactory)
             .build();
-        Pipeline pipeline = new PipelineBuilder(loggerFactory)
+        // The pipeline closes the elements, the lazy loading engine's
+        // threads included.
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
             .addFlowElement(sequenceElement)
             .addFlowElement(engine)
             .addFlowElement(jsonBuilder)
+            .setAutoCloseElements(true)
             .build();
-
-        try (FlowData flowData = pipeline.createFlowData()) {
+             FlowData flowData = pipeline.createFlowData()) {
 
             flowData.process();
     

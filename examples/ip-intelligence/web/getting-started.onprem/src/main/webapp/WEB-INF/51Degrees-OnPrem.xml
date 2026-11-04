@@ -29,7 +29,7 @@
                 <CreateTempDataCopy>false</CreateTempDataCopy>
                 <!-- specify path to 51Degrees IPI Data File -->
                 <!-- Uses TestDataFile system property if set, otherwise defaults to relative path -->
-                <DataFile>${TestDataFile:-cxx/ip-intelligence-data/51Degrees-EnterpriseIpiV41.ipi}</DataFile>
+                <DataFile>${TestDataFile:-cxx/data/ip-intelligence/51Degrees-EnterpriseIpiV41.ipi}</DataFile>
                 <PerformanceProfile>LowMemory</PerformanceProfile>
             </BuildParameters>
             <BuilderName>IPIntelligenceOnPremiseEngine</BuilderName>

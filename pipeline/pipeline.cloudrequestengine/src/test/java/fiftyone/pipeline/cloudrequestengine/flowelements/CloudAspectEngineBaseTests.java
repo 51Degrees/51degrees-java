@@ -181,9 +181,15 @@ public class CloudAspectEngineBaseTests {
     }
 
     @AfterEach
-    public void cleanUp() {
-        loggerFactory.assertMaxWarnings(maxWarnings);
-        loggerFactory.assertMaxErrors(maxErrors);
+    public void cleanUp() throws Exception {
+        try {
+            loggerFactory.assertMaxWarnings(maxWarnings);
+            loggerFactory.assertMaxErrors(maxErrors);
+        } finally {
+            if (pipeline != null) {
+                pipeline.close();
+            }
+        }
     }
     
     private <T extends ElementPropertyMetaData> boolean propertiesContainName(
@@ -370,9 +376,10 @@ public class CloudAspectEngineBaseTests {
 			        .addFlowElement(mockRequestEngine)
 			        .addFlowElement(mockTestInstance)
 			        .build();
-			FlowData flowData = pipeline.createFlowData();
-			flowData.addEvidence("query.user-agent", "iPhone");
-			flowData.process();
+			try (FlowData flowData = pipeline.createFlowData()) {
+				flowData.addEvidence("query.user-agent", "iPhone");
+				flowData.process();
+			}
 			
 		} catch (Exception e) {
 			fail("An exception has occurred here.");
@@ -422,9 +429,10 @@ public class CloudAspectEngineBaseTests {
 			        .addFlowElement(mockRequestEngine)
 			        .addFlowElement(mockTestInstance)
 			        .build();
-			FlowData flowData = pipeline.createFlowData();
-			flowData.addEvidence("query.user-agent", "iPhone");
-			flowData.process();
+			try (FlowData flowData = pipeline.createFlowData()) {
+				flowData.addEvidence("query.user-agent", "iPhone");
+				flowData.process();
+			}
 			
 		} catch (Exception e) {
 			fail("An exception has occurred here.");
@@ -480,9 +488,10 @@ public class CloudAspectEngineBaseTests {
 			        .addFlowElement(mockTestInstance)
 			        .addFlowElement(mockRequestEngine)
 			        .build();
-			FlowData flowData = pipeline.createFlowData();
-			flowData.addEvidence("query.user-agent", "iPhone");
-			flowData.process();
+			try (FlowData flowData = pipeline.createFlowData()) {
+				flowData.addEvidence("query.user-agent", "iPhone");
+				flowData.process();
+			}
 			fail("Expected exception was not thrown");
 			
 		} catch (Exception ex) {

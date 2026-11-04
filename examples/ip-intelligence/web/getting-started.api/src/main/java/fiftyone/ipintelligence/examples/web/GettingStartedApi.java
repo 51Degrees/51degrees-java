@@ -94,7 +94,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * and a JSON builder element which serialises the results.
  * <p>
  * The data file can be supplied as a command line argument. When no argument is given
- * the enterprise data file is looked for in the ip-intelligence-data directory.
+ * the enterprise data file is looked for in the cxx/data/ip-intelligence directory.
  * <p>
  * Note that the .NET version of this example also includes a device detection engine
  * in the same pipeline. This Java version is IP Intelligence only.
@@ -127,16 +127,29 @@ public class GettingStartedApi extends HttpServlet {
                     .setAutoUpdate(false)
                     .build(dataFileLocation, false);
             // The SequenceElement provides the sequence evidence required by
-            // the JsonBuilderElement.
+            // the JsonBuilderElement. The pipeline closes all three elements,
+            // the engine and its data file included, when destroy closes it.
             pipeline = new PipelineBuilder(LoggerFactory.getILoggerFactory())
                     .addFlowElement(new SequenceElementBuilder(
                             LoggerFactory.getILoggerFactory()).build())
                     .addFlowElement(engine)
                     .addFlowElement(new JsonBuilderElementBuilder(
                             LoggerFactory.getILoggerFactory()).build())
+                    .setAutoCloseElements(true)
                     .build();
             DataFileHelper.logDataFileInfo(engine);
         } catch (Exception e) {
+            // A servlet whose init fails is never destroyed, so whatever was
+            // built is closed here.
+            try {
+                if (pipeline != null) {
+                    pipeline.close();
+                } else if (engine != null) {
+                    engine.close();
+                }
+            } catch (Exception closeException) {
+                e.addSuppressed(closeException);
+            }
             throw new ServletException("Failed to create pipeline from data file '" +
                     dataFileLocation + "'", e);
         }

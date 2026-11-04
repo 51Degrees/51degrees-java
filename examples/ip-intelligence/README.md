@@ -10,16 +10,20 @@ These examples are not distributed as maven jars and need to be built by you.
 
 ## Required Files
 
-See [ip-intelligence-data](https://github.com/51Degrees/ip-intelligence-data/)
-repository for instructions on obtaining the necessary data files for on-premise IP intelligence.
+The data files for on-premise IP intelligence are kept in `cxx/data/ip-intelligence`, a
+folder of the [data](https://github.com/51Degrees/data) repository, which is a submodule of
+cxx.
 
-**IMPORTANT**: The enterprise IP Intelligence data file must be placed in the `ip-intelligence-data`
-directory at the root of this repository. The expected filename is `51Degrees-EnterpriseIpiV41.ipi`.
+**IMPORTANT**: The enterprise IP Intelligence data file must be placed in the
+`cxx/data/ip-intelligence` directory of this repository. The expected filename is
+`51Degrees-EnterpriseIpiV41.ipi`.
 
-Two free data files are also usable for many of the examples. The ASN file
-(`51Degrees-IPIV4AsnIpiV41.ipi`) is included in the `ip-intelligence-data` submodule, and the
-Lite file (`51Degrees-LiteV41.ipi`) can be downloaded by running
-`ip-intelligence-data/get-lite-file-from-azure.ps1` (or `.sh`). When the enterprise file is
+Two free data files are also usable for many of the examples, the ASN file
+(`51Degrees-IPIV4AsnIpiV41.ipi`) and the Lite file (`51Degrees-LiteV41.ipi`). Run
+`cxx/data/get-data-files.sh ip-intelligence` from the root of this repository to download
+them, or `cxx\data\get-data-files.ps1 ip-intelligence` in PowerShell on Windows. An example
+that needs one of them and cannot find it runs the script for that file, and logs the
+command it runs. When the enterprise file is
 absent, the tests for examples that work with any data file fall back to the ASN file and
 then the Lite file. The OfflineProcessing and PerformanceBenchmark examples need the
 RegisteredName property, which the ASN file does not contain, so their tests fall back to
@@ -27,12 +31,16 @@ the Lite file only. Tests for examples needing enterprise-only properties (Metri
 and Suspicious) are skipped instead.
 
 ```
-ip-intelligence-java-examples/
-├── ip-intelligence-data/
-│   └── 51Degrees-EnterpriseIpiV41.ipi
-├── console/
-├── web/
-└── shared/
+51degrees-java/
+├── cxx/
+│   └── data/
+│       └── ip-intelligence/
+│           └── 51Degrees-EnterpriseIpiV41.ipi
+└── examples/
+    └── ip-intelligence/
+        ├── console/
+        ├── web/
+        └── shared/
 ```
 
 The examples locate the data file in the following order:
@@ -40,9 +48,9 @@ The examples locate the data file in the following order:
 1. The `51DEGREES_IPI_PATH` environment variable or system property, which can
    be set to an explicit path to the data file.
 2. A search of the project folder hierarchy for the expected file name.
-3. The expected location `ip-intelligence-data/51Degrees-EnterpriseIpiV41.ipi`
+3. The expected location `cxx/data/ip-intelligence/51Degrees-EnterpriseIpiV41.ipi`
    (the configuration files for the getting started examples fall back to the
-   free Lite file `ip-intelligence-data/51Degrees-LiteV41.ipi`).
+   free Lite file `cxx/data/ip-intelligence/51Degrees-LiteV41.ipi`).
 
 This project contains sub-modules - **console**, giving examples that are intended
 to be run from the command line/console and **web**, illustrating use
@@ -121,14 +129,14 @@ to get a paid subscription with more properties.
 
 ## Running Examples and Tests
 
-**IMPORTANT**: All examples and tests must be run from the repository root directory (`ip-intelligence-java-examples/`).
+**IMPORTANT**: All examples and tests must be run from this folder, `examples/ip-intelligence`.
 
 ### Running Tests
 
 To run all tests:
 
 ```bash
-# From the repository root directory
+# From examples/ip-intelligence
 mvn test
 ```
 
@@ -147,14 +155,14 @@ mvn test -pl web/getting-started.onprem
 Console examples can be run directly using Maven exec plugin:
 
 ```bash
-# From the repository root directory
+# From examples/ip-intelligence
 mvn compile exec:java -pl console -Dexec.mainClass="fiftyone.ipintelligence.examples.console.GettingStartedOnPrem"
 ```
 
 Web examples:
 
 ```bash
-# From the repository root directory
+# From examples/ip-intelligence
 mvn compile exec:java -pl web/getting-started.onprem -Dexec.mainClass="fiftyone.ipintelligence.examples.web.GettingStartedWebOnPrem"
 ```
 

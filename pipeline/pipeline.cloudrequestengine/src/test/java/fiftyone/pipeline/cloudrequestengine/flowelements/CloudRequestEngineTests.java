@@ -75,29 +75,30 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
                 .build();
 
 
-        Pipeline pipeline = new PipelineBuilder(loggerFactory)
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
                 .addFlowElement(engine).build();
-        FlowData data = pipeline.createFlowData();
-        data.addEvidence("query.User-Agent", userAgent);
-        data.process();
+             FlowData data = pipeline.createFlowData()) {
+            data.addEvidence("query.User-Agent", userAgent);
+            data.process();
 
-        String result = data.getFromElement(engine).getJsonResponse();
-        assertEquals("{'device':{'value':'1'}}", result);
+            String result = data.getFromElement(engine).getJsonResponse();
+            assertEquals("{'device':{'value':'1'}}", result);
 
-        JSONObject jsonObj = new JSONObject(result);
-        assertEquals(1, jsonObj.getJSONObject("device").getInt("value"));
+            JSONObject jsonObj = new JSONObject(result);
+            assertEquals(1, jsonObj.getJSONObject("device").getInt("value"));
 
-        verify(httpClient, times(1)) // we expected a single external POST request
-                .postData(
-                        argThat(c -> {
-                            return c.getURL().equals(expectedUrl); // to this uri
-                        }),
-                        ArgumentMatchers.anyMap(),
-                        argThat(bytes -> {
-                            String string = new String(bytes);
-                            return string.contains("resource=" + resourceKey) && // content contains resource key
-                                    string.contains("User-Agent=" + userAgent); // content contains user agent
-                        }));
+            verify(httpClient, times(1)) // we expected a single external POST request
+                    .postData(
+                            argThat(c -> {
+                                return c.getURL().equals(expectedUrl); // to this uri
+                            }),
+                            ArgumentMatchers.anyMap(),
+                            argThat(bytes -> {
+                                String string = new String(bytes);
+                                return string.contains("resource=" + resourceKey) && // content contains resource key
+                                        string.contains("User-Agent=" + userAgent); // content contains user agent
+                            }));
+        }
     }
 
     /**
@@ -113,19 +114,20 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
                 .setResourceKey(resourceKey)
                 .build();
 
-        Pipeline pipeline = new PipelineBuilder(loggerFactory)
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
                 .setSuppressProcessException(true)
                 .addFlowElement(engine)
                 .build();
-        FlowData data = pipeline.createFlowData();
+             FlowData data = pipeline.createFlowData()) {
 
-        data.addEvidence("query.User-Agent", userAgent);
-        data.process();
+            data.addEvidence("query.User-Agent", userAgent);
+            data.process();
 
-        assertFalse(data.getErrors().isEmpty());
-        ArrayList<FlowError> errors = (ArrayList<FlowError>) data.getErrors();
-        Throwable throwable = errors.get(0).getThrowable();
-        assertInstanceOf(IOException.class, throwable);
+            assertFalse(data.getErrors().isEmpty());
+            ArrayList<FlowError> errors = (ArrayList<FlowError>) data.getErrors();
+            Throwable throwable = errors.get(0).getThrowable();
+            assertInstanceOf(IOException.class, throwable);
+        }
     }
 
     /**
@@ -330,11 +332,10 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
                 .setResourceKey("resourcekey")
                 .build();
 
-        Pipeline pipeline = new PipelineBuilder(loggerFactory)
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
                 .addFlowElement(engine)
                 .build();
-
-        try (FlowData flowData = pipeline.createFlowData()) {
+             FlowData flowData = pipeline.createFlowData()) {
             flowData.addEvidence(evidence1Parts[0], evidence1Parts[1]);
 
             flowData.addEvidence(evidence2Parts[0], evidence2Parts[1]);
@@ -450,11 +451,10 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
                 .setResourceKey("resourcekey")
                 .build();
 
-        Pipeline pipeline = new PipelineBuilder(loggerFactory)
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
                 .addFlowElement(engine)
                 .build();
-
-        try (FlowData data = pipeline.createFlowData()) {
+             FlowData data = pipeline.createFlowData()) {
             for (Map.Entry<String, Object> entry : evidence.entrySet()) {
                 data.addEvidence(entry.getKey(), entry.getValue());
             }
@@ -479,11 +479,10 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
                 .setResourceKey("resourcekey")
                 .build();
 
-        Pipeline pipeline = new PipelineBuilder(loggerFactory)
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
                 .addFlowElement(engine)
                 .build();
-
-        try (FlowData data = pipeline.createFlowData()) {
+             FlowData data = pipeline.createFlowData()) {
             data.addEvidence("query.id.usage", "non-marketing");
             data.addEvidence("header.id.email", "someone@example.com");
 

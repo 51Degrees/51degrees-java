@@ -62,9 +62,10 @@ public class EngineTests {
 			assumeTrue(e.getMessage(), false);
 		}
 		
-		IPIntelligenceOnPremiseEngine engine = createEngine(dataFile);
-		String tier = engine.getDataSourceTier();
-		engine.close();
+		String tier;
+		try (IPIntelligenceOnPremiseEngine engine = createEngine(dataFile)) {
+			tier = engine.getDataSourceTier();
+		}
 		
 		if (fileName.equals(LITE_IPI_DATA_FILE_NAME)) {
 			assertEquals("Lite", tier);

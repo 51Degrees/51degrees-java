@@ -88,26 +88,30 @@ public class Main {
                     new File(Objects.requireNonNull(getClass().getClassLoader().
                             getResource("51d.xml")).getFile()));
 
-            // Build a new Pipeline from the configuration.
-            Pipeline pipeline = new PipelineBuilder()
+            // Build a new Pipeline from the configuration. Closing the
+            // pipeline closes the ShareUsageElement it created, which sends
+            // any usage data still queued.
+            try (Pipeline pipeline = new PipelineBuilder()
                 .addService(http)
-                .buildFromConfiguration(options);
-                
-            // Alternatively, the commented code below shows how to
-            // configure the ShareUsageElement in code, rather than
-            // using a configuration file.
-            //ShareUsageElement usageElement = new ShareUsageBuilder(loggerFactory, http)
-            //    .setSharePercentage(0.01)
-            //    .setMinimumEntriesPerMessage(2500)
-            //    .build();
-            //Pipeline pipeline = new PipelineBuilder()
-            //    .addFlowElement(usageElement)
-            //    .build();
+                .buildFromConfiguration(options)) {
 
-            System.out.println(
-                "Pipeline created with share usage element. Evidence processed " + 
-                "with this pipeline will now be periodically shared with " +
-                "51Degrees using the specified configuration.");
+                // Alternatively, the commented code below shows how to
+                // configure the ShareUsageElement in code, rather than
+                // using a configuration file.
+                //ShareUsageElement usageElement = new ShareUsageBuilder(loggerFactory, http)
+                //    .setSharePercentage(0.01)
+                //    .setMinimumEntriesPerMessage(2500)
+                //    .build();
+                //Pipeline pipeline = new PipelineBuilder()
+                //    .addFlowElement(usageElement)
+                //    .setAutoCloseElements(true)
+                //    .build();
+
+                System.out.println(
+                    "Pipeline created with share usage element. Evidence processed " +
+                    "with this pipeline will now be periodically shared with " +
+                    "51Degrees using the specified configuration.");
+            }
         }
     }
 

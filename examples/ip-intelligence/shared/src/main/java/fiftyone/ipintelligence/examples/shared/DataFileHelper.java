@@ -39,7 +39,11 @@ import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
@@ -48,31 +52,38 @@ public class DataFileHelper {
     static Logger logger = LoggerFactory.getLogger(DataFileHelper.class);
 
     /**
-     * Relative path to the enterprise IP Intelligence data file from the examples repository root.
-     * This path is used by both console and web examples for testing.
-     * The data file is downloaded to this location by CI scripts.
+     * Sent with each download, so the Distributor can count the downloads
+     * made by these examples.
      */
-    public static final String ENTERPRISE_DATA_FILE_REL_PATH = "ip-intelligence-data/51Degrees-EnterpriseIpiV41.ipi";
+    private static final String DOWNLOAD_SOURCE = "examples-51degrees-java";
 
     /**
-     * Relative path to the freely downloadable Lite IP Intelligence data file.
-     * Run ip-intelligence-data/get-lite-file-from-azure.ps1 (or .sh) to obtain it.
+     * Folder and name of the enterprise IP Intelligence data file, which
+     * belongs in cxx/data/ip-intelligence, a folder of the data repository.
+     * This path is used by both console and web examples for testing.
+     * The data file is linked to this location by CI scripts.
+     */
+    public static final String ENTERPRISE_DATA_FILE_REL_PATH = "ip-intelligence/51Degrees-EnterpriseIpiV41.ipi";
+
+    /**
+     * Folder and name of the free Lite IP Intelligence data file, which the
+     * data repository's get-data-files script downloads to that folder.
      * It contains the RegisteredCountry, RegisteredName and RegisteredOwner properties.
      */
-    public static final String LITE_DATA_FILE_REL_PATH = "ip-intelligence-data/51Degrees-LiteV41.ipi";
+    public static final String LITE_DATA_FILE_REL_PATH = "ip-intelligence/51Degrees-LiteV41.ipi";
 
     /**
-     * Relative path to the ASN IP Intelligence data file which is part of the
-     * ip-intelligence-data submodule. It contains the Asn and AsnName properties.
+     * Folder and name of the free ASN IP Intelligence data file, which the
+     * same script downloads. It contains the Asn and AsnName properties.
      */
-    public static final String ASN_DATA_FILE_REL_PATH = "ip-intelligence-data/51Degrees-IPIV4AsnIpiV41.ipi";
+    public static final String ASN_DATA_FILE_REL_PATH = "ip-intelligence/51Degrees-IPIV4AsnIpiV41.ipi";
 
     /**
      * Find the best IP Intelligence data file available, preferring the
-     * enterprise file, then the ASN file from the ip-intelligence-data
-     * submodule, then the Lite file. Suitable for examples that work with
-     * whatever properties the data file contains, where any data file
-     * allows the example to run.
+     * enterprise file, then the free ASN file, then the free Lite file,
+     * and downloading a free file that is missing. Suitable for examples
+     * that work with whatever properties the data file contains, where any
+     * data file allows the example to run.
      * @return a resolved data file path, or null when none is available
      */
     public static String findAvailableDataFile() {
@@ -180,7 +191,7 @@ public static class DatafileInfo {
 
         File evidenceFile;
         try {
-            evidenceFile = FileFinder.getFilePath(evidenceFilename);
+            evidenceFile = findDataFile(evidenceFilename);
         } catch (Exception e) {
             logger.error("Could not find evidence file {}", evidenceFilename);
             throw e;
@@ -244,13 +255,92 @@ public static class DatafileInfo {
                     if (Files.exists(dataPath)) {
                         return dataPath.toAbsolutePath().toString();
                     }
-                    DataFileHelper.cantFindDataFile(dataFilename);
-                    throw new IOException("Data file not found at relative path: " + dataFilename +
-                                        ". Searched in project directories and current working directory." +
-                                        " An explicit path can be supplied via the " + IPI_PATH_ENV_VAR +
-                                        " environment variable.");
+                    // Download it, if it is a free data file
+                    try {
+                        return findDataFile(dataFilename).getAbsolutePath();
+                    } catch (IllegalArgumentException notFound) {
+                        DataFileHelper.cantFindDataFile(dataFilename);
+                        throw new IOException("Data file not found at relative path: " + dataFilename +
+                                            ". Searched in project directories and current working directory." +
+                                            " An explicit path can be supplied via the " + IPI_PATH_ENV_VAR +
+                                            " environment variable.", notFound);
+                    }
                 }
             }
         }
+    }
+
+    /**
+     * Finds a file below the project root, as
+     * {@link FileFinder#getFilePath(String)} does. A free data file that is
+     * missing has a {@code <file>.link} in the data repository, so the data
+     * repository's script is run to download it, and the file is looked for
+     * again.
+     * @param file the name of the file, or the end of its path
+     * @return the file
+     * @throws IllegalArgumentException if the file was not found, naming the
+     *         command that downloads it when there is one
+     */
+    public static File findDataFile(String file) {
+        try {
+            return getFilePath(file);
+        } catch (IllegalArgumentException notFound) {
+            File link;
+            try {
+                link = getFilePath(file + ".link");
+            } catch (IllegalArgumentException noLink) {
+                throw notFound;
+            }
+            String command = runDownload(link);
+            try {
+                return getFilePath(file);
+            } catch (IllegalArgumentException stillNotFound) {
+                String message = "Could not download '" + file +
+                        "'. Run this command to download it: " + command;
+                logger.error(message);
+                throw new IllegalArgumentException(message, stillNotFound);
+            }
+        }
+    }
+
+    /**
+     * Runs the data repository's script for the file that a link is for,
+     * and waits for it to finish. The data repository is the folder above
+     * the one the link is in.
+     * @param link the {@code <file>.link} file
+     * @return the command, as it would be typed
+     */
+    private static String runDownload(File link) {
+        String name = link.getName().substring(
+                0, link.getName().length() - ".link".length());
+        File data = link.getAbsoluteFile().getParentFile().getParentFile();
+        List<String> command;
+        if (System.getProperty("os.name", "")
+                .toLowerCase(Locale.ROOT).startsWith("windows")) {
+            command = Arrays.asList("powershell", "-NoProfile",
+                    "-ExecutionPolicy", "Bypass", "-File",
+                    new File(data, "get-data-files.ps1").getPath(), name,
+                    "-Source", DOWNLOAD_SOURCE);
+        } else {
+            command = Arrays.asList("sh",
+                    new File(data, "get-data-files.sh").getPath(),
+                    "-s", DOWNLOAD_SOURCE, name);
+        }
+        List<String> typed = new ArrayList<>();
+        for (String argument : command) {
+            typed.add(argument.contains(" ") ?
+                    "\"" + argument + "\"" : argument);
+        }
+        String line = String.join(" ", typed);
+        logger.info("'{}' is missing, so it is being downloaded by running {}",
+                name, line);
+        try {
+            new ProcessBuilder(command).inheritIO().start().waitFor();
+        } catch (IOException e) {
+            logger.error("Could not run {}. {}", line, e.getMessage());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        return line;
     }
 }

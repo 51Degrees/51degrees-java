@@ -114,11 +114,19 @@ public class ProfileMetaDataHash implements ProfileMetaData {
     @Override
     public String getName() {
         List<ValueMetaData> values = new ArrayList<>();
-        for (ValueMetaData value : getValues()) {
-            if (value.getProperty().getDisplayOrder() > 0 &&
-                value.getName().equalsIgnoreCase("N/A") == false) {
-                values.add(value);
+        // The native collection holds the data set until it is closed. The
+        // values taken from it are separate objects, so they outlive it.
+        try (CloseableIterable<ValueMetaData> profileValues = getValues()) {
+            for (ValueMetaData value : profileValues) {
+                if (value.getProperty().getDisplayOrder() > 0 &&
+                    value.getName().equalsIgnoreCase("N/A") == false) {
+                    values.add(value);
+                }
             }
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
         }
         ValueMetaData[] valuesArray = new ValueMetaData[0];
         valuesArray = values.toArray(valuesArray);
