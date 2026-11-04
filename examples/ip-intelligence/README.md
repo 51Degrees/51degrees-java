@@ -129,14 +129,14 @@ to get a paid subscription with more properties.
 
 ## Running Examples and Tests
 
-**IMPORTANT**: All examples and tests must be run from the repository root directory (`ip-intelligence-java-examples/`).
+**IMPORTANT**: All examples and tests must be run from this folder, `examples/ip-intelligence`.
 
 ### Running Tests
 
 To run all tests:
 
 ```bash
-# From the repository root directory
+# From examples/ip-intelligence
 mvn test
 ```
 
@@ -155,14 +155,14 @@ mvn test -pl web/getting-started.onprem
 Console examples can be run directly using Maven exec plugin:
 
 ```bash
-# From the repository root directory
+# From examples/ip-intelligence
 mvn compile exec:java -pl console -Dexec.mainClass="fiftyone.ipintelligence.examples.console.GettingStartedOnPrem"
 ```
 
 Web examples:
 
 ```bash
-# From the repository root directory
+# From examples/ip-intelligence
 mvn compile exec:java -pl web/getting-started.onprem -Dexec.mainClass="fiftyone.ipintelligence.examples.web.GettingStartedWebOnPrem"
 ```
 
