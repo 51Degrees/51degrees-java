@@ -22,6 +22,7 @@
 
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
@@ -75,9 +76,10 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
 public class ShareUsageExample {
     static final Logger logger = LoggerFactory.getLogger(ShareUsageExample.class);
 
-    // Evidence file with 20,000 examples
+    // Evidence file with 20,000 examples, from the data repository in
+    // cxx/data. The example downloads the file if it is missing.
     public static final String HEADER_EVIDENCE_YML =
-            "device-detection-data/20000 Evidence Records.yml";
+            "device-detection/20000 Evidence Records.yml";
 
     // Configurable settings
     private static final int MINIMUM_ENTRIES_PER_MESSAGE = 10;  // Send after 10 entries (default is 50)
@@ -100,7 +102,7 @@ public class ShareUsageExample {
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
 
-        File evidenceFile = getFilePath(HEADER_EVIDENCE_YML);
+        File evidenceFile = DataFileHelper.findDataFile(HEADER_EVIDENCE_YML);
         run(Files.newInputStream(evidenceFile.toPath()));
     }
 

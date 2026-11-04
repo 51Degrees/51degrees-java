@@ -67,22 +67,22 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  */
 public class OfflineProcessing {
     static final Logger logger = LoggerFactory.getLogger(OfflineProcessing.class);
-    // This 51degrees "Lite" file (distributed with the source) needs to
-    // be somewhere in the project space
+    // This 51degrees "Lite" file is used from the data repository in
+    // cxx/data, and is downloaded if it is missing
     //
     // Note that the Lite data file is only used for illustration, and has
     // limited accuracy and capabilities. Find out about the Enterprise data
     // file here: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-offlineprocessing.java&utm_term=lite_v_4_1_hash
     public static final String LITE_V_4_1_HASH =
-            "device-detection-data/51Degrees-LiteV4.1.hash";
-    // This 51degrees file of 20,000 examples (distributed with the source)
-    // needs to be somewhere in the project space
+            "device-detection/51Degrees-LiteV4.1.hash";
+    // This 51degrees file of 20,000 examples is used from the same folder,
+    // and is downloaded if it is missing
     public static final String HEADER_EVIDENCE_YML =
-            "device-detection-data/20000 Evidence Records.yml";
+            "device-detection/20000 Evidence Records.yml";
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
-        File evidenceFile = getFilePath(HEADER_EVIDENCE_YML);
+        File evidenceFile = DataFileHelper.findDataFile(HEADER_EVIDENCE_YML);
         run(LITE_V_4_1_HASH, Files.newInputStream(evidenceFile.toPath()), System.out);
     }
 
@@ -100,7 +100,8 @@ public class OfflineProcessing {
 
         String detectionFile;
         try {
-            detectionFile = getFilePath(dataFile).getAbsolutePath();
+            detectionFile =
+                    DataFileHelper.findDataFile(dataFile).getAbsolutePath();
         } catch (Exception e) {
             DataFileHelper.cantFindDataFile(dataFile);
             throw e;

@@ -94,7 +94,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * and a JSON builder element which serialises the results.
  * <p>
  * The data file can be supplied as a command line argument. When no argument is given
- * the enterprise data file is looked for in the ip-intelligence-data directory.
+ * the enterprise data file is looked for in the cxx/data/ip-intelligence directory.
  * <p>
  * Note that the .NET version of this example also includes a device detection engine
  * in the same pipeline. This Java version is IP Intelligence only.

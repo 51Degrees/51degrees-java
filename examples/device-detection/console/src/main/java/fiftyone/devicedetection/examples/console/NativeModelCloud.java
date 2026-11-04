@@ -56,7 +56,7 @@ public class NativeModelCloud {
         // This example creates the pipeline and engines in code. For a demonstration
         // of how to do this using a configuration file instead, see the TacCloud example.
         // For more information about builders in general see the documentation at
-        // https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-nativemodelcloud.java&utm_term=run
+        // https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-nativemodelcloud.java&utm_term=run
         resourceKey = getOrSetSuperResourceKey(resourceKey, NATIVE_MODEL_EXAMPLE_RESOURCE_KEY_NAME);
 
         try (PrintWriter output = new PrintWriter(os)) {

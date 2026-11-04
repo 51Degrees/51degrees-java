@@ -83,7 +83,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
 public class GettingStartedMixed {
     private static final Logger logger = LoggerFactory.getLogger(GettingStartedMixed.class);
 
-    public static final String DD_DATA_FILE_DEFAULT = "device-detection-data/51Degrees-LiteV4.1.hash";
+    public static final String DD_DATA_FILE_DEFAULT = "device-detection/51Degrees-LiteV4.1.hash";
     public static final String IPI_DATA_FILE_DEFAULT = DataFileHelper.ENTERPRISE_DATA_FILE_REL_PATH;
 
     public static void main(String[] args) throws Exception {
@@ -271,11 +271,12 @@ public class GettingStartedMixed {
         if (Files.exists(relativePath)) {
             return relativePath.toAbsolutePath().toString();
         }
-        // Try FileFinder (searches within project directory)
+        // Search within the project directory, downloading the free Lite
+        // file if it is missing
         try {
-            return getFilePath(dataFile).getAbsolutePath();
+            return DataFileHelper.findDataFile(dataFile).getAbsolutePath();
         } catch (Exception e) {
-            throw new IOException("Data file not found: " + dataFile);
+            throw new IOException("Data file not found: " + dataFile, e);
         }
     }
 }

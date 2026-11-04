@@ -73,9 +73,9 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * ```
  * ## Lite Data File
  * Lite data files (free-to-use, limited capabilities, no license key required) are created roughly
- * once a month and cannot be updated using auto-update, they may be downloaded from
- * [Github](https://github.com/51Degrees/device-detection-data) and are included with
- * source distributions of this software.
+ * once a month and cannot be updated using auto-update, they may be downloaded with the
+ * scripts in the [data repository](https://github.com/51Degrees/data) on GitHub, which is
+ * the cxx/data folder of the source.
  * # Update on Start-Up
  * You can configure the pipeline builder to download an Enterprise data file on start-up.
  * ## Pre-Requisites

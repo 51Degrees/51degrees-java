@@ -43,7 +43,7 @@ public class GettingStartedWebOnPremTest {
     @BeforeClass
     public static void startJetty() throws Exception {
         System.setProperty("TestDataFile", FileUtils.getHashFile() == null
-                ? FileUtils.LITE_HASH_DATA_FILE_NAME
+                ? FileUtils.LITE_HASH_DATA_FILE_PATH
                 : FileUtils.getHashFile().getAbsolutePath());
         SERVER = EmbedJetty.startWebApp(getFilePath(resourceBase).getAbsolutePath(), 8081);
     }

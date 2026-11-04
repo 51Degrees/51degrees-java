@@ -78,8 +78,8 @@ public class HtmlContentHelper {
         return "<div class=\"c-eg-alert\">\n" +
                 "  The IP intelligence data file is " + daysOld + " days old. " +
                 "A more recent data file may be needed for the most accurate IP " +
-                "intelligence results. The latest Lite data file is available from the " +
-                "<a href=\"https://github.com/51Degrees/ip-intelligence-data\">ip-intelligence-data " +
+                "intelligence results. The latest Lite data file is downloaded by the " +
+                "scripts in the <a href=\"https://github.com/51Degrees/data\">data " +
                 "repository on GitHub</a>. Find out about the full Enterprise data file, " +
                 "which includes automatic daily updates, on our " +
                 "<a href=\"https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-shared-src-main-java-fiftyone-ipintelligence-examples-web-htmlcontenthelper.java&utm_term=data-file-age-warning\">pricing page</a>.\n" +
