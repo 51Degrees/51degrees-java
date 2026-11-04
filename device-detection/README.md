@@ -28,23 +28,24 @@ how to use this.
 
 #### On-Premise
 
-If you are using on-premise detection, a "Lite" version of the data required is packaged 
-in this repository. It contains only a limited set of "essential" device detection properties. 
+If you are using on-premise detection, a free "Lite" version of the data required is
+available from the [data](https://github.com/51Degrees/data) repository, which is the
+`cxx/data` folder of this repository. It contains only a limited set of "essential"
+device detection properties.
 
 You may want to license our complete data file containing all properties. 
 [Details of our licenses](https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=on-premise) are available on our website.
 
-If you want to use the lite file, you will need to install [GitLFS](https://git-lfs.github.com/), then:
+To get the Lite file, run the data repository's download script from the root of
+this repository:
 
 ```
-git lfs install
+cxx/data/get-data-files.sh 51Degrees-LiteV4.1.hash
 ```
 
-Then, navigate to 'device-detection.hash.engine.on-premise/src/main/cxx/device-detection-cxx/device-detection-data' and execute:
-
-```
-git lfs pull
-```
+On Windows, run `cxx\data\get-data-files.ps1 51Degrees-LiteV4.1.hash` in PowerShell
+instead. The file is saved in `cxx/data/device-detection`, where the tests and
+examples find it.
 
 ## Installation
 

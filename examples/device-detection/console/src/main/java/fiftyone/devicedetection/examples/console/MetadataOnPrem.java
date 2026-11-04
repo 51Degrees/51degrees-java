@@ -45,12 +45,13 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
 public class MetadataOnPrem {
     private static final Logger logger = LoggerFactory.getLogger(GettingStartedOnPrem.class);
 
-    /* In this example, by default, the 51degrees "Lite" file needs to be somewhere in the project
-    space, or you may specify another file as a command line parameter.
+    /* In this example, by default, the 51degrees "Lite" file is used from the data repository in
+    cxx/data, and is downloaded if it is missing, or you may specify another file as a command line
+    parameter.
 
     Note that the Lite data file is only used for illustration, and has limited accuracy and
     capabilities. Find out about the Enterprise data file here: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-metadataonprem.java&utm_term=lite_v_4_1_hash */
-    public static String LITE_V_4_1_HASH = "51Degrees-LiteV4.1.hash";
+    public static String LITE_V_4_1_HASH = "device-detection/51Degrees-LiteV4.1.hash";
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
@@ -63,7 +64,8 @@ public class MetadataOnPrem {
         logger.info("Running MetadataOnPrem example");
         String dataFileLocation;
         try {
-            dataFileLocation = getFilePath(dataFile).getAbsolutePath();
+            dataFileLocation =
+                    DataFileHelper.findDataFile(dataFile).getAbsolutePath();
         } catch (Exception e) {
             DataFileHelper.cantFindDataFile(dataFile);
             throw e;

@@ -22,8 +22,17 @@ Tests and examples find data files with `FileFinder`, which searches below
 `project.root`. The surefire configuration sets that to
 `maven.multiModuleProjectDirectory`, which Maven takes from the nearest `.mvn`
 folder above the working directory. The only `.mvn` folder is at the root, so
-the search covers `cxx/device-detection-data` and `cxx/ip-intelligence-data`
+the search covers `cxx/data/device-detection` and `cxx/data/ip-intelligence`
 from wherever Maven is run. Do not add a `.mvn` folder below the root.
+
+Those folders are the data repository, a submodule of cxx, where each free
+data file is a `<file>.link` until `get-data-files.ps1` or `get-data-files.sh`
+downloads it. `ci/fetch-assets.ps1` runs the script, and the examples'
+`DataFileHelper.findDataFile` runs it for a file that is missing. Look for a
+free file by its folder and name, such as
+`device-detection/51Degrees-LiteV4.1.hash`, so the search does not stop at a
+file of the same name elsewhere, such as a Git LFS pointer in an old
+`cxx/device-detection-data` folder.
 
 ## Native builds
 

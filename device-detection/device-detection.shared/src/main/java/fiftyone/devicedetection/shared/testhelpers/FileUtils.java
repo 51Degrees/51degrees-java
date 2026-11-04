@@ -41,11 +41,14 @@ public class FileUtils {
     public static final String ENTERPRISE_HASH_DATA_FILE_NAME = "Enterprise-HashV41.hash";
 
     public static final String TAC_HASH_DATA_FILE_NAME = "TAC-HashV41.hash";
-    public static final String LITE_HASH_DATA_FILE_NAME = "51Degrees-LiteV4.1.hash";
+    // The free files are named with the data repository's folder, so a
+    // search does not stop at another file of the same name, such as a Git
+    // LFS pointer in an old device-detection-data folder.
+    public static final String LITE_HASH_DATA_FILE_NAME = "device-detection/51Degrees-LiteV4.1.hash";
     private static  Optional<File> HASH_DATA_FILE;
-    public static final String UA_FILE_NAME = "20000 User Agents.csv";
+    public static final String UA_FILE_NAME = "device-detection/20000 User Agents.csv";
     private static File UA_FILE;
-    public static final String EVIDENCE_FILE_NAME = "20000 Evidence Records.yml";
+    public static final String EVIDENCE_FILE_NAME = "device-detection/20000 Evidence Records.yml";
     private static Optional<File> EVIDENCE_FILE;
 
     /**

@@ -33,14 +33,13 @@ how to use this.
 In order to perform IP intelligence on-premise, you will need to use a
 data file.
 
-[ip-intelligence-data](https://github.com/51Degrees/ip-intelligence-data/) repository instructs how to obtain a 'Lite' data file, otherwise [contact us](https://51degrees.com/contact-us?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=on-premise) to obtain an 'Enterprise' data file.
+The free 'Lite' and Asn data files come from the [data](https://github.com/51Degrees/data) repository, which is the `cxx/data` folder of this repository. Run `cxx/data/get-data-files.sh ip-intelligence` from the root of this repository to download them, or `cxx\data\get-data-files.ps1 ip-intelligence` in PowerShell on Windows. Otherwise [contact us](https://51degrees.com/contact-us?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=on-premise) to obtain an 'Enterprise' data file.
 
 For tests, the data file can be supplied explicitly by setting the
 `51DEGREES_IPI_PATH` environment variable or system property to the path of
 the .ipi file. When it is not set, the project space is searched for the
-expected file name, with the free 'Lite' file expected in the
-[ip-intelligence-data](https://github.com/51Degrees/ip-intelligence-data/)
-location.
+expected file name, with the free 'Lite' file expected in
+`cxx/data/ip-intelligence`.
 
 ## Installation
 
