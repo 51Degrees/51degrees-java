@@ -33,7 +33,7 @@
  * 2. How to pass combined evidence (User-Agent and IP address) to the Pipeline
  * 3. How to retrieve results from both engines
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-java-examples/blob/main/console/src/main/java/fiftyone/ipintelligence/examples/console/GettingStartedMixed.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/console/src/main/java/fiftyone/ipintelligence/examples/console/GettingStartedMixed.java).
  *
  * This example requires:
  * - A Device Detection data file (.hash format)

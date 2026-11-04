@@ -262,7 +262,7 @@ public class OfflineProcessing {
  * @example console/OfflineProcessing.java
  * @include{doc} example-offline-processing-hash.txt
  * <p>
- * This example is available in full on [GitHub](https://github.com/51Degrees/device-detection-java-examples/blob/master/console/src/main/java/fiftyone/devicedetection/examples/console/OfflineProcessing.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/device-detection/console/src/main/java/fiftyone/devicedetection/examples/console/OfflineProcessing.java).
  * @include{doc} example-require-datafile.txt
  */
 

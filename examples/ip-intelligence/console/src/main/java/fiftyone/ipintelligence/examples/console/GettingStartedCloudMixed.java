@@ -31,7 +31,7 @@
  * 2. How to pass input data (User-Agent and IP address) to the Pipeline
  * 3. How to retrieve device and IP intelligence results from a single pipeline
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-java-examples/blob/main/console/src/main/java/fiftyone/ipintelligence/examples/console/GettingStartedCloudMixed.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/console/src/main/java/fiftyone/ipintelligence/examples/console/GettingStartedCloudMixed.java).
  *
  * To run this example, you will eventually need to create a Resource Key. A Resource Key is used as
  * shorthand to store the particular set of properties you are interested in as well as any

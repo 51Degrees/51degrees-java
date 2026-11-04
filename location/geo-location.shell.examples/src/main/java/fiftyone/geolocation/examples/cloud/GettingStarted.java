@@ -42,7 +42,7 @@ import static fiftyone.geolocation.core.Constants.EVIDENCE_GEO_LON_PARAM_KEY;
  *
  * Getting started example of using cloud geo-location.
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/location-java/blob/master/geo-location.shell.examples/src/main/java/fiftyone/geolocation/examples/cloud/GettingStarted.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/location/geo-location.shell.examples/src/main/java/fiftyone/geolocation/examples/cloud/GettingStarted.java).
  *
  * Required Maven Dependencies:
  * - [com.51degrees.geo-location](https://central.sonatype.com/artifact/com.51degrees/geo-location/)

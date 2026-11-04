@@ -31,7 +31,7 @@
  * 2. How evidence from the web request is automatically passed to the Pipeline
  * 3. How to retrieve the results in your web application
  * 
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-java-examples/blob/master/web/getting-started.onprem/src/main/java/fiftyone/ipintelligence/examples/web/GettingStartedWebOnPrem.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/web/getting-started.onprem/src/main/java/fiftyone/ipintelligence/examples/web/GettingStartedWebOnPrem.java).
  *
  * This example requires an enterprise IP Intelligence data file (.ipi). 
  * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-getting-started.onprem-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedwebonprem.java&utm_term=header).

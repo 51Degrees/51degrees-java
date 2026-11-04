@@ -104,7 +104,7 @@ This is not recommended unless absolutely necessary and should be used with caut
 ## Examples
 
 Examples can be found in
-[ip-intelligence-java-examples](https://github.com/51Degrees/ip-intelligence-java-examples)
+[ip-intelligence-java-examples](https://github.com/51Degrees/51degrees-java/tree/main/examples/ip-intelligence)
 repository.
 
 ## Tests

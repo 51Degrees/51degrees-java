@@ -119,7 +119,7 @@ public class NativeModelCloud {
     }
 }
 /*!
- * @example @example console/NativeModel.java
+ * @example console/NativeModelCloud.java
  *
  * This example shows how to use the 51Degrees Cloud service to look up the details of a device
  * based on a given 'native model name'. Native model name is a string of characters that are
@@ -133,5 +133,5 @@ public class NativeModelCloud {
  * pricing page](https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-nativemodelcloud.java&utm_term=top). Once this is done, a resource key with the
  * properties required by this example can be created at [here](https://configure.51degrees.com/QKyYH5XT?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-nativemodelcloud.java&utm_term=top).
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/device-detection-java-examples/blob/master/console/src/main/java/fiftyone/devicedetection/examples/console/NativeModelCloud.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/device-detection/console/src/main/java/fiftyone/devicedetection/examples/console/NativeModelCloud.java).
  */

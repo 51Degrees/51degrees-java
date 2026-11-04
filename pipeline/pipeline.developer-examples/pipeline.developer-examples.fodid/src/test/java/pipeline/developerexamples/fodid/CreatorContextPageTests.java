@@ -303,7 +303,7 @@ public class CreatorContextPageTests {
         String page = pageText();
         assertTrue(page.contains("Find out more"), "the page says where next");
         assertTrue(page.contains("utm_campaign=51degrees-java"), "campaign tag");
-        assertTrue(page.contains("https://github.com/51Degrees/pipeline-java"),
+        assertTrue(page.contains("https://github.com/51Degrees/51degrees-java/tree/main/pipeline"),
             "the repository is linked");
     }
 }

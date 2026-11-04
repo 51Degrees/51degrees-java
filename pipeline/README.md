@@ -94,7 +94,7 @@ consumers who stay on the classpath.
 Device detection users need to grant access to a second module as well. The JNI `native`
 declarations live in `device-detection.hash.engine.on-premise`, and JEP 472 checks
 binding them against the module that declares them - see the
-[device-detection-java README](https://github.com/51Degrees/device-detection-java#native-library-access).
+[device-detection-java README](https://github.com/51Degrees/51degrees-java/blob/main/device-detection/README.md#native-library-access).
 
 ### Configuring builders from the module path
 
@@ -122,7 +122,7 @@ Most packages contain tests which use junit and mockito. These tests can be run 
 There are several examples available in the `pipeline.developer-examples` folder that demonstrate 
 how to make use of the Pipeline API in isolation. These are described in the table below.
 If you want examples that demonstrate how to use 51Degrees products such as device detection, 
-then these are available in the corresponding [repository](https://github.com/51Degrees/device-detection-java) 
+then these are available in the corresponding [repository](https://github.com/51Degrees/51degrees-java/tree/main/device-detection) 
 and on our [website](https://51degrees.com/documentation/_examples__device_detection__index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=examples).
 
 | Example                                            | Description |
