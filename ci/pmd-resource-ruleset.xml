@@ -8,7 +8,7 @@
         Fails the build when a FlowData, a Pipeline or a collection of
         metadata is not closed on every path. The native results in a FlowData
         and the native metadata collections each hold the engine's data set,
-        so if one is left open, closing the Pipeline cannot free the data set.
+        so while one is open, closing the Pipeline cannot free the data set.
         Java never frees the native results by itself.
 
         Where something is closed by its owner elsewhere, such as the FlowData
@@ -63,11 +63,36 @@
         </properties>
     </rule>
 
-    <!-- A Pipeline in a local variable is closed by a try-with-resources
-         statement or in a finally block. -->
-    <rule ref="category/java/errorprone.xml/CloseResource">
+    <rule name="PipelineClosed"
+          language="java"
+          message="Close the Pipeline in a try-with-resources statement or a finally block, so its elements and their data sets are freed on every path"
+          class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+        <description>
+            A local variable holding a Pipeline that a builder has just built
+            is a try-with-resources resource, is closed in a finally block of
+            the same method, or is returned to the caller.
+        </description>
+        <priority>3</priority>
         <properties>
-            <property name="types" value="fiftyone.pipeline.core.flowelements.Pipeline"/>
+            <property name="xpath">
+                <value>
+<![CDATA[
+//LocalVariableDeclaration[not(parent::Resource)]
+    /VariableDeclarator[MethodCall
+        [@MethodName = ('build', 'buildFromConfiguration')]
+        [pmd-java:typeIs('fiftyone.pipeline.core.flowelements.Pipeline')]]
+    /VariableId[
+        let $name := @Name,
+            $body := ancestor::*[self::MethodDeclaration
+                or self::ConstructorDeclaration
+                or self::Initializer
+                or self::LambdaExpression][1]
+        return not($body//FinallyClause//MethodCall[@MethodName = 'close']
+                        /VariableAccess[@Name = $name])
+            and not($body//ReturnStatement/VariableAccess[@Name = $name])]
+]]>
+                </value>
+            </property>
         </properties>
     </rule>
 

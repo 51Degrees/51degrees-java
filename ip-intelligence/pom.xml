@@ -175,6 +175,8 @@
                     <rulesets>
                         <!--suppress UnresolvedMavenProperty -->
                         <ruleset>${maven.multiModuleProjectDirectory}/ci/pmd-ruleset.xml</ruleset>
+                        <!--suppress UnresolvedMavenProperty -->
+                        <ruleset>${maven.multiModuleProjectDirectory}/ci/pmd-resource-ruleset.xml</ruleset>
                     </rulesets>
                     <!-- Analyse test sources -->
                     <includeTests>true</includeTests>
