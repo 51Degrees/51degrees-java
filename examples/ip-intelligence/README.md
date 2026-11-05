@@ -1,8 +1,8 @@
 # 51Degrees IP Intelligence Engines - Examples
 
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-ip-intelligence-engines-examples "Data rewards the curious") **Java IP Intelligence**
+![51Degrees](https://raw.githubusercontent.com/51Degrees/51degrees-java/main/.github/images/logo-160.png "Data rewards the curious") **Java IP Intelligence**
 
-[Developer Documentation](https://51degrees.com/ip-intelligence-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-ip-intelligence-engines-examples "developer documentation")
+[Developer Documentation](https://51degrees.com/documentation/_ip_intelligence__index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-ip-intelligence-engines-examples "developer documentation")
 
 ## Introduction
 

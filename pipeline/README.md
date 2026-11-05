@@ -1,8 +1,8 @@
 # 51Degrees Pipeline
 
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=top "Data rewards the curious") **Java Pipeline**
+![51Degrees](https://raw.githubusercontent.com/51Degrees/51degrees-java/main/.github/images/logo-160.png "Data rewards the curious") **Java Pipeline**
 
-[Developer Documentation](https://51degrees.com/pipeline-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=top "developer documentation")
+[Developer Documentation](https://51degrees.com/documentation/_pipeline_api__index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=top "developer documentation")
 
 ## Introduction
 This repository contains all the projects required to build the Java implementation of the 51Degrees Pipeline API.
@@ -12,7 +12,7 @@ is also available on GitHub and is recommended reading if you wish to understand
 the concepts and design of this API.
 
 Reference documentation for the Java implementation can be found on the
-[Java API documentation](https://51degrees.com/pipeline-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=introduction) page.
+[Java API documentation](https://51degrees.com/documentation/apis/pipeline-java/annotated.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=introduction) page.
 
 ## Pre-requisites
 
