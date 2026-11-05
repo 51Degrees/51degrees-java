@@ -30,10 +30,10 @@ import java.util.regex.Pattern;
  * The callback URL the client script posts to for updated JSON. The protocol
  * and host usually come from the request, and the script holds the URL in a
  * single-quoted string, so the URL is checked before it is written into the
- * script. A URL that is not valid is refused. In the user information, in
- * anything after the host and port, and in the endpoint, the characters a
- * URL cannot hold or that could end the string or the script are
- * percent-encoded.
+ * script. A URL that is not valid, including one whose protocol is not http
+ * or https, is refused. In the user information, in anything after the host
+ * and port, and in the endpoint, the characters a URL cannot hold or that
+ * could end the string or the script are percent-encoded.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/pipeline-elements/javascript-builder.md#callback-url">Specification</a>
  */
 final class CallbackUrl {
@@ -71,11 +71,11 @@ final class CallbackUrl {
         "\\u2028\\u2029\\u202F\\u205F\\u3000]*");
 
     /**
-     * A scheme as RFC 3986 section 3.1 defines one, being a letter followed
-     * by letters, digits, '+', '-' and '.'.
+     * The schemes the script can send its request with. It uses the URL only
+     * with fetch and XMLHttpRequest, which reach a server with no other
+     * scheme.
      */
-    private static final Pattern SCHEME =
-        Pattern.compile("[A-Za-z][A-Za-z0-9+.-]*");
+    private static final String[] SCHEMES = {"http", "https"};
 
     /**
      * A label of a host name, being ASCII letters, digits, '-' and '_'.
@@ -128,7 +128,7 @@ final class CallbackUrl {
      * separates the host and the endpoint, being added when neither has one
      * and removed when both do. The protocol and the host are written in
      * lower case and the rest as given, apart from the percent-encoding.
-     * @param protocol the protocol, such as https
+     * @param protocol the protocol, http or https in any case
      * @param host the host, which can start with user information and end
      *             with a port, a path, a query or a fragment
      * @param endpoint the endpoint
@@ -147,7 +147,7 @@ final class CallbackUrl {
             endpoint = endpoint.substring(1);
         }
         String built = protocol + "://" + host + endpoint;
-        if (SCHEME.matcher(protocol).matches() == false) {
+        if (isScheme(protocol) == false) {
             return new CallbackUrl(false, built);
         }
         int end = authorityEnd(host);
@@ -157,8 +157,44 @@ final class CallbackUrl {
         }
         return new CallbackUrl(
             true,
-            protocol.toLowerCase(Locale.ROOT) + "://" + authority +
+            asciiLowerCase(protocol) + "://" + authority +
                 encoded(host.substring(end)) + encoded(endpoint));
+    }
+
+    /**
+     * Whether the protocol is http or https, ignoring the case of its ASCII
+     * letters only. String.equalsIgnoreCase also matches a letter outside
+     * ASCII to an ASCII one, such as the long s (U+017F) to 's', so it is
+     * not used.
+     * @param protocol the protocol
+     * @return true if the protocol is http or https
+     */
+    static boolean isScheme(String protocol) {
+        if (protocol == null) {
+            return false;
+        }
+        String lower = asciiLowerCase(protocol);
+        for (String scheme : SCHEMES) {
+            if (scheme.equals(lower)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * The text with the ASCII letters A to Z in lower case and every other
+     * character as it is.
+     * @param text the text
+     * @return the text with A to Z in lower case
+     */
+    private static String asciiLowerCase(String text) {
+        StringBuilder lower = new StringBuilder(text.length());
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            lower.append(c >= 'A' && c <= 'Z' ? (char) (c + ('a' - 'A')) : c);
+        }
+        return lower.toString();
     }
 
     /**

@@ -105,20 +105,21 @@ public class JavaScriptBuilderElementBuilder {
      * <p>
      * By default, the protocol from the request will be
      * used.
-     * @param protocol The protocol to use (http / https)
+     * @param protocol The protocol to use, http or https in any case of its
+     *                 ASCII letters
      * @return this builder
+     * @throws PipelineConfigurationException if the protocol is neither http
+     *                                        nor https
      */
     @DefaultValue("The protocol from the request")
     public JavaScriptBuilderElementBuilder setProtocol(String protocol) {
-        if (protocol.equalsIgnoreCase("http") ||
-            protocol.equalsIgnoreCase("https")) {
+        if (CallbackUrl.isScheme(protocol)) {
             this.protocol = protocol;
         }
         else {
             throw new PipelineConfigurationException(
                 "Invalid protocol in configuration (" + protocol +
-                "), must be 'http' or https'");
-
+                "), must be 'http' or 'https'");
         }
         return this;
     }
