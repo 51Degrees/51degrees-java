@@ -192,6 +192,92 @@ public class CallbackUrlTests {
         assertInvalid(url("https", host), "host " + host);
     }
 
+    static Stream<String> refusedZonesAndTextAfterTheBracket() {
+        return Stream.of(
+            "[fe80::1%25]",
+            "[fe80::1%25'+alert(1)+']",
+            "[fe80::1%eth0]",
+            "[fe80::1%25eth%0]",
+            "[::1]x",
+            "[::1]80",
+            "[::1]:80x",
+            "[::1]]");
+    }
+
+    /**
+     * Inside the brackets only an IPv6 address, optionally followed by '%25'
+     * and a zone of unreserved characters, and after them only a port. The
+     * zone check is what keeps a quote out of the script for a bracketed
+     * host.
+     */
+    @ParameterizedTest(name = "[{index}]")
+    @MethodSource("refusedZonesAndTextAfterTheBracket")
+    public void CallbackUrl_RefusesZoneOrTextAfterTheBracket(String host) {
+        assertInvalid(url("https", host), "host " + host);
+    }
+
+    @Test
+    public void CallbackUrl_AcceptsZoneFollowedByPort() {
+        assertValid(
+            "https://[fe80::1%25eth0]:8080/51dpipeline/json",
+            url("https", "[fe80::1%25eth0]:8080"),
+            "host [fe80::1%25eth0]:8080");
+    }
+
+    /**
+     * A port goes by its value, so leading zeros are allowed, and a port too
+     * long to read is refused rather than read as small enough.
+     */
+    @Test
+    public void CallbackUrl_ChecksThePortByItsValue() {
+        assertValid(
+            "https://example.com:00080/51dpipeline/json",
+            url("https", "example.com:00080"),
+            "host example.com:00080");
+        assertValid(
+            "https://example.com:0065535/51dpipeline/json",
+            url("https", "example.com:0065535"),
+            "host example.com:0065535");
+        for (String host : new String[] {
+            "example.com:0065536",
+            "example.com:123456",
+            "example.com:4294967296",
+            "example.com:99999999999999999999"}) {
+            assertInvalid(url("https", host), "host " + host);
+        }
+    }
+
+    /**
+     * Each character rule 8 lists, in the user information, after the host
+     * and in the endpoint, and a '%' without two hexadecimal digits after
+     * it, even at the end.
+     */
+    @Test
+    public void CallbackUrl_EncodesTheCharactersRule8Lists() {
+        assertValid(
+            "https://u%22%5E%60%7B%7C%7D@example.com/%22%5E%60%7B%7C%7D" +
+                "/j%22%5E%60%7B%7C%7D",
+            CallbackUrl.of(
+                "https", "u\"^`{|}@example.com/\"^`{|}", "/j\"^`{|}"),
+            "rule 8 characters");
+        assertValid(
+            "https://example.com/a%25/51dpipeline/json",
+            url("https", "example.com/a%"),
+            "host example.com/a%");
+        assertValid(
+            "https://example.com/a%254/51dpipeline/json",
+            url("https", "example.com/a%4"),
+            "host example.com/a%4");
+        assertValid(
+            "https://example.com/a%41/51dpipeline/json",
+            url("https", "example.com/a%41"),
+            "host example.com/a%41");
+        assertValid(
+            "https://example.com/json%25",
+            CallbackUrl.of("https", "example.com", "/json%"),
+            "endpoint /json%");
+    }
+
     @Test
     public void CallbackUrl_InvalidUrlIsTheOneBuilt() {
         CallbackUrl url = url("https", "exa mple.com");
@@ -200,7 +286,7 @@ public class CallbackUrlTests {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"https", "http", "ftp", "h+t-p.s"})
+    @ValueSource(strings = {"https", "http", "HtTp"})
     public void CallbackUrl_AcceptsScheme(String protocol) {
         CallbackUrl url = url(protocol, "example.com");
         assertNotNull(url);
@@ -215,8 +301,15 @@ public class CallbackUrlTests {
             "protocol HTTPS");
     }
 
+    /**
+     * Only http and https, ignoring the case of ASCII letters only, so a
+     * letter outside ASCII that a case-insensitive comparison can match to an
+     * ASCII one, such as the long s, is refused.
+     */
     @ParameterizedTest
-    @ValueSource(strings = {"1http", "h t", "x');alert(1);//", "a://b"})
+    @ValueSource(strings = {"ftp", "h+t-p.s", "ws", "javascript", "httpx",
+        "https ", "1http", "h t", "x');alert(1);//", "a://b", "http\u017f",
+        "HTTP\u017f"})
     public void CallbackUrl_RefusesScheme(String protocol) {
         assertInvalid(url(protocol, "example.com"), "protocol " + protocol);
     }
