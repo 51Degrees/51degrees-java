@@ -22,10 +22,13 @@
 
 package fiftyone.ipintelligence.examples.shared;
 
+import fiftyone.pipeline.core.data.IWeightedValue;
+import fiftyone.pipeline.core.data.WeightedValue;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
 import org.junit.Test;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -59,5 +62,22 @@ public class PropertyHelperTest {
     public void testAsNoValue() {
         AspectPropertyValue<List<Boolean>> test = new AspectPropertyValueDefault<>();
         assertTrue(PropertyHelper.asString(test).startsWith("Unknown"));
+    }
+
+    @Test
+    public void testAsIPAddressProperty() throws Exception {
+        AspectPropertyValue<InetAddress> test = new AspectPropertyValueDefault<>(
+                InetAddress.getByAddress(new byte[]{8, 8, 8, 0}));
+        assertEquals("8.8.8.0", PropertyHelper.asIPAddressProperty(test));
+    }
+
+    @Test
+    public void testAsStringWeightedIPAddress() throws Exception {
+        List<IWeightedValue<InetAddress>> addresses = new ArrayList<>();
+        addresses.add(new WeightedValue<>(65535,
+                InetAddress.getByAddress(new byte[]{8, 8, 8, (byte) 255})));
+        AspectPropertyValue<List<IWeightedValue<InetAddress>>> test =
+                new AspectPropertyValueDefault<>(addresses);
+        assertEquals("8.8.8.255", PropertyHelper.asString(test));
     }
 }
