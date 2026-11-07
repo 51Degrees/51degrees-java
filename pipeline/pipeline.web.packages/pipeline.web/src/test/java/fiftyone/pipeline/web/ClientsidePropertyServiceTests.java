@@ -81,6 +81,7 @@ public class ClientsidePropertyServiceTests {
 	@Before
   public void init() throws IOException {
     request = mock(HttpServletRequest.class);
+    when(request.getMethod()).thenReturn("GET");
     response = mock(HttpServletResponse.class);
     responseString = new StringWriter();
     PrintWriter responseWriter = new PrintWriter(responseString);
@@ -238,13 +239,16 @@ public class ClientsidePropertyServiceTests {
   }
 
   /**
-   * A browser holding a good response keeps it while processing fails.
+   * A browser holding a good response keeps it while processing fails. The
+   * 304 carries the caching headers a 200 to the same request would, so the
+   * browser asks again next time rather than keeping it for 30 minutes.
    */
   @Test
   public void JavaScript_ProcessingErrors_MatchingIfNoneMatch_304()
     throws IOException {
     recordProcessingError();
-    Configure(null);
+    Configure(ConfigureElements(
+      Collections.singletonList(Arrays.asList("header.User-Agent"))));
     when(request.getHeader("If-None-Match"))
       .thenReturn(String.valueOf(dataKey.hashCode()));
 
@@ -252,6 +256,79 @@ public class ClientsidePropertyServiceTests {
 
     verify(response).setStatus(eq(304));
     assertEquals("", responseString.toString());
+    verify(response).setHeader(eq("Cache-Control"), eq("private, no-cache"));
+    verify(response, times(0)).setHeader(eq("ETag"), anyString());
+    verify(response).setHeader(eq("Vary"), eq("User-Agent"));
+    verify(response).setHeader(eq("Access-Control-Allow-Origin"), eq("*"));
+  }
+
+  /**
+   * A 304 carries the Cache-Control, Vary and ETag headers a 200 to the same
+   * request would, as RFC 9110 section 15.4.5 requires, and the CORS header.
+   */
+  @Test
+  public void JavaScript_MatchingIfNoneMatch_304_CarriesHeaders()
+    throws IOException {
+    Configure(ConfigureElements(
+      Collections.singletonList(Arrays.asList("header.User-Agent"))));
+    String etag = String.valueOf(dataKey.hashCode());
+    when(request.getHeader("If-None-Match")).thenReturn(etag);
+
+    service.serveJavascript(request, response);
+
+    verify(response).setStatus(eq(304));
+    assertEquals("", responseString.toString());
+    verify(response).setHeader(eq("Cache-Control"), eq("private,max-age=1800"));
+    verify(response).setHeader(eq("ETag"), eq(etag));
+    verify(response).setHeader(eq("Vary"), eq("User-Agent"));
+    verify(response).setHeader(eq("Access-Control-Allow-Origin"), eq("*"));
+    verify(response, times(0)).setContentLength(anyInt());
+  }
+
+  @Test
+  public void JavaScript_MatchingIfNoneMatch_Head_304() throws IOException {
+    Configure(null);
+    when(request.getMethod()).thenReturn("HEAD");
+    when(request.getHeader("If-None-Match"))
+      .thenReturn(String.valueOf(dataKey.hashCode()));
+
+    service.serveJavascript(request, response);
+
+    verify(response).setStatus(eq(304));
+    assertEquals("", responseString.toString());
+  }
+
+  /**
+   * RFC 9110 section 13.1.2 answers a matching If-None-Match with 412 for
+   * any method other than GET or HEAD, such as the POST the client-side
+   * script sends to the JSON endpoint.
+   */
+  @Test
+  public void Json_MatchingIfNoneMatch_Post_412() throws IOException {
+    Configure(null);
+    when(request.getMethod()).thenReturn("POST");
+    when(request.getHeader("If-None-Match"))
+      .thenReturn(String.valueOf(dataKey.hashCode()));
+
+    service.serveJson(request, response);
+
+    verify(response).setStatus(eq(412));
+    verify(response, times(0)).setStatus(eq(304));
+    assertEquals("", responseString.toString());
+  }
+
+  /**
+   * Without a matching If-None-Match a POST gets the JSON as before.
+   */
+  @Test
+  public void Json_Post_200() throws IOException {
+    Configure(null);
+    when(request.getMethod()).thenReturn("POST");
+
+    service.serveJson(request, response);
+
+    verify(response).setStatus(eq(200));
+    assertEquals(JSON_CONTENT, responseString.toString());
   }
 
   /**
