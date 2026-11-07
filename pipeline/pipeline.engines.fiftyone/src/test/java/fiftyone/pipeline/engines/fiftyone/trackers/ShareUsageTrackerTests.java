@@ -40,6 +40,8 @@ import java.util.Map;
 import static fiftyone.pipeline.core.Constants.*;
 import static fiftyone.pipeline.engines.Constants.DEFAULT_SESSION_COOKIE_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.when;
 
@@ -113,6 +115,30 @@ public class ShareUsageTrackerTests {
         }
 
         assertEquals(2, trackedEvents);
+    }
+
+    /**
+     * A repeat is shared at most once in each interval. Sharing a repeat after
+     * the interval starts a new interval, so a repeat straight after it is not
+     * shared.
+     */
+    @Test
+    public void ShareUsageTracker_RepeatEvidence_SharedOncePerInterval()
+        throws InterruptedException {
+        long interval = 500;
+        ShareUsageTracker shareUsageTracker = new ShareUsageTracker(
+            new CacheConfiguration(new LruPutCache.Builder(), 1000),
+            interval,
+            evidenceKeyFilter);
+
+        assertTrue(shareUsageTracker.track(data),
+            "New evidence was not shared.");
+        Thread.sleep(interval + 250);
+        assertTrue(shareUsageTracker.track(data),
+            "A repeat after the interval was not shared.");
+        assertFalse(shareUsageTracker.track(data),
+            "A repeat straight after a repeat was shared was also shared, " +
+                "so the time it was shared was not stored.");
     }
 
     @Test
