@@ -161,6 +161,40 @@ public class ShareUsageElementBackOffTests {
         element.dataUploader = uploader;
     }
 
+    /**
+     * Replaces the element with one that has its own back-off settings. The
+     * failures window is long enough that every failure in a test counts.
+     */
+    private void useBackOff(
+        int failuresToEnterRecovery,
+        double initialDelaySeconds,
+        double maxDelaySeconds,
+        int maximumQueueSize) throws Exception {
+        element.close();
+        element = new ShareUsageElement(
+            LoggerFactory.getLogger(ShareUsageElement.class),
+            1,
+            1,
+            maximumQueueSize,
+            100,
+            100,
+            1,
+            true,
+            "http://localhost/usage",
+            new ArrayList<>(),
+            new ArrayList<>(),
+            new ArrayList<>(),
+            DEFAULT_SESSION_COOKIE_NAME,
+            new ShareAll(),
+            failuresToEnterRecovery,
+            100,
+            initialDelaySeconds,
+            maxDelaySeconds,
+            2);
+        element.addPipeline(pipeline);
+        element.dataUploader = uploader;
+    }
+
     @AfterEach
     public void cleanUp() throws Exception {
         element.close();
@@ -261,5 +295,64 @@ public class ShareUsageElementBackOffTests {
             "Closing took " + took + " ms, as it waited for the pause.");
         assertEquals(DEFAULT_FAILURES, uploader.count(),
             "A send was made during the pause or when closing.");
+    }
+
+    /**
+     * Each failed send after a pause multiplies the delay, and the delay
+     * stops growing at the maximum.
+     */
+    @Test
+    public void ShareUsageElement_BackOff_DelayGrowsToMaximum()
+        throws Exception {
+        useBackOff(1, 0.5, 1.0, 100);
+        for (int i = 0; i < 40; i++) {
+            process();
+        }
+
+        waitFor(
+            () -> uploader.count() >= 4,
+            () -> "Fewer than four sends were made.");
+        List<Long> times = uploader.times();
+        long first = times.get(1) - times.get(0);
+        long second = times.get(2) - times.get(1);
+        long third = times.get(3) - times.get(2);
+        String shown = first + ", " + second + ", " + third + " ms";
+        assertTrue(first >= 400,
+            "The first pause was not the initial delay. Gaps: " + shown);
+        assertTrue(second >= 900,
+            "The second pause was not doubled. Gaps: " + shown);
+        assertTrue(third >= 900 && third < 1900,
+            "The third pause was not held at the maximum. Gaps: " + shown);
+    }
+
+    /**
+     * When the queue fills during a pause, new evidence is dropped and what
+     * was queued first is sent once sending resumes.
+     */
+    @Test
+    public void ShareUsageElement_BackOff_FullQueueDropsNewEvidence()
+        throws Exception {
+        useBackOff(1, 2, 2, 4);
+        failSends(1);
+
+        List<String> kept = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            kept.add(process());
+        }
+        List<String> dropped = new ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            dropped.add(process());
+        }
+        uploader.code = 200;
+
+        waitFor(
+            () -> uploader.accepted().containsAll(kept),
+            () -> "The evidence queued during the pause was not all sent. " +
+                "Sent: " + uploader.accepted());
+        Thread.sleep(500);
+        for (String ip : dropped) {
+            assertTrue(uploader.accepted().contains(ip) == false,
+                "Evidence processed when the queue was full was sent.");
+        }
     }
 }
