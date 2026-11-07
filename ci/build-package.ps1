@@ -7,7 +7,15 @@ param(
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
 
-. "$PSScriptRoot/packages.ps1"
+. "$PSScriptRoot/release.ps1"
+
+# Builds the packages this publish releases, each at its own version from the
+# release plan (see release.ps1). $Version is common-ci's label for the run and
+# is not used.
+$plan = @(Get-BuildPlan $RepoName)
+Write-Host "Building $($plan.Count) packages:"
+$plan | Format-Table Name, Previous, Version, Reason -AutoSize | Out-String -Width 200 |
+    Write-Host
 
 # Put the native libraries built on every platform into the engine they came
 # from, so each engine's jar carries all of its own and none of the other's.
@@ -21,46 +29,25 @@ foreach ($package in $NativePackages) {
         }
 }
 
-# The root pom.xml is not the parent of the package trees, so setting the
-# version at the root does not reach them. Set it in each tree, the examples
-# included, so the whole repository carries the version being released.
-foreach ($package in $Packages) {
-    Write-Host "Setting the version of '$($package.Path)' to '$Version'"
-    Push-Location "$RepoName/$($package.Path)"
-    try {
-        mvn versions:set @MavenOptions "-DnewVersion=$Version" -DgenerateBackupPoms=false
-    } finally {
-        Pop-Location
-    }
-}
+# Every published module gets its own version, and the versions of its parent
+# and of the packages it depends on, including those this publish does not
+# release, which stay at their last release.
+Set-PomVersions $RepoName (Get-BuildVersions $RepoName $plan)
 
-# The examples are never published. They are left out of the deploy so that
-# the last project in the reactor is one the publishing plugin is configured
-# for. Maven 3 does not exclude a folder's modules with the folder, so each of
-# them is named.
-$repoPath = (Resolve-Path $RepoName).Path
-$examples = foreach ($package in $Packages | Where-Object { -not $_.Publish }) {
-    Get-ChildItem -Path "$RepoName/$($package.Path)" -Recurse -Filter pom.xml |
-        Where-Object { $_.FullName -notmatch '[\\/](target|node_modules)[\\/]' } |
-        ForEach-Object { '!' + [IO.Path]::GetRelativePath($repoPath, $_.DirectoryName).Replace('\', '/') }
-}
+# Only the modules in the plan are deployed, so the one publishing bundle holds
+# only them. A package they depend on that is not released is taken from Maven
+# Central at its last release, the version their poms now require.
+$modules = @($plan | ForEach-Object { Get-ModulePath $_ })
 
-# The publishing plugin writes the one bundle for the whole reactor under the
-# first tree that publishes. common-ci copies the bundle from where a single
-# tree puts it, below target at the root, so a link at that path leads to the
-# bundle. The link is made before the deploy, which Linux allows.
-$firstPublishing = ($Packages | Where-Object { $_.Publish } | Select-Object -First 1).Path
-New-Item -ItemType Directory -Force -Path "$RepoName/target" | Out-Null
-New-Item -ItemType SymbolicLink -Force -Path "$RepoName/target/central-publishing" -Target "../$firstPublishing/target/central-publishing" | Out-Null
-
-# common-ci sets the version of the root pom.xml, deploys from the root to a
-# local staging folder with signing, and copies the result and the publishing
-# bundle into the package folder.
+# common-ci deploys from the root to a local staging folder with signing, and
+# copies the result and the publishing bundle into the package folder. The
+# versions are already set, so it is given no folder to set them in.
 ./java/build-package.ps1 `
     -RepoName $RepoName `
     -Name $Name `
     -Version $Version `
-    -ExtraArgs "-DskipNativeBuild=true", "-pl", ($examples -join ',') `
+    -VersionPaths @() `
+    -ExtraArgs "-DskipNativeBuild=true", "-pl", ($modules -join ',') `
     -JavaGpgKeyPassphrase $Keys['JavaGpgKeyPassphrase'] `
     -JavaPGP $Keys['JavaPGP'] `
     -CodeSigningKeyVaultName: $Keys['CodeSigningKeyVaultName'] `
