@@ -134,6 +134,8 @@ does the same.
 
 Each package has its own version, and a release publishes only the packages
 that changed since their last release and the packages that depend on them.
+A change only to documentation, tests, examples or the descriptive parts of a
+`pom.xml`, such as its links, releases nothing.
 Each is tagged with its name and version, such as `pipeline.core/4.5.131`.
 [ci/README.md](ci/README.md) describes how CI works out what to release.
 

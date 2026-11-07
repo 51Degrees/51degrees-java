@@ -42,7 +42,14 @@ repositories used to do for one package tree each.
 - Each package has its own version, tagged `<package>/<version>`, such as
   `pipeline.core/4.5.131`. A publish releases a package when a file under its
   folders changed since its last tag, and every package that depends on it,
-  each at its last tag with the patch number moved.
+  each at its last tag with the patch number moved. Changes only to Markdown,
+  `LICENSE` files, or files under folders named `docs`, `tests`, `test` or
+  `examples`, which takes in each module's `src/test`, release nothing, and
+  [release-plan-filter.ps1](release-plan-filter.ps1) leaves out a `pom.xml`
+  whose only change is to its `name`, `description`, `url`, `licenses`,
+  `developers`, `scm` or `issueManagement`, or to its comments and layout.
+  Its Pester 5 tests are
+  [release-plan-filter.Tests.ps1](release-plan-filter.Tests.ps1).
   [release.ps1](release.ps1) takes that plan from common-ci's
   `steps/release-plan.ps1`, and the publish scripts build, check and tag from
   it. [check-version-bump.ps1](check-version-bump.ps1) and
