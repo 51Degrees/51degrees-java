@@ -22,11 +22,14 @@
 
 package fiftyone.pipeline.web;
 
+import fiftyone.pipeline.core.data.EvidenceKeyFilter;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
 import fiftyone.pipeline.engines.fiftyone.flowelements.SequenceElementBuilder;
+import fiftyone.pipeline.engines.fiftyone.flowelements.SetHeadersElementBuilder;
 import fiftyone.pipeline.engines.fiftyone.flowelements.ShareUsageBuilder;
+import fiftyone.pipeline.javascriptbuilder.flowelements.JavaScriptBuilderElementBuilder;
 import fiftyone.pipeline.jsonbuilder.flowelements.JsonBuilderElementBuilder;
 import fiftyone.pipeline.web.services.ClientsidePropertyServiceCore;
 import fiftyone.pipeline.web.services.FlowDataProviderCore;
@@ -151,6 +154,45 @@ public class UsageSharingEvidenceTests {
             assertEquals("1.2.3.4", webRequest.get("server.client-ip"));
             assertFalse("A header no element accepts was added as Evidence.",
                 evidence.containsKey("header.X-Test"));
+        }
+    }
+
+    /**
+     * Every element a web pipeline of this repository holds accepts only the
+     * Evidence that can change its results, so the Pipeline accepts neither
+     * If-None-Match nor a header no element uses, while it still accepts the
+     * keys its elements read.
+     */
+    @Test
+    public void WebPipeline_AcceptsOnlyWhatItsElementsUse() throws Exception {
+        try (Pipeline webPipeline = new PipelineBuilder(
+                LoggerFactory.getILoggerFactory())
+                .addFlowElement(new SequenceElementBuilder(
+                    LoggerFactory.getILoggerFactory()).build())
+                .addFlowElement(new SetHeadersElementBuilder(
+                    LoggerFactory.getILoggerFactory()).build())
+                .addFlowElement(new JsonBuilderElementBuilder(
+                    LoggerFactory.getILoggerFactory()).build())
+                .addFlowElement(new JavaScriptBuilderElementBuilder(
+                    LoggerFactory.getILoggerFactory()).build())
+                .addFlowElement(new ShareUsageBuilder(
+                    LoggerFactory.getILoggerFactory())
+                    .setSharePercentage(0)
+                    .build())
+                .setAutoCloseElements(true)
+                .build()) {
+            EvidenceKeyFilter accepted = webPipeline.getEvidenceKeyFilter();
+
+            assertFalse("If-None-Match is accepted.",
+                accepted.include("header.if-none-match"));
+            assertFalse("A header no element uses is accepted.",
+                accepted.include("header.x-test"));
+            assertFalse("The web request is accepted.",
+                accepted.include("server.http-request"));
+            assertTrue("The JavaScript builder's host is not accepted.",
+                accepted.include("header.host"));
+            assertTrue("The sequence element's session id is not accepted.",
+                accepted.include("query.session-id"));
         }
     }
 
