@@ -30,6 +30,7 @@ import fiftyone.pipeline.core.configuration.PipelineOptions;
 import fiftyone.pipeline.core.configuration.PipelineOptionsFactory;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
+import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.engines.fiftyone.flowelements.FiftyOnePipelineBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,7 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
 import static fiftyone.devicedetection.examples.shared.PropertyHelper.asString;
@@ -63,9 +65,16 @@ public class GettingStartedOnPrem {
     parameter.
 
     Note that the Lite data file is only used for illustration, and has limited accuracy and
-    capabilities. Find out about the Enterprise data file here: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-gettingstartedonprem.java&utm_term=lite_v_4_1_hash */
+    capabilities. The example shows the properties only the Enterprise data file has as needing
+    it. Contact us for a copy of the Enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-gettingstartedonprem.java&utm_term=lite_v_4_1_hash */
     public static String LITE_V_4_1_HASH = "device-detection/51Degrees-LiteV4.1.hash";
     public static String ENTERPRISE_HASH = "TAC-HashV41.hash";
+
+    /**
+     * Where to ask for a copy of the Enterprise data file, tagged with this
+     * example.
+     */
+    private static final String CONTACT_US = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-gettingstartedonprem.java&utm_term=enterprise-data-file";
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
@@ -115,15 +124,20 @@ public class GettingStartedOnPrem {
                 .buildFromConfiguration(pipelineOptions)) {
 
 
-            // carry out some sample detections
-            for (Map<String, String> evidence : evidenceList) {
-                analyzeEvidence(evidence, pipeline, outputStream);
-            }
-
             /* Get the 'engine' element within the pipeline that performs device detection. We
             can use this to get details about the data file as well as meta-data describing
             things such as the available properties. */
             DeviceDetectionHashEngine engine = pipeline.getElement(DeviceDetectionHashEngine.class);
+
+            // carry out some sample detections
+            boolean needsEnterprise = false;
+            for (Map<String, String> evidence : evidenceList) {
+                needsEnterprise |= analyzeEvidence(evidence, pipeline, engine, outputStream);
+            }
+            if (needsEnterprise) {
+                DataFileHelper.writeEnterpriseNote(new PrintWriter(outputStream), CONTACT_US);
+            }
+
             DataFileHelper.logDataFileInfo(engine);
 
             logger.info("All done");
@@ -135,11 +149,15 @@ public class GettingStartedOnPrem {
      * supplied and output the device detection results to the output stream.
      * @param evidence a map representing HTTP headers
      * @param pipeline a pipeline set up to process the evidence
+     * @param engine the engine, which says which properties its data file has
      * @param out somewhere to send the detection results
+     * @return true if a property needed the Enterprise data file
      */
-    private static void analyzeEvidence(Map<String, String> evidence,
-                                        Pipeline pipeline,
-                                        OutputStream out) throws Exception {
+    private static boolean analyzeEvidence(Map<String, String> evidence,
+                                           Pipeline pipeline,
+                                           DeviceDetectionHashEngine engine,
+                                           OutputStream out) throws Exception {
+        boolean needsEnterprise = false;
         PrintWriter writer = new PrintWriter(out);
         /* FlowData is a data structure that is used to convey information required for detection
         and the results of the detection through the pipeline. Information required for
@@ -177,9 +195,37 @@ public class GettingStartedOnPrem {
             writer.println("\tPlatform Version: " + asString(device.getPlatformVersion()));
             writer.println("\tBrowser Name: " + asString(device.getBrowserName()));
             writer.println("\tBrowser Version: " + asString(device.getBrowserVersion()));
+            // Only the Enterprise data file has these properties. The free
+            // Lite data file has the ones above.
+            needsEnterprise |= writeEnterpriseValue(writer, "Hardware Vendor",
+                    engine, "HardwareVendor", device::getHardwareVendor);
+            needsEnterprise |= writeEnterpriseValue(writer, "Hardware Name",
+                    engine, "HardwareName", device::getHardwareName);
+            needsEnterprise |= writeEnterpriseValue(writer, "Device Type",
+                    engine, "DeviceType", device::getDeviceType);
         }
         writer.println();
         writer.flush();
+        return needsEnterprise;
+    }
+
+    /**
+     * Writes a property that only the Enterprise data file has, or that it
+     * needs the Enterprise data file when the data file in use does not
+     * have it. The value is only read when the data file has the property.
+     * @return true if the property needs the Enterprise data file
+     */
+    private static boolean writeEnterpriseValue(PrintWriter writer,
+                                                String name,
+                                                DeviceDetectionHashEngine engine,
+                                                String property,
+                                                Supplier<AspectPropertyValue<?>> value) {
+        if (DataFileHelper.hasProperty(engine, property)) {
+            writer.println("\t" + name + ": " + asString(value.get()));
+            return false;
+        }
+        writer.println("\t" + name + ": " + DataFileHelper.NEEDS_ENTERPRISE);
+        return true;
     }
 }
 /*!

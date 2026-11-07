@@ -40,8 +40,9 @@
  *
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/console/src/main/java/fiftyone/ipintelligence/examples/console/MetricsOnPrem.java).
  *
- * This example requires an enterprise IP Intelligence data file (.ipi).
- * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metricsonprem.java&utm_term=contact-us).
+ * This example needs the location properties only the Enterprise IP Intelligence data file has.
+ * With the free Lite data file, which it uses by default, it says which and stops. To obtain an
+ * Enterprise data file, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metricsonprem.java&utm_term=contact-us).
  *
  * Required Maven Dependencies:
  * - [com.51degrees:ip-intelligence](https://central.sonatype.com/artifact/com.51degrees/ip-intelligence)
@@ -72,6 +73,7 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,7 +89,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Predicate;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
-import static fiftyone.ipintelligence.examples.shared.DataFileHelper.ENTERPRISE_DATA_FILE_REL_PATH;
+import static fiftyone.ipintelligence.examples.shared.DataFileHelper.LITE_DATA_FILE_REL_PATH;
 import static fiftyone.ipintelligence.examples.shared.PropertyHelper.firstValue;
 import static fiftyone.ipintelligence.examples.shared.PropertyHelper.tryGet;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
@@ -114,6 +116,12 @@ public class MetricsOnPrem {
      * Default name of the output file written to the working directory.
      */
     public static final String DEFAULT_OUTPUT_FILE = "metrics-output.csv";
+
+    /**
+     * Where to ask for a copy of the Enterprise data file, tagged with this
+     * example.
+     */
+    private static final String CONTACT_US = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metricsonprem.java&utm_term=enterprise-data-file";
 
     /**
      * Properties needed by the metrics. The first eight form the metric key.
@@ -289,12 +297,22 @@ public class MetricsOnPrem {
         configureLogback(getFilePath("logback.xml"));
 
         // Use the supplied path for the data file
-        String dataFile = args.length > 0 ? args[0] : ENTERPRISE_DATA_FILE_REL_PATH;
+        String dataFile = DataFileHelper.getDataFileLocation(
+                args.length > 0 ? args[0] : LITE_DATA_FILE_REL_PATH);
         // Get the location for the output file
         String outputFile = args.length > 1 ? args[1] : DEFAULT_OUTPUT_FILE;
         // Get the sample percentage or use the default
         double samplePercentage = args.length > 2 ?
                 Double.parseDouble(args[2]) : DEFAULT_SAMPLE_PERCENTAGE;
+
+        // The free data files have none of the location properties.
+        if (DataFileHelper.lacksEnterpriseProperties(dataFile,
+                "Measuring the location areas",
+                Arrays.asList(PROPERTIES),
+                new PrintWriter(System.out),
+                CONTACT_US)) {
+            return;
+        }
 
         try (PrintWriter writer = new PrintWriter(new FileWriter(outputFile))) {
             // Only include IP addresses with periods in them, i.e. IPv4.
