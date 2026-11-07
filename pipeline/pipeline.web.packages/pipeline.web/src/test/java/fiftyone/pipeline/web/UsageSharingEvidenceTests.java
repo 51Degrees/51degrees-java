@@ -42,6 +42,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -67,6 +68,9 @@ public class UsageSharingEvidenceTests {
     private static final String USER_AGENT =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
         "(KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36";
+
+    private static final String SESSION_ID =
+        "1f2e3d4c-5b6a-4987-8a1b-2c3d4e5f6a7b";
 
     private Pipeline pipeline;
 
@@ -104,9 +108,14 @@ public class UsageSharingEvidenceTests {
         }
         when(request.getCookies()).thenReturn(new Cookie[]{
             new Cookie("51D_Profile", "123456")});
+        // A callback from the client-side script carries its session id and
+        // sequence in the query string.
         when(request.getParameterNames()).thenReturn(
-            Collections.enumeration(Collections.singletonList("q")));
+            Collections.enumeration(
+                Arrays.asList("q", "session-id", "sequence")));
         when(request.getParameter("q")).thenReturn("search");
+        when(request.getParameter("session-id")).thenReturn(SESSION_ID);
+        when(request.getParameter("sequence")).thenReturn("2");
         when(request.getRemoteAddr()).thenReturn("1.2.3.4");
         when(request.getScheme()).thenReturn("https");
         return request;
@@ -142,6 +151,28 @@ public class UsageSharingEvidenceTests {
             assertEquals("1.2.3.4", webRequest.get("server.client-ip"));
             assertFalse("A header no element accepts was added as Evidence.",
                 evidence.containsKey("header.X-Test"));
+        }
+    }
+
+    /**
+     * The sequence element accepts the session id and sequence of a
+     * callback, so they reach Evidence although usage sharing accepts
+     * nothing, and the sequence counts on from the callback's.
+     */
+    @Test
+    public void Callback_SessionAndSequence_CarriedOn() throws Exception {
+        try (FlowData flowData = pipeline.createFlowData()) {
+            evidenceService.addEvidenceFromRequest(
+                flowData, request(headers()));
+            flowData.process();
+
+            Map<String, Object> evidence = flowData.getEvidence().asKeyMap();
+            assertEquals("The callback's session id was not kept.",
+                SESSION_ID, evidence.get("query.session-id"));
+            assertEquals("The sequence did not count on from the callback's.",
+                3, evidence.get("query.sequence"));
+            assertTrue("Processing recorded errors: " + flowData.getErrors(),
+                flowData.getErrors().isEmpty());
         }
     }
 

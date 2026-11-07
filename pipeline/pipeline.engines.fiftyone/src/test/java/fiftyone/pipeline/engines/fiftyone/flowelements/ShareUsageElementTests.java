@@ -1248,9 +1248,11 @@ public class ShareUsageElementTests {
     }
 
     /**
-     * The session cookie the element names is kept in evidence for the
-     * tracker, whatever the case of its name, and never sent. With sessions
-     * tracked, the same evidence from a new session is shared again.
+     * The session cookie the element names is read by the tracker, whatever
+     * the case of its name, and never sent. With sessions tracked, the same
+     * evidence from a new session is shared again. The element accepts no
+     * Evidence, so the cookie reaches the tracker from what it finds rather
+     * than through its accepted Evidence.
      */
     @Test
     public void ShareUsageElement_TrackSession_SessionCookie() throws Exception {
@@ -1280,7 +1282,7 @@ public class ShareUsageElementTests {
         shareUsageElement.close();
 
         // Assert
-        assertTrue(shareUsageElement.getEvidenceKeyFilter().include(sessionCookie));
+        assertFalse(shareUsageElement.getEvidenceKeyFilter().include(sessionCookie));
         byte[] output = connector.getBaos().toByteArray();
         assertFalse(new String(output, StandardCharsets.UTF_8).contains(
             "session cookie"), "the session cookie is never sent");
