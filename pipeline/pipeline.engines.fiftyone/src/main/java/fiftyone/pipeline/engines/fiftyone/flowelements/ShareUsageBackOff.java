@@ -63,9 +63,15 @@ class ShareUsageBackOff {
         double initialDelaySeconds,
         double maxDelaySeconds,
         double multiplier) {
-        if (failuresToEnterRecovery < 1) {
+        if (failuresToEnterRecovery <
+                Constants.SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_MIN ||
+            failuresToEnterRecovery >
+                Constants.SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_MAX) {
             throw new IllegalArgumentException(
-                "failuresToEnterRecovery must be 1 or more.");
+                "failuresToEnterRecovery must be from " +
+                    Constants.SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_MIN +
+                    " to " +
+                    Constants.SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_MAX + ".");
         }
         if (failuresWindowSeconds < 1) {
             throw new IllegalArgumentException(

@@ -148,6 +148,8 @@ public class ShareUsageBackOffTests {
         assertThrows(IllegalArgumentException.class,
             () -> new ShareUsageBackOff(0, 10, 2, 5, 2));
         assertThrows(IllegalArgumentException.class,
+            () -> new ShareUsageBackOff(101, 10, 2, 5, 2));
+        assertThrows(IllegalArgumentException.class,
             () -> new ShareUsageBackOff(1, 0, 2, 5, 2));
         assertThrows(IllegalArgumentException.class,
             () -> new ShareUsageBackOff(1, 10, 0, 5, 2));
