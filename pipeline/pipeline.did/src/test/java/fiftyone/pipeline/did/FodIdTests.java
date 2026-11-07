@@ -605,8 +605,10 @@ public class FodIdTests {
     @Test
     public void tryFromBase64_OtherCharacterAroundTheText_InvalidBase64()
             throws Exception {
-        // Characters some runtimes trim as white space, none of which has
-        // the Unicode White_Space property.
+        // Characters without the Unicode White_Space property that are
+        // easy to take for it, being controls String.trim removes, U+180E,
+        // which had the property before Unicode 6.3, and two zero width
+        // characters.
         char[] others = {
             '\u0000', '\u001C', '\u001F', '\u180E', '\u200B', '\uFEFF'
         };
