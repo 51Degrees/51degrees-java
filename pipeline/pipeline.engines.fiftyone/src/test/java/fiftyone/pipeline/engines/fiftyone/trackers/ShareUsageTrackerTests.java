@@ -207,6 +207,13 @@ public class ShareUsageTrackerTests {
     }
 
     private int trackWebRequests(String key, String... values) {
+        // An interval no run of these tests comes near, so a slow runner
+        // cannot make the second request count as new.
+        long noExpiryIntervalMillis = 60 * 60 * 1000;
+        ShareUsageTracker tracker = new ShareUsageTracker(
+            new CacheConfiguration(new LruPutCache.Builder(), 1000),
+            noExpiryIntervalMillis,
+            evidenceKeyFilter);
         int trackedEvents = 0;
         for (String value : values) {
             Map<String, Object> request = new HashMap<>();
@@ -221,7 +228,7 @@ public class ShareUsageTrackerTests {
                 invocation -> generateKey(
                     (EvidenceKeyFilter) invocation.getArgument(0),
                     evidenceData));
-            if (shareUsageTracker.track(data)) {
+            if (tracker.track(data)) {
                 trackedEvents++;
             }
         }
