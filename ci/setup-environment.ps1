@@ -1,6 +1,8 @@
 param(
     [Parameter(Mandatory)][string]$RepoName,
-    [Parameter(Mandatory)][string]$JavaSDKEnvVar
+    [Parameter(Mandatory)][string]$JavaSDKEnvVar,
+    # standard, from select-options.ps1, leaves out the tests WMIC is for.
+    [string]$Depth
 )
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
@@ -11,7 +13,9 @@ $PSNativeCommandUseErrorActionPreference = $true
 
 # Without WMIC a forked test JVM on Windows can end itself part way through
 # the long running data file tests. The script explains why.
-& "$PSScriptRoot/install-wmic.ps1"
+if ($Depth -ne 'standard') {
+    & "$PSScriptRoot/install-wmic.ps1"
+}
 
 # The native builds run PreBuild.sh, which has to be executable whatever the
 # checkout did to its mode.
