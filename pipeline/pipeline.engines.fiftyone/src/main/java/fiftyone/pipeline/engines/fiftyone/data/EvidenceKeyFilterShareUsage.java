@@ -34,7 +34,9 @@ import java.util.Set;
 import static fiftyone.pipeline.core.Constants.*;
 
 /**
- * This filter is used by the {@link ShareUsageElement}.
+ * This filter is used by the {@link ShareUsageElement} to decide which of the
+ * values {@link ShareUsageEvidence#find} finds are shared. It is not the
+ * element's accepted Evidence, which is empty.
  * It will include anything that is:
  * 1) An HTTP header that is not blocked by the constructor parameter, other
  *     than Cookie.
@@ -48,10 +50,6 @@ import static fiftyone.pipeline.core.Constants.*;
  * The prefix of a key is everything before its first '.', and the field
  * everything after it. An email address, the salt for hashed email
  * identifiers, the query string and the path are never included.
- *
- * As this filter is generally inclusive, it will often cause far more
- * evidence to be passed into a pipeline than the engine-specific
- * filters, which tend to be based on a white list
  */
 public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
 
