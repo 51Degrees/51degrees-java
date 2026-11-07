@@ -46,6 +46,11 @@ import java.util.stream.Stream;
 import java.util.zip.GZIPOutputStream;
 
 import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT;
+import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_INITIAL_DELAY_SECONDS_DEFAULT;
+import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT;
+import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT;
+import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_DEFAULT;
+import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_FAILURES_WINDOW_SECONDS_DEFAULT;
 import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_MAX_EVIDENCE_LENGTH;
 
 /**
@@ -309,6 +314,90 @@ public class ShareUsageElement extends ShareUsageBase {
             List<Map.Entry<String, String>> ignoreDataEvidenceFilter,
             String sessionCookieName,
             Tracker tracker) {
+        this(
+                logger,
+                sharePercentage,
+                minimumEntriesPerMessage,
+                maximumQueueSize,
+                addTimeout,
+                takeTimeout,
+                repeatEvidenceIntervalMinutes,
+                trackSession,
+                shareUsageUrl,
+                blockedHttpHeaders,
+                includedQueryStringParameters,
+                ignoreDataEvidenceFilter,
+                sessionCookieName,
+                tracker,
+                SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_DEFAULT,
+                SHARE_USAGE_FAILURES_WINDOW_SECONDS_DEFAULT,
+                SHARE_USAGE_EXPONENTIAL_BACKOFF_INITIAL_DELAY_SECONDS_DEFAULT,
+                SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT,
+                SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT);
+    }
+
+    /**
+     * Constructor
+     *
+     * @param logger                        the logger to use
+     * @param sharePercentage               the approximate proportion of requests to share.
+     *                                      1 = 100%, 0.5 = 50%, etc.
+     * @param minimumEntriesPerMessage      the minimum number of request entries per
+     *                                      message sent to 51Degrees
+     * @param maximumQueueSize              the maximum number of items to hold in the queue
+     *                                      at one time. This must be larger than minimum
+     *                                      entries
+     * @param addTimeout                    the timeout in milliseconds to allow when attempting to
+     *                                      add an item to the queue. If this timeout is exceeded
+     *                                      then the item is not shared
+     * @param takeTimeout                   the timeout in milliseconds to allow when attempting
+     *                                      to take an item to the queue
+     * @param repeatEvidenceIntervalMinutes the interval (in minutes) which is
+     *                                      used to decide if repeat evidence is
+     *                                      old enough to consider a new session
+     * @param trackSession                  set if the tracker should consider sessions in share
+     *                                      usage
+     * @param shareUsageUrl                 the URL to send data to
+     * @param blockedHttpHeaders            a list of the names of the HTTP headers that
+     *                                      share usage should not send to 51Degrees
+     * @param includedQueryStringParameters a list of the names of query string
+     *                                      parameters that share usage should
+     *                                      send to 51Degrees
+     * @param ignoreDataEvidenceFilter      the filter used to determine if an item
+     *                                      of evidence should be ignored or not
+     * @param sessionCookieName             the name of the cookie that contains the session
+     *                                      id
+     * @param tracker                       the {@link Tracker} to use to determine if a given
+     *                                      {@link FlowData} instance should be shared or not
+     * @param failuresToEnterRecovery       the number of failed sends within the failures
+     *                                      window that pauses sending
+     * @param failuresWindowSeconds         the time in seconds over which failed sends are
+     *                                      counted
+     * @param initialRecoveryDelaySeconds   the length in seconds of the first pause
+     * @param maxRecoveryDelaySeconds       the longest a pause can be, in seconds
+     * @param recoveryMultiplier            what the pause is multiplied by each time the send
+     *                                      tried when a pause ends fails
+     */
+    ShareUsageElement(
+            Logger logger,
+            double sharePercentage,
+            int minimumEntriesPerMessage,
+            int maximumQueueSize,
+            int addTimeout,
+            int takeTimeout,
+            int repeatEvidenceIntervalMinutes,
+            boolean trackSession,
+            String shareUsageUrl,
+            List<String> blockedHttpHeaders,
+            List<String> includedQueryStringParameters,
+            List<Map.Entry<String, String>> ignoreDataEvidenceFilter,
+            String sessionCookieName,
+            Tracker tracker,
+            int failuresToEnterRecovery,
+            int failuresWindowSeconds,
+            double initialRecoveryDelaySeconds,
+            double maxRecoveryDelaySeconds,
+            double recoveryMultiplier) {
         super(
                 logger,
                 sharePercentage,
@@ -323,7 +412,12 @@ public class ShareUsageElement extends ShareUsageBase {
                 includedQueryStringParameters,
                 ignoreDataEvidenceFilter,
                 sessionCookieName,
-                tracker);
+                tracker,
+                failuresToEnterRecovery,
+                failuresWindowSeconds,
+                initialRecoveryDelaySeconds,
+                maxRecoveryDelaySeconds,
+                recoveryMultiplier);
 
         headers.put("Content-Type", "text/xml; charset=utf-8");
         // assume default GZIP connection
@@ -336,7 +430,8 @@ public class ShareUsageElement extends ShareUsageBase {
     }
 
     /**
-     * Take data from the queue until there are fewer entries than the minimum batch size
+     * Take data from the queue until there are fewer entries than the minimum
+     * batch size, waiting out any pause after failed sends before each message
      */
     @Override
     protected void sendUsageData() {
@@ -345,10 +440,14 @@ public class ShareUsageElement extends ShareUsageBase {
         List<ShareUsageData> allData = new ArrayList<>();
         // drain queue while minimum entries in it
         do {
+            // Closing while paused ends the wait, and nothing more is sent.
+            if (waitWhilePaused() == false) {
+                break;
+            }
             logger.debug(threadMarker, "Queue size is {}", evidenceCollection.size());
             try {
                 allData.clear();
-                // for historical reasons max entries set to 2*
+                // A message holds at most twice the minimum entries.
                 while (allData.size() < minEntriesPerMessage * 2) {
                     ShareUsageData currentData = evidenceCollection.poll(takeTimeout, TimeUnit.MILLISECONDS);
                     // no data available
@@ -362,7 +461,13 @@ public class ShareUsageElement extends ShareUsageBase {
                 // drained everything - and there is no point posting a document
                 // with no entries in it.
                 if (allData.isEmpty() == false) {
-                    sendAsXML(allData);
+                    boolean accepted = false;
+                    try {
+                        sendAsXML(allData);
+                        accepted = true;
+                    } finally {
+                        recordSendResult(accepted);
+                    }
                 }
             } catch (InterruptedException interruptedException) {
                 // Deliberately not re-interrupting: the interrupt comes from

@@ -225,6 +225,16 @@ public abstract class ShareUsageBase
     protected long lostDataReset = LOST_DATA_RESET_DEFAULT;
 
     /**
+     * Decides when sending may happen after failed sends.
+     */
+    private final ShareUsageBackOff backOff;
+
+    /**
+     * Released when the element starts closing, to end any pause at once.
+     */
+    private final CountDownLatch closing = new CountDownLatch(1);
+
+    /**
      * Constructor
      * @param logger the logger to use
      * @param sharePercentage the approximate proportion of requests to share.
@@ -392,6 +402,90 @@ public abstract class ShareUsageBase
         List<Map.Entry<String, String>> ignoreDataEvidenceFilter,
         String sessionCookieName,
         Tracker tracker) {
+        this(
+            logger,
+            sharePercentage,
+            minimumEntriesPerMessage,
+            maximumQueueSize,
+            addTimeout,
+            takeTimeout,
+            repeatEvidenceIntervalMinutes,
+            trackSession,
+            shareUsageUrl,
+            blockedHttpHeaders,
+            includedQueryStringParameters,
+            ignoreDataEvidenceFilter,
+            sessionCookieName,
+            tracker,
+            Constants.SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_DEFAULT,
+            Constants.SHARE_USAGE_FAILURES_WINDOW_SECONDS_DEFAULT,
+            Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_INITIAL_DELAY_SECONDS_DEFAULT,
+            Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT,
+            Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT);
+    }
+
+    /**
+     * Constructor
+     * @param logger the logger to use
+     * @param sharePercentage the approximate proportion of requests to share.
+     *                        1 = 100%, 0.5 = 50%, etc.
+     * @param minimumEntriesPerMessage the minimum number of request entries per
+     *                                 message sent to 51Degrees
+     * @param maximumQueueSize the maximum number of items to hold in the queue
+     *                         at one time. This must be larger than minimum
+     *                         entries
+     * @param addTimeout the timeout in milliseconds to allow when attempting to
+     *                   add an item to the queue. If this timeout is exceeded
+     *                   then the item is not shared
+     * @param takeTimeout the timeout in milliseconds to allow when attempting
+     *                    to take an item to the queue
+     * @param repeatEvidenceIntervalMinutes the interval (in minutes) which is
+     *                                      used to decide if repeat evidence is
+     *                                      old enough to consider a new session
+     * @param trackSession set if the tracker should consider sessions in share
+     *                     usage
+     * @param shareUsageUrl the URL to send data to
+     * @param blockedHttpHeaders a list of the names of the HTTP headers that
+     *                           share usage should not send to 51Degrees
+     * @param includedQueryStringParameters a list of the names of query string
+     *                                      parameters that share usage should
+     *                                      send to 51Degrees
+     * @param ignoreDataEvidenceFilter the filter used to determine if an item
+     *                                 of evidence should be ignored or not
+     * @param sessionCookieName the name of the cookie that contains the session
+     *                          id
+     * @param tracker the {@link Tracker} to use to determine if a given
+     *                {@link FlowData} instance should be shared or not
+     * @param failuresToEnterRecovery the number of failed sends within the
+     *                                failures window that pauses sending
+     * @param failuresWindowSeconds the time in seconds over which failed sends
+     *                              are counted
+     * @param initialRecoveryDelaySeconds the length in seconds of the first
+     *                                    pause
+     * @param maxRecoveryDelaySeconds the longest a pause can be, in seconds
+     * @param recoveryMultiplier what the pause is multiplied by each time the
+     *                           send tried when a pause ends fails
+     */
+    protected ShareUsageBase(
+        Logger logger,
+        double sharePercentage,
+        int minimumEntriesPerMessage,
+        int maximumQueueSize,
+        int addTimeout,
+        int takeTimeout,
+        int repeatEvidenceIntervalMinutes,
+        boolean trackSession,
+        String shareUsageUrl,
+        List<String> blockedHttpHeaders,
+        List<String> includedQueryStringParameters,
+        List<Map.Entry<String, String>> ignoreDataEvidenceFilter,
+        String sessionCookieName,
+        Tracker tracker,
+        int failuresToEnterRecovery,
+        int failuresWindowSeconds,
+        double initialRecoveryDelaySeconds,
+        double maxRecoveryDelaySeconds,
+        double recoveryMultiplier) {
         super(logger, null);
 
         if (minimumEntriesPerMessage > maximumQueueSize) {
@@ -406,6 +500,12 @@ public abstract class ShareUsageBase
         }
 
         evidenceCollection = new LinkedBlockingQueue<>(maximumQueueSize);
+        backOff = new ShareUsageBackOff(
+            failuresToEnterRecovery,
+            failuresWindowSeconds,
+            initialRecoveryDelaySeconds,
+            maxRecoveryDelaySeconds,
+            recoveryMultiplier);
 
         this.addTimeout = addTimeout;
         this.takeTimeout = takeTimeout;
@@ -606,14 +706,15 @@ public abstract class ShareUsageBase
         // This is set before anything is submitted, so a consumer can never
         // observe it as false and then exit leaving a partial batch behind.
         stopping = true;
-        // Queue a final consumer without consulting isRunning(). That check is
-        // subject to a time-of-check/time-of-use race: a consumer that has
-        // finished its loop with a sub-threshold remainder still reports as
-        // running until its Future flips to done, which used to stop close from
-        // queueing the drain that would have sent the remainder. The executor is
-        // single threaded, so the task queued here cannot run alongside a
-        // consumer that is already in flight - it runs after it - and shutdown()
-        // still allows an already submitted task to run to completion.
+        // Ends a pause at once, so closing never waits for one. Nothing is
+        // sent while paused.
+        closing.countDown();
+        // Queue a final consumer without consulting isRunning(). A consumer
+        // that has finished its loop with a sub-threshold remainder still
+        // reports as running until its Future is done, so checking would skip
+        // the drain that sends the remainder. The executor is single threaded,
+        // so the task queued here runs after any consumer already in flight,
+        // and shutdown() still allows an already submitted task to finish.
         submitSendData();
         try {
             executor.shutdown();
@@ -626,6 +727,13 @@ public abstract class ShareUsageBase
             // so leaving the flag set would make the next element's cleanup
             // abandon its own wait immediately.
             logger.warn("Interrupted while awaiting close down");
+        }
+        if (evidenceCollection.isEmpty() == false &&
+            backOff.remaining(System.currentTimeMillis()) > 0) {
+            logger.info(
+                "{} usage sharing entries were not sent, as sending was " +
+                    "paused after failed sends when usage sharing closed.",
+                evidenceCollection.size());
         }
     }
 
@@ -783,6 +891,51 @@ public abstract class ShareUsageBase
     }
 
     protected abstract void sendUsageData() throws HttpException;
+
+    /**
+     * Waits until sending may start again after failed sends. A consumer
+     * calls this before each message it sends.
+     * @return false if the element started closing while sending was paused,
+     * in which case nothing more should be sent
+     */
+    protected boolean waitWhilePaused() {
+        long pause;
+        while ((pause = backOff.remaining(System.currentTimeMillis())) > 0) {
+            try {
+                if (closing.await(pause, TimeUnit.MILLISECONDS)) {
+                    return false;
+                }
+            } catch (InterruptedException e) {
+                // Not re-interrupting, for the reason given in
+                // managedResourcesCleanup. The interrupt comes from closing.
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Records whether the remote service accepted a message, so that repeated
+     * failures pause sending and a success ends the pause.
+     * @param accepted true if the message was accepted
+     */
+    protected void recordSendResult(boolean accepted) {
+        if (accepted) {
+            if (backOff.succeeded()) {
+                logger.info("Usage sharing resumed after a send succeeded.");
+            }
+        } else {
+            long pause = backOff.failed(System.currentTimeMillis());
+            if (pause > 0) {
+                logger.warn(
+                    "Usage sharing paused for {} seconds after failed " +
+                        "sends. Usage data is still queued, up to the " +
+                        "maximum queue size, and sending starts again when " +
+                        "the pause ends.",
+                    pause / 1000.0);
+            }
+        }
+    }
 
     /**
      * Get engine Version No.
