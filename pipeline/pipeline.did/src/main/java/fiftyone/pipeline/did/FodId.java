@@ -87,7 +87,9 @@ import java.util.Objects;
  * <p>
  * The cloud issues a 51Did in standard base64 with padding, and a page that
  * puts one in a link converts it to the URL-safe alphabet without padding.
- * Both readers of a string accept either form.
+ * Both readers of a string accept either form, and ignore white space
+ * around it. They refuse a text with white space inside it, or with
+ * characters from both alphabets, because the issuer writes neither.
  * <p>
  * Java's {@link Owid} is {@code final}, so this type <b>composes</b> an OWID
  * rather than inheriting from it: it holds the envelope and delegates
@@ -195,8 +197,11 @@ public final class FodId {
      * Reads a 51Did from its base64 form without throwing, in either the
      * standard alphabet ({@code +} and {@code /}, as the cloud issues it) or
      * the URL-safe alphabet ({@code -} and {@code _}, as a page puts it in a
-     * link), with or without padding, and with or without whitespace around
-     * it.
+     * link), with or without padding, and with or without white space around
+     * it. White space inside the text, or characters from both alphabets,
+     * give {@link FodIdParseStatus#INVALID_BASE64}, and a text of white space
+     * alone gives {@link FodIdParseStatus#MISSING_INPUT}. White space is
+     * every character with the Unicode White_Space property.
      * <p>
      * The value may be anything at all, because it is external data and
      * failing to be a 51Did is an ordinary outcome rather than an error. The
@@ -216,7 +221,11 @@ public final class FodId {
         if (base64 == null) {
             return FodIdParseResult.failed(FodIdParseStatus.MISSING_INPUT);
         }
-        return read(Owid.parse(toStandardBase64(base64)));
+        String standard = toStandardBase64(base64);
+        if (standard == null) {
+            return FodIdParseResult.failed(FodIdParseStatus.INVALID_BASE64);
+        }
+        return read(Owid.parse(standard));
     }
 
     /**
@@ -331,8 +340,9 @@ public final class FodId {
      * @param base64 base64 of the full OWID envelope
      * @return the parsed 51Did
      * @throws NullPointerException if {@code base64} is null
-     * @throws OwidException        if the string is not valid base64 or not a
-     *                              valid OWID envelope, with the
+     * @throws OwidException        if the string is not valid base64 in one
+     *                              alphabet, has white space inside it, or
+     *                              is not a valid OWID envelope, with the
      *                              {@link FodIdParseStatus} in the message
      * @throws IllegalArgumentException if the payload is shorter than the
      *                              minimum for its identifier type, names a
@@ -347,22 +357,57 @@ public final class FodId {
     /**
      * Restores a base64 string that may use the URL-safe alphabet, with or
      * without padding, to the standard alphabet with padding, which is the
-     * only alphabet the envelope library reads. Leading and trailing
-     * whitespace is removed first, because a value read from a header, a
+     * only alphabet the envelope library reads. White space before and
+     * after the text is removed first, being every character with the
+     * Unicode White_Space property, because a value read from a header, a
      * file or a form field often carries a newline or a space around it and
      * neither belongs to the identifier. Then {@code -} becomes {@code +},
      * {@code _} becomes {@code /}, and {@code ==} or {@code =} is appended
      * when the length modulo 4 is 2 or 3. That padding is worked out from
-     * the trimmed length, so whitespace cannot push the value into the wrong
-     * case. A value already in the standard padded form with no whitespace
-     * around it is returned unchanged. Nothing here decides whether the
-     * result is base64 at all, which is the envelope library's answer.
+     * the trimmed length, so white space cannot push the value into the
+     * wrong case. A value already in the standard padded form with no white
+     * space around it is returned unchanged.
+     * <p>
+     * A text with white space inside it, or with a character from each
+     * alphabet such as both {@code +} and {@code -}, is refused, as the
+     * 51Did specification requires. The issuer writes neither, so either is
+     * a sign of a damaged value, such as a {@code +} a form decoder turned
+     * into a space or a value converted only in part. Any other character
+     * outside the alphabet is left for the envelope library to refuse.
      *
      * @param value the base64 text in either alphabet
-     * @return the same value in the standard alphabet with padding
+     * @return the same value in the standard alphabet with padding, or null
+     *         when the text is refused
      */
     static String toStandardBase64(String value) {
-        String standard = value.trim().replace('-', '+').replace('_', '/');
+        int start = 0;
+        int end = value.length();
+        while (start < end && isWhiteSpace(value.charAt(start))) {
+            start++;
+        }
+        while (end > start && isWhiteSpace(value.charAt(end - 1))) {
+            end--;
+        }
+        String text = value.substring(start, end);
+        // Whether the text holds a character that only the standard
+        // alphabet uses, and one that only the URL-safe alphabet uses.
+        boolean hasStandard = false;
+        boolean hasUrlSafe = false;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            // The envelope library skips spaces and line breaks inside a
+            // text, so they are refused here, before it sees them.
+            if (isWhiteSpace(c)) {
+                return null;
+            }
+            hasStandard |= c == '+' || c == '/';
+            hasUrlSafe |= c == '-' || c == '_';
+        }
+        // Checked before the mapping below, which would hide a mix.
+        if (hasStandard && hasUrlSafe) {
+            return null;
+        }
+        String standard = text.replace('-', '+').replace('_', '/');
         switch (standard.length() % 4) {
             case 2:
                 return standard + "==";
@@ -371,6 +416,27 @@ public final class FodId {
             default:
                 return standard;
         }
+    }
+
+    /**
+     * Whether the character has the Unicode White_Space property. The 25
+     * code points are listed rather than taken from the runtime, because
+     * {@link String#trim()} and {@link Character#isWhitespace(char)} each
+     * differ from the property, and the Unicode version behind the regular
+     * expression classes changes with the Java release.
+     */
+    private static boolean isWhiteSpace(char c) {
+        return (c >= '\t' && c <= '\r')
+            || c == ' '
+            || c == 0x0085
+            || c == 0x00A0
+            || c == 0x1680
+            || (c >= 0x2000 && c <= 0x200A)
+            || c == 0x2028
+            || c == 0x2029
+            || c == 0x202F
+            || c == 0x205F
+            || c == 0x3000;
     }
 
     /**

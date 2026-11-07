@@ -49,7 +49,10 @@ public enum FodIdParseStatus {
      */
     PARSED,
 
-    /** Nothing was supplied to read, being a null or empty value. */
+    /**
+     * Nothing was supplied to read, being a null or empty value, or a text
+     * of white space alone.
+     */
     MISSING_INPUT,
 
     /**
@@ -59,7 +62,11 @@ public enum FodIdParseStatus {
      */
     INVALID_INPUT_TYPE,
 
-    /** The string is not valid base64, so there are no bytes to read. */
+    /**
+     * The string is not valid base64 in one alphabet, so there are no bytes
+     * to read. White space inside the string, and characters from both
+     * alphabets, report this.
+     */
     INVALID_BASE64,
 
     /** The first byte names an envelope version this reader does not know. */
