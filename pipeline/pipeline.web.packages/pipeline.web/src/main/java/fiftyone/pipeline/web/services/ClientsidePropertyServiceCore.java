@@ -25,6 +25,7 @@ package fiftyone.pipeline.web.services;
 import fiftyone.pipeline.core.data.EvidenceKeyFilter;
 import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import fiftyone.pipeline.core.data.FlowData;
+import fiftyone.pipeline.core.data.FlowError;
 import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.Pipeline;
@@ -35,6 +36,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import static fiftyone.pipeline.core.Constants.EVIDENCE_HTTPHEADER_PREFIX;
@@ -120,6 +122,13 @@ public interface ClientsidePropertyServiceCore {
         private final List<String> cacheControl = Arrays.asList(
             "private",
             "max-age=1800");
+
+        /**
+         * The cache control value for a response built while processing
+         * recorded errors. A browser may keep it but must ask before using
+         * it again, and with no ETag the next request gets a full response.
+         */
+        private static final String FAILED_CACHE_CONTROL = "private, no-cache";
 
         /**
          * Create a new instance.
@@ -240,13 +249,22 @@ public interface ClientsidePropertyServiceCore {
                         break;
                 }
 
+                // A response built while processing recorded errors may lack
+                // the data of the element that failed, so it must not be
+                // revalidated into a 304 once processing works again.
+                Collection<FlowError> errors = flowData.getErrors();
+                boolean failed = errors != null && errors.isEmpty() == false;
+
                 setHeaders(
                     response,
                     hash,
+                    failed,
                     content == null ? 0 : content.length(),
                     contentType == ContentTypes.JavaScript ? "x-javascript" : "json");
 
-                response.getWriter().write(content);
+                if (content != null) {
+                    response.getWriter().write(content);
+                }
             }
 
         }
@@ -256,6 +274,8 @@ public interface ClientsidePropertyServiceCore {
          * @param response the {@link HttpServletResponse} to add the response
          *                 headers to
          * @param hash the hash to use for the ETag
+         * @param failed true when processing recorded errors, in which case
+         *               the response is not cached and carries no ETag
          * @param contentLength the length of the returned content. This is used
          *                      for the 'Content-Length' header
          * @param contentType the type of content
@@ -263,14 +283,19 @@ public interface ClientsidePropertyServiceCore {
         private void setHeaders(
             HttpServletResponse response,
             int hash,
+            boolean failed,
             int contentLength,
             String contentType) {
             response.setContentType("application/" + contentType);
             response.setContentLength(contentLength);
             response.setStatus(200);
-            response.setHeader("Cache-Control", stringJoin(cacheControl, ","));
             response.setHeader("Vary", stringJoin(headersAffectingJavaScript, ","));
-            response.setHeader("ETag", Integer.toString(hash));
+            if (failed) {
+                response.setHeader("Cache-Control", FAILED_CACHE_CONTROL);
+            } else {
+                response.setHeader("Cache-Control", stringJoin(cacheControl, ","));
+                response.setHeader("ETag", Integer.toString(hash));
+            }
             response.setHeader("Access-Control-Allow-Origin", "*");
         }
     }
