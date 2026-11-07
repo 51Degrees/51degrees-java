@@ -274,8 +274,8 @@ public interface ClientsidePropertyServiceCore {
          * @param response the {@link HttpServletResponse} to add the response
          *                 headers to
          * @param hash the hash to use for the ETag
-         * @param failed true when processing recorded errors, in which case
-         *               the response is not cached and carries no ETag
+         * @param failed true when processing recorded errors, which sends
+         *               no-cache in place of max-age, and no ETag
          * @param contentLength the length of the returned content. This is used
          *                      for the 'Content-Length' header
          * @param contentType the type of content
