@@ -207,11 +207,25 @@ public interface ClientsidePropertyServiceCore {
             FlowData flowData = flowDataProviderCore.getFlowData(request);            
             int hash = flowData.generateKey(pipeline.getEvidenceKeyFilter()).hashCode();
 
+            // A response built while processing recorded errors may lack the
+            // data of the element that failed, so it must not be revalidated
+            // into a 304 once processing works again.
+            Collection<FlowError> errors = flowData.getErrors();
+            boolean failed = errors != null && errors.isEmpty() == false;
+
             String ifNoneMatch = request.getHeader("If-None-Match");
             if (ifNoneMatch != null &&
-                Integer.toString(hash).equals(request.getHeader("If-None-Match"))) {
-                // The response hasn't changed so respond with a 304.
-                response.setStatus(304);
+                Integer.toString(hash).equals(ifNoneMatch)) {
+                // The content has not changed. RFC 9110 section 13.1.2 has a
+                // GET or HEAD answered with 304, carrying the caching headers
+                // of the 200 it stands for, and any other method with 412.
+                String method = request.getMethod();
+                if ("GET".equals(method) || "HEAD".equals(method)) {
+                    response.setStatus(304);
+                    setCachingHeaders(response, hash, failed);
+                } else {
+                    response.setStatus(412);
+                }
             } else {
                 // Otherwise, return the requested content to the client.
                 String content = null;
@@ -249,12 +263,6 @@ public interface ClientsidePropertyServiceCore {
                         break;
                 }
 
-                // A response built while processing recorded errors may lack
-                // the data of the element that failed, so it must not be
-                // revalidated into a 304 once processing works again.
-                Collection<FlowError> errors = flowData.getErrors();
-                boolean failed = errors != null && errors.isEmpty() == false;
-
                 setHeaders(
                     response,
                     hash,
@@ -289,6 +297,23 @@ public interface ClientsidePropertyServiceCore {
             response.setContentType("application/" + contentType);
             response.setContentLength(contentLength);
             response.setStatus(200);
+            setCachingHeaders(response, hash, failed);
+        }
+
+        /**
+         * Set the headers a 200 and the 304 that stands for it both carry,
+         * which are Vary, Cache-Control, the ETag unless processing recorded
+         * errors, and the CORS header.
+         * @param response the {@link HttpServletResponse} to add the response
+         *                 headers to
+         * @param hash the hash to use for the ETag
+         * @param failed true when processing recorded errors, which sends
+         *               no-cache in place of max-age, and no ETag
+         */
+        private void setCachingHeaders(
+            HttpServletResponse response,
+            int hash,
+            boolean failed) {
             response.setHeader("Vary", stringJoin(headersAffectingJavaScript, ","));
             if (failed) {
                 response.setHeader("Cache-Control", FAILED_CACHE_CONTROL);
