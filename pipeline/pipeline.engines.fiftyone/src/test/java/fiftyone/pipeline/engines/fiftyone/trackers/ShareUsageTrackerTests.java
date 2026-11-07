@@ -47,7 +47,16 @@ import static org.mockito.Mockito.when;
 
 public class ShareUsageTrackerTests {
 
-    private long interval;
+    /**
+     * An interval no run of these tests comes near, for the tests that do
+     * not test expiry, so a slow runner cannot make a repeat count as new.
+     */
+    private static final long NO_EXPIRY_INTERVAL_MILLIS = 60 * 60 * 1000;
+
+    /**
+     * A short interval, for a test that sleeps past it to test expiry.
+     */
+    private static final long EXPIRY_INTERVAL_MILLIS = 50;
 
     private EvidenceKeyFilter evidenceKeyFilter;
 
@@ -64,7 +73,6 @@ public class ShareUsageTrackerTests {
         includedQueryStringParameters = new ArrayList<>();
         sessionCookieName = DEFAULT_SESSION_COOKIE_NAME;
 
-        interval = 50;
         evidenceKeyFilter = new EvidenceKeyFilterShareUsage(
             blockedHttpHeaders,
             includedQueryStringParameters,
@@ -75,7 +83,7 @@ public class ShareUsageTrackerTests {
             1000);
         shareUsageTracker = new ShareUsageTracker(
             cacheConfig,
-            interval,
+            NO_EXPIRY_INTERVAL_MILLIS,
             evidenceKeyFilter);
 
         evidenceData = new HashMap<>();
@@ -104,6 +112,10 @@ public class ShareUsageTrackerTests {
 
     @Test
     public void ShareUsageTracker_RepeatEvidence_AfterSessionTimeout() throws InterruptedException {
+        ShareUsageTracker shareUsageTracker = new ShareUsageTracker(
+            new CacheConfiguration(new LruPutCache.Builder(), 1000),
+            EXPIRY_INTERVAL_MILLIS,
+            evidenceKeyFilter);
         int trackedEvents = 0;
         for (int i = 0; i < 2; i++) {
             if (shareUsageTracker.track(data)) {
@@ -111,7 +123,7 @@ public class ShareUsageTrackerTests {
             }
 
             // Wait some time equal to the interval to elapse.
-            Thread.sleep(interval);
+            Thread.sleep(EXPIRY_INTERVAL_MILLIS);
         }
 
         assertEquals(2, trackedEvents);
@@ -142,10 +154,12 @@ public class ShareUsageTrackerTests {
     }
 
     @Test
-    public void ShareUsageTracker_Session_Track() throws InterruptedException {
+    public void ShareUsageTracker_Session_Track() {
+        // The interval does not expire, so only the session cookie keeps the
+        // two requests apart.
         shareUsageTracker = new ShareUsageTracker(
             new CacheConfiguration(new LruPutCache.Builder(), 1000),
-            interval,
+            NO_EXPIRY_INTERVAL_MILLIS,
             evidenceKeyFilter);
 
         int trackedEvents = 0;
@@ -164,7 +178,6 @@ public class ShareUsageTrackerTests {
                     }
                 }
             );
-            Thread.sleep(interval);
             if (shareUsageTracker.track(data)) {
                 trackedEvents++;
             }
@@ -182,7 +195,7 @@ public class ShareUsageTrackerTests {
             sessionCookieName);
         ShareUsageTracker shareUsageTracker = new ShareUsageTracker(
             new CacheConfiguration(new LruPutCache.Builder(), 1000),
-            interval,
+            NO_EXPIRY_INTERVAL_MILLIS,
             evidenceKeyFilter);
 
         int trackedEvents = 0;
