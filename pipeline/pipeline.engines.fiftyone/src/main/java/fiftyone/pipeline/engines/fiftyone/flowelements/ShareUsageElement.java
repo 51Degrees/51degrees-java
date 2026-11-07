@@ -447,7 +447,7 @@ public class ShareUsageElement extends ShareUsageBase {
             logger.debug(threadMarker, "Queue size is {}", evidenceCollection.size());
             try {
                 allData.clear();
-                // for historical reasons max entries set to 2*
+                // A message holds at most twice the minimum entries.
                 while (allData.size() < minEntriesPerMessage * 2) {
                     ShareUsageData currentData = evidenceCollection.poll(takeTimeout, TimeUnit.MILLISECONDS);
                     // no data available

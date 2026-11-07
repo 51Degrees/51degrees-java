@@ -709,14 +709,12 @@ public abstract class ShareUsageBase
         // Ends a pause at once, so closing never waits for one. Nothing is
         // sent while paused.
         closing.countDown();
-        // Queue a final consumer without consulting isRunning(). That check is
-        // subject to a time-of-check/time-of-use race: a consumer that has
-        // finished its loop with a sub-threshold remainder still reports as
-        // running until its Future flips to done, which used to stop close from
-        // queueing the drain that would have sent the remainder. The executor is
-        // single threaded, so the task queued here cannot run alongside a
-        // consumer that is already in flight - it runs after it - and shutdown()
-        // still allows an already submitted task to run to completion.
+        // Queue a final consumer without consulting isRunning(). A consumer
+        // that has finished its loop with a sub-threshold remainder still
+        // reports as running until its Future is done, so checking would skip
+        // the drain that sends the remainder. The executor is single threaded,
+        // so the task queued here runs after any consumer already in flight,
+        // and shutdown() still allows an already submitted task to finish.
         submitSendData();
         try {
             executor.shutdown();
