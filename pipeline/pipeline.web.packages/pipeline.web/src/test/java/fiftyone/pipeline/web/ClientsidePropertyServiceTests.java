@@ -27,9 +27,11 @@ import org.junit.Test;
 import org.mockito.ArgumentMatcher;
 
 import fiftyone.pipeline.core.data.DataKey;
+import fiftyone.pipeline.core.data.DataKeyBuilderDefault;
 import fiftyone.pipeline.core.data.EvidenceKeyFilter;
 import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import fiftyone.pipeline.core.data.FlowData;
+import fiftyone.pipeline.core.data.FlowError;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.javascriptbuilder.data.JavaScriptBuilderData;
@@ -49,6 +51,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
@@ -186,8 +189,105 @@ public class ClientsidePropertyServiceTests {
     JavaScript_VaryHeader(elements, "User-Agent,Sec-ch-ua");
   }
 
+  /**
+   * The ETag is worked out from the evidence values alone, so the same
+   * evidence gives the same ETag in every process. The expected value is
+   * the exclusive or of the values' String.hashCode, which the Java
+   * language defines, so it does not depend on the process.
+   */
+  @Test
+  public void JavaScript_ETag_SameInEveryProcess() throws IOException {
+    DataKey key = new DataKeyBuilderDefault()
+      .add(0, "header.user-agent",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+        "(KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36")
+      .add(0, "header.sec-ch-ua-mobile", "?0")
+      .build();
+    when(flowData.generateKey(any(EvidenceKeyFilter.class))).thenReturn(key);
+    Configure(null);
+
+    service.serveJavascript(request, response);
+
+    verify(response).setHeader(eq("ETag"), eq("661586230"));
+  }
+
+  /**
+   * A response built while processing recorded errors may lack the data of
+   * the element that failed, so it is not kept and carries no ETag to
+   * revalidate with.
+   */
+  @Test
+  public void JavaScript_ProcessingErrors_NoCacheAndNoETag()
+    throws IOException {
+    recordProcessingError();
+    Configure(null);
+
+    service.serveJavascript(request, response);
+
+    ValidateFailedResponse(JS_CONTENT, JS_CONTENT_TYPE);
+  }
+
+  @Test
+  public void Json_ProcessingErrors_NoCacheAndNoETag() throws IOException {
+    recordProcessingError();
+    Configure(null);
+
+    service.serveJson(request, response);
+
+    ValidateFailedResponse(JSON_CONTENT, JSON_CONTENT_TYPE);
+  }
+
+  /**
+   * A browser holding a good response keeps it while processing fails.
+   */
+  @Test
+  public void JavaScript_ProcessingErrors_MatchingIfNoneMatch_304()
+    throws IOException {
+    recordProcessingError();
+    Configure(null);
+    when(request.getHeader("If-None-Match"))
+      .thenReturn(String.valueOf(dataKey.hashCode()));
+
+    service.serveJavascript(request, response);
+
+    verify(response).setStatus(eq(304));
+    assertEquals("", responseString.toString());
+  }
+
+  /**
+   * When the builder element is the one that failed there is no content,
+   * and the response is still sent rather than throwing.
+   */
+  @Test
+  public void JavaScript_ProcessingErrors_NoContent() throws IOException {
+    recordProcessingError();
+    when(flowData.getFromElement(jsElement)).thenReturn(null);
+    Configure(null);
+
+    service.serveJavascript(request, response);
+
+    ValidateFailedResponse("", JS_CONTENT_TYPE);
+  }
+
+  private void recordProcessingError() {
+    when(flowData.getErrors()).thenReturn(
+      Collections.singletonList(mock(FlowError.class)));
+  }
+
+  private void ValidateFailedResponse(
+    String expectedContent,
+    String contentType) {
+    assertEquals(expectedContent, responseString.toString());
+    verify(response).setStatus(eq(200));
+    verify(response).setContentType(eq(contentType));
+    verify(response).setContentLength(eq(expectedContent.length()));
+    verify(response).setHeader(eq("Cache-Control"), eq("private, no-cache"));
+    verify(response, times(0)).setHeader(eq("ETag"), anyString());
+    verify(response).setHeader(eq("Access-Control-Allow-Origin"), eq("*"));
+  }
+
   private void JavaScript_VaryHeader(
-    List<List<String>> elements, 
+    List<List<String>> elements,
     String expectedVary) throws IOException {
 
     Configure(ConfigureElements(elements));
