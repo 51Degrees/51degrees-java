@@ -184,6 +184,50 @@ public class ShareUsageTrackerTests {
         assertEquals(1, trackedEvents);
     }
 
+    /**
+     * The tracker's key is of the values usage sharing would share, which
+     * take in those of the web request. Two requests that differ only in the
+     * session cookie the web request holds are both tracked.
+     */
+    @Test
+    public void ShareUsageTracker_WebRequest_SessionCookieTracked() {
+        assertEquals(2, trackWebRequests(
+            "cookie." + DEFAULT_SESSION_COOKIE_NAME, "session-0", "session-1"));
+    }
+
+    /**
+     * Two requests whose web requests differ only in a value usage sharing
+     * leaves out, here a cookie other than the session or 51Degrees ones,
+     * have the same key, so only the first is tracked.
+     */
+    @Test
+    public void ShareUsageTracker_WebRequest_UnsharedValueIgnored() {
+        assertEquals(1, trackWebRequests(
+            "cookie.other", "value-0", "value-1"));
+    }
+
+    private int trackWebRequests(String key, String... values) {
+        int trackedEvents = 0;
+        for (String value : values) {
+            Map<String, Object> request = new HashMap<>();
+            request.put(EVIDENCE_HTTPHEADER_PREFIX + EVIDENCE_SEPERATOR +
+                "user-agent", "iPhone");
+            request.put(key, value);
+            final Map<String, Object> evidenceData = new HashMap<>();
+            evidenceData.put("server.http-request", request);
+            FlowData data = MockFlowData.createFromEvidence(evidenceData, false);
+            // A real FlowData makes its key from its Evidence and a filter.
+            when(data.generateKey(any(EvidenceKeyFilter.class))).then(
+                invocation -> generateKey(
+                    (EvidenceKeyFilter) invocation.getArgument(0),
+                    evidenceData));
+            if (shareUsageTracker.track(data)) {
+                trackedEvents++;
+            }
+        }
+        return trackedEvents;
+    }
+
     public DataKey generateKey(
         EvidenceKeyFilter filter,
         Map<String, Object> evidence) {

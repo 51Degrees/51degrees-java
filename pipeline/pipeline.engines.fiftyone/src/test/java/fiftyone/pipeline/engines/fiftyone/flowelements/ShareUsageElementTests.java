@@ -487,6 +487,82 @@ public class ShareUsageElementTests {
         }
     }
 
+    /**
+     * The element accepts no Evidence, so a header no other element accepts
+     * reaches it only through the web request the web integration adds as
+     * server.http-request. It shares that header under the key it would have
+     * as Evidence, keeps the Evidence value for a key in both places, and
+     * still leaves out the cookie header, a blocked header and the web
+     * request itself.
+     */
+    @Test
+    public void ShareUsageElement_WebRequest_SharesWhatNoOtherElementAccepts()
+        throws Exception {
+        createShareUsage(
+            1,
+            1,
+            1,
+            new ArrayList<>(Collections.singletonList("x-blocked")),
+            new ArrayList<>(),
+            new ArrayList<>());
+
+        Map<String, Object> request = new HashMap<>();
+        request.put("header.User-Agent", "request-ua");
+        request.put("header.X-Test", "shared");
+        request.put("header.Cookie", "a=1; 51D_Profile=123456");
+        request.put("header.X-Blocked", "blocked");
+        request.put("cookie.51D_Profile", "123456");
+        request.put("cookie.other", "not-shared");
+        request.put("query.secret", "not-shared");
+        request.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
+
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(
+                EVIDENCE_HTTPHEADER_PREFIX + EVIDENCE_SEPERATOR + "user-agent",
+                "evidence-ua");
+            data.addEvidence("server.http-request",
+                Collections.unmodifiableMap(request));
+            shareUsageElement.process(data);
+            assertNotNull(shareUsageElement.getSendDataFuture());
+            shareUsageElement.getSendDataFuture().get();
+
+            Document doc = docBuilderFactory.newDocumentBuilder().parse(
+                new ByteArrayInputStream(connector.getBaos().toByteArray()));
+
+            assertEquals("shared", xpath.evaluate(
+                "//header[@Name='X-Test']", doc),
+                "A header only the web request holds was not shared.");
+            NodeList userAgents = (NodeList) xpath.evaluate(
+                "//header[translate(@Name,'USERAGNT','useragnt')='user-agent']",
+                doc, XPathConstants.NODESET);
+            assertEquals(1, userAgents.getLength(),
+                "The User-Agent in both places was not shared once.");
+            assertEquals("evidence-ua", userAgents.item(0).getTextContent(),
+                "The User-Agent in both places did not keep the Evidence value.");
+            assertEquals(0, ((NodeList) xpath.evaluate(
+                "//header[@Name='Cookie' or @Name='cookie']", doc,
+                XPathConstants.NODESET)).getLength(),
+                "The cookie header was shared.");
+            assertEquals(0, ((NodeList) xpath.evaluate(
+                "//header[@Name='X-Blocked']", doc,
+                XPathConstants.NODESET)).getLength(),
+                "A blocked header was shared.");
+            assertEquals("123456", xpath.evaluate(
+                "//cookie[@Name='51D_Profile']", doc),
+                "A 51D_ cookie from the web request was not shared.");
+            assertEquals(0, ((NodeList) xpath.evaluate(
+                "//cookie[@Name='other'] | //query[@Name='secret']", doc,
+                XPathConstants.NODESET)).getLength(),
+                "A cookie or query string parameter the rules leave out was shared.");
+            assertEquals("1.2.3.4", xpath.evaluate("//ClientIP", doc),
+                "The client IP from the web request was not shared.");
+            assertEquals(0, ((NodeList) xpath.evaluate(
+                "//*[@Name='http-request']", doc,
+                XPathConstants.NODESET)).getLength(),
+                "The web request itself was shared.");
+        }
+    }
+
     @Test
     public void ShareUsageElement_LowPercentage() throws Exception {
         // Arrange
