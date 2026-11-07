@@ -29,6 +29,7 @@ import fiftyone.pipeline.core.flowelements.FlowElementBase;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.configuration.CacheConfiguration;
 import fiftyone.pipeline.engines.fiftyone.data.EvidenceKeyFilterShareUsage;
+import fiftyone.pipeline.engines.fiftyone.data.EvidenceKeyFilterShareUsageTracker;
 import fiftyone.pipeline.engines.fiftyone.exceptions.HttpException;
 import fiftyone.pipeline.engines.fiftyone.trackers.ShareUsageTracker;
 import fiftyone.pipeline.engines.trackers.Tracker;
@@ -440,7 +441,7 @@ public abstract class ShareUsageBase
             this.tracker = new ShareUsageTracker(
                 cacheConfiguration,
                     intervalMillis,
-                new EvidenceKeyFilterShareUsage(
+                new EvidenceKeyFilterShareUsageTracker(
                     blockedHttpHeaders, includedQueryStringParameters, trackSession, sessionCookieName));
         }
 

@@ -83,7 +83,8 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     }
 
     /**
-     * By default, query string parameters are not shared.
+     * By default, only query string parameters that start with 51D_ are
+     * shared.
      * <p>
      * This setter replaces the current list, if any
      * <p>
@@ -95,7 +96,7 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      * @return this builder
      */
 
-    @DefaultValue("No sharing")
+    @DefaultValue("No sharing unless the parameter starts with 51D_")
     public ShareUsageBuilderBase<T> setIncludedQueryStringParameters(
         List<String> queryStringParameterNames) {
         includedQueryStringParameters.clear();
@@ -104,7 +105,8 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     }
 
     /**
-     * By default, query string parameters are not shared.
+     * By default, only query string parameters that start with 51D_ are
+     * shared.
      * <p>
      * This setter replaces the current list, if any
      * <p>
@@ -115,7 +117,7 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      *                                  query string parameters to include
      * @return this builder
      */
-    @DefaultValue("No sharing")
+    @DefaultValue("No sharing unless the parameter starts with 51D_")
     public ShareUsageBuilderBase<T> setIncludedQueryStringParameters(
             String queryStringParameterNames) {
         includedQueryStringParameters.clear();
@@ -125,7 +127,8 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     }
 
     /**
-     * By default, query string parameters are not shared.
+     * By default, only query string parameters that start with 51D_ are
+     * shared.
      * <p>
      * This setting adds the name of a parameter to share with 51Degrees
      * if needed.
@@ -133,7 +136,7 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      *                                 query string parameter to include
      * @return this builder
      */
-    @DefaultValue("No sharing")
+    @DefaultValue("No sharing unless the parameter starts with 51D_")
     public ShareUsageBuilderBase<T> setIncludedQueryStringParameter(
         String queryStringParameterName) {
         includedQueryStringParameters.add(queryStringParameterName.trim());
