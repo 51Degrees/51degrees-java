@@ -32,10 +32,11 @@ as the first argument, or set the `51DEGREES_IPI_PATH` environment variable or s
 property to its path.
 
 The Enterprise data file is over 6 GB, and the MaxPerformance profile loads all of it into
-memory, so the examples built for it use the LowMemory profile, which reads the file from disk
-as it is needed. Those are the Compare, Metrics, Suspicious and UpdateDataFile examples. The
-Metrics and Compare examples take a profile as their fourth argument, and `MaxPerformance`
-there makes them faster on a machine with memory to hold the whole file.
+memory, so the examples built for it, or that may be given it, use the LowMemory profile,
+which reads the file from disk as it is needed. Those are the Compare, Metrics,
+OfflineProcessing, Suspicious and UpdateDataFile examples. The Metrics and Compare examples
+take a profile as their fourth argument, and `MaxPerformance` there makes them faster on a
+machine with memory to hold the whole file.
 
 The `ExamplesWithoutSettingsTest` tests run each console example as a fresh clone does. The
 other tests use the Enterprise data file, `51Degrees-EnterpriseIpiV41.ipi`, when it is in

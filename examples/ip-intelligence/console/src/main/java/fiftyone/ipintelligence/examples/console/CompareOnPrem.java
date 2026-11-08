@@ -200,11 +200,15 @@ public class CompareOnPrem {
         String csvTruthFile = args.length > 1 ? args[1] : GEOIP_COMPARISON_EVIDENCE_REL_PATH;
         // Get the location for the output file
         String outputFile = args.length > 2 ? args[2] : DEFAULT_OUTPUT_FILE;
-        // Get the performance profile, such as MaxPerformance, or use the
-        // default
+        // Get the performance profile named, ignoring case, such as
+        // MaxPerformance, or use the default
         Constants.PerformanceProfiles profile = args.length > 3 ?
-                Constants.PerformanceProfiles.valueOf(args[3]) :
+                DataFileHelper.findPerformanceProfile(
+                        args[3], new PrintWriter(System.out)) :
                 DEFAULT_PERFORMANCE_PROFILE;
+        if (profile == null) {
+            return;
+        }
 
         // The free data files have none of the location properties.
         if (DataFileHelper.lacksEnterpriseProperties(dataFile,

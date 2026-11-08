@@ -125,9 +125,7 @@ public class MetricsOnPrem {
      * 6 GB, and LowMemory reads it from disk as it is needed, so the example
      * runs without memory to hold the whole file. MaxPerformance loads the
      * whole file into memory and is much faster here, because the example
-     * reads the values of every profile in the file. The .NET version of
-     * this example, over the same native library, measured about 166
-     * profiles a second with LowMemory against 2,013 with MaxPerformance.
+     * reads the values of every profile in the file.
      */
     public static final Constants.PerformanceProfiles
             DEFAULT_PERFORMANCE_PROFILE =
@@ -320,11 +318,15 @@ public class MetricsOnPrem {
         // Get the sample percentage or use the default
         double samplePercentage = args.length > 2 ?
                 Double.parseDouble(args[2]) : DEFAULT_SAMPLE_PERCENTAGE;
-        // Get the performance profile, such as MaxPerformance, or use the
-        // default
+        // Get the performance profile named, ignoring case, such as
+        // MaxPerformance, or use the default
         Constants.PerformanceProfiles profile = args.length > 3 ?
-                Constants.PerformanceProfiles.valueOf(args[3]) :
+                DataFileHelper.findPerformanceProfile(
+                        args[3], new PrintWriter(System.out)) :
                 DEFAULT_PERFORMANCE_PROFILE;
+        if (profile == null) {
+            return;
+        }
 
         // The free data files have none of the location properties.
         if (DataFileHelper.lacksEnterpriseProperties(dataFile,
