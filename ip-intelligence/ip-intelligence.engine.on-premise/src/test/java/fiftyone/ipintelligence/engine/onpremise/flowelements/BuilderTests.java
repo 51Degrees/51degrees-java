@@ -74,10 +74,11 @@ public class BuilderTests {
     /**
      * Check that a profile the caller names, in code or by name as a
      * configuration file gives it, replaces the Balanced default.
+     * MaxPerformance and LowMemory give every collection the same settings,
+     * so this cannot tell those two apart.
      */
     @Test
-    public void Builder_MaxPerformance_CollectionsAreInMemory()
-            throws Exception {
+    public void Builder_MaxPerformance_ReplacesBalanced() throws Exception {
         long[] inMemory = collections(PerformanceProfiles.MaxPerformance);
 
         builder.setPerformanceProfile(PerformanceProfiles.MaxPerformance);
@@ -131,17 +132,17 @@ public class BuilderTests {
      */
     private static long[] collections(ConfigIpiSwig config) {
         CollectionConfigSwig[] all = {
-            config.getStrings(),
-            config.getComponents(),
-            config.getMaps(),
-            config.getProperties(),
-            config.getValues(),
-            config.getProfiles(),
-            config.getGraphs(),
-            config.getProfileGroups(),
-            config.getProfileOffsets(),
-            config.getPropertyTypes(),
-            config.getGraph()
+            borrowed(config.getStrings()),
+            borrowed(config.getComponents()),
+            borrowed(config.getMaps()),
+            borrowed(config.getProperties()),
+            borrowed(config.getValues()),
+            borrowed(config.getProfiles()),
+            borrowed(config.getGraphs()),
+            borrowed(config.getProfileGroups()),
+            borrowed(config.getProfileOffsets()),
+            borrowed(config.getPropertyTypes()),
+            borrowed(config.getGraph())
         };
         long[] settings = new long[all.length * 2];
         for (int i = 0; i < all.length; i++) {
@@ -149,5 +150,21 @@ public class BuilderTests {
             settings[i * 2 + 1] = all[i].getCapacity();
         }
         return settings;
+    }
+
+    /**
+     * The generated wrappers mark four ConfigIpiSwig getters as owned until
+     * they are regenerated with the C library's corrected MetaData.i.
+     */
+    private static CollectionConfigSwig borrowed(CollectionConfigSwig proxy) {
+        try {
+            Field own = CollectionConfigSwig.class
+                .getDeclaredField("swigCMemOwn");
+            own.setAccessible(true);
+            own.setBoolean(proxy, false);
+            return proxy;
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
     }
 }
