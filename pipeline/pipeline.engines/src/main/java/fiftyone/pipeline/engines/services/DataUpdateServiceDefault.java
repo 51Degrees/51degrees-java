@@ -70,6 +70,14 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     private final List<OnUpdateComplete> onUpdateCompleteList = new ArrayList<>();
     private final Object configLock = new Object();
     /**
+     * Held for every read and write of a data file's scheduled check, so a
+     * check cannot read or clear its future before
+     * {@link #registerDataFile} has stored it. Only the future is scheduled,
+     * cancelled and stored while holding it, so it is never held while
+     * waiting for the configuration lock or a data file's update lock.
+     */
+    private final Object futureLock = new Object();
+    /**
      * HTTP client used to download new data files.
      */
     private final HttpClient httpClient;
@@ -226,16 +234,18 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 // This will repeat until the update is acquired.
                 if (manualUpdate == false) {
                     logger.debug("Cancelling and resetting update timer");
-                    if (dataFile.getFuture() != null) {
-                        dataFile.getFuture().cancel(true);
-                        dataFile.setFuture(futureFactory.schedule(
-                                new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        checkForUpdate(dataFile, false);
-                                    }
-                                },
-                                getInterval(dataFile.getConfiguration())));
+                    synchronized (futureLock) {
+                        if (dataFile.getFuture() != null) {
+                            dataFile.getFuture().cancel(true);
+                            dataFile.setFuture(futureFactory.schedule(
+                                    new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            checkForUpdate(dataFile, false);
+                                        }
+                                    },
+                                    getInterval(dataFile.getConfiguration())));
+                        }
                     }
                 }
             }
@@ -268,10 +278,12 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     private AutoUpdateStatus updatedFileAvailable(AspectEngineDataFile dataFile) {
         AspectEngineDataFileDefault aspectDataFile = (AspectEngineDataFileDefault) dataFile;
 
-        if (aspectDataFile.getFuture() != null) {
-            // Dispose of the old timer object
-            aspectDataFile.getFuture().cancel(true);
-            aspectDataFile.setFuture(null);
+        synchronized (futureLock) {
+            if (aspectDataFile.getFuture() != null) {
+                // Dispose of the old timer object
+                aspectDataFile.getFuture().cancel(true);
+                aspectDataFile.setFuture(null);
+            }
         }
 
         if (dataFile.getEngine() == null) {
@@ -417,39 +429,43 @@ public class DataUpdateServiceDefault implements DataUpdateService {
 
             // Only create an automatic update timer if auto updates are
             // enabled for this engine and there is not already an associated
-            // timer.
-            if (aspectDataFile.getAutomaticUpdatesEnabled() &&
-                    aspectDataFile.getFuture() == null) {
-                long delay = getInterval(aspectDataFile.getConfiguration());
-                if (aspectDataFile.getUpdateAvailableTime() != null) {
-                    if (aspectDataFile.getUpdateAvailableTime().getTime()
-                            > System.currentTimeMillis()) {
-                        delay = applyIntervalRandomisation(
-                                aspectDataFile.getUpdateAvailableTime().getTime()
-                                        - System.currentTimeMillis(),
-                                aspectDataFile.getConfiguration());
+            // timer. The lock is held from scheduling to storing, because
+            // the check can start as soon as it is scheduled and must find
+            // its own future.
+            synchronized (futureLock) {
+                if (aspectDataFile.getAutomaticUpdatesEnabled() &&
+                        aspectDataFile.getFuture() == null) {
+                    long delay = getInterval(aspectDataFile.getConfiguration());
+                    if (aspectDataFile.getUpdateAvailableTime() != null) {
+                        if (aspectDataFile.getUpdateAvailableTime().getTime()
+                                > System.currentTimeMillis()) {
+                            delay = applyIntervalRandomisation(
+                                    aspectDataFile.getUpdateAvailableTime().getTime()
+                                            - System.currentTimeMillis(),
+                                    aspectDataFile.getConfiguration());
+                        }
                     }
-                }
-                // Create a timer that will go off when the engine expects
-                // updated data to be available.
-                logger.debug("Scheduling update check with delay {}", delay);
-                try {
-                    ScheduledFuture<?> future = futureFactory.schedule(
-                            new Runnable() {
-                                @Override
-                                public void run() {
-                                    logger.debug("running checkForUpdate {}",
-                                            aspectDataFile.getDataFilePath());
-                                    checkForUpdate(aspectDataFile, false);
-                                    logger.debug("Returning from checkForUpdate");
-                                }
-                            },
-                            delay);
-                    logger.debug("Update check scheduled for {} millis",
-                            future.getDelay(TimeUnit.MILLISECONDS));
-                    aspectDataFile.setFuture(future);
-                } catch (Throwable t) {
-                    logger.error("Exception when scheduling update check", t);
+                    // Create a timer that will go off when the engine expects
+                    // updated data to be available.
+                    logger.debug("Scheduling update check with delay {}", delay);
+                    try {
+                        ScheduledFuture<?> future = futureFactory.schedule(
+                                new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        logger.debug("running checkForUpdate {}",
+                                                aspectDataFile.getDataFilePath());
+                                        checkForUpdate(aspectDataFile, false);
+                                        logger.debug("Returning from checkForUpdate");
+                                    }
+                                },
+                                delay);
+                        logger.debug("Update check scheduled for {} millis",
+                                future.getDelay(TimeUnit.MILLISECONDS));
+                        aspectDataFile.setFuture(future);
+                    } catch (Throwable t) {
+                        logger.error("Exception when scheduling update check", t);
+                    }
                 }
             }
 
@@ -539,9 +555,11 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                     aspectDataFile.getConfiguration().getWatchKey().cancel();
                     aspectDataFile.getConfiguration().setWatchKey(null);
                 }
-                if (aspectDataFile.getFuture() != null) {
-                    aspectDataFile.getFuture().cancel(true);
-                    aspectDataFile.setFuture(null);
+                synchronized (futureLock) {
+                    if (aspectDataFile.getFuture() != null) {
+                        aspectDataFile.getFuture().cancel(true);
+                        aspectDataFile.setFuture(null);
+                    }
                 }
             }
         }
