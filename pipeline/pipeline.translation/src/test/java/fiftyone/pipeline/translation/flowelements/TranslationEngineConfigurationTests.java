@@ -101,15 +101,6 @@ public class TranslationEngineConfigurationTests {
         }
     }
 
-    /** Every message in the chain of causes, for checking a failure. */
-    private static String messages(Throwable thrown) {
-        StringBuilder messages = new StringBuilder();
-        for (Throwable t = thrown; t != null; t = t.getCause()) {
-            messages.append(t.getMessage()).append(' ');
-        }
-        return messages.toString();
-    }
-
     @Test
     public void preparedBuilder_ConfigurationSetsTheOptionsAndTranslates()
             throws Exception {
@@ -194,8 +185,8 @@ public class TranslationEngineConfigurationTests {
         PipelineConfigurationException thrown = assertThrows(
             PipelineConfigurationException.class,
             () -> new PipelineBuilder().buildFromConfiguration(options));
-        assertTrue(messages(thrown).contains(
+        assertTrue(thrown.getMessage().contains(
             "which are added in code with addSource and addTranslation"),
-            messages(thrown));
+            thrown.getMessage());
     }
 }

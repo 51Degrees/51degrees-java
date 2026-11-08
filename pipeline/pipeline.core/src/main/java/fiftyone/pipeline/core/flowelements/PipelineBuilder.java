@@ -384,10 +384,14 @@ public class PipelineBuilder
         try {
             result = buildMethod.invoke(builderInstance, parameters.toArray());
         } catch (Exception e) {
+            // Keep the build method's own message, which says why the
+            // element could not be built.
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
             throw new PipelineConfigurationException(
                 "Failed to build " + elementLocation + " using " +
-                    "'" + builderType.getName() + "'.",
-                e);
+                    "'" + builderType.getName() + "'." +
+                    (cause.getMessage() == null ? "" : " " + cause.getMessage()),
+                cause);
         }
         if (result == null) {
             throw new PipelineConfigurationException(
