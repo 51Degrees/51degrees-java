@@ -314,6 +314,7 @@ public class ClientsidePropertyServiceTests {
 
     verify(response).setStatus(eq(412));
     verify(response, times(0)).setStatus(eq(304));
+    verify(response).setHeader(eq("Access-Control-Allow-Origin"), eq("*"));
     assertEquals("", responseString.toString());
   }
 
