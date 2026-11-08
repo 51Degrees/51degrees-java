@@ -51,6 +51,9 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
@@ -61,8 +64,10 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static fiftyone.pipeline.engines.services.DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
 import static fiftyone.pipeline.engines.services.DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED;
@@ -490,6 +495,73 @@ public class DataUpdateServiceTests {
         verify(futureFactory, times(2)).schedule(
             any(Runnable.class),
             anyLong());
+    }
+
+    /**
+     * A check that finds an update and starts before registration has
+     * stored its future must still leave the next check scheduled and
+     * stored.
+     */
+    @Test
+    public void DataUpdateService_UpdateFromFile_FileUpdated_CheckBeforeFutureStored()
+        throws InterruptedException {
+        // Arrange
+        RaceDataFile file = new RaceDataFile();
+        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
+            mock(OnPremiseAspectEngine.class);
+        DataFileConfigurationDefault config = new DataFileConfigurationDefault();
+        config.setAutomaticUpdatesEnabled(true);
+        config.setFileSystemWatcherEnabled(false);
+        file.setEngine(engine);
+        file.setConfiguration(config);
+        when(engine.getDataFileMetaData()).thenReturn(file);
+        configureFileUpdate(engine);
+        configureScheduleRace(file);
+        Semaphore completeFlag = onUpdateCompleteFlag();
+
+        // Act
+        dataUpdate.registerDataFile(file);
+        boolean completed = completeFlag.tryAcquire(
+            RACE_WAIT_SECONDS * 3, TimeUnit.SECONDS);
+
+        // Assert
+        assertTrue("The OnUpdateComplete event was never fired", completed);
+        verify(engine, times(1)).refreshData((String) any());
+        assertNextCheckScheduled(file);
+    }
+
+    /**
+     * A check that applies no update and starts before registration has
+     * stored its future must still leave the next check scheduled and
+     * stored. Every check that applies no update takes this path, the retry
+     * after a 429 response among them.
+     */
+    @Test
+    public void DataUpdateService_UpdateFromFile_FileNotUpdated_CheckBeforeFutureStored()
+        throws InterruptedException {
+        // Arrange
+        RaceDataFile file = new RaceDataFile();
+        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
+            mock(OnPremiseAspectEngine.class);
+        DataFileConfigurationDefault config = new DataFileConfigurationDefault();
+        config.setAutomaticUpdatesEnabled(true);
+        config.setFileSystemWatcherEnabled(false);
+        file.setEngine(engine);
+        file.setConfiguration(config);
+        when(engine.getDataFileMetaData()).thenReturn(file);
+        configureFileNoUpdate(engine);
+        configureScheduleRace(file);
+        Semaphore completeFlag = onUpdateCompleteFlag();
+
+        // Act
+        dataUpdate.registerDataFile(file);
+        boolean completed = completeFlag.tryAcquire(
+            RACE_WAIT_SECONDS * 3, TimeUnit.SECONDS);
+
+        // Assert
+        assertTrue("The OnUpdateComplete event was never fired", completed);
+        verify(engine, never()).refreshData(anyString());
+        assertNextCheckScheduled(file);
     }
 
     @Test
@@ -1407,6 +1479,153 @@ public class DataUpdateServiceTests {
 
     private void configureTimerImmediateCallbackOnce() {
         configureTimerImmediateCallback(1, null);
+    }
+
+    private static final long RACE_WAIT_SECONDS = 10;
+
+    /**
+     * Data file that records each read and write of its future. The check's
+     * first read waits until registration has stored the future, so a check
+     * that reads it too early goes on with a stale value.
+     */
+    private static class RaceDataFile extends AspectEngineDataFileDefault {
+        private final Thread registering = Thread.currentThread();
+        private final List<String> events = new CopyOnWriteArrayList<>();
+        private final AtomicInteger schedules = new AtomicInteger();
+        private final AtomicReference<ScheduledFuture<?>> first =
+            new AtomicReference<>();
+        private final AtomicReference<ScheduledFuture<?>> next =
+            new AtomicReference<>();
+        private final AtomicReference<Thread> check = new AtomicReference<>();
+        private final CountDownLatch checkRead = new CountDownLatch(1);
+        private final CountDownLatch stored = new CountDownLatch(1);
+        private volatile boolean registrationReleased;
+        private volatile boolean storedInTime = true;
+
+        private String who() {
+            return Thread.currentThread() == registering ?
+                "registration" : "check";
+        }
+
+        private String name(ScheduledFuture<?> future) {
+            if (future == null) {
+                return "no future";
+            }
+            if (future == first.get()) {
+                return "the first future";
+            }
+            return future == next.get() ? "the next future" : "another future";
+        }
+
+        @Override
+        public ScheduledFuture<?> getFuture() {
+            ScheduledFuture<?> future = super.getFuture();
+            if (Thread.currentThread() != registering) {
+                events.add("check read " + name(future));
+                if (checkRead.getCount() > 0) {
+                    checkRead.countDown();
+                    try {
+                        storedInTime = stored.await(
+                            RACE_WAIT_SECONDS, TimeUnit.SECONDS);
+                    } catch (InterruptedException e) {
+                        storedInTime = false;
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            }
+            return future;
+        }
+
+        @Override
+        public void setFuture(ScheduledFuture<?> future) {
+            super.setFuture(future);
+            events.add(future == null ?
+                who() + " cleared the future" :
+                who() + " stored " + name(future));
+            if (Thread.currentThread() == registering) {
+                stored.countDown();
+            }
+        }
+    }
+
+    /**
+     * Run the first check at once, and hold registration after scheduling
+     * it until the check has read the future or waits for a lock that
+     * registration holds. Later checks are never run.
+     */
+    private void configureScheduleRace(final RaceDataFile file) {
+        final ThreadMXBean threads = ManagementFactory.getThreadMXBean();
+        doAnswer(invocation -> {
+            final Runnable check = invocation.getArgument(0);
+            if (file.schedules.incrementAndGet() > 1) {
+                ScheduledFuture<?> next = mock(ScheduledFuture.class);
+                file.next.set(next);
+                file.events.add(file.who() + " scheduled the next check");
+                return next;
+            }
+            file.events.add(file.who() + " scheduled the first check");
+            ScheduledFuture<?> first = executorService.schedule(() -> {
+                file.check.set(Thread.currentThread());
+                check.run();
+            }, 0, TimeUnit.MILLISECONDS);
+            file.first.set(first);
+            file.registrationReleased = waitForCheck(file, threads);
+            return first;
+        }).when(futureFactory).schedule(any(Runnable.class), anyLong());
+    }
+
+    /**
+     * Wait until the check has read the future, or is blocked on a lock
+     * that the registering thread holds and so cannot read it until
+     * registration has finished. Thread.getId() is deprecated from Java 19
+     * but is the id that ThreadMXBean reports on every version.
+     */
+    @SuppressWarnings("deprecation")
+    private static boolean waitForCheck(
+        RaceDataFile file,
+        ThreadMXBean threads) throws InterruptedException {
+        long deadline = System.nanoTime() +
+            TimeUnit.SECONDS.toNanos(RACE_WAIT_SECONDS);
+        while (System.nanoTime() < deadline) {
+            if (file.checkRead.await(10, TimeUnit.MILLISECONDS)) {
+                return true;
+            }
+            Thread check = file.check.get();
+            if (check != null) {
+                ThreadInfo info = threads.getThreadInfo(check.getId());
+                if (info != null &&
+                    info.getLockOwnerId() == file.registering.getId()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Assert that one check was scheduled at registration and one after it,
+     * and that the future stored is the next check's. Each message carries
+     * the order in which the two threads read and wrote the future.
+     */
+    private static void assertNextCheckScheduled(RaceDataFile file) {
+        String events = " Events: " + file.events;
+        assertTrue("The check neither read the future nor waited for " +
+                "registration." + events,
+            file.registrationReleased);
+        assertTrue("Registration did not store the future while the " +
+                "check waited." + events,
+            file.storedInTime);
+        assertEquals("Schedules." + events, 2, file.schedules.get());
+        assertSame("The future stored is not the next check's." + events,
+            file.next.get(),
+            file.getFuture());
+    }
+
+    private Semaphore onUpdateCompleteFlag() throws InterruptedException {
+        final Semaphore completeFlag = new Semaphore(1);
+        completeFlag.acquire();
+        dataUpdate.onUpdateComplete((sender, args) -> completeFlag.release());
+        return completeFlag;
     }
 
     private void configureFileNoUpdate(OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine) {
