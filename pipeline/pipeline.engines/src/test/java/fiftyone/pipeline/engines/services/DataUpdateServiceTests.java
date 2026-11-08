@@ -531,9 +531,9 @@ public class DataUpdateServiceTests {
     }
 
     /**
-     * A check that applies no update and starts before registration has
+     * A check that finds no update and starts before registration has
      * stored its future must still leave the next check scheduled and
-     * stored. Every check that applies no update takes this path, the retry
+     * stored. A check whose download fails takes the same path, the retry
      * after a 429 response among them.
      */
     @Test
@@ -1484,9 +1484,10 @@ public class DataUpdateServiceTests {
     private static final long RACE_WAIT_SECONDS = 10;
 
     /**
-     * Data file that records each read and write of its future. The check's
-     * first read waits until registration has stored the future, so a check
-     * that reads it too early goes on with a stale value.
+     * Data file that records every write of its future and every read the
+     * check makes. The check's first read waits until registration has
+     * stored the future, so a check that reads it too early goes on with a
+     * stale value.
      */
     private static class RaceDataFile extends AspectEngineDataFileDefault {
         private final Thread registering = Thread.currentThread();

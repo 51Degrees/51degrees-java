@@ -70,8 +70,8 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     private final List<OnUpdateComplete> onUpdateCompleteList = new ArrayList<>();
     private final Object configLock = new Object();
     /**
-     * Held for every read and write of a data file's scheduled check, so a
-     * check cannot read or clear its future before
+     * Held for every read and write this service makes of a data file's
+     * future, so a check cannot read or clear its future before
      * {@link #registerDataFile} has stored it. Only the future is scheduled,
      * cancelled and stored while holding it, so it is never held while
      * waiting for the configuration lock or a data file's update lock.
