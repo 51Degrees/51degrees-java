@@ -225,6 +225,7 @@ public interface ClientsidePropertyServiceCore {
                     setCachingHeaders(response, hash, failed);
                 } else {
                     response.setStatus(412);
+                    response.setHeader("Access-Control-Allow-Origin", "*");
                 }
             } else {
                 // Otherwise, return the requested content to the client.
