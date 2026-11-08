@@ -42,6 +42,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import org.mockito.internal.matchers.LessOrEqual;
 import org.mockito.invocation.InvocationOnMock;
@@ -231,6 +232,46 @@ public class DataUpdateServiceTests {
                 }
             })
         );
+    }
+
+    @Test
+    public void DataUpdateService_Register_UpdateAvailableRandomDelayInSeconds() {
+        // Arrange
+        final int registrations = 50;
+        final long availableInMillis = 3600000;
+        final long maxDelayMillis = 600 * 1000;
+        final Date availableAt =
+            new Date(System.currentTimeMillis() + availableInMillis);
+        DataFileConfigurationDefault config = new DataFileConfigurationDefault();
+        config.setAutomaticUpdatesEnabled(true);
+        config.setMaxRandomisationSeconds(600);
+
+        // Act
+        for (int i = 0; i < registrations; i++) {
+            AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
+            file.setUpdateAvailableTime(availableAt);
+            file.setEngine(mock(OnPremiseAspectEngine.class));
+            file.setConfiguration(config);
+            dataUpdate.registerDataFile(file);
+        }
+
+        // Assert
+        // The delay is the time until the update is available plus a random
+        // number of seconds, so across many registrations at least one adds
+        // more than a second, and none adds more than the maximum.
+        ArgumentCaptor<Long> delays = ArgumentCaptor.forClass(Long.class);
+        verify(futureFactory, times(registrations)).schedule(
+            any(Runnable.class),
+            delays.capture());
+        long largestExtra = Long.MIN_VALUE;
+        for (long delay : delays.getAllValues()) {
+            long extra = delay - availableInMillis;
+            largestExtra = Math.max(largestExtra, extra);
+            assertTrue("Delay " + delay + " adds more than the maximum",
+                extra <= maxDelayMillis);
+        }
+        assertTrue("Largest random delay was " + largestExtra + " millis",
+            largestExtra > 1000);
     }
 
     @Test
