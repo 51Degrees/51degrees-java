@@ -691,7 +691,7 @@ public class FodIdTests {
      * A signed envelope whose standard base64 holds both characters that
      * differ between the alphabets, so every conversion is exercised. The
      * signature is random, so envelopes are signed until one qualifies,
-     * which takes one or two tries.
+     * which usually takes a few tries.
      */
     private String standardWithBothSpecials() throws OwidException {
         for (int attempt = 0; attempt < 100; attempt++) {

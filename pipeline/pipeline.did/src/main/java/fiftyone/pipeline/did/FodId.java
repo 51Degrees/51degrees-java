@@ -208,7 +208,10 @@ public final class FodId {
      * result reports whether the read worked, the 51Did only when it did,
      * and a named reason either way. An envelope failure carries the OWID
      * library's own status unchanged, and a payload failure is one of the
-     * 51Did payload statuses. See {@link FodIdParseStatus}.
+     * 51Did payload statuses. White space inside the text and characters
+     * from both alphabets are refused by this reader itself, before the OWID
+     * library sees the text, under the same
+     * {@link FodIdParseStatus#INVALID_BASE64}. See {@link FodIdParseStatus}.
      * <p>
      * Success means the input is structurally a 51Did. The signature has
      * not been checked.

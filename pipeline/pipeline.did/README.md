@@ -170,7 +170,7 @@ found it, and adds its own for the payload rules.
 |---|---|---|
 | `PARSED` | A structurally valid 51Did. Says nothing about the signature. | |
 | `MISSING_INPUT` | Null or empty input, or white space alone. | OWID |
-| `INVALID_BASE64` | The string is not base64 in one alphabet. White space inside it, and characters from both alphabets, report this. | OWID |
+| `INVALID_BASE64` | The string is not base64 in one alphabet. White space inside it, and characters from both alphabets, report this. | OWID, or 51Did for white space inside the text and mixed alphabets |
 | `UNSUPPORTED_VERSION` | The first byte names an envelope version the reader does not know. | OWID |
 | `UNEXPECTED_END` | The data stopped in the middle of an envelope field. | OWID |
 | `INVALID_DOMAIN_ENCODING` | The creator domain is unterminated or longer than a domain name can be. | OWID |
