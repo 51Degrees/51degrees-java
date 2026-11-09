@@ -127,6 +127,10 @@ public class CallbackUrlTests {
                 "https://[::1]/51dpipeline/json"),
             Arguments.of("[::1]:8080",
                 "https://[::1]:8080/51dpipeline/json"),
+            Arguments.of("[1:2:3:4:5:6:7:8]",
+                "https://[1:2:3:4:5:6:7:8]/51dpipeline/json"),
+            Arguments.of("[::1.2.3.4]",
+                "https://[::1.2.3.4]/51dpipeline/json"),
             Arguments.of("example.com.",
                 "https://example.com./51dpipeline/json"),
             Arguments.of("example.com/path",
@@ -189,6 +193,9 @@ public class CallbackUrlTests {
             "a\nb.com",
             " example.com",
             "example.com ",
+            "example.com\n",
+            "example.com:80\n",
+            "[::1]\n",
             "example.com:8080');alert(1);//",
             // User information, or an @ anywhere in the host value.
             "user@example.com",
@@ -267,7 +274,9 @@ public class CallbackUrlTests {
             "[::1]x",
             "[::1]80",
             "[::1]:80x",
-            "[::1]]");
+            "[::1]]",
+            "[1::2::3]",
+            "[12345::1]");
     }
 
     /**
