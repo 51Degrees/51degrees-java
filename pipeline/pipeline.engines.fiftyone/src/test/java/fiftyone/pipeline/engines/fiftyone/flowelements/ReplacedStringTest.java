@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class ReplacedStringTest {
 
-    // is transparent to legal characters
+    // is transparent to the three control characters XML 1.0 allows
     @Test
     public void testNormal(){
         String aString = IntStream.of(0x9, 0xA, 0xD)
@@ -47,8 +47,8 @@ class ReplacedStringTest {
                 .collect(joining());
         ReplacedString replacedString = new ReplacedString(aString);
         assertFalse(replacedString.isTruncated());
-        assertTrue(replacedString.isReplaced());
-        assertEquals(3, replacedString.toString().length());
+        assertFalse(replacedString.isReplaced());
+        assertEquals(aString, replacedString.toString());
     }
     // is transparent to legal characters except \
     @Test
@@ -123,31 +123,66 @@ class ReplacedStringTest {
         assertEquals(5, replacedString.toString().length());
     }
 
-    @Test ()
-    public void testEscapedEvenBigger(){
-        String aString = IntStream.range(0,5).mapToObj(i -> "\u0100").collect(joining());
+    // does not replace characters above U+00FF, which XML 1.0 allows
+    @Test
+    public void testNonLatinKept(){
+        String aString = "\u0100 \u0416 \u6F22\u5B57 \uD7FF \uE000 \uFFFD";
         ReplacedString replacedString = new ReplacedString(aString);
         assertFalse(replacedString.isTruncated());
-        assertTrue(replacedString.isReplaced());
-        System.out.println(replacedString);
-        assertEquals(5, replacedString.toString().length());
-
+        assertFalse(replacedString.isReplaced());
+        assertEquals(aString, replacedString.toString());
+    }
+    // does not replace the controls from U+007F to U+009F, which XML 1.0 allows
+    @Test
+    public void testC1ControlsKept(){
+        String aString = IntStream.range(0x7F, 0xA0)
+                .mapToObj(i -> Character.toString((char)i))
+                .collect(joining());
+        ReplacedString replacedString = new ReplacedString(aString);
+        assertFalse(replacedString.isReplaced());
+        assertEquals(aString, replacedString.toString());
+    }
+    // keeps a pair of surrogates, which is one character above U+FFFF
+    @Test
+    public void testSurrogatePairKept(){
+        String aString = "a\uD83D\uDE00b";
+        ReplacedString replacedString = new ReplacedString(aString);
+        assertFalse(replacedString.isReplaced());
+        assertEquals(aString, replacedString.toString());
+    }
+    // replaces a surrogate on its own, U+FFFE and U+FFFF, which XML 1.0 forbids
+    @Test
+    public void testForbiddenCharactersReplaced(){
+        String[] forbidden = { "\uD83D", "\uDE00", "\uFFFE", "\uFFFF" };
+        for (String character : forbidden) {
+            ReplacedString replacedString = new ReplacedString(
+                    "a" + character + "b");
+            assertTrue(replacedString.isReplaced());
+            assertEquals("a\uFFFDb", replacedString.toString());
+        }
+        // A low surrogate before a high one is two surrogates on their own.
+        ReplacedString reversed = new ReplacedString("\uDE00\uD83D");
+        assertTrue(reversed.isReplaced());
+        assertEquals("\uFFFD\uFFFD", reversed.toString());
     }
 
     private final XMLOutputFactory xmlOutputFactory = XMLOutputFactory.newInstance();
     private final XMLInputFactory xmlInputFactory =XMLInputFactory.newInstance();
 
+    // text built from the characters XML 1.0 allows survives writing and reading
     @Test
     public void testXmlSerialise() throws XMLStreamException {
         xmlOutputFactory.setProperty("escapeCharacters", true);
-        String text = ReplacedString.VALID_XML_CHARS.stream()
-                .map(i->Character.toString((char)i.intValue()))
-                .collect(joining());
+        String text = "\t\n a\u00E9\u0100\u0416\u6F22\u5B57\uD83D\uDE00" +
+                "\u007F\u0080\u009F\uD7FF\uE000\uFFFD <&>";
+        String sanitised = new ReplacedString(text).toString();
+        assertEquals(text, sanitised);
+
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         XMLStreamWriter writer = xmlOutputFactory.createXMLStreamWriter(os, "UTF-8");
-        writer.writeStartDocument("UTF-8", "1.1");
+        writer.writeStartDocument("UTF-8", "1.0");
         writer.writeStartElement("test");
-        writer.writeCharacters(text);
+        writer.writeCharacters(sanitised);
         writer.writeEndElement();
         writer.close();
 
@@ -155,10 +190,8 @@ class ReplacedStringTest {
         XMLStreamReader reader = xmlInputFactory.createXMLStreamReader(is);
         reader.next();
         String readText = reader.getElementText();
-        System.out.println(text);
-        System.out.println(readText);
         reader.close();
 
-        assertEquals(readText, text);
+        assertEquals(text, readText);
     }
 }

@@ -24,6 +24,12 @@ package fiftyone.pipeline.web;
 
 import fiftyone.pipeline.core.data.ElementData;
 import fiftyone.pipeline.core.data.FlowData;
+import fiftyone.pipeline.core.flowelements.FlowElement;
+import fiftyone.pipeline.core.flowelements.Pipeline;
+import fiftyone.pipeline.engines.fiftyone.flowelements.SequenceElement;
+import fiftyone.pipeline.engines.fiftyone.flowelements.SetHeadersElement;
+import fiftyone.pipeline.javascriptbuilder.flowelements.JavaScriptBuilderElement;
+import fiftyone.pipeline.jsonbuilder.flowelements.JsonBuilderElement;
 
 import org.junit.After;
 import org.junit.Before;
@@ -36,18 +42,23 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static fiftyone.pipeline.engines.fiftyone.data.SetHeadersData.*;
 import static fiftyone.pipeline.engines.fiftyone.flowelements.SetHeadersElement.*;
 import static fiftyone.pipeline.web.Constants.*;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+@SuppressWarnings("rawtypes")
 public class PipelineFilterTests {
 
     private FilterConfig config;
@@ -182,5 +193,110 @@ public class PipelineFilterTests {
             assertEquals("chain failed", e.getMessage());
         }
         verify(flowData, times(1)).close();
+    }
+
+    private List<FlowElement> elementsOf(PipelineFilter initialised)
+        throws Exception {
+        Field field = PipelineFilter.class.getDeclaredField("pipeline");
+        field.setAccessible(true);
+        return ((Pipeline) field.get(initialised)).getFlowElements();
+    }
+
+    private static boolean hasElement(
+        List<FlowElement> elements,
+        Class<? extends FlowElement> type) {
+        for (FlowElement element : elements) {
+            if (type.isInstance(element)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String endpointOf(List<FlowElement> elements)
+        throws Exception {
+        for (FlowElement element : elements) {
+            if (element instanceof JavaScriptBuilderElement) {
+                Field field =
+                    JavaScriptBuilderElement.class.getDeclaredField("endpoint");
+                field.setAccessible(true);
+                return (String) field.get(element);
+            }
+        }
+        return null;
+    }
+
+    private PipelineFilter initFilterWith(String name, String value)
+        throws Exception {
+        doReturn(value).when(config).getInitParameter(name);
+        PipelineFilter initialised = new PipelineFilter();
+        initialised.init(config);
+        return initialised;
+    }
+
+    /**
+     * Check that the Sequence Element and the Set Headers Element are added
+     * when the init parameters do not say otherwise.
+     */
+    @Test
+    public void PipelineFilter_Defaults_AddsSequenceAndSetHeaders()
+        throws Exception {
+        filter = new PipelineFilter();
+        filter.init(config);
+
+        List<FlowElement> elements = elementsOf(filter);
+        assertTrue(hasElement(elements, SequenceElement.class));
+        assertTrue(hasElement(elements, SetHeadersElement.class));
+        assertTrue(hasElement(elements, JsonBuilderElement.class));
+        assertTrue(hasElement(elements, JavaScriptBuilderElement.class));
+        assertEquals("/51Degrees.core.json", endpointOf(elements));
+    }
+
+    @Test
+    public void PipelineFilter_SequenceElementDisabled_NotAdded()
+        throws Exception {
+        filter = initFilterWith("sequence-element-enabled", "false");
+
+        List<FlowElement> elements = elementsOf(filter);
+        assertFalse(hasElement(elements, SequenceElement.class));
+        assertTrue(hasElement(elements, SetHeadersElement.class));
+    }
+
+    @Test
+    public void PipelineFilter_SetHeadersElementDisabled_NotAdded()
+        throws Exception {
+        filter = initFilterWith("set-headers-element-enabled", "false");
+
+        List<FlowElement> elements = elementsOf(filter);
+        assertTrue(hasElement(elements, SequenceElement.class));
+        assertFalse(hasElement(elements, SetHeadersElement.class));
+    }
+
+    /**
+     * Check that the client-side switch still removes only the JSON Builder
+     * Element and the JavaScript Builder Element.
+     */
+    @Test
+    public void PipelineFilter_ClientSideDisabled_KeepsSequenceAndSetHeaders()
+        throws Exception {
+        filter = initFilterWith("clientside-properties-enabled", "false");
+
+        List<FlowElement> elements = elementsOf(filter);
+        assertTrue(hasElement(elements, SequenceElement.class));
+        assertTrue(hasElement(elements, SetHeadersElement.class));
+        assertFalse(hasElement(elements, JsonBuilderElement.class));
+        assertFalse(hasElement(elements, JavaScriptBuilderElement.class));
+    }
+
+    /**
+     * Check that the JavaScript Builder Element calls back to the JSON path
+     * set in the init parameter.
+     */
+    @Test
+    public void PipelineFilter_JsonPath_IsTheCallbackEndpoint()
+        throws Exception {
+        filter = initFilterWith("json-path", "/51dpipeline/json");
+
+        assertEquals("/51dpipeline/json", endpointOf(elementsOf(filter)));
     }
 }
