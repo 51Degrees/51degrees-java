@@ -259,7 +259,7 @@ public class Calculations {
                 holes);
     }
 
-    private static LinearRing transformRing(
+    static LinearRing transformRing(
             LinearRing ring,
             CoordinateTransform transform) {
         Coordinate[] source = ring.getCoordinates();
