@@ -93,6 +93,43 @@ public class BuilderTests {
     }
 
     /**
+     * Check that every collection the configuration hands out is borrowed.
+     * The collections belong to the configuration, so a proxy that owned
+     * one would free it a second time when the proxy is deleted.
+     */
+    @Test
+    public void Config_CollectionsAreBorrowed() throws Exception {
+        ConfigIpiSwig config = new ConfigIpiSwig();
+        try {
+            config.setBalanced();
+            long[] before = collections(config);
+            CollectionConfigSwig[] all = {
+                config.getStrings(),
+                config.getComponents(),
+                config.getMaps(),
+                config.getProperties(),
+                config.getValues(),
+                config.getProfiles(),
+                config.getGraphs(),
+                config.getProfileGroups(),
+                config.getProfileOffsets(),
+                config.getPropertyTypes(),
+                config.getGraph()
+            };
+            Field own = CollectionConfigSwig.class
+                .getDeclaredField("swigCMemOwn");
+            own.setAccessible(true);
+            for (CollectionConfigSwig collection : all) {
+                assertFalse(own.getBoolean(collection));
+                collection.delete();
+            }
+            assertArrayEquals(before, collections(config));
+        } finally {
+            config.delete();
+        }
+    }
+
+    /**
      * The native configuration the builder hands to the engine it builds.
      */
     private static ConfigIpiSwig configOf(
@@ -132,17 +169,17 @@ public class BuilderTests {
      */
     private static long[] collections(ConfigIpiSwig config) {
         CollectionConfigSwig[] all = {
-            borrowed(config.getStrings()),
-            borrowed(config.getComponents()),
-            borrowed(config.getMaps()),
-            borrowed(config.getProperties()),
-            borrowed(config.getValues()),
-            borrowed(config.getProfiles()),
-            borrowed(config.getGraphs()),
-            borrowed(config.getProfileGroups()),
-            borrowed(config.getProfileOffsets()),
-            borrowed(config.getPropertyTypes()),
-            borrowed(config.getGraph())
+            config.getStrings(),
+            config.getComponents(),
+            config.getMaps(),
+            config.getProperties(),
+            config.getValues(),
+            config.getProfiles(),
+            config.getGraphs(),
+            config.getProfileGroups(),
+            config.getProfileOffsets(),
+            config.getPropertyTypes(),
+            config.getGraph()
         };
         long[] settings = new long[all.length * 2];
         for (int i = 0; i < all.length; i++) {
@@ -150,21 +187,5 @@ public class BuilderTests {
             settings[i * 2 + 1] = all[i].getCapacity();
         }
         return settings;
-    }
-
-    /**
-     * The generated wrappers mark four ConfigIpiSwig getters as owned until
-     * they are regenerated with the C library's corrected MetaData.i.
-     */
-    private static CollectionConfigSwig borrowed(CollectionConfigSwig proxy) {
-        try {
-            Field own = CollectionConfigSwig.class
-                .getDeclaredField("swigCMemOwn");
-            own.setAccessible(true);
-            own.setBoolean(proxy, false);
-            return proxy;
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException(e);
-        }
     }
 }

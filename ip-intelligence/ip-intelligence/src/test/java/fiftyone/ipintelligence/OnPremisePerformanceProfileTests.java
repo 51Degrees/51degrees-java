@@ -171,17 +171,17 @@ public class OnPremisePerformanceProfileTests {
      */
     private static long[] collections(ConfigIpiSwig config) {
         CollectionConfigSwig[] all = {
-            borrowed(config.getStrings()),
-            borrowed(config.getComponents()),
-            borrowed(config.getMaps()),
-            borrowed(config.getProperties()),
-            borrowed(config.getValues()),
-            borrowed(config.getProfiles()),
-            borrowed(config.getGraphs()),
-            borrowed(config.getProfileGroups()),
-            borrowed(config.getProfileOffsets()),
-            borrowed(config.getPropertyTypes()),
-            borrowed(config.getGraph())
+            config.getStrings(),
+            config.getComponents(),
+            config.getMaps(),
+            config.getProperties(),
+            config.getValues(),
+            config.getProfiles(),
+            config.getGraphs(),
+            config.getProfileGroups(),
+            config.getProfileOffsets(),
+            config.getPropertyTypes(),
+            config.getGraph()
         };
         long[] settings = new long[all.length * 2];
         for (int i = 0; i < all.length; i++) {
@@ -189,19 +189,5 @@ public class OnPremisePerformanceProfileTests {
             settings[i * 2 + 1] = all[i].getCapacity();
         }
         return settings;
-    }
-
-    /**
-     * The generated wrappers mark four ConfigIpiSwig getters as owned until
-     * they are regenerated with the C library's corrected MetaData.i.
-     */
-    private static CollectionConfigSwig borrowed(CollectionConfigSwig proxy) {
-        try {
-            field(CollectionConfigSwig.class, "swigCMemOwn")
-                .setBoolean(proxy, false);
-            return proxy;
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException(e);
-        }
     }
 }
