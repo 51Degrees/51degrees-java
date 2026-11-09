@@ -23,8 +23,10 @@
 package fiftyone.pipeline.engines.fiftyone.flowelements;
 
 import fiftyone.pipeline.core.data.*;
+import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
+import fiftyone.pipeline.engines.fiftyone.data.SequenceData;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -38,12 +40,35 @@ import org.slf4j.Logger;
 public class SequenceElement 
     extends FlowElementBase<ElementData, ElementPropertyMetaData> {
 
+    private final List<ElementPropertyMetaData> properties;
+
     /**
      * Construct a new instance of the {@link FlowElement}.
      * @param logger logger instance to use for logging
      */
-    public SequenceElement(Logger logger) {
-        super(logger, null);
+    @SuppressWarnings("this-escape")
+    public SequenceElement(final Logger logger) {
+        super(logger, new ElementDataFactory<ElementData>() {
+            @Override
+            public ElementData create(
+                FlowData flowData,
+                FlowElement<ElementData, ?> flowElement) {
+                return new SequenceData(logger, flowData);
+            }
+        });
+        properties = new ArrayList<>();
+        properties.add(new ElementPropertyMetaDataDefault(
+            SequenceData.SESSION_ID_PROPERTY_NAME,
+            this,
+            "",
+            String.class,
+            true));
+        properties.add(new ElementPropertyMetaDataDefault(
+            SequenceData.SEQUENCE_PROPERTY_NAME,
+            this,
+            "",
+            Integer.class,
+            true));
     }
 
     @Override
@@ -63,6 +88,21 @@ public class SequenceElement
             int seq = (int) sequence;
             data.addEvidence(Constants.EVIDENCE_SEQUENCE, seq + 1);
         }
+        addElementData(data);
+    }
+
+    /**
+     * Write the session id and sequence now in Evidence to the element data.
+     */
+    private void addElementData(FlowData data) {
+        Map<String, Object> evidence = data.getEvidence().asKeyMap();
+        SequenceData sequenceData = (SequenceData) data.getOrAdd(
+            getElementDataKey(),
+            getDataFactory());
+        sequenceData.setSessionId(
+            String.valueOf(evidence.get(Constants.EVIDENCE_SESSIONID)));
+        sequenceData.setSequence(
+            ((Number) evidence.get(Constants.EVIDENCE_SEQUENCE)).intValue());
     }
 
     @Override
@@ -77,7 +117,7 @@ public class SequenceElement
 
     @Override
     public List<ElementPropertyMetaData> getProperties() {
-        return new ArrayList<>();
+        return properties;
     }
 
     @Override

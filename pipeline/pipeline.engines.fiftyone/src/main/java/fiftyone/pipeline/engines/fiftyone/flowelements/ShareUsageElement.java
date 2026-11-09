@@ -40,9 +40,6 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 import java.util.zip.GZIPOutputStream;
 
 import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT;
@@ -488,18 +485,19 @@ public class ShareUsageElement extends ShareUsageBase {
      * replace characters that cause problems in XML with the "Replacement character"
      */
     public static class ReplacedString {
-        // a set of valid XML character values (ignoring valid controls x09, x0a, x0d, x85)
-        static final Set<Integer> VALID_XML_CHARS =
-                Stream.of(  IntStream.range(0x20,0x7F),
-                            IntStream.range(0xA0, 0x100))
-                .flatMapToInt(i -> i)
-                .boxed()
-                .collect(Collectors.toCollection(HashSet::new));
-        // an array describing whether a character value is valid
-        static final Boolean[] IS_VALID_XML_CHAR = IntStream
-                .range(0, 0x100)
-                .mapToObj(VALID_XML_CHARS::contains)
-                .toArray(Boolean[]::new);
+        /**
+         * Whether the character is allowed in an XML 1.0 document, as the
+         * Char production in section 2.2 of the XML 1.0 specification says.
+         * A surrogate is allowed only as half of a pair, which the
+         * constructor checks.
+         * @param c the UTF-16 code unit to check
+         * @return true if the character is allowed in XML 1.0
+         */
+        static boolean isXmlChar(char c) {
+            return c == 0x9 || c == 0xA || c == 0xD ||
+                (c >= 0x20 && c <= 0xD7FF) ||
+                (c >= 0xE000 && c <= 0xFFFD);
+        }
 
         // maximum string length
         static final int MAX_LENGTH = SHARE_USAGE_MAX_EVIDENCE_LENGTH;
@@ -515,18 +513,23 @@ public class ShareUsageElement extends ShareUsageBase {
                 // error in Jdk 8.
                 // return;
             } else {
-                builder = new StringBuilder(Math.min(text.length(), MAX_LENGTH));
+                int limit = Math.min(text.length(), MAX_LENGTH);
+                builder = new StringBuilder(limit);
                 truncated = text.length() > MAX_LENGTH;
-                text.chars()
-                        .limit(MAX_LENGTH)
-                        .forEach(c -> {
-                            if (c < IS_VALID_XML_CHAR.length && IS_VALID_XML_CHAR[c]) {
-                                builder.append((char) c);
-                            } else {
-                                builder.append((char) 0xFFFD);
-                                replaced = true;
-                            }
-                        });
+                for (int i = 0; i < limit; i++) {
+                    char c = text.charAt(i);
+                    if (Character.isHighSurrogate(c) &&
+                        i + 1 < limit &&
+                        Character.isLowSurrogate(text.charAt(i + 1))) {
+                        // A pair is one character above U+FFFF.
+                        builder.append(c).append(text.charAt(++i));
+                    } else if (isXmlChar(c)) {
+                        builder.append(c);
+                    } else {
+                        builder.append((char) 0xFFFD);
+                        replaced = true;
+                    }
+                }
             }
         }
 

@@ -71,9 +71,12 @@ public interface FiftyOneJSServiceCore {
     class Default implements FiftyOneJSServiceCore {
         protected final ClientsidePropertyServiceCore clientsidePropertyServiceCore;
         protected boolean enabled;
+        protected final String javaScriptPath;
+        protected final String jsonPath;
 
         /**
-         * Construct a new instance.
+         * Construct a new instance that serves the JavaScript and the JSON
+         * from the default paths.
          * @param clientsidePropertyServiceCore used to get the JavaScript to
          *                                      add to the returned file
          * @param enabled true if the service should be enabled
@@ -81,8 +84,31 @@ public interface FiftyOneJSServiceCore {
         public Default(
             ClientsidePropertyServiceCore clientsidePropertyServiceCore,
             boolean enabled) {
+            this(clientsidePropertyServiceCore, enabled, null, null);
+        }
+
+        /**
+         * Construct a new instance.
+         * @param clientsidePropertyServiceCore used to get the JavaScript to
+         *                                      add to the returned file
+         * @param enabled true if the service should be enabled
+         * @param javaScriptPath the end of the request path that the
+         *                       JavaScript is served for, or null or empty
+         *                       for the default
+         * @param jsonPath the end of the request path that the JSON is
+         *                 served for, or null or empty for the default
+         */
+        public Default(
+            ClientsidePropertyServiceCore clientsidePropertyServiceCore,
+            boolean enabled,
+            String javaScriptPath,
+            String jsonPath) {
             this.clientsidePropertyServiceCore = clientsidePropertyServiceCore;
             this.enabled = enabled;
+            this.javaScriptPath = javaScriptPath == null ||
+                javaScriptPath.isEmpty() ? CORE_JS_NAME : javaScriptPath;
+            this.jsonPath = jsonPath == null || jsonPath.isEmpty() ?
+                CORE_JSON_NAME : jsonPath;
         }
 
         @Override
@@ -91,7 +117,7 @@ public interface FiftyOneJSServiceCore {
             HttpServletResponse response) throws IOException {
             boolean result = false;
             if (request.getRequestURL().toString().toLowerCase()
-                .endsWith(CORE_JS_NAME.toLowerCase())) {
+                .endsWith(javaScriptPath.toLowerCase())) {
                 serveCoreJS(request, response);
                 result = true;
             }
@@ -120,7 +146,7 @@ public interface FiftyOneJSServiceCore {
 
             boolean result = false;
             if (request.getRequestURI().toString().toLowerCase()
-                .endsWith(CORE_JSON_NAME.toLowerCase())) {
+                .endsWith(jsonPath.toLowerCase())) {
                 serveCoreJson(request, response);
                 result = true;
             }

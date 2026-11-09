@@ -74,4 +74,36 @@ public class Constants {
      */
     public static final boolean DEFAULT_CLIENTSIDE_ENABLED = true;
 
+    /**
+     * Default value for the options that add the Sequence Element and the
+     * Set Headers Element.
+     */
+    public static final boolean DEFAULT_ELEMENT_ENABLED = true;
+
+    /**
+     * Name of the filter init parameter that sets the path the JavaScript is
+     * served from.
+     */
+    public static final String INIT_PARAM_JAVASCRIPT_PATH = "javascript-path";
+
+    /**
+     * Name of the filter init parameter that sets the path the JSON is
+     * served from.
+     */
+    public static final String INIT_PARAM_JSON_PATH = "json-path";
+
+    /**
+     * Name of the filter init parameter that sets whether the Sequence
+     * Element is added to the Pipeline when it is missing.
+     */
+    public static final String INIT_PARAM_SEQUENCE_ELEMENT_ENABLED =
+        "sequence-element-enabled";
+
+    /**
+     * Name of the filter init parameter that sets whether the Set Headers
+     * Element is added to the Pipeline when it is missing.
+     */
+    public static final String INIT_PARAM_SET_HEADERS_ELEMENT_ENABLED =
+        "set-headers-element-enabled";
+
 }
