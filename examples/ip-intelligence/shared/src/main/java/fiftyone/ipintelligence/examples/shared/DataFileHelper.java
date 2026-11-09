@@ -160,8 +160,18 @@ public static class DatafileInfo {
             return free;
         }
     }
+
+    /**
+     * Reads the details of a data file, such as its tier and publish date.
+     * The data file is opened with the low memory profile, which reads
+     * little of it.
+     * @param dataFileLocation the data file to read
+     * @return the data file's details
+     * @throws Exception if the data file cannot be opened
+     */
     public static DatafileInfo getDatafileMetaData(String dataFileLocation) throws Exception {
         try(IPIntelligenceOnPremiseEngine ddhe = new IPIntelligenceOnPremiseEngineBuilder()
+                .setPerformanceProfile(Constants.PerformanceProfiles.LowMemory)
                 .setAutoUpdate(false)
                 .build(dataFileLocation,false)) {
             return new DatafileInfo((FiftyOneDataFile) ddhe.getDataFileMetaData(),
@@ -309,6 +319,31 @@ public static class DatafileInfo {
                 "data file adds the location, range and connection " +
                 "properties. Contact us for a copy at " + contactUs);
         output.flush();
+    }
+
+    /**
+     * Finds the performance profile an example is given by name, ignoring
+     * case. When no profile has the name, writes the names accepted.
+     * @param name the name given, such as MaxPerformance
+     * @param output where to write when no profile has the name
+     * @return the profile, or null when no profile has the name
+     */
+    public static Constants.PerformanceProfiles findPerformanceProfile(
+            String name,
+            PrintWriter output) {
+        List<String> names = new ArrayList<>();
+        for (Constants.PerformanceProfiles profile :
+                Constants.PerformanceProfiles.values()) {
+            if (profile.name().equalsIgnoreCase(name)) {
+                return profile;
+            }
+            names.add(profile.name());
+        }
+        output.println("'" + name + "' is not a performance profile. The " +
+                "names accepted, in upper or lower case, are " +
+                joinNames(names) + ".");
+        output.flush();
+        return null;
     }
 
     /**
