@@ -34,7 +34,9 @@ import java.util.Set;
 import static fiftyone.pipeline.core.Constants.*;
 
 /**
- * This filter is used by the {@link ShareUsageElement}.
+ * This filter is used by the {@link ShareUsageElement} to decide which of the
+ * values {@link ShareUsageEvidence#find} finds are shared. It is not the
+ * element's accepted Evidence, which is empty.
  * It will include anything that is:
  * 1) An HTTP header that is not blocked by the constructor parameter, other
  *     than Cookie.
@@ -48,10 +50,6 @@ import static fiftyone.pipeline.core.Constants.*;
  * The prefix of a key is everything before its first '.', and the field
  * everything after it. An email address, the salt for hashed email
  * identifiers, the query string and the path are never included.
- *
- * As this filter is generally inclusive, it will often cause far more
- * evidence to be passed into a pipeline than the engine-specific
- * filters, which tend to be based on a white list
  */
 public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
 
@@ -85,6 +83,7 @@ public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
      * Evidence keys that are never shared, matched without regard to case as
      * the whole key or after a '.'. 'id.email' and 'id.salt' are a raw email
      * address and the salt used to make hashed email identifiers.
+     * 'header.cookie' is the Cookie header, which carries every cookie.
      * 'request-query' is the whole query string, which would undo the rules
      * for its parameters. 'request-path' would make each page a visitor opens
      * look like a new session to the tracker.
@@ -92,6 +91,7 @@ public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
     private static final String[] NEVER_SHARED_EVIDENCE_KEYS = {
         "id.email",
         "id.salt",
+        "header.cookie",
         "request-query",
         "request-path"
     };

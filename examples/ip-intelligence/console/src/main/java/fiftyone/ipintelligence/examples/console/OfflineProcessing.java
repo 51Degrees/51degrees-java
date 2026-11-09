@@ -180,11 +180,14 @@ public class OfflineProcessing {
                 // Performance options for IP Intelligence
                 //.setPerformanceProfile(Constants.PerformanceProfiles.MaxPerformance)
                 //.setPerformanceProfile(Constants.PerformanceProfiles.HighPerformance)
-                // Low memory profile has the data streamed from disk on
-                // demand and is conservative in its use of memory, but
-                // slower because of disk access
-                .setPerformanceProfile(Constants.PerformanceProfiles.MaxPerformance)
                 //.setPerformanceProfile(Constants.PerformanceProfiles.Balanced)
+                // We use the low memory profile, which reads the data file
+                // from disk as it is needed, because this example may be
+                // given the Enterprise data file, which is over 6 GB, through
+                // its first argument or 51DEGREES_IPI_PATH. MaxPerformance
+                // loads the whole data file into memory, which makes each
+                // lookup faster where there is memory to hold it.
+                .setPerformanceProfile(Constants.PerformanceProfiles.LowMemory)
                 .build()) {
 
             // get the details of the IP Intelligence engine from the pipeline,

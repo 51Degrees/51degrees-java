@@ -37,7 +37,9 @@ import static fiftyone.pipeline.core.Constants.*;
  * Service used to populate the {@link Evidence} from a
  * {@link HttpServletRequest} ready for it to be processed by the Pipeline.
  * The Pipeline's {@link EvidenceKeyFilter} is used to determine what should be
- * collected from the request.
+ * collected from the request. Every value offered, accepted or not, is also
+ * added in one {@link WebRequestEvidence} for the usage sharing element,
+ * which accepts no Evidence.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/web-integration.md#populating-evidence">Specification</a>
  */
 public interface WebRequestEvidenceServiceCore {
@@ -57,10 +59,18 @@ public interface WebRequestEvidenceServiceCore {
      */
     class Default implements WebRequestEvidenceServiceCore {
 
+        private static final String EVIDENCE_REQUEST_METHOD =
+            EVIDENCE_SERVER_PREFIX + EVIDENCE_SEPERATOR + "request-method";
+
+        private static final String EVIDENCE_REQUEST_PATH =
+            EVIDENCE_SERVER_PREFIX + EVIDENCE_SEPERATOR + "request-path";
+
         @Override
         public void addEvidenceFromRequest(
             FlowData flowData,
             HttpServletRequest request) {
+            // Added on every request, whether or not any element accepts it.
+            WebRequestEvidence.of(flowData);
 
             Enumeration<String> headerNames = request.getHeaderNames();
             if (headerNames != null) {
@@ -116,11 +126,19 @@ public interface WebRequestEvidenceServiceCore {
             checkAndAdd(flowData, EVIDENCE_CLIENTIP_KEY, request.getRemoteAddr());
             
             checkAndAdd(flowData, EVIDENCE_PROTOCOL, request.getScheme());
+
+            // The method and the path of the request line, as sent.
+            checkAndAdd(flowData, EVIDENCE_REQUEST_METHOD, request.getMethod());
+            checkAndAdd(
+                flowData,
+                EVIDENCE_REQUEST_PATH,
+                request.getRequestURI());
         }
 
         /**
          * Check if the {@link FlowData} requires this item of evidence, and add
-         * it if it does.
+         * it if it does. It is recorded in the {@link WebRequestEvidence}
+         * either way.
          * @param flowData to check and add to
          * @param key the key to check and add
          * @param value the value to add if the check passes
@@ -129,6 +147,7 @@ public interface WebRequestEvidenceServiceCore {
             if (flowData.getEvidenceKeyFilter().include(key)) {
                 flowData.addEvidence(key, value);
             }
+            WebRequestEvidence.of(flowData).record(key, value);
         }
     }
 }
