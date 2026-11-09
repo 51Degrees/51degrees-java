@@ -1398,8 +1398,8 @@ public class DataUpdateServiceTests {
         assertTrue("The 'checkForUpdateComplete' " +
             "event was never fired",
             completed);
-        // Ignore the error that is logged due to the 429
-        ignoreErrors = 1;
+        // Ignore the warning that is logged due to the 429
+        ignoreWranings = 1;
         // Check that the timer has been set to go off again.
         assertNotNull(file.getFuture());
         // Check that the timer has been set to expire in 10 seconds.

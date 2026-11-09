@@ -304,6 +304,34 @@ public class DataUpdateServiceLoggingTests {
             engineType + ". Error detail: refused");
     }
 
+    private void assertStatusWarned(int status, String detail)
+        throws Exception {
+        when(connection.getResponseCode()).thenReturn(status);
+        newDataFile(true, false, false);
+
+        dataUpdate.checkForUpdate(engine);
+
+        assertLogged(Level.WARN, "An error occurred while downloading a data " +
+            "file update for " + engineType + " from " + UPDATE_URL + ". " +
+            "Error detail: " + detail);
+        assertTrue(logged(Level.ERROR).isEmpty());
+    }
+
+    @Test
+    public void TooManyRequests_WarnsAboutTheDownload() throws Exception {
+        assertStatusWarned(429, "HTTP status code 429 (too many requests)");
+    }
+
+    @Test
+    public void Forbidden_WarnsAboutTheDownload() throws Exception {
+        assertStatusWarned(403, "HTTP status code 403 (access denied)");
+    }
+
+    @Test
+    public void OtherStatus_WarnsAboutTheDownload() throws Exception {
+        assertStatusWarned(500, "HTTP status code 500");
+    }
+
     @Test
     public void Md5DoesNotMatch_WarnsAboutIntegrityCheck() throws Exception {
         when(connection.getResponseCode())
