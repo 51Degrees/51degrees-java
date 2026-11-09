@@ -44,6 +44,7 @@ import static fiftyone.pipeline.engines.fiftyone.flowelements.SetHeadersElement.
 import static fiftyone.pipeline.web.Constants.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -122,6 +123,57 @@ public class PipelineFilterTests {
      */
     @Test
     public void PipelineFilter_Initialise() throws ServletException {
+        filter = new PipelineFilter();
+
+        filter.init(config);
+    }
+
+    /**
+     * The client-side max-age is the default when the init parameter is
+     * not set.
+     * @throws ServletException
+     */
+    @Test
+    public void CacheMaxAge_NotSet_IsTheDefault() throws ServletException {
+        assertEquals(
+            DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS,
+            PipelineFilter.getCacheMaxAgeSeconds(config));
+    }
+
+    @Test
+    public void CacheMaxAge_Set() throws ServletException {
+        FilterConfig withMaxAge = mock(FilterConfig.class);
+        when(withMaxAge.getInitParameter(INIT_PARAM_CLIENTSIDE_CACHE_MAX_AGE))
+            .thenReturn(" 60 ");
+
+        assertEquals(60, PipelineFilter.getCacheMaxAgeSeconds(withMaxAge));
+    }
+
+    /**
+     * A max-age that is not a whole number of seconds, 0 or more, fails
+     * the filter's start rather than being ignored.
+     */
+    @Test
+    public void CacheMaxAge_Invalid_Refused() {
+        for (String value : new String[] { "-1", "1.5", "ten" }) {
+            FilterConfig invalid = mock(FilterConfig.class);
+            when(invalid.getInitParameter(INIT_PARAM_CLIENTSIDE_CACHE_MAX_AGE))
+                .thenReturn(value);
+            try {
+                PipelineFilter.getCacheMaxAgeSeconds(invalid);
+                fail("'" + value + "' was accepted");
+            } catch (ServletException e) {
+                assertTrue(e.getMessage(), e.getMessage().contains(
+                    INIT_PARAM_CLIENTSIDE_CACHE_MAX_AGE));
+            }
+        }
+    }
+
+    @Test(expected = ServletException.class)
+    public void PipelineFilter_Initialise_InvalidCacheMaxAge()
+        throws ServletException {
+        when(config.getInitParameter(INIT_PARAM_CLIENTSIDE_CACHE_MAX_AGE))
+            .thenReturn("-1");
         filter = new PipelineFilter();
 
         filter.init(config);

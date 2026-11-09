@@ -23,6 +23,8 @@
 package fiftyone.pipeline.web.mvc.configuration;
 
 import javax.servlet.ServletContext;
+
+import static fiftyone.pipeline.web.Constants.DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -33,6 +35,9 @@ public class FiftyOneInterceptorConfigDefault implements FiftyOneInterceptorConf
     private String dataFilePath;
 
     private boolean clientsidePropertiesEnabled;
+
+    private int clientsideCacheMaxAge =
+        DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS;
 
     @Autowired
     public ServletContext servletContext;
@@ -45,6 +50,15 @@ public class FiftyOneInterceptorConfigDefault implements FiftyOneInterceptorConf
         this.clientsidePropertiesEnabled = clientsidePropertiesEnabled;
     }
 
+    /**
+     * Set how many seconds a browser may keep the client-side JavaScript or
+     * JSON before it asks again, the max-age of their Cache-Control header.
+     * @param seconds the max-age, 0 or more
+     */
+    public void setClientsideCacheMaxAge(int seconds) {
+        this.clientsideCacheMaxAge = seconds;
+    }
+
     @Override
     public String getDataFilePath() {
         return dataFilePath;
@@ -53,5 +67,10 @@ public class FiftyOneInterceptorConfigDefault implements FiftyOneInterceptorConf
     @Override
     public boolean getClientsidePropertiesEnabled() {
         return clientsidePropertiesEnabled;
+    }
+
+    @Override
+    public int getClientsideCacheMaxAge() {
+        return clientsideCacheMaxAge;
     }
 }

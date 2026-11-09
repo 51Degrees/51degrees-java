@@ -40,7 +40,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.List;
@@ -50,6 +49,7 @@ import java.util.TreeMap;
 
 import static fiftyone.pipeline.core.Constants.EVIDENCE_HTTPHEADER_PREFIX;
 import static fiftyone.pipeline.core.Constants.EVIDENCE_SEPERATOR;
+import static fiftyone.pipeline.web.Constants.DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS;
 import fiftyone.pipeline.javascriptbuilder.data.JavaScriptBuilderData;
 import fiftyone.pipeline.jsonbuilder.data.JsonBuilderData;
 import fiftyone.pipeline.jsonbuilder.flowelements.JsonBuilderElement;
@@ -126,11 +126,11 @@ public interface ClientsidePropertyServiceCore {
         private List<String> headersAffectingJavaScript;
 
         /**
-         * The cache control values that will be set for the JavaScript.
+         * The cache control value for a good response, which only the
+         * browser may keep, for the configured max-age.
          */
-        private final List<String> cacheControl = Arrays.asList(
-            "private",
-            "max-age=1800");
+        private volatile String cacheControl =
+            cacheControl(DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS);
 
         /**
          * The cache control value for a response built while processing
@@ -192,6 +192,28 @@ public interface ClientsidePropertyServiceCore {
                     }
                 }
             }
+        }
+
+        /**
+         * Set how many seconds a browser may keep a good response before it
+         * asks again, the max-age of the Cache-Control header. The default
+         * is {@link fiftyone.pipeline.web.Constants#DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS}.
+         * A shorter time suits JavaScript that gathers values which change,
+         * such as a location.
+         * @param seconds the max-age, 0 or more
+         * @throws IllegalArgumentException if seconds is negative
+         */
+        public void setCacheMaxAge(int seconds) {
+            if (seconds < 0) {
+                throw new IllegalArgumentException(
+                    "The max-age of the client-side responses cannot be " +
+                        "negative, and was " + seconds + ".");
+            }
+            cacheControl = cacheControl(seconds);
+        }
+
+        private static String cacheControl(int maxAgeSeconds) {
+            return "private,max-age=" + maxAgeSeconds;
         }
 
         private boolean hasControlChar(String str) {
@@ -530,7 +552,7 @@ public interface ClientsidePropertyServiceCore {
             if (failed) {
                 response.setHeader("Cache-Control", FAILED_CACHE_CONTROL);
             } else {
-                response.setHeader("Cache-Control", stringJoin(cacheControl, ","));
+                response.setHeader("Cache-Control", cacheControl);
                 response.setHeader("ETag", etag);
             }
             response.setHeader("Access-Control-Allow-Origin", "*");

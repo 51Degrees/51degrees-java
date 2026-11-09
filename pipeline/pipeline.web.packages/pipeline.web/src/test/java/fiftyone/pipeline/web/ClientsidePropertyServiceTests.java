@@ -515,6 +515,53 @@ public class ClientsidePropertyServiceTests {
   }
 
   /**
+   * The max-age can be set, as the specification says it SHOULD be, and a
+   * 200 and a 304 both carry it.
+   */
+  @Test
+  public void JavaScript_CacheMaxAge_Configured() throws IOException {
+    Configure(null);
+    ((ClientsidePropertyServiceCore.Default) service).setCacheMaxAge(60);
+
+    service.serveJavascript(request, response);
+
+    verify(response).setHeader(eq("Cache-Control"), eq("private,max-age=60"));
+  }
+
+  @Test
+  public void Json_CacheMaxAge_Configured_304() throws IOException {
+    Configure(null);
+    ((ClientsidePropertyServiceCore.Default) service).setCacheMaxAge(0);
+    ifNoneMatch(etagSent());
+
+    service.serveJson(request, response);
+
+    verify(response).setStatus(eq(304));
+    verify(response).setHeader(eq("Cache-Control"), eq("private,max-age=0"));
+  }
+
+  /**
+   * A failed response is not kept, whatever the max-age.
+   */
+  @Test
+  public void JavaScript_CacheMaxAge_FailedResponseNoCache()
+    throws IOException {
+    recordProcessingError();
+    Configure(null);
+    ((ClientsidePropertyServiceCore.Default) service).setCacheMaxAge(60);
+
+    service.serveJavascript(request, response);
+
+    ValidateFailedResponse(JS_CONTENT, JS_CONTENT_TYPE);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void CacheMaxAge_Negative_Refused() {
+    Configure(null);
+    ((ClientsidePropertyServiceCore.Default) service).setCacheMaxAge(-1);
+  }
+
+  /**
    * "*" matches, as the endpoint always has a representation. RFC 9110
    * section 13.1.2 step 1.
    */

@@ -98,6 +98,31 @@ public class FiftyOneInterceptorTests {
     }
     
     /**
+     * The interceptor gives the client-side service the max-age its
+     * configuration sets.
+     */
+    @Test
+    public void FiftyOneInterceptor_SetsTheCacheMaxAge() {
+        FiftyOneInterceptorConfig config =
+            mock(FiftyOneInterceptorConfig.class);
+        when(config.getDataFilePath())
+            .thenReturn("src/test/resources/Test.xml");
+        when(config.getClientsideCacheMaxAge()).thenReturn(60);
+        ClientsidePropertyService clientsidePropertyService =
+            mock(ClientsidePropertyService.class);
+
+        new FiftyOneInterceptor(
+            config,
+            mock(PipelineResultService.class),
+            mock(FlowDataProvider.class),
+            clientsidePropertyService,
+            mock(FiftyOneJSService.class),
+            mock(UACHService.class));
+
+        verify(clientsidePropertyService, times(1)).setCacheMaxAge(60);
+    }
+
+    /**
      * Check that 'resultService.process()' is called during
      * interceptor's preHandle process
      * @throws Exception

@@ -113,6 +113,8 @@ public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
 
         resultService.setPipeline(pipeline);
         clientsidePropertyService.setPipeline(pipeline);
+        clientsidePropertyService.setCacheMaxAge(
+            config.getClientsideCacheMaxAge());
         fiftyOneJsService.enable(config.getClientsidePropertiesEnabled());
     }
 

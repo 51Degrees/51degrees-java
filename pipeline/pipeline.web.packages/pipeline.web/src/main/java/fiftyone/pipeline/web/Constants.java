@@ -74,4 +74,18 @@ public class Constants {
      */
     public static final boolean DEFAULT_CLIENTSIDE_ENABLED = true;
 
+    /**
+     * Default number of seconds a browser may keep the client-side
+     * JavaScript or JSON before it asks again, the max-age of their
+     * Cache-Control header.
+     */
+    public static final int DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS = 1800;
+
+    /**
+     * Name of the filter init parameter that sets the max-age of the
+     * client-side endpoints' Cache-Control header, in seconds.
+     */
+    public static final String INIT_PARAM_CLIENTSIDE_CACHE_MAX_AGE =
+        "clientside-cache-max-age";
+
 }
