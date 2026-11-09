@@ -187,6 +187,15 @@ public abstract class OnPremiseAspectEngineBuilderBase<
             dataFile.setIdentifier(dataFileConfig.getIdentifier());
             dataFile.setConfiguration(dataFileConfig);
             dataFile.setTempDataDirPath(tempDir);
+            if (dataFile instanceof AspectEngineDataFileDefault) {
+                // By convention an engine is named for its builder.
+                String builderName = getClass().getSimpleName();
+                ((AspectEngineDataFileDefault) dataFile).setEngineTypeName(
+                    builderName.endsWith("Builder") ?
+                        builderName.substring(
+                            0, builderName.length() - "Builder".length()) :
+                        builderName);
+            }
 
             boolean autoUpdate = dataFileConfig.getAutomaticUpdatesEnabled();
             boolean updateOnStartup = dataFileConfig.getUpdateOnStartup();

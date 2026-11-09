@@ -746,9 +746,15 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     }
 
     private String getEngineType(AspectEngineDataFile dataFile) {
-        return dataFile.getEngine() == null ?
-                "No Engine" :
-                dataFile.getEngine().getClass().getSimpleName();
+        if (dataFile.getEngine() != null) {
+            return dataFile.getEngine().getClass().getSimpleName();
+        }
+        // The engine is built after update on start-up has run.
+        if (dataFile instanceof AspectEngineDataFileDefault &&
+                ((AspectEngineDataFileDefault) dataFile).getEngineTypeName() != null) {
+            return ((AspectEngineDataFileDefault) dataFile).getEngineTypeName();
+        }
+        return "No Engine";
     }
 
     /**
