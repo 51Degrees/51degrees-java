@@ -109,6 +109,9 @@ public class UsageSharingEvidenceTests {
         for (Map.Entry<String, String> header : headers.entrySet()) {
             when(request.getHeader(header.getKey()))
                 .thenReturn(header.getValue());
+            when(request.getHeaders(header.getKey())).thenAnswer(
+                invocation -> Collections.enumeration(
+                    Collections.singletonList(header.getValue())));
         }
         when(request.getCookies()).thenReturn(new Cookie[]{
             new Cookie("51D_Profile", "123456")});
@@ -272,16 +275,13 @@ public class UsageSharingEvidenceTests {
             when(provider.getFlowData(revalidation))
                 .thenReturn(revalidationData);
 
-            assertEquals("The revalidation's ETag differs from the one it sends.",
-                etag.getValue(),
-                Integer.toString(revalidationData.generateKey(
-                    pipeline.getEvidenceKeyFilter()).hashCode()));
-
             HttpServletResponse revalidationResponse = response();
             service.serveJson(revalidation, revalidationResponse);
             verify(revalidationResponse).setStatus(304);
             verify(revalidationResponse, never()).setStatus(200);
             verify(revalidationResponse, never()).setContentType(anyString());
+            // The 304 carries the ETag a 200 would, which is the one sent.
+            verify(revalidationResponse).setHeader("ETag", etag.getValue());
         }
     }
 
