@@ -35,6 +35,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -110,5 +112,115 @@ public class SequenceElementTests {
             assertTrue(names.contains("sequence"));
             assertEquals(2, names.size());
         }
+    }
+
+    /**
+     * Process with the given Evidence values, where null means none, and
+     * check that the Evidence and the Element Data hold the same values.
+     * @return the session id and the sequence
+     */
+    private Object[] run(Object sessionId, Object sequence) throws Exception {
+        try (Pipeline pipeline = newPipeline();
+             FlowData flowData = pipeline.createFlowData()) {
+            if (sessionId != null) {
+                flowData.addEvidence(SESSION_ID_EVIDENCE, sessionId);
+            }
+            if (sequence != null) {
+                flowData.addEvidence(SEQUENCE_EVIDENCE, sequence);
+            }
+            flowData.process();
+
+            ElementData data = sequenceData(flowData);
+            Object evidenceSession =
+                flowData.getEvidence().asKeyMap().get(SESSION_ID_EVIDENCE);
+            Object evidenceSequence =
+                flowData.getEvidence().asKeyMap().get(SEQUENCE_EVIDENCE);
+            assertEquals(evidenceSession, data.get("session-id"));
+            assertEquals(evidenceSequence, data.get("sequence"));
+            return new Object[] {evidenceSession, evidenceSequence};
+        }
+    }
+
+    private void assertNewSession(Object sessionId, Object sequence,
+        int expectedSequence) throws Exception {
+        Object[] result = run(sessionId, sequence);
+        assertTrue(result[0] instanceof String);
+        assertFalse(((String) result[0]).isEmpty());
+        if (sessionId != null) {
+            assertNotEquals(sessionId, result[0]);
+        }
+        assertEquals(expectedSequence, result[1]);
+    }
+
+    private void assertSequence(Object sequence, int expected)
+        throws Exception {
+        Object[] result = run("abc", sequence);
+        assertEquals("abc", result[0]);
+        assertEquals(expected, result[1]);
+    }
+
+    @Test
+    public void SequenceAsText_Digits_CountsUp() throws Exception {
+        assertSequence("2", 3);
+        assertSequence("0", 1);
+        assertSequence("00012", 13);
+    }
+
+    @Test
+    public void SequenceAsOtherWholeNumbers_CountsUp() throws Exception {
+        assertSequence(2L, 3);
+        assertSequence((short) 2, 3);
+        assertSequence(new java.math.BigInteger("2"), 3);
+    }
+
+    @Test
+    public void SequenceNotAWholeNumber_CountsAsAbsent() throws Exception {
+        assertSequence("abc", 1);
+        assertSequence("", 1);
+        assertSequence(" 2", 1);
+        assertSequence("2 ", 1);
+        assertSequence("-2", 1);
+        assertSequence("+2", 1);
+        assertSequence("2.5", 1);
+        assertSequence(2.5, 1);
+        assertSequence(new Object(), 1);
+    }
+
+    @Test
+    public void SequenceOutOfRange_CountsAsAbsent() throws Exception {
+        assertSequence("99999999999999999999", 1);
+        assertSequence("2147483648", 1);
+        assertSequence(2147483648L, 1);
+        // One more would not fit in an int either.
+        assertSequence("2147483647", 1);
+        assertSequence(2147483647, 1);
+        assertSequence("2147483646", 2147483647);
+    }
+
+    @Test
+    public void SessionIdNotANonEmptyString_CountsAsAbsent() throws Exception {
+        assertNewSession("", 2, 3);
+        assertNewSession(5, 2, 3);
+        assertNewSession(new Object(), null, 1);
+    }
+
+    @Test
+    public void SessionIdZero_Kept() throws Exception {
+        Object[] result = run("0", 4);
+        assertEquals("0", result[0]);
+        assertEquals(5, result[1]);
+    }
+
+    @Test
+    public void SequenceWithoutSessionId_CountsUpWithNewSession()
+        throws Exception {
+        assertNewSession(null, 4, 5);
+    }
+
+    @Test
+    public void SessionIdWithoutSequence_GivesOne() throws Exception {
+        Object[] result = run("abc", null);
+        assertEquals("abc", result[0]);
+        assertEquals(1, result[1]);
     }
 }
