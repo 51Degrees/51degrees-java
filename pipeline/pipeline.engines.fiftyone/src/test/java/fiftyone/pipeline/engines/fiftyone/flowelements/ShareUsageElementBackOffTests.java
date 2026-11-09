@@ -30,14 +30,18 @@ import fiftyone.pipeline.engines.trackers.Tracker;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.Map;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
@@ -129,6 +133,7 @@ public class ShareUsageElementBackOffTests {
     }
 
     private Pipeline pipeline;
+    private Logger logger = LoggerFactory.getLogger(ShareUsageElement.class);
     private RecordingUploader uploader;
     private ShareUsageElement element;
     private int requests;
@@ -172,7 +177,7 @@ public class ShareUsageElementBackOffTests {
         int maximumQueueSize) throws Exception {
         element.close();
         element = new ShareUsageElement(
-            LoggerFactory.getLogger(ShareUsageElement.class),
+            logger,
             1,
             1,
             maximumQueueSize,
@@ -356,5 +361,54 @@ public class ShareUsageElementBackOffTests {
             assertTrue(uploader.accepted().contains(ip) == false,
                 "Evidence processed when the queue was full was sent.");
         }
+    }
+
+    /**
+     * A logger that records the warnings it is given.
+     */
+    private static Logger recordingLogger(List<String> warnings) {
+        return (Logger) Proxy.newProxyInstance(
+            Logger.class.getClassLoader(),
+            new Class<?>[] {Logger.class},
+            (proxy, method, args) -> {
+                if (method.getName().equals("warn")) {
+                    warnings.add(Arrays.deepToString(args));
+                    return null;
+                }
+                if (method.getReturnType() == boolean.class) {
+                    return false;
+                }
+                if (method.getReturnType() == int.class) {
+                    return 0;
+                }
+                if (method.getReturnType() == String.class) {
+                    return "test";
+                }
+                return null;
+            });
+    }
+
+    /**
+     * Evidence discarded because the queue is full is logged, but not with a
+     * message for each entry discarded.
+     */
+    @Test
+    public void ShareUsageElement_FullQueue_LogsWithoutAMessagePerEntry()
+        throws Exception {
+        List<String> warnings = new CopyOnWriteArrayList<>();
+        logger = recordingLogger(warnings);
+        useBackOff(1, 2, 2, 4);
+        failSends(1);
+        warnings.clear();
+
+        for (int i = 0; i < 10; i++) {
+            process();
+        }
+
+        long full = warnings.stream()
+            .filter(warning -> warning.contains("full"))
+            .count();
+        assertTrue(full >= 1, "Discarding entries was not logged.");
+        assertTrue(full < 6, "A message was logged for each entry discarded.");
     }
 }
