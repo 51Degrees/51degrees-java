@@ -33,11 +33,14 @@ import fiftyone.pipeline.core.exceptions.PropertyNotLoadedException;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
 import fiftyone.pipeline.engines.services.HttpClientDefault;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 
@@ -46,7 +49,9 @@ import java.net.MalformedURLException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -332,6 +337,7 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
         loggerFactory.loggers.clear();
         String[] evidence1Parts = evidence1.split("=");
         String[] evidence2Parts = evidence2.split("=");
+        acceptEvidence(Arrays.asList(evidence1Parts[0], evidence2Parts[0]));
         configureMockedClient();
 
         CloudRequestEngine engine = new CloudRequestEngineBuilder(loggerFactory, httpClient)
@@ -452,6 +458,7 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
     @ParameterizedTest(name = "{0}")
     @MethodSource("getFormDataArgs")
     public void getFormData(String name, Map<String, Object> evidence, String expectedValue) throws Exception {
+        acceptEvidence(evidence.keySet());
         configureMockedClient();
         CloudRequestEngineDefault engine = (CloudRequestEngineDefault) new CloudRequestEngineBuilder(loggerFactory, httpClient)
                 .setResourceKey("resourcekey")
@@ -473,10 +480,12 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
     /**
      * The web integration adds the whole web request as server.http-request
      * for usage sharing to read. It holds every header and cookie, so it is
-     * never sent to the cloud service.
+     * never sent to the cloud service, even where the service lists its key.
      */
     @Test
     public void getFormData_LeavesOutTheWebRequest() throws Exception {
+        acceptEvidence(Arrays.asList(
+            "header.User-Agent", "server.client-ip", "server.http-request"));
         configureMockedClient();
         CloudRequestEngineDefault engine = (CloudRequestEngineDefault) new CloudRequestEngineBuilder(loggerFactory, httpClient)
                 .setResourceKey("resourcekey")
@@ -509,6 +518,7 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
      */
     @Test
     public void getFormData_KeepsDotsInEvidenceName() throws Exception {
+        acceptEvidence(Arrays.asList("query.id.usage", "header.id.email"));
         configureMockedClient();
         CloudRequestEngineDefault engine = (CloudRequestEngineDefault)
             new CloudRequestEngineBuilder(loggerFactory, httpClient)
@@ -536,6 +546,7 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
      */
     @Test
     public void process_PostsWholeEvidenceName() throws Exception {
+        acceptEvidence(Arrays.asList("query.id.usage"));
         configureMockedClient();
         CloudRequestEngine engine =
             new CloudRequestEngineBuilder(loggerFactory, httpClient)
@@ -555,6 +566,111 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
             new String(body.getValue(), StandardCharsets.UTF_8).split("&"));
         assertTrue(items.contains("id.usage=non-marketing"),
             "The posted body does not carry id.usage: " + items);
+    }
+
+    /**
+     * Only the Evidence whose keys the cloud service accepts is sent, with
+     * the keys compared without regard to case.
+     * See the Processing section of the cloud request engine specification.
+     */
+    @Test
+    public void process_SendsOnlyAcceptedEvidence() throws Exception {
+        acceptEvidence(Arrays.asList(
+            "query.User-Agent", "header.Accept-Language"));
+        Map<String, Object> evidence = new HashMap<>();
+        evidence.put("query.User-Agent", "iPhone");
+        evidence.put("header.accept-language", "en-GB");
+        evidence.put("header.X-Other", "other");
+        evidence.put("cookie.session", "abc");
+        evidence.put("server.client-ip", "1.2.3.4");
+
+        List<String> items = postedItems(null, evidence);
+
+        assertEquals(
+            new HashSet<>(Arrays.asList(
+                "resource=resourcekey",
+                "User-Agent=iPhone",
+                "accept-language=en-GB")),
+            new HashSet<>(items),
+            "The request carried Evidence the cloud service does not " +
+                "accept: " + items);
+    }
+
+    /**
+     * Evidence whose key strips to resource, license or values is never
+     * sent, whatever its case and even where the cloud service lists the
+     * key, so the request carries the configured resource key, and the
+     * license key where one is configured, once each.
+     * See the Processing section of the cloud request engine specification.
+     */
+    @ParameterizedTest(name = "license key {0}")
+    @NullSource
+    @ValueSource(strings = {"ABCDEFG"})
+    public void process_LeavesOutEvidenceNamedResourceLicenseOrValues(
+        String licenseKey) throws Exception {
+        acceptEvidence(Arrays.asList(
+            "query.User-Agent",
+            "query.resource",
+            "header.Resource",
+            "query.license",
+            "cookie.LICENSE",
+            "query.values"));
+        Map<String, Object> evidence = new HashMap<>();
+        evidence.put("query.User-Agent", "iPhone");
+        evidence.put("query.resource", "evidence-resource");
+        evidence.put("header.Resource", "header-resource");
+        evidence.put("query.license", "evidence-license");
+        evidence.put("cookie.LICENSE", "cookie-license");
+        evidence.put("query.values", "ismobile");
+
+        List<String> items = postedItems(licenseKey, evidence);
+
+        List<String> expected = new ArrayList<>();
+        expected.add("resource=resourcekey");
+        if (licenseKey != null) {
+            expected.add("license=" + licenseKey);
+        }
+        expected.add("User-Agent=iPhone");
+        assertEquals(expected, items);
+    }
+
+    /**
+     * Answer the evidencekeys request with the given keys.
+     * @param keys the Evidence keys the cloud service accepts
+     */
+    private void acceptEvidence(Collection<String> keys) {
+        evidenceKeysResponse = new JSONArray(keys).toString();
+    }
+
+    /**
+     * Process the Evidence with an engine on the resource key
+     * {@code resourcekey} and return the fields of the one request it
+     * posted, in order.
+     * @param licenseKey the license key, or null for none
+     * @param evidence the Evidence to process
+     * @return the posted fields
+     */
+    private List<String> postedItems(
+        String licenseKey,
+        Map<String, Object> evidence) throws Exception {
+        configureMockedClient();
+        CloudRequestEngine engine =
+            new CloudRequestEngineBuilder(loggerFactory, httpClient)
+                .setResourceKey("resourcekey")
+                .setLicenseKey(licenseKey)
+                .build();
+
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+                .addFlowElement(engine).build();
+             FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidence);
+            data.process();
+        }
+
+        ArgumentCaptor<byte[]> body = ArgumentCaptor.forClass(byte[].class);
+        verify(httpClient, times(1)).postData(any(), any(), body.capture());
+        return Arrays.asList(
+            new String(body.getValue(), StandardCharsets.UTF_8).split("&"));
     }
 
     /**
