@@ -103,6 +103,7 @@ public class UsageSharingEvidenceTests {
     private static HttpServletRequest request(Map<String, String> headers) {
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getMethod()).thenReturn("GET");
+        when(request.getRequestURI()).thenReturn("/a%2Fb/c");
         when(request.getHeaderNames()).thenReturn(
             Collections.enumeration(headers.keySet()));
         for (Map.Entry<String, String> header : headers.entrySet()) {
@@ -154,6 +155,27 @@ public class UsageSharingEvidenceTests {
             assertEquals("1.2.3.4", webRequest.get("server.client-ip"));
             assertFalse("A header no element accepts was added as Evidence.",
                 evidence.containsKey("header.X-Test"));
+        }
+    }
+
+    /**
+     * The web request holds the method and the path of the request line as
+     * sent, with no decoding, beside the other parts the specification names.
+     */
+    @Test
+    public void addEvidenceFromRequest_WebRequestHoldsMethodAndPath()
+        throws Exception {
+        try (FlowData flowData = pipeline.createFlowData()) {
+            evidenceService.addEvidenceFromRequest(
+                flowData, request(headers()));
+
+            Map<?, ?> webRequest = (Map<?, ?>) flowData.getEvidence()
+                .asKeyMap().get("server.http-request");
+            assertEquals("The method is missing.",
+                "GET", webRequest.get("server.request-method"));
+            assertEquals("The path is missing or was decoded.",
+                "/a%2Fb/c", webRequest.get("server.request-path"));
+            assertEquals("https", webRequest.get("header.protocol"));
         }
     }
 

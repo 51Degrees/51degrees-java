@@ -160,6 +160,22 @@ public class EvidenceKeyFilterShareUsageTests {
     }
 
     /**
+     * The Cookie header carries every cookie, so it is never shared, whether
+     * bare or after a prefix, and without regard to case.
+     */
+    @Test
+    public void cookieHeaderNeverShared() {
+        EvidenceKeyFilterShareUsage filter = defaults();
+        for (String key : Arrays.asList(
+            "header.cookie", "HEADER.COOKIE", "x.header.cookie",
+            "server.header.cookie")) {
+            assertFalse(filter.include(key), key);
+        }
+        assertTrue(filter.include("header.cookies-allowed"));
+        assertTrue(filter.include("server.request-method"));
+    }
+
+    /**
      * A key that only ends with the same letters as a key never shared is
      * treated as an ordinary key.
      */

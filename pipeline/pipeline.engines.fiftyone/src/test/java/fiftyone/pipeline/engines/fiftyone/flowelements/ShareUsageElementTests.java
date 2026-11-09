@@ -515,6 +515,8 @@ public class ShareUsageElementTests {
         request.put("cookie.other", "not-shared");
         request.put("query.secret", "not-shared");
         request.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
+        request.put("server.request-method", "GET");
+        request.put("server.request-path", "/a%2Fb/c");
 
         try (FlowData data = pipeline.createFlowData()) {
             data.addEvidence(
@@ -556,6 +558,13 @@ public class ShareUsageElementTests {
                 "A cookie or query string parameter the rules leave out was shared.");
             assertEquals("1.2.3.4", xpath.evaluate("//ClientIP", doc),
                 "The client IP from the web request was not shared.");
+            assertEquals("GET", xpath.evaluate(
+                "//server[@Name='request-method']", doc),
+                "The method of the request line was not shared.");
+            assertEquals(0, ((NodeList) xpath.evaluate(
+                "//*[@Name='request-path']", doc,
+                XPathConstants.NODESET)).getLength(),
+                "The path of the request line was shared.");
             assertEquals(0, ((NodeList) xpath.evaluate(
                 "//*[@Name='http-request']", doc,
                 XPathConstants.NODESET)).getLength(),
