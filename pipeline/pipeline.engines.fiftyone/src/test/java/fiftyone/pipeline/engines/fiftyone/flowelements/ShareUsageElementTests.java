@@ -40,6 +40,7 @@ import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -713,12 +714,107 @@ public class ShareUsageElementTests {
             NodeList f = (NodeList) xpath.compile("//header[@Name='user-agent']").evaluate(doc, XPathConstants.NODESET);
             assertEquals(1, f.getLength(), "1 user-agent header expected");
             assertEquals("<iPhone\uFFFD>", f.item(0).getTextContent());
-            assertEquals("true", f.item(0).getAttributes().getNamedItem("replaced").getTextContent());
+            assertEquals("true", f.item(0).getAttributes().getNamedItem("escaped").getTextContent());
             NodeList b = (NodeList) xpath.compile("//BadSchema").evaluate(doc, XPathConstants.NODESET);
             assertEquals(0, b.getLength());
         }
     }
     
+    /**
+     * Check that the invalid characters in a value are marked with the
+     * attribute the specification names, and that a value that is not too
+     * long is not marked as truncated.
+     */
+    @Test
+    public void ShareUsageElement_InvalidCharacter_EscapedAttributeOnly()
+        throws Exception {
+        Document doc = shareUserAgent("<iPhone" + (char) 0x18 + ">");
+
+        Node userAgent = doc.getElementsByTagName("header").item(0);
+        assertEquals("true",
+            userAgent.getAttributes().getNamedItem("escaped").getTextContent());
+        assertNull(userAgent.getAttributes().getNamedItem("replaced"));
+        assertNull(userAgent.getAttributes().getNamedItem("truncated"));
+    }
+
+    /**
+     * Check that a value that is too long is cut and marked as truncated,
+     * without the escaped attribute.
+     */
+    @Test
+    public void ShareUsageElement_LongValue_TruncatedAttributeOnly()
+        throws Exception {
+        StringBuilder longValue = new StringBuilder();
+        for (int i = 0; i < 600; i++) {
+            longValue.append('a');
+        }
+        Document doc = shareUserAgent(longValue.toString());
+
+        Node userAgent = doc.getElementsByTagName("header").item(0);
+        assertEquals("true",
+            userAgent.getAttributes().getNamedItem("truncated").getTextContent());
+        assertNull(userAgent.getAttributes().getNamedItem("escaped"));
+        assertEquals(512, userAgent.getTextContent().length());
+    }
+
+    /**
+     * Check that the values are written in the order the specification's
+     * example gives, and that no CDATA section or BadSchema element is used.
+     */
+    @Test
+    public void ShareUsageElement_RecordFollowsTheSpecificationExample()
+        throws Exception {
+        Document doc = shareUserAgent("<iPhone>");
+
+        Node device = doc.getElementsByTagName("Device").item(0);
+        List<String> names = new ArrayList<>();
+        for (int i = 0; i < device.getChildNodes().getLength(); i++) {
+            Node child = device.getChildNodes().item(i);
+            assertNotEquals(Node.CDATA_SECTION_NODE, child.getNodeType());
+            if (child.getNodeType() == Node.ELEMENT_NODE) {
+                names.add(child.getNodeName());
+            }
+        }
+        String[] expected = {"SessionId", "Sequence", "DateSent", "Version",
+            "Product", "FlowElement", "Language", "LanguageVersion",
+            "ClientIP", "ServerIP", "Platform"};
+        List<String> required = Arrays.asList("SessionId", "Sequence",
+            "DateSent", "Product", "Language", "LanguageVersion");
+        int last = -1;
+        for (String name : expected) {
+            int index = names.indexOf(name);
+            if (!required.contains(name)) {
+                // Only present when the Pipeline, the request and the
+                // platform give one.
+                if (index < 0) {
+                    continue;
+                }
+            }
+            assertTrue(index >= 0, name + " missing from " + names);
+            assertTrue(index > last, name + " out of order in " + names);
+            last = index;
+        }
+        assertEquals(0, doc.getElementsByTagName("BadSchema").getLength());
+        assertEquals(1, doc.getElementsByTagName("header").getLength());
+    }
+
+    private Document shareUserAgent(String userAgent) throws Exception {
+        createShareUsage(1, 1, 1, new ArrayList<>(),
+                new ArrayList<>(), new ArrayList<>());
+        Map<String, Object> evidenceData = new HashMap<>();
+        evidenceData.put(EVIDENCE_HEADER_USERAGENT_KEY, userAgent);
+        evidenceData.put("query.session-id", "session");
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidenceData);
+            shareUsageElement.process(data);
+            assertNotNull(shareUsageElement.getSendDataFuture());
+            shareUsageElement.getSendDataFuture().get();
+            byte[] output = connector.getBaos().toByteArray();
+            return docBuilderFactory.newDocumentBuilder()
+                .parse(new ByteArrayInputStream(output));
+        }
+    }
+
 /**
      * Test that the ShareUsageElement generates a session id if one is not
      * contained in the evidence and adds it to the results.
