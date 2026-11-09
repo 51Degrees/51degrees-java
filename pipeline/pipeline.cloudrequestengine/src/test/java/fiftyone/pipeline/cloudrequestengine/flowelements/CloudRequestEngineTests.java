@@ -635,6 +635,37 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
     }
 
     /**
+     * Evidence whose key strips to licence, whatever its case, is never
+     * sent, because the cloud service reads the license key from licence
+     * where license is absent.
+     * See the Processing section of the cloud request engine specification.
+     */
+    @ParameterizedTest(name = "license key {0}")
+    @NullSource
+    @ValueSource(strings = {"ABCDEFG"})
+    public void process_LeavesOutEvidenceNamedLicence(
+        String licenseKey) throws Exception {
+        acceptEvidence(Arrays.asList(
+            "query.User-Agent",
+            "query.licence",
+            "cookie.LICENCE"));
+        Map<String, Object> evidence = new HashMap<>();
+        evidence.put("query.User-Agent", "iPhone");
+        evidence.put("query.licence", "evidence-licence");
+        evidence.put("cookie.LICENCE", "cookie-licence");
+
+        List<String> items = postedItems(licenseKey, evidence);
+
+        List<String> expected = new ArrayList<>();
+        expected.add("resource=resourcekey");
+        if (licenseKey != null) {
+            expected.add("license=" + licenseKey);
+        }
+        expected.add("User-Agent=iPhone");
+        assertEquals(expected, items);
+    }
+
+    /**
      * Answer the evidencekeys request with the given keys.
      * @param keys the Evidence keys the cloud service accepts
      */
