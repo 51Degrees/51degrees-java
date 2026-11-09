@@ -149,6 +149,8 @@ public class ProductMissingTests {
      * An engine whose Cloud Request Engine reports the accessible products
      * of a resource key that includes IP Intelligence alone.
      */
+    // thenReturn has a varargs overload, so a generic Map is an unchecked array.
+    @SuppressWarnings("unchecked")
     private DeviceDetectionCloudEngine buildEngine() throws Exception {
         DeviceDetectionCloudEngine engine =
             new DeviceDetectionCloudEngineBuilder(loggerFactory).build();

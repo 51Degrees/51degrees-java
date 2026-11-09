@@ -152,6 +152,8 @@ public class GeoLocationCloudEngineTests {
      * An engine whose Cloud Request Engine reports the accessible products
      * of a resource key that includes IP Intelligence alone.
      */
+    // thenReturn has a varargs overload, so a generic Map is an unchecked array.
+    @SuppressWarnings("unchecked")
     private GeoLocationCloudEngine buildEngine() throws Exception {
         GeoLocationCloudEngine engine =
             new GeoLocationCloudEngineBuilder(loggerFactory)
