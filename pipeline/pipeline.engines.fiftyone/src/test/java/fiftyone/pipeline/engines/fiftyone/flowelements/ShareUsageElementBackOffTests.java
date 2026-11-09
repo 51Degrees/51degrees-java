@@ -51,6 +51,7 @@ import java.util.regex.Pattern;
 import static fiftyone.pipeline.core.Constants.EVIDENCE_CLIENTIP_KEY;
 import static fiftyone.pipeline.engines.Constants.DEFAULT_SESSION_COOKIE_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -83,6 +84,7 @@ public class ShareUsageElementBackOffTests {
         private final List<Long> times = new ArrayList<>();
         private final List<String> accepted = new ArrayList<>();
         private volatile int code = 500;
+        private volatile String content = "";
         private ByteArrayOutputStream body;
 
         @Override
@@ -103,6 +105,10 @@ public class ShareUsageElementBackOffTests {
                 }
             }
             return answer;
+        }
+
+        public String getResponseContent() {
+            return content;
         }
 
         long now() {
@@ -410,5 +416,21 @@ public class ShareUsageElementBackOffTests {
             .count();
         assertTrue(full >= 1, "Discarding entries was not logged.");
         assertTrue(full < 6, "A message was logged for each entry discarded.");
+    }
+
+    /**
+     * A send answered with anything other than 200 reports the status code
+     * and the content of the answer.
+     */
+    @Test
+    public void ShareUsageElement_FailedAnswer_ReportsStatusAndContent() {
+        uploader.content = "the service says no";
+
+        Exception failure = assertThrows(
+            Exception.class,
+            () -> element.sendAsXML(new ArrayList<>()));
+
+        assertTrue(failure.getMessage().contains("500"));
+        assertTrue(failure.getMessage().contains("the service says no"));
     }
 }
