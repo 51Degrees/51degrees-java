@@ -92,9 +92,9 @@ final class CallbackUrl {
     private static final Pattern LABEL = Pattern.compile("[A-Za-z0-9_-]+");
 
     /**
-     * A port as it follows the host, being ':' and any number of digits.
+     * A port as it follows the host, being ':' and at least one digit.
      */
-    private static final Pattern PORT = Pattern.compile(":[0-9]*");
+    private static final Pattern PORT = Pattern.compile(":[0-9]+");
 
     /**
      * One group of an IPv6 address.
@@ -253,7 +253,7 @@ final class CallbackUrl {
      * valid. The host is an IPv6 address in brackets, or a name of labels
      * separated by dots with a dot allowed at the end, which must be an IPv4
      * address when its last label is a number. The port is ':' followed by
-     * digits up to 65535, or by nothing.
+     * digits up to 65535.
      */
     private static String checkedHostPort(String hostPort) {
         String host;
@@ -296,7 +296,7 @@ final class CallbackUrl {
 
     /**
      * Whether the text is ':' followed by digits whose value is no more than
-     * 65535, or by nothing.
+     * 65535.
      */
     private static boolean isPort(String text) {
         if (PORT.matcher(text).matches() == false) {
