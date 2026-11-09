@@ -58,6 +58,12 @@ public class ShareUsageTrackerTests {
      */
     private static final long EXPIRY_INTERVAL_MILLIS = 50;
 
+    /**
+     * Added to the wait for an interval to pass, so that a sleep that returns
+     * early or a slow clock cannot leave a repeat inside the interval.
+     */
+    private static final long EXPIRY_MARGIN_MILLIS = 250;
+
     private EvidenceKeyFilter evidenceKeyFilter;
 
     private ShareUsageTracker shareUsageTracker;
@@ -122,8 +128,8 @@ public class ShareUsageTrackerTests {
                 trackedEvents++;
             }
 
-            // Wait some time equal to the interval to elapse.
-            Thread.sleep(EXPIRY_INTERVAL_MILLIS);
+            // Wait for the interval to pass, with a margin.
+            Thread.sleep(EXPIRY_INTERVAL_MILLIS + EXPIRY_MARGIN_MILLIS);
         }
 
         assertEquals(2, trackedEvents);
@@ -145,7 +151,7 @@ public class ShareUsageTrackerTests {
 
         assertTrue(shareUsageTracker.track(data),
             "New evidence was not shared.");
-        Thread.sleep(interval + 250);
+        Thread.sleep(interval + EXPIRY_MARGIN_MILLIS);
         assertTrue(shareUsageTracker.track(data),
             "A repeat after the interval was not shared.");
         assertFalse(shareUsageTracker.track(data),
