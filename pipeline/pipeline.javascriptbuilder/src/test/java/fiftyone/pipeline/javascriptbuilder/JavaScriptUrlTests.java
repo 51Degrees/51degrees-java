@@ -245,7 +245,8 @@ public class JavaScriptUrlTests {
         "user:pa/ss@example.com|\"https://***@example.com/json\"",
         "user:pa?ss@example.com|\"https://***@example.com/json\"",
         "exa mple.com/a@b|\"https://***@b/json\"",
-        "example.123|\"https://example.123/json\""})
+        "example.123|\"https://example.123/json\"",
+        "https://example.com|\"https://https://example.com/json\""})
     public void Url_RefusedHost_LoggedWithoutUserInformation(
         String host, String logged) throws Exception {
         renderWithHosts(host);
