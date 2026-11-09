@@ -40,7 +40,8 @@ public class DataUploaderHttp implements DataUploader{
      * the URL to which data is to be uploaded
      * @param url the URL rto which data should be uploaded
      * @param headers HTTP headers for the connection
-     * @param timeout connection timeout in milliseconds
+     * @param timeout milliseconds to wait to connect, and then to wait for
+     *                an answer
      */
     public DataUploaderHttp(String url, Map<String, String> headers, int timeout) {
         this.url = url;
@@ -55,6 +56,7 @@ public class DataUploaderHttp implements DataUploader{
     public OutputStream getOutputStream() throws Exception{
         connection = (HttpURLConnection) new URI(url.trim()).toURL().openConnection();
         connection.setConnectTimeout(timeout);
+        connection.setReadTimeout(timeout);
         connection.setRequestMethod("POST");
         for (Map.Entry<String, String> header : headers.entrySet()) {
             connection.setRequestProperty(header.getKey(), header.getValue());
