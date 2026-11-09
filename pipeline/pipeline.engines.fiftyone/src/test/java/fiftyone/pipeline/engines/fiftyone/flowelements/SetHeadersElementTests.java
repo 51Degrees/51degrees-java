@@ -244,7 +244,7 @@ public class SetHeadersElementTests {
 	 */
 	@Test
 	public void setHeadersElement_ConfigKeptOnceLoaded() throws Exception {
-		FlowElement source = mock(FlowElement.class);
+		FlowElement<?, ?> source = mock(FlowElement.class);
 		when(source.hasLoadedProperties()).thenReturn(true);
 		Pipeline mockPipeline = mockPipeline(source);
 		createElement();
@@ -264,7 +264,7 @@ public class SetHeadersElementTests {
 	 */
 	@Test
 	public void setHeadersElement_ConfigBuiltAgainUntilLoaded() throws Exception {
-		FlowElement source = mock(FlowElement.class);
+		FlowElement<?, ?> source = mock(FlowElement.class);
 		when(source.hasLoadedProperties()).thenReturn(false, true);
 		Pipeline mockPipeline = mockPipeline(source);
 		createElement();
