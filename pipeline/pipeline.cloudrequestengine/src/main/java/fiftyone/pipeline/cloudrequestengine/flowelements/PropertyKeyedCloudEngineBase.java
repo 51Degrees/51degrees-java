@@ -33,6 +33,7 @@ import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import fiftyone.pipeline.engines.data.MultiProfileData;
 import fiftyone.pipeline.util.Types;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
@@ -71,10 +72,20 @@ public abstract class PropertyKeyedCloudEngineBase<
     	
         // Extract data from json to the aspectData instance.
         JSONObject map = new JSONObject(json);
+        // Load the property meta-data, which finds whether the resource key
+        // includes this engine's product.
+        getProperties();
         // Access the data relating to this engine.
-        JSONObject propertyKeyed = map.getJSONObject(getElementDataKey());
-        // Access the 'Profiles' property
-        for (Object entry : propertyKeyed.getJSONArray("profiles")) {
+        JSONObject propertyKeyed = getElementJson(map);
+        // Access the 'Profiles' property. The response holds none for a
+        // product the resource key does not include.
+        JSONArray profiles = isProductMissing() ?
+            propertyKeyed.optJSONArray("profiles") :
+            propertyKeyed.getJSONArray("profiles");
+        if (profiles == null) {
+            return;
+        }
+        for (Object entry : profiles) {
             // Iterate through the devices, parsing each one and
             // adding it to the result.
 

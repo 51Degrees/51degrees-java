@@ -107,7 +107,7 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
             String json = requestData.getJsonResponse();
 
             JSONObject jsonObj = new JSONObject(json);
-            JSONObject geoObj = jsonObj.getJSONObject(getElementDataKey());
+            JSONObject geoObj = getElementJson(jsonObj);
 
             Map<String, Object> methodData = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
@@ -177,16 +177,14 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
     }
 
     private boolean loadAspectProperties(CloudRequestEngine engine) {
-        Map<String, AccessiblePropertyMetaData.ProductMetaData> map =
-            engine.getPublicProperties();
+        AccessiblePropertyMetaData.ProductMetaData product =
+            findProduct(engine.getPublicProperties());
 
-        if (map != null &&
-            map.size() > 0 &&
-            map.containsKey(getElementDataKey())) {
+        if (product != null) {
             properties = new ArrayList<>();
-            dataSourceTier = map.get(getElementDataKey()).dataTier;
+            dataSourceTier = product.dataTier;
 
-            for (AccessiblePropertyMetaData.PropertyMetaData item : map.get(getElementDataKey()).properties)
+            for (AccessiblePropertyMetaData.PropertyMetaData item : product.properties)
             {
                 AspectPropertyMetaData property = new AspectPropertyMetaDataDefault(
                     item.name,
@@ -205,7 +203,7 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
         }
         else {
             logger.error("Aspect properties could not be loaded for" +
-                " the Device Detection cloud engine", this);
+                " the Location cloud engine", this);
             return false;
         }
     }
