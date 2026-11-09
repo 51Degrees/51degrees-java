@@ -419,7 +419,13 @@ public class ShareUsageElement extends ShareUsageBase {
      */
     protected void writeXmlData(XMLStreamWriter writer, ShareUsageData data) throws XMLStreamException {
         writer.writeStartElement("Device");
-        // --- write invariant data
+        // The elements follow the order of the specification's example.
+        // The SessionID used to track a series of requests
+        writeXmlElement(writer, "SessionId", data.sessionId);
+        // The sequence number of the request in a series of requests.
+        writeXmlElement(writer, "Sequence", String.valueOf(data.sequence));
+        // The UTC date/time this entry was written
+        writeXmlElement(writer, "DateSent", DATE_FMT.format(new Date()));
         // The version number of the Pipeline API
         writeXmlElement(writer, "Version", coreVersion);
         // Write Pipeline information
@@ -432,20 +438,12 @@ public class ShareUsageElement extends ShareUsageBase {
         writeXmlElement(writer, "Language", "java");
         // The software language version
         writeXmlElement(writer, "LanguageVersion", languageVersion);
+        // The client IP of the request
+        writeXmlElement(writer, "ClientIP", data.clientIP);
         // The IP of this server
         writeXmlElement(writer, "ServerIP", getHostAddress());
         // The OS name and version
         writeXmlElement(writer, "Platform", osVersion);
-
-        // --- write variable data
-        // The SessionID used to track a series of requests
-        writeXmlElement(writer, "SessionId", data.sessionId);
-        // The sequence number of the request in a series of requests.
-        writeXmlElement(writer, "Sequence", String.valueOf(data.sequence));
-        // The UTC date/time this entry was written
-        writeXmlElement(writer, "DateSent", DATE_FMT.format(new Date()));
-        // The client IP of the request
-        writeXmlElement(writer, "ClientIP", data.clientIP);
 
         // Write all other evidence data that has been included.
         for (Map.Entry<String, Map<String, String>> category : data.evidenceData.entrySet()) {
@@ -458,7 +456,7 @@ public class ShareUsageElement extends ShareUsageBase {
                     writer.writeStartElement(entry.getKey());
                 }
                 if (replacedString.isReplaced()) {
-                    writer.writeAttribute("replaced", "true");
+                    writer.writeAttribute("escaped", "true");
                 }
                 if (replacedString.isTruncated()) {
                     writer.writeAttribute("truncated", "true");
@@ -485,50 +483,54 @@ public class ShareUsageElement extends ShareUsageBase {
      * replace characters that cause problems in XML with the "Replacement character"
      */
     public static class ReplacedString {
-        /**
-         * Whether the character is allowed in an XML 1.0 document, as the
-         * Char production in section 2.2 of the XML 1.0 specification says.
-         * A surrogate is allowed only as half of a pair, which the
-         * constructor checks.
-         * @param c the UTF-16 code unit to check
-         * @return true if the character is allowed in XML 1.0
-         */
-        static boolean isXmlChar(char c) {
-            return c == 0x9 || c == 0xA || c == 0xD ||
-                (c >= 0x20 && c <= 0xD7FF) ||
-                (c >= 0xE000 && c <= 0xFFFD);
-        }
-
-        // maximum string length
+        // maximum string length, in characters
         static final int MAX_LENGTH = SHARE_USAGE_MAX_EVIDENCE_LENGTH;
 
         private boolean replaced;
         private boolean truncated;
         private final StringBuilder builder;
 
+        /**
+         * Whether the character is allowed in an XML 1.0 document, as the
+         * Char production in section 2.2 of the XML 1.0 specification says.
+         * @param codePoint the character to check
+         * @return true if the character is allowed in XML 1.0
+         */
+        static boolean isXmlChar(int codePoint) {
+            return codePoint == 0x9 || codePoint == 0xA || codePoint == 0xD ||
+                (codePoint >= 0x20 && codePoint <= 0xD7FF) ||
+                (codePoint >= 0xE000 && codePoint <= 0xFFFD) ||
+                (codePoint >= 0x10000 && codePoint <= 0x10FFFF);
+        }
+
+        /**
+         * Keep the first {@link #MAX_LENGTH} characters of the text, and write
+         * each character XML 1.0 does not allow as a backslash, an x and the
+         * four lower-case hexadecimal digits of its code. The limit counts
+         * characters, so a pair of surrogates is never split.
+         * @param text the text to prepare
+         */
         public ReplacedString(String text) {
             if (Objects.isNull(text) || text.length() == 0) {
                 builder = new StringBuilder(0);
-                // Using 'return' statement in a constructor throws compilation
-                // error in Jdk 8.
-                // return;
             } else {
-                int limit = Math.min(text.length(), MAX_LENGTH);
-                builder = new StringBuilder(limit);
-                truncated = text.length() > MAX_LENGTH;
-                for (int i = 0; i < limit; i++) {
-                    char c = text.charAt(i);
-                    if (Character.isHighSurrogate(c) &&
-                        i + 1 < limit &&
-                        Character.isLowSurrogate(text.charAt(i + 1))) {
-                        // A pair is one character above U+FFFF.
-                        builder.append(c).append(text.charAt(++i));
-                    } else if (isXmlChar(c)) {
-                        builder.append(c);
+                int end = text.length();
+                if (text.codePointCount(0, end) > MAX_LENGTH) {
+                    end = text.offsetByCodePoints(0, MAX_LENGTH);
+                    truncated = true;
+                }
+                builder = new StringBuilder(end);
+                int index = 0;
+                while (index < end) {
+                    int codePoint = text.codePointAt(index);
+                    if (isXmlChar(codePoint)) {
+                        builder.appendCodePoint(codePoint);
                     } else {
-                        builder.append((char) 0xFFFD);
+                        builder.append("\\x").append(
+                            String.format("%04x", codePoint));
                         replaced = true;
                     }
+                    index += Character.charCount(codePoint);
                 }
             }
         }
