@@ -1020,6 +1020,32 @@ public class DataUpdateServiceTests {
             anyLong());
     }
 
+    /**
+     * A programmatic update compares the data file on disk whether or not
+     * Automatic Update from File is enabled, and with automatic update off
+     * no file system watcher exists whatever the watcher flag says.
+     */
+    @Test
+    public void DataUpdateService_CheckForUpdate_FileUpdated_AutoUpdateOffWatcherFlagDefault() {
+        // Arrange
+        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        DataFileConfigurationDefault config = new DataFileConfigurationDefault();
+        config.setAutomaticUpdatesEnabled(false);
+
+        AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
+        file.setEngine(engine);
+        file.setConfiguration(config);
+        when(engine.getDataFileMetaData()).thenReturn(file);
+
+        configureFileUpdate(engine);
+
+        // Act
+        dataUpdate.checkForUpdate(engine);
+
+        // Assert
+        verify(engine, times(1)).refreshData((String)any());
+    }
+
     @Test
     public void DataUpdateService_CheckForUpdate_UrlNoUpdate() throws IOException {
         // Getting no data from the URL will cause an error to be logged

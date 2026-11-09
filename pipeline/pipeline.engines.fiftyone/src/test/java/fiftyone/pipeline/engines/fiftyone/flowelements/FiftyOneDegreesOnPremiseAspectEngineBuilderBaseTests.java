@@ -24,6 +24,7 @@ package fiftyone.pipeline.engines.fiftyone.flowelements;
 
 import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.engines.Constants;
+import fiftyone.pipeline.engines.configuration.DataFileConfigurationDefault;
 import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectEngineDataFile;
 import fiftyone.pipeline.engines.data.AspectEngineDataFileDefault;
@@ -239,6 +240,29 @@ public class FiftyOneDegreesOnPremiseAspectEngineBuilderBaseTests {
 
         assertTrue(e.getMessage().contains("setDataUpdateOnStartup(false)"));
         assertFalse(e.getMessage().contains("setAutoUpdate(false)"));
+    }
+
+    /**
+     * Every data file is checked before any is registered, so a refused
+     * build leaves nothing registered with the update service.
+     */
+    @Test
+    public void SecondDataFileHasNoLicenseKey_NothingRegistered() {
+        DataFileConfigurationDefault withKey = new DataFileConfigurationDefault();
+        withKey.setDataUpdateUrl(
+            FiftyOneOnPremiseAspectEngineBuilderBase.DATA_UPDATE_URL);
+        withKey.setAutomaticUpdatesEnabled(true);
+        withKey.setDataUpdateLicenseKeys(
+            java.util.Collections.singletonList(licenseKey));
+        ImplementedBuilder builder = newBuilder();
+        builder.addDataFile(withKey);
+        builder.setAutoUpdate(true);
+
+        assertThrows(
+            PipelineConfigurationException.class,
+            () -> builder.build("", false));
+
+        verify(updateService, never()).registerDataFile(any());
     }
 
     @Test

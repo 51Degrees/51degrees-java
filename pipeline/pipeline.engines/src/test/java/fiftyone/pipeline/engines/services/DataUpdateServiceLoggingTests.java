@@ -348,6 +348,30 @@ public class DataUpdateServiceLoggingTests {
     }
 
     @Test
+    public void TemporaryFileCannotBeWritten_LogsTheWriteError()
+        throws Exception {
+        when(connection.getResponseCode())
+            .thenReturn(HttpURLConnection.HTTP_OK);
+        when(connection.getInputStream())
+            .thenReturn(new ByteArrayInputStream(new byte[]{1, 2, 3}));
+        AspectEngineDataFileDefault file = newDataFile(false, false, false);
+        String missingDirectory = new File(
+            System.getProperty("java.io.tmpdir"),
+            "no-such-directory-" + System.nanoTime()).getAbsolutePath();
+        file.setTempDataDirPath(missingDirectory);
+
+        dataUpdate.checkForUpdate(engine);
+
+        boolean found = false;
+        for (String message : logged(Level.ERROR)) {
+            found |= message.startsWith("An error occurred when writing to " +
+                missingDirectory) && message.contains(". Error detail: ");
+        }
+        assertTrue("No write error in " + logged(Level.ERROR), found);
+        assertTrue(logged(Level.WARN).isEmpty());
+    }
+
+    @Test
     public void Md5DoesNotMatch_WarnsAboutIntegrityCheck() throws Exception {
         when(connection.getResponseCode())
             .thenReturn(HttpURLConnection.HTTP_OK);
