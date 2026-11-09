@@ -54,6 +54,7 @@ import static fiftyone.pipeline.web.Constants.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.*;
@@ -256,11 +257,32 @@ public class PipelineFilterTests {
     @Test
     public void PipelineFilter_SequenceElementDisabled_NotAdded()
         throws Exception {
+        doReturn("false").when(config)
+            .getInitParameter("clientside-properties-enabled");
         filter = initFilterWith("sequence-element-enabled", "false");
 
         List<FlowElement> elements = elementsOf(filter);
         assertFalse(hasElement(elements, SequenceElement.class));
         assertTrue(hasElement(elements, SetHeadersElement.class));
+    }
+
+    /**
+     * Check that the build is refused when the JSON Builder Element would
+     * have no Sequence Element before it, as the JSON Builder Element then
+     * fails on every request.
+     */
+    @Test
+    public void PipelineFilter_SequenceElementDisabledWithClientSide_Refused() {
+        doReturn("false").when(config)
+            .getInitParameter("sequence-element-enabled");
+        filter = new PipelineFilter();
+
+        ServletException e = assertThrows(
+            ServletException.class, () -> filter.init(config));
+
+        assertTrue(e.getCause().getMessage().contains("Sequence Element"));
+        assertTrue(e.getCause().getMessage()
+            .contains("sequence-element-enabled"));
     }
 
     @Test
@@ -321,8 +343,8 @@ public class PipelineFilterTests {
     @Test
     public void PipelineFilter_JsonPath_IsTheCallbackEndpoint()
         throws Exception {
-        filter = initFilterWith("json-path", "/51dpipeline/json");
+        filter = initFilterWith("json-path", "/custom/json");
 
-        assertEquals("/51dpipeline/json", endpointOf(elementsOf(filter)));
+        assertEquals("/custom/json", endpointOf(elementsOf(filter)));
     }
 }

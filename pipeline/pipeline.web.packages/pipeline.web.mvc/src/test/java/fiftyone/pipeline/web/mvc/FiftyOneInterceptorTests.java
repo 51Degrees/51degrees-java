@@ -24,6 +24,7 @@ package fiftyone.pipeline.web.mvc;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -205,11 +206,27 @@ public class FiftyOneInterceptorTests {
     @Test
     public void FiftyOneInterceptor_ElementsDisabled_NotAdded()
         throws Exception {
+        FiftyOneInterceptorConfig config = newConfig(false, false, null, null);
+        when(config.getClientsidePropertiesEnabled()).thenReturn(false);
         FiftyOneInterceptor created = newInterceptor(
-            newConfig(false, false, null, null), mock(FiftyOneJSService.class));
+            config, mock(FiftyOneJSService.class));
 
         assertFalse(hasElement(created, SequenceElement.class));
         assertFalse(hasElement(created, SetHeadersElement.class));
+    }
+
+    /**
+     * Check that the build is refused when the JSON Builder Element would
+     * have no Sequence Element before it.
+     */
+    @Test
+    public void FiftyOneInterceptor_NoSequenceElementWithJson_Refused() {
+        RuntimeException e = assertThrows(RuntimeException.class,
+            () -> newInterceptor(
+                newConfig(false, true, null, null),
+                mock(FiftyOneJSService.class)));
+
+        assertTrue(e.getCause().getMessage().contains("Sequence Element"));
     }
 
     /**
