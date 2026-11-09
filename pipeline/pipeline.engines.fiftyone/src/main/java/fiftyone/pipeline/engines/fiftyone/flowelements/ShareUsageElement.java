@@ -333,7 +333,9 @@ public class ShareUsageElement extends ShareUsageBase {
                 SHARE_USAGE_FAILURES_WINDOW_SECONDS_DEFAULT,
                 SHARE_USAGE_EXPONENTIAL_BACKOFF_INITIAL_DELAY_SECONDS_DEFAULT,
                 SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT,
-                SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT);
+                SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT,
+                false,
+                false);
     }
 
     /**
@@ -377,6 +379,10 @@ public class ShareUsageElement extends ShareUsageBase {
      * @param maxRecoveryDelaySeconds       the longest a pause can be, in seconds
      * @param recoveryMultiplier            what the pause is multiplied by each time the send
      *                                      tried when a pause ends fails
+     * @param shareAllEvidence              if true then all Evidence is shared, apart from
+     *                                      the keys that are never shared
+     * @param shareAllQueryStringParameters if true then all query string
+     *                                      parameters are shared
      */
     ShareUsageElement(
             Logger logger,
@@ -397,7 +403,9 @@ public class ShareUsageElement extends ShareUsageBase {
             int failuresWindowSeconds,
             double initialRecoveryDelaySeconds,
             double maxRecoveryDelaySeconds,
-            double recoveryMultiplier) {
+            double recoveryMultiplier,
+            boolean shareAllEvidence,
+            boolean shareAllQueryStringParameters) {
         super(
                 logger,
                 sharePercentage,
@@ -417,7 +425,9 @@ public class ShareUsageElement extends ShareUsageBase {
                 failuresWindowSeconds,
                 initialRecoveryDelaySeconds,
                 maxRecoveryDelaySeconds,
-                recoveryMultiplier);
+                recoveryMultiplier,
+                shareAllEvidence,
+                shareAllQueryStringParameters);
 
         headers.put("Content-Type", "text/xml; charset=utf-8");
         // assume default GZIP connection

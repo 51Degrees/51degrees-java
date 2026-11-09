@@ -64,6 +64,8 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     protected double initialRecoveryDelaySeconds = Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_INITIAL_DELAY_SECONDS_DEFAULT;
     protected double maxRecoveryDelaySeconds = Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT;
     protected double recoveryMultiplier = Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT;
+    protected boolean shareAllEvidence;
+    protected boolean shareAllQueryStringParameters;
 
     /**
      * Constructor
@@ -146,6 +148,56 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
         String queryStringParameterName) {
         includedQueryStringParameters.add(queryStringParameterName.trim());
         return this;
+    }
+
+    /**
+     * If set to true, every query string and HTTP form parameter is shared,
+     * rather than only those that start with 51D_ or are named in the
+     * included parameters. The whole query string and the parameters that are
+     * never shared are still not shared.
+     * <p>
+     * Default value is false
+     * @param shareAll true to share all query string parameters
+     * @return this builder
+     */
+    @DefaultValue(booleanValue = false)
+    public ShareUsageBuilderBase<T> setShareAllQueryStringParameters(
+        boolean shareAll) {
+        this.shareAllQueryStringParameters = shareAll;
+        return this;
+    }
+
+    /**
+     * Whether every query string parameter is shared.
+     * @return true if all query string parameters are shared
+     */
+    public boolean isShareAllQueryStringParameters() {
+        return shareAllQueryStringParameters;
+    }
+
+    /**
+     * If set to true, all Evidence is shared, which overrides the blocked
+     * HTTP headers and the rules for cookies, session values and query string
+     * parameters. The keys that are never shared (an email address, the salt
+     * for hashed email identifiers, the whole query string, the path and the
+     * Cookie header) are still not shared.
+     * <p>
+     * Default value is false
+     * @param shareAll true to share all Evidence
+     * @return this builder
+     */
+    @DefaultValue(booleanValue = false)
+    public ShareUsageBuilderBase<T> setShareAllEvidence(boolean shareAll) {
+        this.shareAllEvidence = shareAll;
+        return this;
+    }
+
+    /**
+     * Whether all Evidence is shared.
+     * @return true if all Evidence is shared
+     */
+    public boolean isShareAllEvidence() {
+        return shareAllEvidence;
     }
 
     /**

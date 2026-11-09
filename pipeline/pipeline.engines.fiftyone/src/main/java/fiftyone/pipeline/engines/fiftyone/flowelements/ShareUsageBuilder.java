@@ -134,7 +134,9 @@ public class ShareUsageBuilder extends ShareUsageBuilderBase<ShareUsageElement> 
             failuresWindowSeconds,
             initialRecoveryDelaySeconds,
             maxRecoveryDelaySeconds,
-            recoveryMultiplier);
+            recoveryMultiplier,
+            shareAllEvidence,
+            shareAllQueryStringParameters);
         if (Objects.nonNull(this.httpClient)) {
             sue.httpClient = httpClient;
         } else if (Objects.nonNull(dataUploader)){

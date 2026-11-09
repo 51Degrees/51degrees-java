@@ -425,7 +425,9 @@ public abstract class ShareUsageBase
             Constants.SHARE_USAGE_FAILURES_WINDOW_SECONDS_DEFAULT,
             Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_INITIAL_DELAY_SECONDS_DEFAULT,
             Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT,
-            Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT);
+            Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT,
+            false,
+            false);
     }
 
     /**
@@ -469,6 +471,10 @@ public abstract class ShareUsageBase
      * @param maxRecoveryDelaySeconds the longest a pause can be, in seconds
      * @param recoveryMultiplier what the pause is multiplied by each time the
      *                           send tried when a pause ends fails
+     * @param shareAllEvidence if true then all Evidence is shared, apart from
+     *                         the keys that are never shared
+     * @param shareAllQueryStringParameters if true then all query string
+     *                                      parameters are shared
      */
     protected ShareUsageBase(
         Logger logger,
@@ -489,7 +495,9 @@ public abstract class ShareUsageBase
         int failuresWindowSeconds,
         double initialRecoveryDelaySeconds,
         double maxRecoveryDelaySeconds,
-        double recoveryMultiplier) {
+        double recoveryMultiplier,
+        boolean shareAllEvidence,
+        boolean shareAllQueryStringParameters) {
         super(logger, null);
 
         if (minimumEntriesPerMessage > maximumQueueSize) {
@@ -530,7 +538,12 @@ public abstract class ShareUsageBase
         includedQueryStringParameters.add(Constants.EVIDENCE_SEQUENCE_SUFIX);
 
         evidenceKeyFilterExclSession = new EvidenceKeyFilterShareUsage(
-            blockedHttpHeaders, includedQueryStringParameters, false, sessionCookieName);
+            blockedHttpHeaders,
+            includedQueryStringParameters,
+            false,
+            sessionCookieName,
+            shareAllEvidence,
+            shareAllQueryStringParameters);
 
         this.ignoreDataEvidenceFilter = ignoreDataEvidenceFilter;
 
@@ -544,7 +557,12 @@ public abstract class ShareUsageBase
                 cacheConfiguration,
                     intervalMillis,
                 new EvidenceKeyFilterShareUsageTracker(
-                    blockedHttpHeaders, includedQueryStringParameters, trackSession, sessionCookieName));
+                    blockedHttpHeaders,
+                    includedQueryStringParameters,
+                    trackSession,
+                    sessionCookieName,
+                    shareAllEvidence,
+                    shareAllQueryStringParameters));
         }
 
         properties = new ArrayList<>();
@@ -819,7 +837,9 @@ public abstract class ShareUsageBase
                 continue;
             }
 
-            switch (entry.getKey()) {
+            // The keys are compared without regard to case, and the constants
+            // are lower case.
+            switch (entry.getKey().toLowerCase(Locale.ROOT)) {
                 case fiftyone.pipeline.core.Constants.EVIDENCE_CLIENTIP_KEY:
                     // The client IP is dealt with separately for backwards
                     // compatibility purposes.

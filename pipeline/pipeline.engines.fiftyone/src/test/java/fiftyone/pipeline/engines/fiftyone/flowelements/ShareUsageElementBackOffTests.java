@@ -190,7 +190,9 @@ public class ShareUsageElementBackOffTests {
             100,
             initialDelaySeconds,
             maxDelaySeconds,
-            2);
+            2,
+            false,
+            false);
         element.addPipeline(pipeline);
         element.dataUploader = uploader;
     }
