@@ -509,7 +509,7 @@ public class JsonBuilderTests {
 
             JsonBuilderData jsonResult = flowData.get(JsonBuilderData.class);
             JSONObject jsonData = new JSONObject(jsonResult.getJson());
-            JSONObject sequence = jsonData.getJSONObject("sequence-element");
+            JSONObject sequence = jsonData.getJSONObject("sequence");
             assertEquals(1, sequence.getLong("sequence"));
             assertFalse(sequence.getString("session-id").isEmpty());
         }

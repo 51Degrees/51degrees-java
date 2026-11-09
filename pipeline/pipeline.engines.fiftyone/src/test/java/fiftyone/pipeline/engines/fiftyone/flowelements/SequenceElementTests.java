@@ -56,8 +56,8 @@ public class SequenceElementTests {
     }
 
     private ElementData sequenceData(FlowData flowData) throws Exception {
-        ElementData data = flowData.get("sequence-element");
-        assertNotNull(data, "Expected Element Data under 'sequence-element'");
+        ElementData data = flowData.get("sequence");
+        assertNotNull(data, "Expected Element Data under 'sequence'");
         return data;
     }
 
