@@ -209,6 +209,23 @@ public class StartupHelpers {
 
         }
 
+        // The JSON Builder Element fails on every request without a
+        // sequence number, which only the Sequence Element supplies.
+        if (getElementIndex(
+            options,
+            JsonBuilderElement.class.getSimpleName()) != -1 &&
+            getElementIndex(
+                options,
+                SequenceElement.class.getSimpleName()) == -1) {
+            throw new PipelineConfigurationException(
+                "The Pipeline has a JSON Builder Element but no Sequence " +
+                    "Element, and the JSON Builder Element needs the " +
+                    "sequence number the Sequence Element supplies. Turn " +
+                    "sequence-element-enabled back on, add a Sequence " +
+                    "Element to the configuration, or turn off " +
+                    "client-side properties.");
+        }
+
         // Add the set-headers element.
         if (setHeadersElementEnabled &&
             getElementIndex(
