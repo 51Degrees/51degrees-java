@@ -26,15 +26,12 @@ import fiftyone.ipintelligence.examples.shared.KeyHelper;
 import fiftyone.ipintelligence.shared.testhelpers.KeyUtils;
 import org.junit.Test;
 
-import static org.junit.Assume.assumeFalse;
-
 public class MetadataCloudTest {
 
     @Test
     public void metadataCloudTest() throws Exception {
-        String resourceKey = KeyUtils.getNamedKey(KeyHelper.TEST_RESOURCE_KEY);
-        assumeFalse("Skipping test, no resource key found",
-                KeyUtils.isInvalidKey(resourceKey));
+        String resourceKey = KeyHelper.requireTestResourceKey(
+            "the IP Intelligence properties it offers", "ip");
         MetadataCloud.run(resourceKey,
                 KeyUtils.getNamedKey(GettingStartedCloud.CLOUD_END_POINT_NAME),
                 System.out);

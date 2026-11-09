@@ -26,6 +26,7 @@ import fiftyone.ipintelligence.IPIntelligencePipelineBuilder;
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
 import fiftyone.ipintelligence.shared.testhelpers.KeyUtils;
 import fiftyone.pipeline.core.flowelements.Pipeline;
+import fiftyone.pipeline.engines.Constants;
 import fiftyone.pipeline.engines.services.DataUpdateService;
 import fiftyone.pipeline.engines.services.DataUpdateServiceDefault;
 import fiftyone.pipeline.engines.services.OnUpdateComplete;
@@ -293,6 +294,10 @@ public class UpdateDataFile {
                     // overwritten the pipeline must be configured to copy the supplied
                     // file to a temporary file (createTempDataCopy parameter == true.
                     .useOnPremise(dataFilename, true)
+                    // Use the low memory profile, because this example
+                    // downloads the Enterprise data file, which is over 6 GB,
+                    // and MaxPerformance would load all of it into memory.
+                    .setPerformanceProfile(Constants.PerformanceProfiles.LowMemory)
                     // pass in the update listener which has been configured
                     // to notify when update complete
                     .setDataUpdateService(dataUpdateService)

@@ -26,6 +26,7 @@ import fiftyone.pipeline.core.data.*;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -37,6 +38,18 @@ import org.slf4j.Logger;
  */
 public class SequenceElement 
     extends FlowElementBase<ElementData, ElementPropertyMetaData> {
+
+    /**
+     * The session id and sequence of a callback, which the specification
+     * lists as this element's accepted Evidence. Without them the web
+     * integration would not add them, and every callback would start a new
+     * session.
+     */
+    private final EvidenceKeyFilter acceptedEvidence =
+        new EvidenceKeyFilterWhitelist(Arrays.asList(
+            Constants.EVIDENCE_SESSIONID,
+            Constants.EVIDENCE_SEQUENCE),
+            String.CASE_INSENSITIVE_ORDER);
 
     /**
      * Construct a new instance of the {@link FlowElement}.
@@ -59,9 +72,25 @@ public class SequenceElement
         if (evidence.containsKey(Constants.EVIDENCE_SEQUENCE) == false) {
             data.addEvidence(Constants.EVIDENCE_SEQUENCE, 1);
         } else {
-            Object sequence = evidence.get(Constants.EVIDENCE_SEQUENCE);
-            int seq = (int) sequence;
-            data.addEvidence(Constants.EVIDENCE_SEQUENCE, seq + 1);
+            data.addEvidence(
+                Constants.EVIDENCE_SEQUENCE,
+                getSequence(evidence.get(Constants.EVIDENCE_SEQUENCE)) + 1);
+        }
+    }
+
+    /**
+     * The sequence in Evidence, which is a number when an element set it and
+     * text when it came from the query string of a callback. Anything that is
+     * not a number counts as no sequence.
+     */
+    private static int getSequence(Object sequence) {
+        if (sequence instanceof Number) {
+            return ((Number) sequence).intValue();
+        }
+        try {
+            return Integer.parseInt(String.valueOf(sequence).trim());
+        } catch (NumberFormatException e) {
+            return 0;
         }
     }
 
@@ -72,7 +101,7 @@ public class SequenceElement
 
     @Override
     public EvidenceKeyFilter getEvidenceKeyFilter() {
-        return new EvidenceKeyFilterWhitelist(new ArrayList<String>());
+        return acceptedEvidence;
     }
 
     @Override

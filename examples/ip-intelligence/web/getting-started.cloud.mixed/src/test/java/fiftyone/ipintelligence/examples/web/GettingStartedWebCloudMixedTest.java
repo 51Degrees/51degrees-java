@@ -23,7 +23,6 @@
 package fiftyone.ipintelligence.examples.web;
 
 import fiftyone.ipintelligence.examples.shared.KeyHelper;
-import fiftyone.ipintelligence.shared.testhelpers.KeyUtils;
 import org.eclipse.jetty.server.Server;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -36,7 +35,6 @@ import java.util.Scanner;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeFalse;
 
 public class GettingStartedWebCloudMixedTest {
     private static Server SERVER;
@@ -44,9 +42,10 @@ public class GettingStartedWebCloudMixedTest {
 
     @BeforeClass
     public static void startJetty() throws Exception {
-        String resourceKey = KeyUtils.getNamedKey(KeyHelper.TEST_RESOURCE_KEY);
-        assumeFalse("Skipping test, no resource key found",
-                KeyUtils.isInvalidKey(resourceKey));
+        String resourceKey = KeyHelper.requireTestResourceKey(
+            "the network and location of the address a request comes from, " +
+                "and the device that sent it",
+            "ip", "device");
         // Make the resource key available to the pipeline configuration file.
         // The resource key must include both device detection and IP
         // Intelligence properties as this example uses both engines.
