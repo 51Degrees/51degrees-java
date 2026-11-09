@@ -63,8 +63,9 @@ import org.json.JSONArray;
  */
 public class IPIntelligenceCloudEngine
     extends CloudAspectEngineBase<IPIntelligenceDataCloud> {
-    List<AspectPropertyMetaData> aspectProperties;
+    volatile List<AspectPropertyMetaData> aspectProperties;
     private String dataSourceTier;
+    private final Object metadataLock = new Object();
     // Lower-cased names of properties the cloud returns as weighted lists
     // (cloud type "Weighted..."), so processEngine can read their value/weight
     // pairs rather than treating them as a plain list.
@@ -84,9 +85,26 @@ public class IPIntelligenceCloudEngine
         this.cloudRequestEngine = null;
     }
 
+    /**
+     * The property metadata, from the products the Cloud Request Engine
+     * reports. Until they are known, after a failure at build that can
+     * pass, this is empty and is read again on the next call.
+     * @return the property metadata
+     */
     @Override
     public List<AspectPropertyMetaData> getProperties() {
-        return aspectProperties;
+        List<AspectPropertyMetaData> loaded = aspectProperties;
+        if (loaded == null && cloudRequestEngine != null) {
+            synchronized (metadataLock) {
+                if (aspectProperties == null) {
+                    loadAspectProperties(cloudRequestEngine);
+                }
+                loaded = aspectProperties;
+            }
+        }
+        return loaded == null ?
+            new ArrayList<AspectPropertyMetaData>() :
+            loaded;
     }
 
     @Override
@@ -222,9 +240,10 @@ public class IPIntelligenceCloudEngine
         if (cloudRequestEngine == null) {
             cloudRequestEngine = pipeline.getElement(CloudRequestEngine.class);
             if (cloudRequestEngine != null) {
-                if (loadAspectProperties(cloudRequestEngine) == false) {
-                    logger.error("Failed to load aspect properties");
-                }
+                // The products are not known after a failure at build that
+                // can pass, which the Cloud Request Engine has logged.
+                // getProperties reads them once they are.
+                loadAspectProperties(cloudRequestEngine);
             }
 
         }
@@ -243,7 +262,7 @@ public class IPIntelligenceCloudEngine
             findProduct(engine.getPublicProperties());
 
         if (product != null) {
-            aspectProperties = new ArrayList<>();
+            List<AspectPropertyMetaData> properties = new ArrayList<>();
             weightedPropertyNames.clear();
             dataSourceTier = product.dataTier;
 
@@ -259,13 +278,12 @@ public class IPIntelligenceCloudEngine
                     resolvePropertyType(item),
                     new ArrayList<String>(),
                     true);
-                aspectProperties.add(property);
+                properties.add(property);
             }
+            aspectProperties = properties;
             return true;
         }
         else {
-            logger.error("Aspect properties could not be loaded for" +
-                " the IP Intelligence cloud engine", this);
             return false;
         }
     }

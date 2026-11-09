@@ -150,11 +150,11 @@ public interface ClientsidePropertyServiceCore {
             }
 
             for (EvidenceKeyFilter filter : filters) {
-                // If the filter is a white list or derived type then
-                // get all HTTP header evidence keys from white list
-                // and add them to the headers that could affect the
-                // generated JavaScript.
-                if (filter.getClass().equals(EvidenceKeyFilterWhitelist.class)) {
+                // If the filter is a white list or derived type, such as
+                // the filter of a parallel group, then get all HTTP header
+                // evidence keys from white list and add them to the
+                // headers that could affect the generated JavaScript.
+                if (filter instanceof EvidenceKeyFilterWhitelist) {
                     EvidenceKeyFilterWhitelist whitelist = (EvidenceKeyFilterWhitelist) filter;
                     for (String key : whitelist.getWhitelist().keySet()) {
                         if (key.startsWith(EVIDENCE_HTTPHEADER_PREFIX + EVIDENCE_SEPERATOR) &&

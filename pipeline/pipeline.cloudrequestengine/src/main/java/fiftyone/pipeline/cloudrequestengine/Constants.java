@@ -48,6 +48,13 @@ public class Constants {
                 + "see our explainer: "
                 + "https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=pipeline.cloudrequestengine-src-main-java-fiftyone-pipeline-cloudrequestengine-constants.java&utm_term=exceptionfailedtoloadproperties";
         
+        public static final String MessageDiscoveryDeferred =
+                "The cloud request engine could not fetch its accessible "
+                + "properties or accepted evidence keys when it was built, "
+                + "because of a failure that can pass. It will fetch them "
+                + "again when it is first used, and sends no data request "
+                + "until it has both.";
+
         public static final String MessageProductNotInResourceKey =
                 "The resource key does not include the '%s' product, so "
                 + "%s has no properties and its results hold no values. "

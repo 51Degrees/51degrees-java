@@ -22,7 +22,6 @@
 
 package fiftyone.pipeline.cloudrequestengine.flowelements;
 
-import static fiftyone.pipeline.cloudrequestengine.Constants.Messages.ExceptionFailedToLoadProperties;
 import static fiftyone.pipeline.cloudrequestengine.Constants.Messages.MessageProductNotInResourceKey;
 import static fiftyone.pipeline.cloudrequestengine.Constants.Messages.ProcessCloudEngineNotImplemented;
 
@@ -146,6 +145,13 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
         this.requestEngine = requestEngine;
     }
 
+    /**
+     * The property metadata of this engine, from the products the Cloud
+     * Request Engine reports. After a failure at build that can pass the
+     * products are not known yet, and an empty list is returned without
+     * being kept, so the metadata is read again on the next call.
+     * @return the property metadata
+     */
     @Override
     public List<AspectPropertyMetaData> getProperties() {
         List<AspectPropertyMetaData> localRef = aspectProperties;
@@ -154,17 +160,13 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
                 localRef = aspectProperties;
                 if (localRef == null) {
                     if(loadAspectProperties() == false) {
-                        throw new RuntimeException(
-                            String.format(
-                                ExceptionFailedToLoadProperties,
-                                this.getElementDataKey(),
-                                this.getElementDataKey())
-                        );
+                        return new ArrayList<>();
                     }
+                    localRef = aspectProperties;
                 }
             }
         }
-        return aspectProperties;
+        return localRef;
     }
 
     @Override
@@ -221,8 +223,8 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
                 aspectProperties = properties;
                 return true;
         } else {
-            logger.error("Aspect properties could not be loaded for " + 
-                this.getClass().getName(), this);
+            // The Cloud Request Engine has logged why the products are not
+            // known yet.
             return false;
         }
     }

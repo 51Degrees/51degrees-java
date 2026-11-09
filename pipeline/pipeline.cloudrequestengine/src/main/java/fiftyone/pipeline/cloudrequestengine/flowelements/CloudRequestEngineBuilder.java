@@ -98,7 +98,7 @@ public class CloudRequestEngineBuilder extends
         	}
         }
         
-        return new CloudRequestEngineDefault(
+        CloudRequestEngineDefault engine = new CloudRequestEngineDefault(
             loggerFactory.getLogger(CloudRequestEngine.class.getName()),
             new CloudRequestDataFactory(loggerFactory),
             httpClient,
@@ -109,6 +109,11 @@ public class CloudRequestEngineBuilder extends
             evidenceKeysEndpoint,
                 timeoutMillis,
             cloudRequestOrigin);
+        // Fetch the accessible properties and the accepted evidence keys
+        // now, so that the built engine is ready. A 4xx answer fails the
+        // build, and any other failure is retried on first use.
+        engine.discover();
+        return engine;
     }
     
     private String getEnvironmentVariable(String name) {
