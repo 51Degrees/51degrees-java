@@ -32,16 +32,57 @@ public enum MissingTranslationBehavior {
      * Use the original value if there is no translation for it. This is the
      * default behaviour.
      */
-    ORIGINAL,
+    ORIGINAL("Original"),
 
     /**
      * Use an empty string if there is no translation for the value.
      */
-    EMPTY_STRING,
+    EMPTY_STRING("EmptyString"),
 
     /**
      * Add a flow error if there is no translation for the value. The error
      * contains the reason there was no translation.
      */
-    FLOW_ERROR
+    FLOW_ERROR("FlowError");
+
+    /**
+     * The name the specification gives the behaviour, which a configuration
+     * file uses.
+     */
+    private final String specificationName;
+
+    MissingTranslationBehavior(String specificationName) {
+        this.specificationName = specificationName;
+    }
+
+    /**
+     * Reads a behaviour from text, as a configuration file gives it. The
+     * names the specification uses, Original, EmptyString and FlowError, and
+     * the names of these constants are accepted, ignoring case and any white
+     * space around the text.
+     * @param value the text to read
+     * @return the behaviour the text names
+     * @throws IllegalArgumentException if the text names no behaviour
+     */
+    public static MissingTranslationBehavior parse(String value) {
+        if (value != null) {
+            String text = value.trim();
+            for (MissingTranslationBehavior behavior : values()) {
+                if (behavior.specificationName.equalsIgnoreCase(text) ||
+                    behavior.name().equalsIgnoreCase(text)) {
+                    return behavior;
+                }
+            }
+        }
+        StringBuilder accepted = new StringBuilder();
+        MissingTranslationBehavior[] behaviors = values();
+        for (int i = 0; i < behaviors.length; i++) {
+            if (i > 0) {
+                accepted.append(i == behaviors.length - 1 ? " or " : ", ");
+            }
+            accepted.append(behaviors[i].specificationName);
+        }
+        throw new IllegalArgumentException("'" + value + "' is not a " +
+            "missing translation behavior. Use " + accepted + ".");
+    }
 }

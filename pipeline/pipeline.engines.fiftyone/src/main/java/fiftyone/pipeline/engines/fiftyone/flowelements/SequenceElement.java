@@ -29,6 +29,7 @@ import fiftyone.pipeline.core.flowelements.FlowElementBase;
 import fiftyone.pipeline.engines.fiftyone.data.SequenceData;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -45,6 +46,18 @@ public class SequenceElement
     private static final Pattern DIGITS = Pattern.compile("[0-9]+");
 
     private final List<ElementPropertyMetaData> properties;
+
+    /**
+     * The session id and sequence of a callback, which the specification
+     * lists as this element's accepted Evidence. Without them the web
+     * integration would not add them, and every callback would start a new
+     * session.
+     */
+    private final EvidenceKeyFilter acceptedEvidence =
+        new EvidenceKeyFilterWhitelist(Arrays.asList(
+            Constants.EVIDENCE_SESSIONID,
+            Constants.EVIDENCE_SEQUENCE),
+            String.CASE_INSENSITIVE_ORDER);
 
     /**
      * Construct a new instance of the {@link FlowElement}.
@@ -140,7 +153,7 @@ public class SequenceElement
 
     @Override
     public EvidenceKeyFilter getEvidenceKeyFilter() {
-        return new EvidenceKeyFilterWhitelist(new ArrayList<String>());
+        return acceptedEvidence;
     }
 
     @Override
