@@ -45,6 +45,7 @@ import org.junit.runners.Parameterized;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import org.mockito.internal.matchers.LessOrEqual;
+import org.mockito.invocation.Invocation;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.LoggerFactory;
@@ -61,6 +62,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
@@ -72,6 +74,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static fiftyone.pipeline.engines.services.DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
 import static fiftyone.pipeline.engines.services.DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED;
+import static fiftyone.pipeline.engines.services.DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_SUCCESS;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 import static org.mockito.Mockito.*;
@@ -1227,6 +1230,57 @@ public class DataUpdateServiceTests {
         }
         // The timer factory should have been called once.
         verify(futureFactory, times(1)).schedule(any(Runnable.class), anyLong());
+    }
+
+    /**
+     * A check that finds an update for a data file with no file path
+     * applies it in memory, so it refreshes the engine once, with the
+     * downloaded data, and does not refresh it again.
+     */
+    @Test
+    public void DataUpdateService_CheckForUpdate_InMemory_RefreshesOnce()
+        throws IOException {
+        // Arrange
+        configureNoFileSystem();
+        when(httpClientConnection.getResponseCode())
+            .thenReturn(HttpURLConnection.HTTP_OK);
+        when(httpClientConnection.getResponseMessage()).thenReturn(null);
+        when(httpClientConnection.getHeaderField("Content-MD5"))
+            .thenReturn("08527dcbdd437e7fa6c084423d06dba6");
+        when(httpClientConnection.getInputStream()).thenReturn(
+            DataUpdateServiceTests.class.getClassLoader()
+                .getResourceAsStream("file.gz"));
+
+        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
+            mock(OnPremiseAspectEngine.class);
+        DataFileConfigurationDefault config = new DataFileConfigurationDefault();
+        config.setDataUpdateUrl("http://www.test.com");
+        config.setVerifyMd5(true);
+        config.setDecompressContent(true);
+        config.setVerifyModifiedSince(false);
+
+        AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
+        file.setEngine(engine);
+        file.setConfiguration(config);
+        when(engine.getDataFileMetaData()).thenReturn(file);
+
+        // Act
+        DataUpdateService.AutoUpdateStatus status =
+            dataUpdate.checkForUpdate(engine);
+
+        // Assert
+        assertEquals(AUTO_UPDATE_SUCCESS, status);
+        List<String> refreshes = new ArrayList<>();
+        for (Invocation invocation : mockingDetails(engine).getInvocations()) {
+            if (invocation.getMethod().getName().equals("refreshData")) {
+                refreshes.add(invocation.getMethod().toGenericString());
+            }
+        }
+        assertEquals(
+            "The engine was not refreshed exactly once: " + refreshes,
+            1,
+            refreshes.size());
+        verify(engine, times(1)).refreshData(any(), any(byte[].class));
     }
 
 
