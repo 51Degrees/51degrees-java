@@ -241,6 +241,21 @@ public class DataUpdateServiceLoggingTests {
     }
 
     @Test
+    public void UpdateOnStartup_EngineNotBuiltYet_LogsTheEngineTypeName()
+        throws Exception {
+        when(connection.getResponseCode())
+            .thenReturn(HttpURLConnection.HTTP_NOT_MODIFIED);
+        AspectEngineDataFileDefault file = newDataFile(false, false, true);
+        file.setEngine(null);
+        file.setEngineTypeName("ExampleEngine");
+
+        dataUpdate.registerDataFile(file);
+
+        assertLogged(Level.INFO, "Checking for update from '" + UPDATE_URL +
+            "' for Engine 'ExampleEngine'");
+    }
+
+    @Test
     public void UpdateOnStartup_AutoUpdateOff_StartsNoTimer() throws Exception {
         when(connection.getResponseCode())
             .thenReturn(HttpURLConnection.HTTP_NOT_MODIFIED);

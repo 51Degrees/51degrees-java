@@ -26,9 +26,11 @@ import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.engines.Constants;
 import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectEngineDataFile;
+import fiftyone.pipeline.engines.data.AspectEngineDataFileDefault;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneDataFile;
 import fiftyone.pipeline.engines.services.DataUpdateService;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -172,6 +174,28 @@ public class FiftyOneDegreesOnPremiseAspectEngineBuilderBaseTests {
         builder.build("", false);
 
         verify(updateService, times(1)).registerDataFile(any());
+    }
+
+    /**
+     * The engine does not exist when the data file is registered, so the
+     * data file carries the engine's type name for the update service's log.
+     */
+    @Test
+    public void UpdateOnStartup_DataFileCarriesTheEngineTypeName()
+        throws Exception {
+        ImplementedBuilder builder = newBuilder()
+            .setAutoUpdate(false)
+            .setDataUpdateOnStartup(true)
+            .setDataUpdateLicenseKey(licenseKey);
+
+        builder.build("", false);
+
+        ArgumentCaptor<AspectEngineDataFile> registered =
+            ArgumentCaptor.forClass(AspectEngineDataFile.class);
+        verify(updateService).registerDataFile(registered.capture());
+        assertEquals("Implemented",
+            ((AspectEngineDataFileDefault) registered.getValue())
+                .getEngineTypeName());
     }
 
     @Test
