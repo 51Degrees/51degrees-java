@@ -226,6 +226,15 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 // yet been refreshed.
                 logger.debug("Calling updatedFileAvailable");
                 result = updatedFileAvailable(dataFile);
+            } else if (result == AUTO_UPDATE_SUCCESS) {
+                // The update was applied in memory. Clear the timer, as
+                // updatedFileAvailable does, so a new one is registered.
+                synchronized (futureLock) {
+                    if (dataFile.getFuture() != null) {
+                        dataFile.getFuture().cancel(true);
+                        dataFile.setFuture(null);
+                    }
+                }
             } else {
                 // No update available.
                 // If this was a manual call to update then do nothing.
@@ -805,7 +814,8 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                         dataFile.getConfiguration().setData(reader.toByteArray());
                     }
                 }
-                return memoryDownloadResult;
+                // The engine, or the configuration, now holds the new data.
+                return AUTO_UPDATE_SUCCESS;
             } catch (Exception ex) {
                 logger.error("An error occurred when applying a data update to engine '{}'" ,
                                 Objects.nonNull(dataFile.getEngine())?
