@@ -131,6 +131,20 @@ class ReplacedStringTest {
         assertTrue(over.isTruncated());
         assertEquals(repeat(emoji, 10000), over.toString());
     }
+    // the limit counts the value as supplied, so the escapes written for
+    // invalid characters do not count towards it
+    @Test
+    public void testEscapesDoNotCountTowardsTheLimit(){
+        String aString = "a" + (char) 0x1 + repeat("b", 9998);
+        ReplacedString replacedString = new ReplacedString(aString);
+        assertFalse(replacedString.isTruncated());
+        assertTrue(replacedString.isReplaced());
+        assertEquals(10000 - 1 + 6, replacedString.toString().length());
+        // One character more is cut, whatever the escapes add.
+        ReplacedString over = new ReplacedString(aString + "c");
+        assertTrue(over.isTruncated());
+        assertEquals(10000 - 1 + 6, over.toString().length());
+    }
     private static String repeat(String text, int times) {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < times; i++) {
