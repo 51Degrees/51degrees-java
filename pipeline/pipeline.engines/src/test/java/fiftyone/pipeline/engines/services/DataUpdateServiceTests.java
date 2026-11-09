@@ -418,14 +418,17 @@ public class DataUpdateServiceTests {
                 }
             });
 
-            // Configure a flag to be set when processing
-            // is complete.
+            // Configure a flag to be set when the watcher has applied the
+            // update. The polling timer's own check also completes, with no
+            // update found, and must not release the flag.
             final Semaphore completeFlag = new Semaphore(1);
             completeFlag.acquire();
             dataUpdate.onUpdateComplete(new OnUpdateComplete() {
                 @Override
                 public void call(Object sender, DataUpdateService.DataUpdateCompleteArgs args) {
-                    completeFlag.release();
+                    if (args.getStatus() == AUTO_UPDATE_SUCCESS) {
+                        completeFlag.release();
+                    }
                 }
             });
 
