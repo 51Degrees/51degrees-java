@@ -422,7 +422,13 @@ public class ShareUsageElement extends ShareUsageBase {
      */
     protected void writeXmlData(XMLStreamWriter writer, ShareUsageData data) throws XMLStreamException {
         writer.writeStartElement("Device");
-        // --- write invariant data
+        // The elements follow the order of the specification's example.
+        // The SessionID used to track a series of requests
+        writeXmlElement(writer, "SessionId", data.sessionId);
+        // The sequence number of the request in a series of requests.
+        writeXmlElement(writer, "Sequence", String.valueOf(data.sequence));
+        // The UTC date/time this entry was written
+        writeXmlElement(writer, "DateSent", DATE_FMT.format(new Date()));
         // The version number of the Pipeline API
         writeXmlElement(writer, "Version", coreVersion);
         // Write Pipeline information
@@ -435,20 +441,12 @@ public class ShareUsageElement extends ShareUsageBase {
         writeXmlElement(writer, "Language", "java");
         // The software language version
         writeXmlElement(writer, "LanguageVersion", languageVersion);
+        // The client IP of the request
+        writeXmlElement(writer, "ClientIP", data.clientIP);
         // The IP of this server
         writeXmlElement(writer, "ServerIP", getHostAddress());
         // The OS name and version
         writeXmlElement(writer, "Platform", osVersion);
-
-        // --- write variable data
-        // The SessionID used to track a series of requests
-        writeXmlElement(writer, "SessionId", data.sessionId);
-        // The sequence number of the request in a series of requests.
-        writeXmlElement(writer, "Sequence", String.valueOf(data.sequence));
-        // The UTC date/time this entry was written
-        writeXmlElement(writer, "DateSent", DATE_FMT.format(new Date()));
-        // The client IP of the request
-        writeXmlElement(writer, "ClientIP", data.clientIP);
 
         // Write all other evidence data that has been included.
         for (Map.Entry<String, Map<String, String>> category : data.evidenceData.entrySet()) {
@@ -461,7 +459,7 @@ public class ShareUsageElement extends ShareUsageBase {
                     writer.writeStartElement(entry.getKey());
                 }
                 if (replacedString.isReplaced()) {
-                    writer.writeAttribute("replaced", "true");
+                    writer.writeAttribute("escaped", "true");
                 }
                 if (replacedString.isTruncated()) {
                     writer.writeAttribute("truncated", "true");
