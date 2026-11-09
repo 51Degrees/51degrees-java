@@ -94,11 +94,10 @@ public class MetadataOnPrem {
                     dataFile, DataFileHelper.IPI_PATH_ENV_VAR);
             throw e;
         }
-        // Build a new on-premise IP Intelligence engine with the max performance profile.
-        // Note that there is no need to construct a complete pipeline in order to access
-        // the meta-data.
-        // If you already have a pipeline and just want to get a reference to the engine 
-        // then you can use `var engine = pipeline.GetElement<IPIntelligenceOnPremiseEngine>();`
+        // Build an on-premise IP Intelligence engine with the low memory
+        // profile. There is no need to build a complete pipeline to read the
+        // metadata. Code that already has a pipeline can get its engine with
+        // pipeline.getElement(IPIntelligenceOnPremiseEngine.class).
         try (IPIntelligenceOnPremiseEngine engine =
                      new IPIntelligenceOnPremiseEngineBuilder(LoggerFactory.getILoggerFactory())
                 // We use the low memory profile to minimize memory usage for this

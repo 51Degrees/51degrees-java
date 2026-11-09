@@ -61,8 +61,11 @@ public class IPIntelligenceOnPremisePipelineBuilder
     private String dataUpdateUrl = null;
     private Boolean dataUpdateVerifyMd5 = null;
     private DataUpdateUrlFormatter dataUpdateUrlFormatter = null;
-    private Constants.PerformanceProfiles performanceProfile =
-        Constants.PerformanceProfiles.MaxPerformance;
+    /**
+     * The profile the caller chose, or null for the engine builder's
+     * default, which is Balanced.
+     */
+    private Constants.PerformanceProfiles performanceProfile = null;
 
     private DataUpdateService dataUpdateService;
 
@@ -240,7 +243,8 @@ public class IPIntelligenceOnPremisePipelineBuilder
 
     /**
      * Set the performance profile for the IP Intelligence engine.
-     * Defaults to MaxPerformance.
+     * Defaults to Balanced, which reads the data file as lookups need it,
+     * through caches. MaxPerformance loads the whole data file into memory.
      * @param profile The performance profile to use.
      * @return This builder instance.
      */
@@ -386,8 +390,13 @@ public class IPIntelligenceOnPremisePipelineBuilder
                 builder.setProperty(property);
             }
         }
-        // Configure performance profile
-        builder.setPerformanceProfile(performanceProfile);
+        // Configure the performance profile only when the caller chose one.
+        // The engine builder already starts from Balanced, and applying
+        // Balanced again here would also replace the concurrency the engine
+        // builder set.
+        if (performanceProfile != null) {
+            builder.setPerformanceProfile(performanceProfile);
+        }
 
         // Configure the concurrency
         if (concurrency > 1) {
