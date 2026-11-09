@@ -277,6 +277,20 @@ public interface FlowData extends AutoCloseable {
     DataKey generateKey(EvidenceKeyFilter filter);
 
     /**
+     * Generate a {@link DataKey} from the evidence as it was when processing
+     * started, without the values that Flow Elements added or replaced while
+     * processing. Before processing starts it is the same as
+     * {@link #generateKey(EvidenceKeyFilter)}. It is for work that depends on
+     * the request alone, such as a cache validator.
+     * @param filter an {@link EvidenceKeyFilter} instance that defines the
+     *              values to include in the generated key
+     * @return a new {@link DataKey} instance
+     */
+    default DataKey generateSuppliedKey(EvidenceKeyFilter filter) {
+        return generateKey(filter);
+    }
+
+    /**
      * Get a filter that will only include the evidence keys that can be used by
      * the elements within the pipeline that created this flow element.
      * @return {@link EvidenceKeyFilter} for this instance
