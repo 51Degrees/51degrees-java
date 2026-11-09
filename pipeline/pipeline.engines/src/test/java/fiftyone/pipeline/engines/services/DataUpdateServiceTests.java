@@ -1286,6 +1286,141 @@ public class DataUpdateServiceTests {
         verify(engine, times(1)).refreshData(any(), any(byte[].class));
     }
 
+    /**
+     * A manual check that applies an update from the data file to a data
+     * file registered for automatic updates sets the next update timer, as
+     * a check the timer started does.
+     */
+    @Test
+    public void DataUpdateService_CheckForUpdate_FileUpdated_TimerSetAgain() {
+        // Arrange
+        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
+            mock(OnPremiseAspectEngine.class);
+        DataFileConfigurationDefault config = new DataFileConfigurationDefault();
+        config.setAutomaticUpdatesEnabled(autoUpdateEnabled);
+        config.setFileSystemWatcherEnabled(false);
+
+        AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
+        file.setEngine(engine);
+        file.setConfiguration(config);
+        when(engine.getDataFileMetaData()).thenReturn(file);
+        configureFileUpdate(engine);
+
+        dataUpdate.registerDataFile(file);
+        int timers = autoUpdateEnabled ? 1 : 0;
+        verify(futureFactory, times(timers)).schedule(
+            any(Runnable.class),
+            anyLong());
+
+        // Act
+        DataUpdateService.AutoUpdateStatus status =
+            dataUpdate.checkForUpdate(engine);
+
+        // Assert
+        assertEquals(AUTO_UPDATE_SUCCESS, status);
+        verify(engine, times(1)).refreshData((String) any());
+        verify(futureFactory, times(2 * timers)).schedule(
+            any(Runnable.class),
+            anyLong());
+        assertEquals(
+            "The next update timer was not set after the manual update.",
+            autoUpdateEnabled,
+            file.getFuture() != null);
+    }
+
+    /**
+     * A manual check that applies an update in memory to a data file
+     * registered for automatic updates sets the next update timer, as a
+     * check the timer started does.
+     */
+    @Test
+    public void DataUpdateService_CheckForUpdate_InMemory_TimerSetAgain()
+        throws IOException {
+        // Arrange
+        configureNoFileSystem();
+        when(httpClientConnection.getResponseCode())
+            .thenReturn(HttpURLConnection.HTTP_OK);
+        when(httpClientConnection.getResponseMessage()).thenReturn(null);
+        when(httpClientConnection.getHeaderField("Content-MD5"))
+            .thenReturn("08527dcbdd437e7fa6c084423d06dba6");
+        when(httpClientConnection.getInputStream()).thenReturn(
+            DataUpdateServiceTests.class.getClassLoader()
+                .getResourceAsStream("file.gz"));
+
+        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
+            mock(OnPremiseAspectEngine.class);
+        DataFileConfigurationDefault config = new DataFileConfigurationDefault();
+        config.setAutomaticUpdatesEnabled(autoUpdateEnabled);
+        config.setDataUpdateUrl("http://www.test.com");
+        config.setVerifyMd5(true);
+        config.setDecompressContent(true);
+        config.setVerifyModifiedSince(false);
+
+        AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
+        file.setEngine(engine);
+        file.setConfiguration(config);
+        when(engine.getDataFileMetaData()).thenReturn(file);
+
+        dataUpdate.registerDataFile(file);
+        int timers = autoUpdateEnabled ? 1 : 0;
+        verify(futureFactory, times(timers)).schedule(
+            any(Runnable.class),
+            anyLong());
+
+        // Act
+        DataUpdateService.AutoUpdateStatus status =
+            dataUpdate.checkForUpdate(engine);
+
+        // Assert
+        assertEquals(AUTO_UPDATE_SUCCESS, status);
+        verify(futureFactory, times(2 * timers)).schedule(
+            any(Runnable.class),
+            anyLong());
+        assertEquals(
+            "The next update timer was not set after the manual update.",
+            autoUpdateEnabled,
+            file.getFuture() != null);
+    }
+
+    /**
+     * A manual check that finds no update leaves the timer of a data file
+     * registered for automatic updates as it was.
+     */
+    @Test
+    public void DataUpdateService_CheckForUpdate_NoUpdate_TimerKept()
+        throws IOException {
+        // Arrange
+        configureNoFileSystem();
+        configureHttpNoUpdateAvailable();
+
+        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
+            mock(OnPremiseAspectEngine.class);
+        DataFileConfigurationDefault config = new DataFileConfigurationDefault();
+        config.setAutomaticUpdatesEnabled(autoUpdateEnabled);
+        config.setDataUpdateUrl("http://www.test.com");
+        config.setVerifyModifiedSince(false);
+
+        AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
+        file.setEngine(engine);
+        file.setConfiguration(config);
+        when(engine.getDataFileMetaData()).thenReturn(file);
+
+        dataUpdate.registerDataFile(file);
+        Object timer = file.getFuture();
+
+        // Act
+        DataUpdateService.AutoUpdateStatus status =
+            dataUpdate.checkForUpdate(engine);
+
+        // Assert
+        assertEquals(AUTO_UPDATE_NOT_NEEDED, status);
+        verify(engine, never()).refreshData(anyString());
+        verify(futureFactory, times(autoUpdateEnabled ? 1 : 0)).schedule(
+            any(Runnable.class),
+            anyLong());
+        assertSame(timer, file.getFuture());
+    }
+
 
 
     /**
