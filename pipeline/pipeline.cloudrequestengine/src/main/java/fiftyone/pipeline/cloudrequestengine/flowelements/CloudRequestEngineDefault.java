@@ -77,12 +77,14 @@ public class CloudRequestEngineDefault
 
     /**
      * Form fields the request reserves for the credentials and the list of
-     * Properties. Evidence whose key strips to one of them is never sent,
-     * as the Processing section of the specification requires.
+     * Properties, with licence, which the cloud service reads as the
+     * license key where license is absent. Evidence whose key strips to one
+     * of them is never sent, as the Processing section of the
+     * specification requires.
      */
     private static final Set<String> ENGINE_FIELDS =
         Collections.unmodifiableSet(new HashSet<>(
-            Arrays.asList("resource", "license", "values")));
+            Arrays.asList("resource", "license", "licence", "values")));
 
     private HttpClient httpClient;
 
