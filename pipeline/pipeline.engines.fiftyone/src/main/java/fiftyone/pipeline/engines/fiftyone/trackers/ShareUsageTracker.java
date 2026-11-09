@@ -22,12 +22,19 @@
 
 package fiftyone.pipeline.engines.fiftyone.trackers;
 
+import fiftyone.caching.PutCache;
+import fiftyone.pipeline.core.data.DataKey;
+import fiftyone.pipeline.core.data.DataKeyBuilder;
+import fiftyone.pipeline.core.data.DataKeyBuilderDefault;
 import fiftyone.pipeline.core.data.EvidenceKeyFilter;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.engines.configuration.CacheConfiguration;
+import fiftyone.pipeline.engines.fiftyone.data.ShareUsageEvidence;
 import fiftyone.pipeline.engines.trackers.TrackerBase;
 
+import java.io.IOException;
 import java.util.Date;
+import java.util.Map;
 
 /**
  * A tracker used by share usage to attempt to avoid repeatedly sending data
@@ -47,6 +54,13 @@ public class ShareUsageTracker extends TrackerBase<Date> {
     private final long interval;
 
     /**
+     * The times keyed by the values usage sharing would share. The cache of
+     * the base class is keyed by the Evidence alone, which no longer holds
+     * the web request's values.
+     */
+    private final PutCache<DataKey, Date> sharedValuesCache;
+
+    /**
      * Construct a new instance.
      * @param configuration the cache configuration to use when building the
      *                      internal cache used by this tracker
@@ -61,6 +75,10 @@ public class ShareUsageTracker extends TrackerBase<Date> {
         super(configuration);
         this.interval = intervalMillis;
         this.filter = filter;
+        // The base class has checked that the builder makes a PutCache.
+        this.sharedValuesCache = (PutCache<DataKey, Date>)
+            configuration.getCacheBuilder().<DataKey, Date>build(
+                null, configuration.getSize());
     }
 
     @Override
@@ -78,5 +96,43 @@ public class ShareUsageTracker extends TrackerBase<Date> {
     @Override
     protected EvidenceKeyFilter getFilter() {
         return filter;
+    }
+
+    @Override
+    public Date get(FlowData data) {
+        return sharedValuesCache.get(getSharedValuesKey(data));
+    }
+
+    @Override
+    public void put(FlowData data, Date value) {
+        sharedValuesCache.put(getSharedValuesKey(data), value);
+    }
+
+    @Override
+    public void close() throws IOException {
+        try {
+            sharedValuesCache.close();
+        } finally {
+            super.close();
+        }
+    }
+
+    /**
+     * The key of the values {@link ShareUsageEvidence#find} finds that the
+     * filter includes, which take in the web request's values, as the
+     * session tracking hash is of the values that would be shared.
+     */
+    private DataKey getSharedValuesKey(FlowData data) {
+        DataKeyBuilder builder = new DataKeyBuilderDefault();
+        for (Map.Entry<String, Object> entry :
+            ShareUsageEvidence.find(data.getEvidence()).entrySet()) {
+            if (filter.include(entry.getKey())) {
+                builder.add(
+                    filter.order(entry.getKey()),
+                    entry.getKey(),
+                    entry.getValue());
+            }
+        }
+        return builder.build();
     }
 }

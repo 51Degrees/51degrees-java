@@ -63,6 +63,15 @@ import static fiftyone.pipeline.util.StringManipulation.stringJoin;
 public class CloudRequestEngineDefault
     extends AspectEngineBase<CloudRequestData, AspectPropertyMetaData>
     implements CloudRequestEngine {
+    /**
+     * The Evidence key of the whole web request, which the web integration
+     * adds for usage sharing to read. It holds every header and cookie of
+     * the request, so it is never sent to the cloud service. The usage
+     * sharing package defines the same key, and this package does not
+     * depend on that one.
+     */
+    private static final String HTTP_REQUEST_KEY = "server.http-request";
+
     private HttpClient httpClient;
 
     private String endPoint;
@@ -266,7 +275,9 @@ public class CloudRequestEngineDefault
     }
 
     Map<String, Object> getFormData(FlowData flowData) {
-        Map<String, Object> evidence = flowData.getEvidence().asKeyMap();
+        Map<String, Object> evidence = new HashMap<>(
+            flowData.getEvidence().asKeyMap());
+        evidence.keySet().removeIf(HTTP_REQUEST_KEY::equalsIgnoreCase);
         Map<String, Object> formData = new HashMap<>();
 
         // Add evidence in reverse alphabetical order, excluding special keys.
