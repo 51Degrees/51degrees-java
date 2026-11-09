@@ -1312,6 +1312,8 @@ public class DataUpdateServiceTests {
             any(Runnable.class),
             anyLong());
 
+        ScheduledFuture<?> pending = file.getFuture();
+
         // Act
         DataUpdateService.AutoUpdateStatus status =
             dataUpdate.checkForUpdate(engine);
@@ -1326,6 +1328,14 @@ public class DataUpdateServiceTests {
             "The next update timer was not set after the manual update.",
             autoUpdateEnabled,
             file.getFuture() != null);
+
+        if (autoUpdateEnabled) {
+            // The pending timer is cancelled, so only the new one is left.
+            assertTrue(
+                "The timer pending before the manual update was not cancelled.",
+                pending.isCancelled());
+            assertNotSame(pending, file.getFuture());
+        }
     }
 
     /**
@@ -1367,6 +1377,8 @@ public class DataUpdateServiceTests {
             any(Runnable.class),
             anyLong());
 
+        ScheduledFuture<?> pending = file.getFuture();
+
         // Act
         DataUpdateService.AutoUpdateStatus status =
             dataUpdate.checkForUpdate(engine);
@@ -1380,6 +1392,14 @@ public class DataUpdateServiceTests {
             "The next update timer was not set after the manual update.",
             autoUpdateEnabled,
             file.getFuture() != null);
+
+        if (autoUpdateEnabled) {
+            // The pending timer is cancelled, so only the new one is left.
+            assertTrue(
+                "The timer pending before the manual update was not cancelled.",
+                pending.isCancelled());
+            assertNotSame(pending, file.getFuture());
+        }
     }
 
     /**
