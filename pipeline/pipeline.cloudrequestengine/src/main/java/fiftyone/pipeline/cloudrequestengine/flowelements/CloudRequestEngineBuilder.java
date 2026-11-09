@@ -118,8 +118,8 @@ public class CloudRequestEngineBuilder extends
         else {
             // Fetch the accessible properties and the accepted evidence
             // keys now, so that the built engine is ready. A 4xx answer
-            // other than 408 or 429 fails the build, and any other failure
-            // is retried on first use.
+            // fails the build, and any other failure is retried on first
+            // use.
             engine.discover();
         }
         built = engine;
