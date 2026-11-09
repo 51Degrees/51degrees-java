@@ -129,7 +129,9 @@ public class ProductMissingTests {
         Map<String, ProductMetaData> products = new HashMap<>();
         products.put("ip", product);
         CloudRequestEngine requestEngine = mock(CloudRequestEngine.class);
-        when(requestEngine.getPublicProperties()).thenReturn(null, products);
+        when(requestEngine.getPublicProperties())
+            .thenReturn(null)
+            .thenReturn(products);
         Pipeline pipeline = mock(Pipeline.class);
         when(pipeline.getElement(CloudRequestEngine.class))
             .thenReturn(requestEngine);
@@ -149,6 +151,8 @@ public class ProductMissingTests {
      * An engine whose Cloud Request Engine reports the accessible products
      * of a resource key that includes Device Detection alone.
      */
+    // thenReturn has a varargs overload, so a generic Map is an unchecked array.
+    @SuppressWarnings("unchecked")
     private IPIntelligenceCloudEngine buildEngine() throws Exception {
         IPIntelligenceCloudEngine engine =
             new IPIntelligenceCloudEngineBuilder(loggerFactory).build();

@@ -131,7 +131,9 @@ public class GeoLocationCloudEngineTests {
         Map<String, ProductMetaData> products = new HashMap<>();
         products.put("location", product);
         CloudRequestEngine requestEngine = mock(CloudRequestEngine.class);
-        when(requestEngine.getPublicProperties()).thenReturn(null, products);
+        when(requestEngine.getPublicProperties())
+            .thenReturn(null)
+            .thenReturn(products);
         Pipeline pipeline = mock(Pipeline.class);
         when(pipeline.getElement(CloudRequestEngine.class))
             .thenReturn(requestEngine);
@@ -152,6 +154,8 @@ public class GeoLocationCloudEngineTests {
      * An engine whose Cloud Request Engine reports the accessible products
      * of a resource key that includes IP Intelligence alone.
      */
+    // thenReturn has a varargs overload, so a generic Map is an unchecked array.
+    @SuppressWarnings("unchecked")
     private GeoLocationCloudEngine buildEngine() throws Exception {
         GeoLocationCloudEngine engine =
             new GeoLocationCloudEngineBuilder(loggerFactory)
