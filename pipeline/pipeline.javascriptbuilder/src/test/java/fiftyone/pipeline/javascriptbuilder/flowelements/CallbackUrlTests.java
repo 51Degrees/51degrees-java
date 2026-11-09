@@ -193,12 +193,9 @@ public class CallbackUrlTests {
             "a\nb.com",
             " example.com",
             "example.com ",
-            "example.com
-",
-            "example.com:80
-",
-            "[::1]
-",
+            "example.com\n",
+            "example.com:80\n",
+            "[::1]\n",
             "example.com:8080');alert(1);//",
             // User information, or an @ anywhere in the host value.
             "user@example.com",
