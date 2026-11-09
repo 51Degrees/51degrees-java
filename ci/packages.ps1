@@ -5,6 +5,8 @@
 # one reactor but is not their parent. Publish says whether the tree's
 # packages go to Maven Central. The examples are built and tested but never
 # published. Each published module is a package of its own in packages.json.
+# The example modules inside the published trees are packages too, and give
+# an Ignore glob over their whole folder, so a change to one releases nothing.
 $Trees = @(
     @{ Path = 'pipeline'; Publish = $true }
     @{ Path = 'device-detection'; Publish = $true }
