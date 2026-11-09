@@ -71,8 +71,8 @@ public interface FiftyOneJSServiceCore {
     class Default implements FiftyOneJSServiceCore {
         protected final ClientsidePropertyServiceCore clientsidePropertyServiceCore;
         protected boolean enabled;
-        protected final String javaScriptPath;
-        protected final String jsonPath;
+        protected String javaScriptPath;
+        protected String jsonPath;
 
         /**
          * Construct a new instance that serves the JavaScript and the JSON
@@ -105,6 +105,18 @@ public interface FiftyOneJSServiceCore {
             String jsonPath) {
             this.clientsidePropertyServiceCore = clientsidePropertyServiceCore;
             this.enabled = enabled;
+            setPaths(javaScriptPath, jsonPath);
+        }
+
+        /**
+         * Set the paths the JavaScript and the JSON are served from.
+         * @param javaScriptPath the end of the request path that the
+         *                       JavaScript is served for, or null or empty
+         *                       for the default
+         * @param jsonPath the end of the request path that the JSON is
+         *                 served for, or null or empty for the default
+         */
+        public void setPaths(String javaScriptPath, String jsonPath) {
             this.javaScriptPath = javaScriptPath == null ||
                 javaScriptPath.isEmpty() ? CORE_JS_NAME : javaScriptPath;
             this.jsonPath = jsonPath == null || jsonPath.isEmpty() ?
