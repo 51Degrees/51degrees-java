@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import fiftyone.common.testhelpers.TestLogger;
 import fiftyone.common.testhelpers.TestLoggerFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,6 +58,7 @@ import fiftyone.pipeline.core.flowelements.PipelineBuilder;
 import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectDataBase;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
+import fiftyone.pipeline.engines.data.MultiProfileData;
 import fiftyone.pipeline.engines.flowelements.AspectEngine;
 import fiftyone.pipeline.engines.flowelements.AspectEngineBase;
 
@@ -104,6 +106,55 @@ public class CloudAspectEngineBaseTests {
                 fail("'json' value should not be null or empty if " +
                         "this method is called");                
             }        
+        }
+    }
+
+    public class TestProfiles extends AspectDataBase
+        implements MultiProfileData<TestData> {
+        private final List<TestData> profiles = new ArrayList<>();
+
+        public TestProfiles(
+            Logger logger,
+            FlowData flowData,
+            AspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine) {
+            super(logger, flowData, engine);
+        }
+
+        @Override
+        public List<TestData> getProfiles() {
+            return profiles;
+        }
+
+        @Override
+        public void addProfile(TestData profile) {
+            profiles.add(profile);
+        }
+    }
+
+    private class TestKeyedInstance
+        extends PropertyKeyedCloudEngineBase<TestProfiles, TestData> {
+        public TestKeyedInstance() {
+            super(loggerFactory.getLogger("TestKeyedInstance"), new ElementDataFactory<TestProfiles>() {
+                @Override
+                public TestProfiles create(FlowData flowData, FlowElement<TestProfiles, ?> flowElement) {
+                    return new TestProfiles(null, flowData, (AspectEngine<TestProfiles, ?>) flowElement);
+                }
+            });
+        }
+
+        @Override
+        public String getElementDataKey() {
+            return "test";
+        }
+
+        @Override
+        protected TestData createProfileData(FlowData flowData) {
+            return new TestData(null, flowData, this);
+        }
+
+        @Override
+        protected void unmanagedResourcesCleanup() {
+
         }
     }
 
@@ -227,12 +278,55 @@ public class CloudAspectEngineBaseTests {
     }
     
     /**
-    * Test that an exception is thrown by the Properties auto property if 
-    * the cloud request engine returns no properties.
-    * @throws Exception 
+    * A resource key that includes no products at all includes none for this
+    * engine, so the Pipeline builds, the engine has empty property metadata
+    * and the missing product is logged once.
+    * @throws Exception
     */
     @Test
     public void loadProperties_noProperties() throws Exception {
+        createPipeline();
+
+        assertEquals(0, engine.getProperties().size());
+        assertProductMissingLoggedOnce();
+        maxErrors = 1;
+    }
+
+    /**
+     * A resource key whose products hold only other engines' properties
+     * does not include this engine's product. The Pipeline builds, the engine
+     * has empty property metadata, and the missing product is logged once
+     * however often the metadata is read.
+     * @throws Exception
+     */
+    @Test
+    public void loadProperties_wrongProperties() throws Exception {
+        List<AccessiblePropertyMetaData.PropertyMetaData> properties = new ArrayList<>();
+        properties.add(new AccessiblePropertyMetaData.PropertyMetaData("ismobile", "Boolean", null, null));
+        properties.add(new AccessiblePropertyMetaData.PropertyMetaData("hardwarevendor", "String", null, null));
+        properties.add(new AccessiblePropertyMetaData.PropertyMetaData("hardwarevariants", "Array", null, null));
+        AccessiblePropertyMetaData.ProductMetaData devicePropertyData = new AccessiblePropertyMetaData.ProductMetaData();
+        devicePropertyData.properties = properties;
+        propertiesReturnedByRequestEngine.put("test2", devicePropertyData);
+
+        createPipeline();
+
+        for (int i = 0; i < 3; i++) {
+            assertEquals(0, engine.getProperties().size());
+        }
+        assertProductMissingLoggedOnce();
+        maxErrors = 1;
+    }
+
+    /**
+     * Accessible properties that have not been loaded are not a missing
+     * product, so reading the property metadata still fails rather than
+     * keeping an empty result.
+     * @throws Exception
+     */
+    @Test
+    public void loadProperties_notLoaded() throws Exception {
+        propertiesReturnedByRequestEngine = null;
         try {
             createPipeline();
             fail("RuntimeException should be thrown");
@@ -247,36 +341,55 @@ public class CloudAspectEngineBaseTests {
         }
         maxErrors = 1;
     }
-    
+
     /**
-     * Test that an exception is thrown by the Properties auto property if
-     * the cloud engine only returns properties for other engines.
-     * @throws Exception 
+     * A property keyed engine, such as the hardware profile engine, whose
+     * product the resource key does not include builds, gives no profiles
+     * for a response that holds nothing for it, and logs nothing on each
+     * request.
+     * @throws Exception
      */
     @Test
-    public void loadProperties_wrongProperties() throws Exception {
+    public void propertyKeyed_productMissing_noProfiles() throws Exception {
         List<AccessiblePropertyMetaData.PropertyMetaData> properties = new ArrayList<>();
         properties.add(new AccessiblePropertyMetaData.PropertyMetaData("ismobile", "Boolean", null, null));
-        properties.add(new AccessiblePropertyMetaData.PropertyMetaData("hardwarevendor", "String", null, null));
-        properties.add(new AccessiblePropertyMetaData.PropertyMetaData("hardwarevariants", "Array", null, null));
-        AccessiblePropertyMetaData.ProductMetaData devicePropertyData = new AccessiblePropertyMetaData.ProductMetaData();
-        devicePropertyData.properties = properties;
-        propertiesReturnedByRequestEngine.put("test2", devicePropertyData);
+        AccessiblePropertyMetaData.ProductMetaData otherProduct = new AccessiblePropertyMetaData.ProductMetaData();
+        otherProduct.properties = properties;
+        propertiesReturnedByRequestEngine.put("test2", otherProduct);
+        TestKeyedInstance keyed = new TestKeyedInstance();
+        requestEngine = new TestRequestEngine();
+        requestEngine.setPublicProperties(propertiesReturnedByRequestEngine);
+        pipeline = new PipelineBuilder(loggerFactory)
+            .addFlowElement(requestEngine)
+            .addFlowElement(keyed)
+            .build();
 
-        try {
-            createPipeline();
-            fail("RuntimeException should be thrown");
-        } catch (RuntimeException ex){
-            assertEquals(
-                String.format(
-                    ExceptionFailedToLoadProperties,
-                    "test",
-                    "test"),
-                ex.getMessage()
-            );
+        for (int i = 0; i < 3; i++) {
+            TestProfiles profiles = new TestProfiles(
+                null,
+                Mockito.mock(FlowData.class),
+                keyed);
+            keyed.processCloudEngine(
+                Mockito.mock(FlowData.class),
+                profiles,
+                "{ \"test2\": { \"ismobile\": true } }");
+            assertEquals(0, profiles.getProfiles().size());
         }
-
+        assertEquals(0, keyed.getProperties().size());
+        assertProductMissingLoggedOnce();
         maxErrors = 1;
+    }
+
+    private void assertProductMissingLoggedOnce() {
+        List<String> errors = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
+        for (TestLogger logger : loggerFactory.loggers) {
+            errors.addAll(logger.errorsLogged);
+            warnings.addAll(logger.warningsLogged);
+        }
+        assertEquals(1, errors.size(), errors.toString());
+        assertTrue(errors.get(0).contains("'test'"), errors.get(0));
+        assertEquals(0, warnings.size(), warnings.toString());
     }
 
     /**
