@@ -196,7 +196,11 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             // is not enabled and the engine is using a temporary file.
             logger.info("Checking for update");
             logger.debug("CheckForUpdate {}", dataFile.getDataFilePath());
-            if (dataFile.getConfiguration().getFileSystemWatcherEnabled() == false &&
+            // A programmatic update always compares the file on disk. The
+            // timer does so only where no file system watcher will notice
+            // a new file.
+            if ((manualUpdate ||
+                    dataFile.getConfiguration().getFileSystemWatcherEnabled() == false) &&
                     dataFile.getDataFilePath() != null &&
                     dataFile.getDataFilePath().isEmpty() == false &&
                     dataFile.getTempDataFilePath() != null &&
@@ -791,7 +795,17 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             src = new GZIPInputStream(src);
         }
 
-        writeBodyTo(tempFile, src);
+        ReadFailureFlag readStream = new ReadFailureFlag(src);
+        try {
+            writeBodyTo(tempFile, readStream);
+        } catch (IOException e) {
+            if (readStream.failed) {
+                throw e;
+            }
+            logger.error("An error occurred when writing to " +
+                    tempFile.getPath() + ". Error detail: " + e.getMessage(), e);
+            return AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED;
+        }
 
         if (verifyMd5 && !md5Matches(md, connection)) {
             logger.warn("An error occurred during the integrity check of new " +
@@ -834,6 +848,38 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             }
         };
         return new BufferedInputStream(lying);
+    }
+
+    /**
+     * Records that a read of the download failed, so that a failure to write
+     * the downloaded data can be told from a failure to download it.
+     */
+    private static class ReadFailureFlag extends FilterInputStream {
+        boolean failed;
+
+        ReadFailureFlag(InputStream in) {
+            super(in);
+        }
+
+        @Override
+        public int read() throws IOException {
+            try {
+                return super.read();
+            } catch (IOException e) {
+                failed = true;
+                throw e;
+            }
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+            try {
+                return super.read(b, off, len);
+            } catch (IOException e) {
+                failed = true;
+                throw e;
+            }
+        }
     }
 
     private void writeBodyTo(FileWrapper tempFile, InputStream body) throws IOException {
