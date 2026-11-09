@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class ReplacedStringTest {
 
-    // is transparent to legal characters
+    // is transparent to the three control characters XML 1.0 allows
     @Test
     public void testNormal(){
         String aString = IntStream.of(0x9, 0xA, 0xD)
@@ -47,8 +47,8 @@ class ReplacedStringTest {
                 .collect(joining());
         ReplacedString replacedString = new ReplacedString(aString);
         assertFalse(replacedString.isTruncated());
-        assertTrue(replacedString.isReplaced());
-        assertEquals(3, replacedString.toString().length());
+        assertFalse(replacedString.isReplaced());
+        assertEquals(aString, replacedString.toString());
     }
     // is transparent to legal characters except \
     @Test
@@ -83,14 +83,60 @@ class ReplacedStringTest {
         assertEquals(0, escapedString.toString().length());
         assertEquals("", escapedString.toString());
     }
-    // truncates longer than 512
+    // truncates longer than 10,000 characters
     @Test
     public void testTruncate(){
-        String aString = IntStream.range(0,513).mapToObj(i -> "a").collect(joining());
+        String aString = repeat("a", 10001);
         ReplacedString replacedString = new ReplacedString(aString);
         assertTrue(replacedString.isTruncated());
         assertFalse(replacedString.isReplaced());
-        assertEquals(512, replacedString.toString().length());
+        assertEquals(10000, replacedString.toString().length());
+    }
+    // keeps a value of exactly 10,000 characters whole
+    @Test
+    public void testNotTruncatedAtTheLimit(){
+        String aString = repeat("a", 10000);
+        ReplacedString replacedString = new ReplacedString(aString);
+        assertFalse(replacedString.isTruncated());
+        assertEquals(aString, replacedString.toString());
+    }
+    // the limit counts characters, so a character made of a pair of
+    // surrogates at the limit is kept whole and the next one is cut
+    @Test
+    public void testTruncateNeverSplitsASurrogatePair(){
+        String emoji = "\uD83D\uDE00";
+        String aString = repeat("a", 9999) + emoji + "b";
+        ReplacedString replacedString = new ReplacedString(aString);
+        assertTrue(replacedString.isTruncated());
+        assertFalse(replacedString.isReplaced());
+        assertEquals(repeat("a", 9999) + emoji, replacedString.toString());
+    }
+    // a pair that would start after the limit is cut with the rest
+    @Test
+    public void testTruncateBeforeASurrogatePair(){
+        String emoji = "\uD83D\uDE00";
+        String aString = repeat("a", 10000) + emoji;
+        ReplacedString replacedString = new ReplacedString(aString);
+        assertTrue(replacedString.isTruncated());
+        assertEquals(repeat("a", 10000), replacedString.toString());
+    }
+    // counts characters and not UTF-16 code units
+    @Test
+    public void testLimitCountsCharactersNotCodeUnits(){
+        String emoji = "\uD83D\uDE00";
+        ReplacedString atLimit = new ReplacedString(repeat(emoji, 10000));
+        assertFalse(atLimit.isTruncated());
+        assertEquals(20000, atLimit.toString().length());
+        ReplacedString over = new ReplacedString(repeat(emoji, 10001));
+        assertTrue(over.isTruncated());
+        assertEquals(repeat(emoji, 10000), over.toString());
+    }
+    private static String repeat(String text, int times) {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < times; i++) {
+            builder.append(text);
+        }
+        return builder.toString();
     }
     // escapes single digit Hex
     @Test
@@ -99,8 +145,7 @@ class ReplacedStringTest {
         ReplacedString replacedString = new ReplacedString(aString);
         assertFalse(replacedString.isTruncated());
         assertTrue(replacedString.isReplaced());
-        System.out.println(replacedString);
-        assertEquals(5, replacedString.toString().length());
+        assertEquals(repeat("\\x0001", 5), replacedString.toString());
     }
     // escapes 2 digit hex
     @Test
@@ -109,8 +154,7 @@ class ReplacedStringTest {
         ReplacedString replacedString = new ReplacedString(aString);
         assertFalse(replacedString.isTruncated());
         assertTrue(replacedString.isReplaced());
-        System.out.println(replacedString);
-        assertEquals(5, replacedString.toString().length());
+        assertEquals(repeat("\\x001f", 5), replacedString.toString());
     }
     // does not escape valid chars
     @Test
@@ -123,15 +167,50 @@ class ReplacedStringTest {
         assertEquals(5, replacedString.toString().length());
     }
 
-    @Test ()
-    public void testEscapedEvenBigger(){
-        String aString = IntStream.range(0,5).mapToObj(i -> "\u0100").collect(joining());
+    // does not replace characters above U+00FF, which XML 1.0 allows
+    @Test
+    public void testNonLatinKept(){
+        String aString = "\u0100 \u0416 \u6F22\u5B57 \uD7FF \uE000 \uFFFD";
         ReplacedString replacedString = new ReplacedString(aString);
         assertFalse(replacedString.isTruncated());
-        assertTrue(replacedString.isReplaced());
-        System.out.println(replacedString);
-        assertEquals(5, replacedString.toString().length());
-
+        assertFalse(replacedString.isReplaced());
+        assertEquals(aString, replacedString.toString());
+    }
+    // does not replace the controls from U+007F to U+009F, which XML 1.0 allows
+    @Test
+    public void testC1ControlsKept(){
+        String aString = IntStream.range(0x7F, 0xA0)
+                .mapToObj(i -> Character.toString((char)i))
+                .collect(joining());
+        ReplacedString replacedString = new ReplacedString(aString);
+        assertFalse(replacedString.isReplaced());
+        assertEquals(aString, replacedString.toString());
+    }
+    // keeps a pair of surrogates, which is one character above U+FFFF
+    @Test
+    public void testSurrogatePairKept(){
+        String aString = "a\uD83D\uDE00b";
+        ReplacedString replacedString = new ReplacedString(aString);
+        assertFalse(replacedString.isReplaced());
+        assertEquals(aString, replacedString.toString());
+    }
+    // writes a surrogate on its own, U+FFFE and U+FFFF as \x and four
+    // lower-case hexadecimal digits
+    @Test
+    public void testForbiddenCharactersEscaped(){
+        String[][] cases = {
+            {"\uD83D", "\\xd83d"}, {"\uDE00", "\\xde00"},
+            {"\uFFFE", "\\xfffe"}, {"\uFFFF", "\\xffff"},
+            {"\u0000", "\\x0000"}, {"\u000B", "\\x000b"}};
+        for (String[] c : cases) {
+            ReplacedString replacedString = new ReplacedString("a" + c[0] + "b");
+            assertTrue(replacedString.isReplaced());
+            assertEquals("a" + c[1] + "b", replacedString.toString());
+        }
+        // A low surrogate before a high one is two surrogates on their own.
+        ReplacedString reversed = new ReplacedString("\uDE00\uD83D");
+        assertTrue(reversed.isReplaced());
+        assertEquals("\\xde00\\xd83d", reversed.toString());
     }
 
     private final XMLOutputFactory xmlOutputFactory = XMLOutputFactory.newInstance();
@@ -140,12 +219,12 @@ class ReplacedStringTest {
     @Test
     public void testXmlSerialise() throws XMLStreamException {
         xmlOutputFactory.setProperty("escapeCharacters", true);
-        String text = ReplacedString.VALID_XML_CHARS.stream()
-                .map(i->Character.toString((char)i.intValue()))
-                .collect(joining());
+        String text = "\t\n a\u00E9\u0100\u0416\u6F22\u5B57\uD83D\uDE00" +
+                "\u007F\u0080\u009F\uD7FF\uE000\uFFFD <&>";
+        assertEquals(text, new ReplacedString(text).toString());
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         XMLStreamWriter writer = xmlOutputFactory.createXMLStreamWriter(os, "UTF-8");
-        writer.writeStartDocument("UTF-8", "1.1");
+        writer.writeStartDocument("UTF-8", "1.0");
         writer.writeStartElement("test");
         writer.writeCharacters(text);
         writer.writeEndElement();
@@ -155,8 +234,6 @@ class ReplacedStringTest {
         XMLStreamReader reader = xmlInputFactory.createXMLStreamReader(is);
         reader.next();
         String readText = reader.getElementText();
-        System.out.println(text);
-        System.out.println(readText);
         reader.close();
 
         assertEquals(readText, text);

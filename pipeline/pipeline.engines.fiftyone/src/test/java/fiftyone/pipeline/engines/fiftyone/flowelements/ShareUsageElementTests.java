@@ -798,7 +798,7 @@ public class ShareUsageElementTests {
             // Check that the expected values are populated.
             NodeList f = (NodeList) xpath.compile("//header[@Name='user-agent']").evaluate(doc, XPathConstants.NODESET);
             assertEquals(1, f.getLength(), "1 user-agent header expected");
-            assertEquals("<iPhone\uFFFD>", f.item(0).getTextContent());
+            assertEquals("<iPhone\\x0018>", f.item(0).getTextContent());
             assertEquals("true", f.item(0).getAttributes().getNamedItem("escaped").getTextContent());
             NodeList b = (NodeList) xpath.compile("//BadSchema").evaluate(doc, XPathConstants.NODESET);
             assertEquals(0, b.getLength());
@@ -820,6 +820,7 @@ public class ShareUsageElementTests {
             userAgent.getAttributes().getNamedItem("escaped").getTextContent());
         assertNull(userAgent.getAttributes().getNamedItem("replaced"));
         assertNull(userAgent.getAttributes().getNamedItem("truncated"));
+        assertEquals("<iPhone\\x0018>", userAgent.getTextContent());
     }
 
     /**
@@ -830,7 +831,7 @@ public class ShareUsageElementTests {
     public void ShareUsageElement_LongValue_TruncatedAttributeOnly()
         throws Exception {
         StringBuilder longValue = new StringBuilder();
-        for (int i = 0; i < 600; i++) {
+        for (int i = 0; i < 10001; i++) {
             longValue.append('a');
         }
         Document doc = shareUserAgent(longValue.toString());
@@ -839,7 +840,7 @@ public class ShareUsageElementTests {
         assertEquals("true",
             userAgent.getAttributes().getNamedItem("truncated").getTextContent());
         assertNull(userAgent.getAttributes().getNamedItem("escaped"));
-        assertEquals(512, userAgent.getTextContent().length());
+        assertEquals(10000, userAgent.getTextContent().length());
     }
 
     /**
