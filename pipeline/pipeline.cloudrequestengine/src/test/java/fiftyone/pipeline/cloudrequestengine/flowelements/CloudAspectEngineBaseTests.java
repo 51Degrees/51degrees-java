@@ -22,7 +22,6 @@
 
 package fiftyone.pipeline.cloudrequestengine.flowelements;
 
-import static fiftyone.pipeline.cloudrequestengine.Constants.Messages.ExceptionFailedToLoadProperties;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -319,27 +318,30 @@ public class CloudAspectEngineBaseTests {
     }
 
     /**
-     * Accessible properties that have not been loaded are not a missing
-     * product, so reading the property metadata still fails rather than
-     * keeping an empty result.
+     * Accessible properties the Cloud Request Engine has not fetched yet,
+     * after a failure at build that can pass, are not a missing product.
+     * The Pipeline builds, the metadata is empty and nothing is logged, and
+     * the metadata is read again once the properties are known rather than
+     * kept empty.
      * @throws Exception
      */
     @Test
     public void loadProperties_notLoaded() throws Exception {
         propertiesReturnedByRequestEngine = null;
-        try {
-            createPipeline();
-            fail("RuntimeException should be thrown");
-        } catch (RuntimeException ex){
-            assertEquals(
-                String.format(
-                    ExceptionFailedToLoadProperties,
-                    "test",
-                    "test"),
-                ex.getMessage()
-            );
-        }
-        maxErrors = 1;
+        createPipeline();
+
+        assertEquals(0, engine.getProperties().size());
+
+        List<AccessiblePropertyMetaData.PropertyMetaData> properties = new ArrayList<>();
+        properties.add(new AccessiblePropertyMetaData.PropertyMetaData("ismobile", "Boolean", null, null));
+        AccessiblePropertyMetaData.ProductMetaData product = new AccessiblePropertyMetaData.ProductMetaData();
+        product.properties = properties;
+        Map<String, AccessiblePropertyMetaData.ProductMetaData> products = new HashMap<>();
+        products.put("test", product);
+        requestEngine.setPublicProperties(products);
+
+        assertEquals(1, engine.getProperties().size());
+        assertTrue(propertiesContainName(engine.getProperties(), "ismobile"));
     }
 
     /**
