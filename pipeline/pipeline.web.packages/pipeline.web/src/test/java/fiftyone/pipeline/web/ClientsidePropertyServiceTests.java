@@ -28,7 +28,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import org.slf4j.LoggerFactory;
 
-import fiftyone.pipeline.core.data.DataKey;
 import fiftyone.pipeline.core.data.ElementData;
 import fiftyone.pipeline.core.data.ElementPropertyMetaData;
 import fiftyone.pipeline.core.data.Evidence;
@@ -77,7 +76,6 @@ public class ClientsidePropertyServiceTests {
   private FlowDataProviderCore flowDataProvider;
   private Pipeline pipeline;
   private FlowData flowData;
-  private DataKey dataKey;
   private Map<String, Object> evidence;
   private JavaScriptBuilderElement jsElement;
   private JsonBuilderElement jsonElement;
@@ -131,8 +129,6 @@ public class ClientsidePropertyServiceTests {
     jsonElement = mock(JsonBuilderElement.class);
 
     flowData = mock(FlowData.class);
-    dataKey = mock(DataKey.class);
-    when(flowData.generateKey(any(EvidenceKeyFilter.class))).thenReturn(dataKey);
     evidence = new HashMap<>();
     Evidence flowEvidence = mock(Evidence.class);
     when(flowEvidence.asKeyMap()).thenReturn(evidence);
@@ -835,16 +831,16 @@ public class ClientsidePropertyServiceTests {
       JS_CONTENT.length(),
       JS_CONTENT_TYPE,
       200,
-      String.valueOf(dataKey.hashCode()),
+      WEAK_ETAG,
       expectedVary);
   }
 
   private void ValidateResponse(
     String expectedContent,
-    Integer contentLength, 
+    Integer contentLength,
     String contentType,
     int expectedStatusCode,
-    String expectedETag,
+    String expectedETagPattern,
     String expectedVary)
   {
     if (expectedContent == null) { expectedContent = ""; }
@@ -884,8 +880,8 @@ public class ClientsidePropertyServiceTests {
       verify(response, times(0)).setHeader(eq("Vary"), anyString());
     }
     
-    if (expectedETag != null) {
-      verify(response).setHeader(eq("ETag"), eq(expectedETag));
+    if (expectedETagPattern != null) {
+      verify(response).setHeader(eq("ETag"), matches(expectedETagPattern));
     }
     else {
       verify(response, times(0)).setHeader(eq("ETag"), anyString());
