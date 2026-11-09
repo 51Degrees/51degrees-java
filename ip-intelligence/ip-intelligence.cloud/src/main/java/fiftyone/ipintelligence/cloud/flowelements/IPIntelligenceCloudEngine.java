@@ -107,6 +107,17 @@ public class IPIntelligenceCloudEngine
             loaded;
     }
 
+    /**
+     * Whether the property metadata is loaded, which reads it if the Cloud
+     * Request Engine now knows the accessible properties.
+     * @return true once the property metadata is loaded
+     */
+    @Override
+    public boolean hasLoadedProperties() {
+        getProperties();
+        return aspectProperties != null;
+    }
+
     @Override
     public String getDataSourceTier() {
         return dataSourceTier;

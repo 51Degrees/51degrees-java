@@ -169,6 +169,17 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
         return localRef;
     }
 
+    /**
+     * Whether the property metadata is loaded, which reads it if the Cloud
+     * Request Engine now knows the accessible properties.
+     * @return true once the property metadata is loaded
+     */
+    @Override
+    public boolean hasLoadedProperties() {
+        getProperties();
+        return aspectProperties != null;
+    }
+
     @Override
     public TypedKey<TData> getTypedDataKey() {
         if (typedKey == null) {

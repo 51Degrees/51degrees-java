@@ -51,6 +51,8 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -267,19 +269,25 @@ public class CloudRequestEngineDefault
     public void discover() {
         List<RuntimeException> failures = new ArrayList<>();
         synchronized (discoveryLock) {
-            if (evidenceKeyFilter.isKnown() == false) {
-                try {
-                    fetchEvidenceKeys();
-                } catch (RuntimeException e) {
-                    failures.add(e);
-                }
-            }
+            // The two requests are made at once, so a service that does not
+            // answer delays the build by one timeout rather than two.
+            CompletableFuture<Void> evidenceKeys =
+                evidenceKeyFilter.isKnown() ?
+                    CompletableFuture.<Void>completedFuture(null) :
+                    CompletableFuture.runAsync(this::fetchEvidenceKeys);
             if (publicProperties == null) {
                 try {
                     fetchPublicProperties();
                 } catch (RuntimeException e) {
                     failures.add(e);
                 }
+            }
+            try {
+                evidenceKeys.join();
+            } catch (CompletionException e) {
+                failures.add(e.getCause() instanceof RuntimeException ?
+                    (RuntimeException) e.getCause() :
+                    e);
             }
         }
         if (failures.isEmpty()) {
@@ -296,6 +304,17 @@ public class CloudRequestEngineDefault
             first.addSuppressed(failures.get(i));
         }
         logger.warn(MessageDiscoveryDeferred, first);
+    }
+
+    /**
+     * Whether discovery has fetched both the accepted evidence keys and the
+     * accessible properties, so that what reads them, such as the
+     * Pipeline's map of available properties, can keep what it reads.
+     * @return true once both are known
+     */
+    @Override
+    public boolean hasLoadedProperties() {
+        return evidenceKeyFilter.isKnown() && publicProperties != null;
     }
 
     /**

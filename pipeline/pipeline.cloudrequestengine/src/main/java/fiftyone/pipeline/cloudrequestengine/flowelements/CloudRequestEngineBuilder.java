@@ -247,9 +247,10 @@ public class CloudRequestEngineBuilder extends
     }
 
     /**
-     * Timeout in seconds for the request to the endpoint.
+     * Timeout in seconds for each request to the cloud service, the two
+     * discovery requests when the engine is built and each data request.
      * <p>
-     * Default value is 100 seconds
+     * Default value is 2 seconds
      * @param timeout in seconds
      * @return this builder
      */
