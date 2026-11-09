@@ -1,0 +1,56 @@
+name: Temporary usage sharing tests
+
+on:
+  push:
+    branches:
+      - 'tmp/u97-**'
+
+jobs:
+  run:
+    name: Usage sharing tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JavaScript templates submodule
+        run: git submodule update --init pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Usage sharing tests
+        run: |
+          mvn -B -ntp -f pipeline/pom.xml \
+            -pl pipeline.engines,pipeline.engines.fiftyone -am \
+            test "-Dtest=ShareUsage*Tests,DataUploaderHttpTests,EvidenceKeyFilterShareUsageTests" \
+            -DfailIfNoTests=false -DtrimStackTrace=false
+
+      - name: Results
+        if: always()
+        run: |
+          python3 - <<'EOF'
+          import glob
+          import xml.etree.ElementTree as ET
+          counts = {}
+          for path in sorted(glob.glob("pipeline/**/target/surefire-reports/TEST-*.xml", recursive=True)):
+              root = ET.parse(path).getroot()
+              for case in root.iter("testcase"):
+                  outcome, message = "passed", ""
+                  for kind in ("failure", "error", "skipped"):
+                      node = case.find(kind)
+                      if node is not None:
+                          outcome = kind
+                          message = f"{node.get('type')}: {node.get('message') or ''}"
+                          break
+                  counts[outcome] = counts.get(outcome, 0) + 1
+                  print(f"{outcome.upper():8} {case.get('classname')}.{case.get('name')}")
+                  if message:
+                      print("         " + " ".join(message.split())[:600])
+                      if kind == "error":
+                          for line in (node.text or "").splitlines()[:400]:
+                              if "Caused by" in line or "Suppressed" in line or "Exception" in line:
+                                  print("           " + line.strip()[:200])
+          print("TOTALS", counts)
+          EOF
