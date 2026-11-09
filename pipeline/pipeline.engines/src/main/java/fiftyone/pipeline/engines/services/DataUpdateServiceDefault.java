@@ -36,6 +36,7 @@ import fiftyone.pipeline.engines.flowelements.OnPremiseAspectEngine;
 import fiftyone.pipeline.engines.services.update.FutureFactory;
 import fiftyone.pipeline.engines.services.update.FutureFactoryDefault;
 import fiftyone.pipeline.util.Check;
+import fiftyone.pipeline.util.LicenseKeyMask;
 import jakarta.xml.bind.DatatypeConverter;
 import org.apache.commons.lang3.ObjectUtils;
 import org.slf4j.Logger;
@@ -615,13 +616,18 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             FileWrapper tempFile) {
 
         String url = dataFile.getFormattedUrl();
-        logger.debug("downloadFile from {}", url);
+        // The URL carries the license keys, so every message names it with
+        // each key masked.
+        List<String> licenseKeys =
+                dataFile.getConfiguration().getDataUpdateLicenseKeys();
+        String loggedUrl = LicenseKeyMask.maskIn(url, licenseKeys);
+        logger.debug("downloadFile from {}", loggedUrl);
 
         try {
             HttpURLConnection connection = httpClient.connect(new URI(url.trim()).toURL());
             if (connection == null) {
                 logger.error("No response from data update service at '{}' for engine '{}'",
-                        dataFile.getFormattedUrl(), Objects.nonNull(dataFile.getEngine()) ?
+                        loggedUrl, Objects.nonNull(dataFile.getEngine()) ?
                                 dataFile.getEngine().getClass().getSimpleName() : "No Engine");
                 return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
             }
@@ -645,19 +651,19 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                     // in some versions of the HttpStatusCode enum.
                     case (429):
                         logger.error("Too many requests to '{}' for {}",
-                                dataFile.getFormattedUrl(), getIdForLogging(dataFile));
+                                loggedUrl, getIdForLogging(dataFile));
                         return AutoUpdateStatus.AUTO_UPDATE_ERR_429_TOO_MANY_ATTEMPTS;
                     case HttpURLConnection.HTTP_NOT_MODIFIED:
                         logger.debug("No data update available from '{}' for {}",
-                                dataFile.getFormattedUrl(), getIdForLogging(dataFile));
+                                loggedUrl, getIdForLogging(dataFile));
                         return AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED;
                     case HttpURLConnection.HTTP_FORBIDDEN:
                         logger.error("Access denied to data update service at '{}' for {}",
-                                dataFile.getFormattedUrl(), getIdForLogging(dataFile));
+                                loggedUrl, getIdForLogging(dataFile));
                         return AutoUpdateStatus.AUTO_UPDATE_ERR_403_FORBIDDEN;
                     default:
                         logger.error("HTTP status code '{}' from data update service at '{}' for {}",
-                                connection.getResponseCode(), dataFile.getFormattedUrl(),
+                                connection.getResponseCode(), loggedUrl,
                                 getIdForLogging(dataFile));
                         return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
                 }
@@ -665,7 +671,9 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 connection.disconnect();
             }
         } catch (Exception e) {
-            logger.error("Error while processing data file download", e);
+            // An HTTP library's exception often names the URL it requested.
+            logger.error("Error while processing data file download",
+                    LicenseKeyMask.maskIn(e, licenseKeys));
             return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
         }
     }
