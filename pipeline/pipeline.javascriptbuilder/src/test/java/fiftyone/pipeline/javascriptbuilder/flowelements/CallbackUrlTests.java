@@ -109,26 +109,34 @@ public class CallbackUrlTests {
                 "https://-ab.com/51dpipeline/json"),
             Arguments.of("127.0.0.1:80",
                 "https://127.0.0.1:80/51dpipeline/json"),
+            Arguments.of("example.com",
+                "https://example.com/51dpipeline/json"),
+            Arguments.of("1.2.3.4",
+                "https://1.2.3.4/51dpipeline/json"),
+            Arguments.of("1.2.3.4:8080",
+                "https://1.2.3.4:8080/51dpipeline/json"),
+            Arguments.of("1.2.3.4/path",
+                "https://1.2.3.4/path/51dpipeline/json"),
+            Arguments.of("0.0.0.0",
+                "https://0.0.0.0/51dpipeline/json"),
+            Arguments.of("101.2.3.4",
+                "https://101.2.3.4/51dpipeline/json"),
+            Arguments.of("example.co1",
+                "https://example.co1/51dpipeline/json"),
+            Arguments.of("123.example.com",
+                "https://123.example.com/51dpipeline/json"),
             Arguments.of("[::1]",
                 "https://[::1]/51dpipeline/json"),
             Arguments.of("[::1]:8080",
                 "https://[::1]:8080/51dpipeline/json"),
-            Arguments.of("[fe80::1%25eth0]",
-                "https://[fe80::1%25eth0]/51dpipeline/json"),
-            Arguments.of("user:pw@example.com",
-                "https://user:pw@example.com/51dpipeline/json"),
-            Arguments.of("u x@example.com",
-                "https://u%20x@example.com/51dpipeline/json"),
-            Arguments.of("u\tx@example.com",
-                "https://u%09x@example.com/51dpipeline/json"),
             Arguments.of("example.com.",
                 "https://example.com./51dpipeline/json"),
             Arguments.of("example.com/path",
                 "https://example.com/path/51dpipeline/json"),
-            Arguments.of("example.com?x",
-                "https://example.com?x/51dpipeline/json"),
             Arguments.of("example.com/a b",
                 "https://example.com/a%20b/51dpipeline/json"),
+            Arguments.of("example.com/a\"b",
+                "https://example.com/a%22b/51dpipeline/json"),
             Arguments.of("example.com/a%zzb",
                 "https://example.com/a%25zzb/51dpipeline/json"),
             Arguments.of("example.com/a%41b",
@@ -183,7 +191,54 @@ public class CallbackUrlTests {
             "a\nb.com",
             " example.com",
             "example.com ",
-            "example.com:8080');alert(1);//");
+            "example.com:8080');alert(1);//",
+            // User information, or an @ anywhere in the host value.
+            "user@example.com",
+            "user:pw@example.com",
+            "@example.com",
+            ":@example.com",
+            "user@example.com:8080",
+            "user@[::1]",
+            "user@example.com/path",
+            "u%41@example.com",
+            "u x@example.com",
+            "u\tx@example.com",
+            "u\"x@example.com",
+            "u'x@example.com",
+            "u\\x@example.com",
+            "u\nx@example.com",
+            "u\u0001x@example.com",
+            "example.com/a@b",
+            "user:12/ss@example.com",
+            "user:pa/ss@example.com",
+            "user:pa?ss@example.com",
+            "exa mple.com/a@b",
+            // A query or fragment.
+            "example.com?x",
+            "example.com#x",
+            "example.com?",
+            "example.com#",
+            "example.com:8080?x",
+            "[::1]#x",
+            "example.com/path?x",
+            "example.com/path#x",
+            "example.com?');alert(1);//",
+            "example.com#');alert(1);//",
+            // A name whose last label is a number must be an IPv4 address.
+            "example.123",
+            "example.0x1f",
+            "example.0X",
+            "1.2.3.999",
+            "1.2.3",
+            "127.1",
+            "0x7f.0.0.1",
+            "01.2.3.4",
+            "example.123.",
+            "1.2.3.4.",
+            "1.2.3.4.5",
+            "1",
+            "300.1.1.1",
+            "0x7f.1");
     }
 
     @ParameterizedTest(name = "[{index}]")
@@ -195,6 +250,13 @@ public class CallbackUrlTests {
     static Stream<String> refusedZonesAndTextAfterTheBracket() {
         return Stream.of(
             "[fe80::1%25]",
+            "[fe80::1%25eth0]",
+            "[fe80::1%25eth0]:8080",
+            "[FE80::1%25ETH0]",
+            "[fe80::1%251]",
+            "[::1%25lo]",
+            "[fe80::1%]",
+            "[fe80::1%25eth0]/path",
             "[fe80::1%25'+alert(1)+']",
             "[fe80::1%eth0]",
             "[fe80::1%25eth%0]",
@@ -205,23 +267,13 @@ public class CallbackUrlTests {
     }
 
     /**
-     * Inside the brackets only an IPv6 address, optionally followed by '%25'
-     * and a zone of unreserved characters, and after them only a port. The
-     * zone check is what keeps a quote out of the script for a bracketed
-     * host.
+     * Inside the brackets only an IPv6 address, so a zone identifier is
+     * refused, and after them only a port.
      */
     @ParameterizedTest(name = "[{index}]")
     @MethodSource("refusedZonesAndTextAfterTheBracket")
     public void CallbackUrl_RefusesZoneOrTextAfterTheBracket(String host) {
         assertInvalid(url("https", host), "host " + host);
-    }
-
-    @Test
-    public void CallbackUrl_AcceptsZoneFollowedByPort() {
-        assertValid(
-            "https://[fe80::1%25eth0]:8080/51dpipeline/json",
-            url("https", "[fe80::1%25eth0]:8080"),
-            "host [fe80::1%25eth0]:8080");
     }
 
     /**
@@ -248,17 +300,14 @@ public class CallbackUrlTests {
     }
 
     /**
-     * Each character rule 8 lists, in the user information, after the host
-     * and in the endpoint, and a '%' without two hexadecimal digits after
-     * it, even at the end.
+     * Each character rule 8 lists, after the host and in the endpoint, and a
+     * '%' without two hexadecimal digits after it, even at the end.
      */
     @Test
     public void CallbackUrl_EncodesTheCharactersRule8Lists() {
         assertValid(
-            "https://u%22%5E%60%7B%7C%7D@example.com/%22%5E%60%7B%7C%7D" +
-                "/j%22%5E%60%7B%7C%7D",
-            CallbackUrl.of(
-                "https", "u\"^`{|}@example.com/\"^`{|}", "/j\"^`{|}"),
+            "https://example.com/%22%5E%60%7B%7C%7D/j%22%5E%60%7B%7C%7D",
+            CallbackUrl.of("https", "example.com/\"^`{|}", "/j\"^`{|}"),
             "rule 8 characters");
         assertValid(
             "https://example.com/a%25/51dpipeline/json",
@@ -276,6 +325,37 @@ public class CallbackUrlTests {
             "https://example.com/json%25",
             CallbackUrl.of("https", "example.com", "/json%"),
             "endpoint /json%");
+    }
+
+    static Stream<Arguments> refusedUrlsForTheLog() {
+        return Stream.of(
+            Arguments.of("user:secret@example.com",
+                "https://***@example.com/51dpipeline/json"),
+            Arguments.of("a@b@example.com",
+                "https://***@example.com/51dpipeline/json"),
+            Arguments.of("u@[::1]:80x",
+                "https://***@[::1]:80x/51dpipeline/json"),
+            Arguments.of("user:pa/ss@example.com",
+                "https://***@example.com/51dpipeline/json"),
+            Arguments.of("user:pa?ss@example.com",
+                "https://***@example.com/51dpipeline/json"),
+            Arguments.of("exa mple.com/a@b",
+                "https://***@b/51dpipeline/json"),
+            Arguments.of("@example.com",
+                "https://***@example.com/51dpipeline/json"));
+    }
+
+    /**
+     * The URL kept for the log shows *** in place of everything in the host
+     * value before its last '@'.
+     */
+    @ParameterizedTest(name = "[{index}]")
+    @MethodSource("refusedUrlsForTheLog")
+    public void CallbackUrl_RefusedUrlForTheLogHasNoUserInformation(
+        String host, String expected) {
+        CallbackUrl url = url("https", host);
+        assertInvalid(url, "host " + host);
+        assertEquals(expected, url.url, "host " + host);
     }
 
     @Test
@@ -317,10 +397,7 @@ public class CallbackUrlTests {
     static Stream<String> hostsThatCouldEndTheString() {
         return Stream.of(
             "example.com/');alert(1);//",
-            "example.com?');alert(1);//",
-            "example.com#');alert(1);//",
-            "u'x@example.com",
-            "u\\x@example.com",
+            "example.com/a\"b",
             "example.com/a\\b",
             "example.com/</script>");
     }
