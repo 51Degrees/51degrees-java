@@ -244,7 +244,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                                             checkForUpdate(dataFile, false);
                                         }
                                     },
-                                    getInterval(dataFile.getConfiguration())));
+                                    getIntervalMillis(dataFile.getConfiguration())));
                         }
                     }
                 }
@@ -435,11 +435,12 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             synchronized (futureLock) {
                 if (aspectDataFile.getAutomaticUpdatesEnabled() &&
                         aspectDataFile.getFuture() == null) {
-                    long delay = getInterval(aspectDataFile.getConfiguration());
+                    long delayMillis =
+                            getIntervalMillis(aspectDataFile.getConfiguration());
                     if (aspectDataFile.getUpdateAvailableTime() != null) {
                         if (aspectDataFile.getUpdateAvailableTime().getTime()
                                 > System.currentTimeMillis()) {
-                            delay = applyIntervalRandomisation(
+                            delayMillis = applyIntervalRandomisationMillis(
                                     aspectDataFile.getUpdateAvailableTime().getTime()
                                             - System.currentTimeMillis(),
                                     aspectDataFile.getConfiguration());
@@ -447,7 +448,8 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                     }
                     // Create a timer that will go off when the engine expects
                     // updated data to be available.
-                    logger.debug("Scheduling update check with delay {}", delay);
+                    logger.debug("Scheduling update check with delay {} millis",
+                            delayMillis);
                     try {
                         ScheduledFuture<?> future = futureFactory.schedule(
                                 new Runnable() {
@@ -459,7 +461,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                                         logger.debug("Returning from checkForUpdate");
                                     }
                                 },
-                                delay);
+                                delayMillis);
                         logger.debug("Update check scheduled for {} millis",
                                 future.getDelay(TimeUnit.MILLISECONDS));
                         aspectDataFile.setFuture(future);
@@ -566,35 +568,37 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     }
 
     /**
-     * Get the random delay in milliseconds to add on to the scheduled time
-     * for a specific Engine, no greater than the Engine's max randomisation.
+     * Get the polling interval for a data file plus a random number of
+     * seconds, no greater than the configured maximum randomisation.
      *
-     * @param config to get the delay for
-     * @return a random delay in milliseconds.
+     * @param config to get the interval for
+     * @return the interval in milliseconds.
      */
-    private long getInterval(DataFileConfiguration config) {
-        int seconds = 0;
+    private long getIntervalMillis(DataFileConfiguration config) {
+        long intervalMillis = 0;
         if (config.getPollingIntervalSeconds() > 0) {
-            seconds = config.getPollingIntervalSeconds();
+            intervalMillis = config.getPollingIntervalSeconds() * 1000L;
         }
-        return applyIntervalRandomisation(seconds, config) * 1000;
-
+        return applyIntervalRandomisationMillis(intervalMillis, config);
     }
 
     /**
-     * Add a random amount of time to the specified interval
+     * Add a random number of whole seconds, up to the maximum in the
+     * configuration, to the specified interval.
      *
-     * @param interval the interval to add a random amount of time to
-     * @param config   the {@link DataFileConfiguration} object that specifies the
-     *                 maximum number of seconds to add
-     * @return the new interval
+     * @param intervalMillis the interval in milliseconds to add to
+     * @param config         the {@link DataFileConfiguration} object that
+     *                       specifies the maximum number of seconds to add
+     * @return the new interval in milliseconds
      */
-    private long applyIntervalRandomisation(long interval, DataFileConfiguration config) {
-        long seconds = 0;
+    private long applyIntervalRandomisationMillis(
+            long intervalMillis,
+            DataFileConfiguration config) {
+        long randomSeconds = 0;
         if (config.getMaxRandomisationSeconds() > 0) {
-            seconds = random.nextInt(config.getMaxRandomisationSeconds());
+            randomSeconds = random.nextInt(config.getMaxRandomisationSeconds());
         }
-        return interval + seconds;
+        return intervalMillis + randomSeconds * 1000;
     }
 
     /**
