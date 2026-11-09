@@ -62,6 +62,19 @@ public class ShareUsageBackOffTests {
         return create(3, 2, 5);
     }
 
+    /**
+     * The time the back-off is given comes from a clock that a change to the
+     * system time does not move.
+     */
+    @Test
+    public void ShareUsageBackOff_Now_FollowsTheMonotonicClock() {
+        long before = System.nanoTime() / 1000000;
+        long now = ShareUsageBackOff.now();
+        long after = System.nanoTime() / 1000000;
+
+        assertTrue(before <= now && now <= after);
+    }
+
     @Test
     public void ShareUsageBackOff_PausesAfterFailuresWithinWindow() {
         ShareUsageBackOff backOff = create();
