@@ -371,7 +371,12 @@ public class DataUpdateServiceTests {
             dataUpdate.registerDataFile(file);
 
             // Assert
-            assertNotNull(config.getWatchKey());
+            // The automatic update switch governs the file system watcher.
+            if (autoUpdateEnabled) {
+                assertNotNull(config.getWatchKey());
+            } else {
+                assertNull(config.getWatchKey());
+            }
         } finally {
             // Make sure we tidy up the temp file.
             File tempFile = new File(tempData);
@@ -884,10 +889,12 @@ public class DataUpdateServiceTests {
             // reconfigured to try again later.
             verify(futureFactory, atLeast(1))
                 .schedule(any(Runnable.class), anyLong());
-            // We expect one error to be logged so make sure it's
+            // We expect one warning to be logged so make sure it's
             // ignored in cleanup and verify its presence.
-            ignoreErrors = 1;
-            assertEquals(1, logger.errorsLogged.size());
+            ignoreWranings = 1;
+            assertEquals(1, logger.warningsLogged.size());
+            assertTrue(logger.warningsLogged.get(0).contains(errorText));
+            assertEquals(0, logger.errorsLogged.size());
             assertEquals(AUTO_UPDATE_HTTPS_ERR, completeEventArgs[0].getStatus());
         }
         finally {

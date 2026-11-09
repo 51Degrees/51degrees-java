@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.engines.fiftyone.flowelements;
 
+import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.engines.Constants;
 import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectEngineDataFile;
@@ -38,7 +39,10 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -118,6 +122,7 @@ public class FiftyOneDegreesOnPremiseAspectEngineBuilderBaseTests {
         ImplementedBuilder builder = new ImplementedBuilder(
             LoggerFactory.getILoggerFactory(),
             updateService);
+        builder.setAutoUpdate(false);
         builder.build("", false);
 
         assertNotNull(engine.getDataFileMetaData());
@@ -144,5 +149,103 @@ public class FiftyOneDegreesOnPremiseAspectEngineBuilderBaseTests {
         assertEquals(
             "https://distributor.51degrees.com/api/v2/download?LicenseKeys="+licenseKey+"&Download=True&Type="+downloadType,
             engine.getDataFileMetaData().getFormattedUrl());
+    }
+
+    private ImplementedBuilder newBuilder() {
+        return new ImplementedBuilder(
+            LoggerFactory.getILoggerFactory(),
+            updateService);
+    }
+
+    /**
+     * The data file is registered with the update service when update on
+     * start-up is on, even though auto update is off.
+     */
+    @Test
+    public void UpdateOnStartup_AutoUpdateOff_DataFileRegistered()
+        throws Exception {
+        ImplementedBuilder builder = newBuilder()
+            .setAutoUpdate(false)
+            .setDataUpdateOnStartup(true)
+            .setDataUpdateLicenseKey(licenseKey);
+
+        builder.build("", false);
+
+        verify(updateService, times(1)).registerDataFile(any());
+    }
+
+    @Test
+    public void AutoUpdateAndUpdateOnStartupOff_DataFileNotRegistered()
+        throws Exception {
+        ImplementedBuilder builder = newBuilder()
+            .setAutoUpdate(false)
+            .setDataUpdateOnStartup(false);
+
+        builder.build("", false);
+
+        verify(updateService, never()).registerDataFile(any());
+    }
+
+    /**
+     * The default update URL is the Distributor's, which serves nothing
+     * without a license key.
+     */
+    @Test
+    public void AutoUpdate_DefaultUrlNoLicenseKey_BuildRefused() {
+        ImplementedBuilder builder = newBuilder().setAutoUpdate(true);
+
+        PipelineConfigurationException e = assertThrows(
+            PipelineConfigurationException.class,
+            () -> builder.build("", false));
+
+        assertTrue(e.getMessage().contains("setAutoUpdate(false)"));
+        assertFalse(e.getMessage().contains("setDataUpdateOnStartup(false)"));
+        verify(updateService, never()).registerDataFile(any());
+    }
+
+    @Test
+    public void UpdateOnStartup_DefaultUrlNoLicenseKey_BuildRefused() {
+        ImplementedBuilder builder = newBuilder()
+            .setAutoUpdate(false)
+            .setDataUpdateOnStartup(true);
+
+        PipelineConfigurationException e = assertThrows(
+            PipelineConfigurationException.class,
+            () -> builder.build("", false));
+
+        assertTrue(e.getMessage().contains("setDataUpdateOnStartup(false)"));
+        assertFalse(e.getMessage().contains("setAutoUpdate(false)"));
+    }
+
+    @Test
+    public void AutoUpdate_LicenseKeySet_BuildAllowed() throws Exception {
+        ImplementedBuilder builder = newBuilder()
+            .setAutoUpdate(true)
+            .setDataUpdateLicenseKey(licenseKey);
+
+        builder.build("", false);
+
+        verify(updateService, times(1)).registerDataFile(any());
+    }
+
+    @Test
+    public void AutoUpdate_OtherUrlNoLicenseKey_BuildAllowed()
+        throws Exception {
+        ImplementedBuilder builder = newBuilder()
+            .setAutoUpdate(true)
+            .setDataUpdateUrl("https://example.com/data.file");
+
+        builder.build("", false);
+
+        verify(updateService, times(1)).registerDataFile(any());
+    }
+
+    @Test
+    public void AutoUpdateOff_NoLicenseKey_BuildAllowed() throws Exception {
+        ImplementedBuilder builder = newBuilder().setAutoUpdate(false);
+
+        builder.build("", false);
+
+        verify(updateService, never()).registerDataFile(any());
     }
 }
