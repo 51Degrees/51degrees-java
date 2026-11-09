@@ -51,6 +51,7 @@ import java.io.File;
 
 import static fiftyone.pipeline.web.Constants.CORE_JS_NAME;
 import static fiftyone.pipeline.web.Constants.CORE_JSON_NAME;
+import static fiftyone.pipeline.web.Constants.DEFAULT_JSON_PATH;
 
 /**
  * The 51Degrees middleware component.
@@ -95,7 +96,7 @@ public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
 
         String jsonPath = config.getJsonPath() == null ||
             config.getJsonPath().isEmpty() ?
-            CORE_JSON_NAME : config.getJsonPath();
+            DEFAULT_JSON_PATH : config.getJsonPath();
 
         File configFile = new File(configFileName);
         PipelineBuilder builder = new PipelineBuilder()
@@ -127,6 +128,7 @@ public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
 
     public static void enableClientsideProperties(ViewControllerRegistry viewControllerRegistry) {
         viewControllerRegistry.addViewController("/" + CORE_JS_NAME);
+        viewControllerRegistry.addViewController(DEFAULT_JSON_PATH);
         viewControllerRegistry.addViewController("/" + CORE_JSON_NAME);
     }
 
@@ -147,7 +149,8 @@ public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
                 CORE_JS_NAME : javaScriptPath));
         viewControllerRegistry.addViewController("/" + withoutSlash(
             jsonPath == null || jsonPath.isEmpty() ?
-                CORE_JSON_NAME : jsonPath));
+                DEFAULT_JSON_PATH : jsonPath));
+        viewControllerRegistry.addViewController("/" + CORE_JSON_NAME);
     }
 
     private static String withoutSlash(String path) {

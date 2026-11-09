@@ -30,9 +30,16 @@ public class Constants {
     public static final String CORE_JS_NAME = "51Degrees.core.js";
     
     /**
-     * The name of the JSON served to the client.
+     * The name the JSON was served under before {@link #DEFAULT_JSON_PATH}
+     * became the default. It is still answered.
      */
     public static final String CORE_JSON_NAME = "51Degrees.core.json";
+
+    /**
+     * The default path the JSON is served from, which the specification
+     * gives.
+     */
+    public static final String DEFAULT_JSON_PATH = "/51dpipeline/json";
 
     /**
      * Key prefix used for 51Degrees data stored in the HTTP context.

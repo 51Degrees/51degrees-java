@@ -30,6 +30,7 @@ import java.io.IOException;
 
 import static fiftyone.pipeline.web.Constants.CORE_JS_NAME;
 import static fiftyone.pipeline.web.Constants.CORE_JSON_NAME;
+import static fiftyone.pipeline.web.Constants.DEFAULT_JSON_PATH;
 
 /**
  * Service that provides the 51Degrees javascript when requested.
@@ -106,7 +107,7 @@ public interface FiftyOneJSServiceCore {
             this.clientsidePropertyServiceCore = clientsidePropertyServiceCore;
             this.enabled = enabled;
             this.javaScriptPath = orDefault(javaScriptPath, CORE_JS_NAME);
-            this.jsonPath = orDefault(jsonPath, CORE_JSON_NAME);
+            this.jsonPath = orDefault(jsonPath, DEFAULT_JSON_PATH);
         }
 
         private static String orDefault(String path, String defaultPath) {
@@ -123,7 +124,7 @@ public interface FiftyOneJSServiceCore {
          */
         public void setPaths(String javaScriptPath, String jsonPath) {
             this.javaScriptPath = orDefault(javaScriptPath, CORE_JS_NAME);
-            this.jsonPath = orDefault(jsonPath, CORE_JSON_NAME);
+            this.jsonPath = orDefault(jsonPath, DEFAULT_JSON_PATH);
         }
 
         @Override
@@ -160,8 +161,9 @@ public interface FiftyOneJSServiceCore {
 
 
             boolean result = false;
-            if (request.getRequestURI().toString().toLowerCase()
-                .endsWith(jsonPath.toLowerCase())) {
+            String uri = request.getRequestURI().toString().toLowerCase();
+            if (uri.endsWith(jsonPath.toLowerCase()) ||
+                uri.endsWith(CORE_JSON_NAME.toLowerCase())) {
                 serveCoreJson(request, response);
                 result = true;
             }

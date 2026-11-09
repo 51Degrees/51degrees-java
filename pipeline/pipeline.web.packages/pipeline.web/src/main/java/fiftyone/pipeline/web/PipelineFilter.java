@@ -40,7 +40,7 @@ import jakarta.xml.bind.Unmarshaller;
 import java.io.File;
 import java.io.IOException;
 
-import static fiftyone.pipeline.web.Constants.CORE_JSON_NAME;
+import static fiftyone.pipeline.web.Constants.DEFAULT_JSON_PATH;
 import static fiftyone.pipeline.web.Constants.CORE_JS_NAME;
 import static fiftyone.pipeline.web.Constants.DEFAULT_CLIENTSIDE_ENABLED;
 import static fiftyone.pipeline.web.Constants.DEFAULT_CONFIG_FILE;
@@ -99,7 +99,7 @@ public class PipelineFilter implements Filter {
         String javaScriptPath = getPathInitParameter(
             filterConfig, INIT_PARAM_JAVASCRIPT_PATH, CORE_JS_NAME);
         String jsonPath = getPathInitParameter(
-            filterConfig, INIT_PARAM_JSON_PATH, CORE_JSON_NAME);
+            filterConfig, INIT_PARAM_JSON_PATH, DEFAULT_JSON_PATH);
 
         ServletContext context = config.getServletContext();
 

@@ -101,7 +101,7 @@ public class StartupHelpers {
         String contextRoot) throws Exception {
 
         return StartupHelpers.buildFromConfiguration(builder, options,
-            clientSideEvidenceEnabled, contextRoot, Constants.CORE_JSON_NAME,
+            clientSideEvidenceEnabled, contextRoot, Constants.DEFAULT_JSON_PATH,
             Constants.DEFAULT_ELEMENT_ENABLED,
             Constants.DEFAULT_ELEMENT_ENABLED);
     }
