@@ -1,0 +1,38 @@
+name: Temporary callback URL tests
+
+on:
+  push:
+    branches:
+      - 'tmp/callback-url'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Callback URL tests, ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the submodules the module builds from
+        shell: pwsh
+        run: |
+          git submodule update --init pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates pipeline/owid-java
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+      - name: Run the callback URL tests
+        shell: pwsh
+        run: |
+          git log --oneline -1
+          mvn -B -f pipeline/pom.xml -pl pipeline.javascriptbuilder -am test `
+            '-Dtest=CallbackUrlTests,JavaScriptUrlTests' `
+            -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false
+          if ($LASTEXITCODE -ne 0) { exit 1 }
