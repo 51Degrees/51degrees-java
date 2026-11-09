@@ -44,9 +44,13 @@ import java.net.HttpURLConnection;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -94,11 +98,28 @@ public class CloudRequestEngineDiscoveryTests {
 
     private static final int TIMEOUT_SECONDS = 3;
 
+    /**
+     * How long a discovery request waits for the other one to start.
+     */
+    private static final int WAIT_SECONDS = 5;
+
+    /**
+     * The timeout the page's Configuration options table and .NET give.
+     */
+    private static final int DEFAULT_TIMEOUT_SECONDS = 2;
+
     private TestLoggerFactory loggerFactory;
     private HttpClient httpClient;
-    private final Map<String, Integer> requests = new HashMap<>();
+    private final Map<String, Integer> requests = new ConcurrentHashMap<>();
     private final Map<String, Integer> answers = new HashMap<>();
-    private final List<HttpURLConnection> connections = new ArrayList<>();
+    private final List<HttpURLConnection> connections =
+        Collections.synchronizedList(new ArrayList<HttpURLConnection>());
+
+    /**
+     * When set, each discovery request waits until the other has started,
+     * so the two only complete if they are made at once.
+     */
+    private volatile CountDownLatch bothDiscoveryRequests = null;
 
     @BeforeEach
     public void init() throws IOException {
@@ -114,6 +135,14 @@ public class CloudRequestEngineDiscoveryTests {
             URL url = invocation.getArgument(0);
             String name = endpoint(url);
             requests.merge(name, 1, Integer::sum);
+            CountDownLatch latch = bothDiscoveryRequests;
+            if (latch != null && name.equals(DATA) == false) {
+                latch.countDown();
+                if (latch.await(WAIT_SECONDS, TimeUnit.SECONDS) == false) {
+                    throw new SocketTimeoutException(
+                        "The other discovery request was not made");
+                }
+            }
             int answer = answers.get(name);
             if (answer == UNREACHABLE) {
                 throw new ConnectException("Connection refused");
@@ -386,6 +415,40 @@ public class CloudRequestEngineDiscoveryTests {
         return new CloudRequestEngineBuilder(loggerFactory, httpClient)
             .setResourceKey("resource_key")
             .setTimeOutSeconds(TIMEOUT_SECONDS);
+    }
+
+    /**
+     * The two discovery requests are made at once, as the page allows, so
+     * a service that does not answer delays the build by one timeout. Each
+     * request here waits for the other to start, so made one after the
+     * other they would both fail.
+     */
+    @Test
+    public void Build_MakesBothRequestsAtOnce() throws Exception {
+        bothDiscoveryRequests = new CountDownLatch(2);
+
+        CloudRequestEngine engine = build();
+
+        assertEquals(0, warnings().size(), warnings().toString());
+        assertNotNull(engine.getPublicProperties());
+        assertTrue(engine.getEvidenceKeyFilter().include("header.user-agent"));
+    }
+
+    /**
+     * With no timeout set, the requests time out after 2 seconds.
+     */
+    @Test
+    public void Build_DefaultTimeoutIsTwoSeconds() throws Exception {
+        new CloudRequestEngineBuilder(loggerFactory, httpClient)
+            .setResourceKey("resource_key")
+            .build();
+
+        assertEquals(2, connections.size());
+        for (HttpURLConnection connection : connections) {
+            verify(connection).setConnectTimeout(
+                DEFAULT_TIMEOUT_SECONDS * 1000);
+            verify(connection).setReadTimeout(DEFAULT_TIMEOUT_SECONDS * 1000);
+        }
     }
 
     private CloudRequestEngine build() throws Exception {

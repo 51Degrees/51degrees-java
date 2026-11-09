@@ -345,6 +345,33 @@ public class CloudAspectEngineBaseTests {
     }
 
     /**
+     * The Pipeline's map of available properties, built before the Cloud
+     * Request Engine knows the accessible properties, holds the engine's
+     * properties once they are known rather than keeping what it first saw.
+     * @throws Exception
+     */
+    @Test
+    public void elementAvailableProperties_ReadAgainOnceKnown() throws Exception {
+        propertiesReturnedByRequestEngine = null;
+        createPipeline();
+
+        assertTrue(
+            pipeline.getElementAvailableProperties().get("test") == null ||
+            pipeline.getElementAvailableProperties().get("test").isEmpty());
+
+        List<AccessiblePropertyMetaData.PropertyMetaData> properties = new ArrayList<>();
+        properties.add(new AccessiblePropertyMetaData.PropertyMetaData("ismobile", "Boolean", null, null));
+        AccessiblePropertyMetaData.ProductMetaData product = new AccessiblePropertyMetaData.ProductMetaData();
+        product.properties = properties;
+        Map<String, AccessiblePropertyMetaData.ProductMetaData> products = new HashMap<>();
+        products.put("test", product);
+        requestEngine.setPublicProperties(products);
+
+        assertTrue(pipeline.getElementAvailableProperties().get("test")
+            .containsKey("ismobile"));
+    }
+
+    /**
      * A property keyed engine, such as the hardware profile engine, whose
      * product the resource key does not include builds, gives no profiles
      * for a response that holds nothing for it, and logs nothing on each
