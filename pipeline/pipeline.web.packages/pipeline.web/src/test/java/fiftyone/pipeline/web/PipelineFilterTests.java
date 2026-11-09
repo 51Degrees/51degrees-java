@@ -25,6 +25,7 @@ package fiftyone.pipeline.web;
 import fiftyone.pipeline.core.data.ElementData;
 import fiftyone.pipeline.core.data.FlowData;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -41,7 +42,9 @@ import java.util.Map;
 import static fiftyone.pipeline.engines.fiftyone.data.SetHeadersData.*;
 import static fiftyone.pipeline.engines.fiftyone.flowelements.SetHeadersElement.*;
 import static fiftyone.pipeline.web.Constants.*;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -54,6 +57,7 @@ public class PipelineFilterTests {
     private FilterChain chain;
     private FlowData flowData;
     private ElementData elementData;
+    private PipelineFilter filter;
     
 	@Before
     public void init() throws IOException, ServletException {
@@ -103,12 +107,22 @@ public class PipelineFilterTests {
 	}
 
     /**
+     * Close the pipeline each filter built.
+     */
+    @After
+    public void cleanUp() {
+        if (filter != null) {
+            filter.destroy();
+        }
+    }
+
+    /**
      * Check that the filter can be initialised.
      * @throws ServletException
      */
     @Test
     public void PipelineFilter_Initialise() throws ServletException {
-        PipelineFilter filter = new PipelineFilter();
+        filter = new PipelineFilter();
 
         filter.init(config);
     }
@@ -121,7 +135,7 @@ public class PipelineFilterTests {
      */
     @Test
     public void PipelineFilter_Process() throws ServletException, IOException {
-        PipelineFilter filter = new PipelineFilter();
+        filter = new PipelineFilter();
 
         filter.init(config);
         filter.doFilter(request, response, chain);
@@ -142,10 +156,31 @@ public class PipelineFilterTests {
      */
     @Test
     public void PipelineFilter_CloseFlowData() throws Exception {
-        PipelineFilter filter = new PipelineFilter();
+        filter = new PipelineFilter();
 
         filter.init(config);
         filter.doFilter(request, response, chain);
+        verify(flowData, times(1)).close();
+    }
+
+    /**
+     * Check that the filter disposes of the FlowData when a later filter in
+     * the chain fails.
+     * @throws Exception
+     */
+    @Test
+    public void PipelineFilter_CloseFlowData_ChainFails() throws Exception {
+        doThrow(new ServletException("chain failed"))
+            .when(chain).doFilter(any(ServletRequest.class), any(ServletResponse.class));
+        filter = new PipelineFilter();
+
+        filter.init(config);
+        try {
+            filter.doFilter(request, response, chain);
+            fail("Expected the exception from the chain");
+        } catch (ServletException e) {
+            assertEquals("chain failed", e.getMessage());
+        }
         verify(flowData, times(1)).close();
     }
 }

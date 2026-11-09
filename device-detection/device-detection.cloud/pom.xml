@@ -12,7 +12,7 @@
     <artifactId>device-detection.cloud</artifactId>
     <name>51Degrees :: Device Detection :: Cloud</name>
     <description>Device Detection and User-Agent parser for Java, using the 51Degrees cloud service. Detects the device type and model, browser, operating system, and crawlers from the User-Agent and User-Agent Client Hints. Needs a Resource Key that says which properties to return. Built on the 51Degrees Pipeline API. An alternative to UAParser.js, DeviceAtlas, and WURFL.</description>
-    <url>https://51degrees.com?utm_source=maven&amp;utm_medium=package&amp;utm_campaign=51degrees-java&amp;utm_content=device-detection.cloud-pom.xml&amp;utm_term=url</url>
+    <url>https://github.com/51Degrees/51degrees-java</url>
 
     <dependencies>
         <dependency>

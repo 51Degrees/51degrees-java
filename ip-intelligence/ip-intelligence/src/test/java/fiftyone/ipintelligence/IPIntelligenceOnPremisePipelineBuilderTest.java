@@ -88,12 +88,13 @@ public class IPIntelligenceOnPremisePipelineBuilderTest {
 
     @Test
     public void setFilename_PropertyPropagatedToDataFileConfiguration() throws Exception {
-        Pipeline pipeline = builder
+        try (Pipeline pipeline = builder
                 .setFilename(IPI_DATA_FILE_NAME, true)
-                .build();
-        DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
-        assertEquals(IPI_DATA_FILE_NAME, dataFileConfiguration.getDataFilePath());
-        assertTrue(dataFileConfiguration.getCreateTempDataCopy());
+                .build()) {
+            DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
+            assertEquals(IPI_DATA_FILE_NAME, dataFileConfiguration.getDataFilePath());
+            assertTrue(dataFileConfiguration.getCreateTempDataCopy());
+        }
     }
 
     @Test
@@ -118,144 +119,159 @@ public class IPIntelligenceOnPremisePipelineBuilderTest {
 
     @Test
     public void setShareUsage_False_SharedFlowElementNotAdded() throws Exception {
-        Pipeline pipeline = new IPIntelligencePipelineBuilder(loggerFactory)
+        try (Pipeline pipeline = new IPIntelligencePipelineBuilder(loggerFactory)
                 .useOnPremise(datafile.getAbsolutePath(), false)
                 .setShareUsage(false)
-                .build();
-        List<FlowElement> flowElements = pipeline.getFlowElements();
-        assertEquals(1, flowElements.size());
-        assertFalse(flowElements.get(0) instanceof ShareUsageElement);
+                .build()) {
+            List<FlowElement> flowElements = pipeline.getFlowElements();
+            assertEquals(1, flowElements.size());
+            assertFalse(flowElements.get(0) instanceof ShareUsageElement);
+        }
     }
 
     @Test
     public void setShareUsage_True_SharedFlowElementAdded() throws Exception {
-        Pipeline pipeline = new IPIntelligencePipelineBuilder(loggerFactory)
+        try (Pipeline pipeline = new IPIntelligencePipelineBuilder(loggerFactory)
                 .useOnPremise(datafile.getAbsolutePath(), false)
                 .setShareUsage(true)
-                .build();
-        List<FlowElement> flowElements = pipeline.getFlowElements();
-        assertEquals(2, flowElements.size());
-        assertTrue(flowElements.get(0) instanceof ShareUsageElement);
+                .build()) {
+            List<FlowElement> flowElements = pipeline.getFlowElements();
+            assertEquals(2, flowElements.size());
+            assertTrue(flowElements.get(0) instanceof ShareUsageElement);
+        }
     }
 
     @Test
     public void setAutoUpdate_PropertyPropagatedToDataFileConfiguration() throws Exception {
-        Pipeline pipeline = builder
+        try (Pipeline pipeline = builder
                 .setAutoUpdate(true)
-                .build();
-        DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
-        assertTrue(dataFileConfiguration.getAutomaticUpdatesEnabled());
+                .build()) {
+            DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
+            assertTrue(dataFileConfiguration.getAutomaticUpdatesEnabled());
+        }
     }
 
     @Test
     public void setDataFileSystemWatcher_PropertyPropagatedToDataFileConfiguration() throws Exception {
-        Pipeline pipeline = builder
+        try (Pipeline pipeline = builder
                 .setDataFileSystemWatcher(true)
-                .build();
-        DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
-        assertTrue(dataFileConfiguration.getFileSystemWatcherEnabled());
+                .build()) {
+            DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
+            assertTrue(dataFileConfiguration.getFileSystemWatcherEnabled());
+        }
     }
 
     @Test
     public void setDataUpdateService_RegisterDataFileTriggered() throws Exception {
         DataUpdateServiceDefault dataUpdateServiceDefault = mock(DataUpdateServiceDefault.class);
-        builder
+        try (Pipeline ignored = builder
                 .setAutoUpdate(true)
                 .setDataUpdateService(dataUpdateServiceDefault)
-                .build();
-        verify(dataUpdateServiceDefault).registerDataFile(any());
+                .build()) {
+            verify(dataUpdateServiceDefault).registerDataFile(any());
+        }
     }
 
     @Test
     public void setDataUpdateOnStartup_PropertyPropagatedToDataFileConfiguration() throws Exception {
-        Pipeline pipeline = builder
+        try (Pipeline pipeline = builder
                 .setDataUpdateOnStartup(true)
-                .build();
-        DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
-        assertTrue(dataFileConfiguration.getUpdateOnStartup());
+                .build()) {
+            DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
+            assertTrue(dataFileConfiguration.getUpdateOnStartup());
+        }
     }
 
     @Test
     public void setUpdatePollingInterval_PropertyPropagatedToDataFileConfiguration() throws Exception {
-        Pipeline pipeline = builder
+        try (Pipeline pipeline = builder
                 .setUpdatePollingInterval(10)
-                .build();
-        DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
-        assertEquals(10, dataFileConfiguration.getPollingIntervalSeconds());
+                .build()) {
+            DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
+            assertEquals(10, dataFileConfiguration.getPollingIntervalSeconds());
+        }
     }
 
     @Test
     public void setUpdatePollingIntervalMillis_PropertyPropagatedToDataFileConfiguration() throws Exception {
-        Pipeline pipeline = builder
+        try (Pipeline pipeline = builder
                 .setUpdatePollingIntervalMillis(10000)
-                .build();
-        DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
-        assertEquals(10, dataFileConfiguration.getPollingIntervalSeconds());
+                .build()) {
+            DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
+            assertEquals(10, dataFileConfiguration.getPollingIntervalSeconds());
+        }
     }
 
     @Test
     public void setUpdateRandomisationMax_PropertyPropagatedToDataFileConfiguration() throws Exception {
-        Pipeline pipeline = builder
+        try (Pipeline pipeline = builder
                 .setUpdateRandomisationMax(123)
-                .build();
-        DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
-        assertEquals(123, dataFileConfiguration.getMaxRandomisationSeconds());
+                .build()) {
+            DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
+            assertEquals(123, dataFileConfiguration.getMaxRandomisationSeconds());
+        }
     }
 
     @Test
     public void setUpdateRandomisationMaxMillis_PropertyPropagatedToDataFileConfiguration() throws Exception {
-        Pipeline pipeline = builder
+        try (Pipeline pipeline = builder
                 .setUpdateRandomisationMaxMillis(123000)
-                .build();
-        DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
-        assertEquals(123, dataFileConfiguration.getMaxRandomisationSeconds());
+                .build()) {
+            DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
+            assertEquals(123, dataFileConfiguration.getMaxRandomisationSeconds());
+        }
     }
 
     @Test
     public void setDataUpdateLicenseKey_PropertyPropagatedToDataFileConfiguration() throws Exception {
         String key = "licence_key";
-        Pipeline pipeline = builder
+        try (Pipeline pipeline = builder
                 .setDataUpdateLicenseKey(key)
-                .build();
-        DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
-        assertTrue(dataFileConfiguration.getDataUpdateLicenseKeys().contains(key));
+                .build()) {
+            DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
+            assertTrue(dataFileConfiguration.getDataUpdateLicenseKeys().contains(key));
+        }
     }
 
     @Test
     public void setConcurrency_PropertyPropagatedSwigConfiguration() throws Exception {
-        Pipeline pipeline = builder
+        try (Pipeline pipeline = builder
                 .setConcurrency(4)
-                .build();
-        ConfigIpiSwig swig = getConfigIpiSwig(pipeline);
-        assertEquals(4, swig.getConcurrency());
+                .build()) {
+            ConfigIpiSwig swig = getConfigIpiSwig(pipeline);
+            assertEquals(4, swig.getConcurrency());
+        }
     }
 
     @Test
     public void setDataUpdateUrl_PropertyPropagatedToDataFileConfiguration() throws Exception {
         String url = "https://update.me.com";
-        Pipeline pipeline = builder
+        try (Pipeline pipeline = builder
                 .setDataUpdateUrl(url)
-                .build();
-        DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
-        assertEquals(url, dataFileConfiguration.getDataUpdateUrl());
+                .build()) {
+            DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
+            assertEquals(url, dataFileConfiguration.getDataUpdateUrl());
+        }
     }
 
     @Test
     public void setDataUpdateVerifyMd5_PropertyPropagatedToDataFileConfiguration() throws Exception {
-        Pipeline pipeline = builder
+        try (Pipeline pipeline = builder
                 .setDataUpdateVerifyMd5(true)
-                .build();
-        DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
-        assertTrue(dataFileConfiguration.getVerifyMd5());
+                .build()) {
+            DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
+            assertTrue(dataFileConfiguration.getVerifyMd5());
+        }
     }
 
     @Test
     public void setDataUpdateUrlFormatter_PropertyPropagatedToDataFileConfiguration() throws Exception {
         DataUpdateUrlFormatter urlFormatter = mock(DataUpdateUrlFormatter.class);
-        Pipeline pipeline = builder
+        try (Pipeline pipeline = builder
                 .setDataUpdateUrlFormatter(urlFormatter)
-                .build();
-        DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
-        assertEquals(urlFormatter, dataFileConfiguration.getUrlFormatter());
+                .build()) {
+            DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
+            assertEquals(urlFormatter, dataFileConfiguration.getUrlFormatter());
+        }
     }
 }

@@ -86,12 +86,11 @@ public class CloudRequestOriginTests {
         when(loggerFactory.getLogger(anyString())).thenReturn(logger);
 
         try {
-            Pipeline pipeline = new DeviceDetectionPipelineBuilder(loggerFactory, http)
+            try (Pipeline pipeline = new DeviceDetectionPipelineBuilder(loggerFactory, http)
                 .useCloud(resourceKey)
                 .setCloudRequestOrigin(this.origin)
                 .build();
-
-            try(FlowData data = pipeline.createFlowData()) {        
+                 FlowData data = pipeline.createFlowData()) {
                 data.addEvidence("query.user-agent",                         
                         "Mozilla/5.0 (Linux; Android 8.0.0; Pixel 2 XL " +
                         "Build/OPD1.170816.004) AppleWebKit/537.36 " +

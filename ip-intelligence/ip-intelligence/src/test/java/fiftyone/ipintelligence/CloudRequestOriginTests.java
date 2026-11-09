@@ -88,12 +88,11 @@ public class CloudRequestOriginTests {
         when(loggerFactory.getLogger(anyString())).thenReturn(logger);
 
         try {
-            Pipeline pipeline = new IPIntelligencePipelineBuilder(loggerFactory, http)
+            try (Pipeline pipeline = new IPIntelligencePipelineBuilder(loggerFactory, http)
                 .useCloud(resourceKey)
                 .setCloudRequestOrigin(this.origin)
                 .build();
-
-            try(FlowData data = pipeline.createFlowData()) {
+                 FlowData data = pipeline.createFlowData()) {
                 data.addEvidence("query.client-ip", "8.8.8.8")
                     .process();
             }

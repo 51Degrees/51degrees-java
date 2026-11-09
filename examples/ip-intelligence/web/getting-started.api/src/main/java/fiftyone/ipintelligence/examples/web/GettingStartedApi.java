@@ -38,7 +38,7 @@
  * A cloud example, such as GettingStartedCloud, can be pointed at this server as a
  * custom endpoint.
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-java-examples/blob/main/web/getting-started.api/src/main/java/fiftyone/ipintelligence/examples/web/GettingStartedApi.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/web/getting-started.api/src/main/java/fiftyone/ipintelligence/examples/web/GettingStartedApi.java).
  *
  * Required Maven Dependencies:
  * - [com.51degrees:ip-intelligence](https://central.sonatype.com/artifact/com.51degrees/ip-intelligence)
@@ -85,7 +85,7 @@ import java.util.Set;
 import java.util.zip.GZIPOutputStream;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
-import static fiftyone.ipintelligence.examples.shared.DataFileHelper.ENTERPRISE_DATA_FILE_REL_PATH;
+import static fiftyone.ipintelligence.examples.shared.DataFileHelper.LITE_DATA_FILE_REL_PATH;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
 /**
@@ -94,7 +94,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * and a JSON builder element which serialises the results.
  * <p>
  * The data file can be supplied as a command line argument. When no argument is given
- * the enterprise data file is looked for in the ip-intelligence-data directory.
+ * the enterprise data file is looked for in the cxx/data/ip-intelligence directory.
  * <p>
  * Note that the .NET version of this example also includes a device detection engine
  * in the same pipeline. This Java version is IP Intelligence only.
@@ -110,7 +110,7 @@ public class GettingStartedApi extends HttpServlet {
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
-        String dataFile = args.length > 0 ? args[0] : ENTERPRISE_DATA_FILE_REL_PATH;
+        String dataFile = args.length > 0 ? args[0] : LITE_DATA_FILE_REL_PATH;
         String dataFileLocation = DataFileHelper.getDataFileLocation(dataFile);
         logger.info("Running GettingStartedApi server using data file '{}'", dataFileLocation);
 
@@ -127,16 +127,29 @@ public class GettingStartedApi extends HttpServlet {
                     .setAutoUpdate(false)
                     .build(dataFileLocation, false);
             // The SequenceElement provides the sequence evidence required by
-            // the JsonBuilderElement.
+            // the JsonBuilderElement. The pipeline closes all three elements,
+            // the engine and its data file included, when destroy closes it.
             pipeline = new PipelineBuilder(LoggerFactory.getILoggerFactory())
                     .addFlowElement(new SequenceElementBuilder(
                             LoggerFactory.getILoggerFactory()).build())
                     .addFlowElement(engine)
                     .addFlowElement(new JsonBuilderElementBuilder(
                             LoggerFactory.getILoggerFactory()).build())
+                    .setAutoCloseElements(true)
                     .build();
             DataFileHelper.logDataFileInfo(engine);
         } catch (Exception e) {
+            // A servlet whose init fails is never destroyed, so whatever was
+            // built is closed here.
+            try {
+                if (pipeline != null) {
+                    pipeline.close();
+                } else if (engine != null) {
+                    engine.close();
+                }
+            } catch (Exception closeException) {
+                e.addSuppressed(closeException);
+            }
             throw new ServletException("Failed to create pipeline from data file '" +
                     dataFileLocation + "'", e);
         }

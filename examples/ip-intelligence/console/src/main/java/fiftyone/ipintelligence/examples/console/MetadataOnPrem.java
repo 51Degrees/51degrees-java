@@ -21,6 +21,7 @@
  * ********************************************************************* */
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngineBuilder;
@@ -41,7 +42,7 @@ import java.util.stream.StreamSupport;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
-import static fiftyone.ipintelligence.examples.shared.DataFileHelper.ENTERPRISE_DATA_FILE_REL_PATH;
+import static fiftyone.ipintelligence.examples.shared.DataFileHelper.LITE_DATA_FILE_REL_PATH;
 
 /**
  * This example shows how to access metadata about the IP Intelligence properties that are available 
@@ -50,25 +51,33 @@ import static fiftyone.ipintelligence.examples.shared.DataFileHelper.ENTERPRISE_
  * The example will output the available properties along with details about their data types and descriptions.
  * This helps you understand what IP Intelligence data you can access for your use case.
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-java-examples/blob/main/console/src/main/java/fiftyone/ipintelligence/examples/console/MetadataOnPrem.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/console/src/main/java/fiftyone/ipintelligence/examples/console/MetadataOnPrem.java).
  *
  * Required Maven Dependencies:
  * - [com.51degrees:ip-intelligence](https://central.sonatype.com/artifact/com.51degrees/ip-intelligence)
  *
- * This example requires an enterprise IP Intelligence data file (.ipi).
- * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metadataonprem.java&utm_term=header).
+ * By default the example uses the free Lite IP Intelligence data file, which it downloads when
+ * it is missing. To obtain an Enterprise data file, which has many more properties, please
+ * [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metadataonprem.java&utm_term=header).
  */
 public class MetadataOnPrem {
     private static final Logger logger = LoggerFactory.getLogger(GettingStartedOnPrem.class);
 
-    /* In this example, by default, the 51degrees IP Intelligence data file needs to be somewhere in the project
-    space, or you may specify another file as a command line parameter.
+    /* In this example, by default, the free 51degrees Lite IP Intelligence data file is used from
+    the data repository in cxx/data, and is downloaded if it is missing, or you may specify another
+    file as a command line parameter.
 
-    For testing, contact us to obtain an enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metadataonprem.java&utm_term=main */
+    Contact us for a copy of the Enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metadataonprem.java&utm_term=main */
+
+    /**
+     * Where to ask for a copy of the Enterprise data file, tagged with this
+     * example.
+     */
+    private static final String CONTACT_US = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metadataonprem.java&utm_term=enterprise-data-file";
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
-        String dataFile = args.length > 0 ? args[0] : ENTERPRISE_DATA_FILE_REL_PATH;
+        String dataFile = args.length > 0 ? args[0] : LITE_DATA_FILE_REL_PATH;
         run(dataFile, System.out);
     }
 
@@ -85,11 +94,10 @@ public class MetadataOnPrem {
                     dataFile, DataFileHelper.IPI_PATH_ENV_VAR);
             throw e;
         }
-        // Build a new on-premise IP Intelligence engine with the max performance profile.
-        // Note that there is no need to construct a complete pipeline in order to access
-        // the meta-data.
-        // If you already have a pipeline and just want to get a reference to the engine 
-        // then you can use `var engine = pipeline.GetElement<IPIntelligenceOnPremiseEngine>();`
+        // Build an on-premise IP Intelligence engine with the low memory
+        // profile. There is no need to build a complete pipeline to read the
+        // metadata. Code that already has a pipeline can get its engine with
+        // pipeline.getElement(IPIntelligenceOnPremiseEngine.class).
         try (IPIntelligenceOnPremiseEngine engine =
                      new IPIntelligenceOnPremiseEngineBuilder(LoggerFactory.getILoggerFactory())
                 // We use the low memory profile to minimize memory usage for this
@@ -118,6 +126,9 @@ public class MetadataOnPrem {
             writer.flush();
 
             DataFileHelper.logDataFileInfo(engine);
+            if (DataFileHelper.isFreeDataFile(engine)) {
+                DataFileHelper.writeEnterpriseOffer(writer, CONTACT_US);
+            }
         }
     }
 
@@ -175,59 +186,67 @@ public class MetadataOnPrem {
             throws Exception {
         // See outputProfileDetails for why this is a try-with-resource block.
         try (CloseableIterable<ComponentMetaData> components = engine.getComponents()) {
-            components.forEach(c -> {
+            for (ComponentMetaData c : components) {
                 output.println("Component - "+ c.getName());
                 outputProperties(c, output);
-            });
+            }
         }
     }
 
-    private static void outputProperties(ComponentMetaData component, PrintWriter output) {
-        if (component.getProperties().iterator().hasNext() == false) {
-            output.println("    ... no properties");
-            return;
+    private static void outputProperties(ComponentMetaData component, PrintWriter output)
+            throws Exception {
+        // The properties of a component, and the values of a property, are
+        // collections that are closed in the same way.
+        try (CloseableIterable<FiftyOneAspectPropertyMetaData> properties =
+                     component.getProperties()) {
+            if (properties.iterator().hasNext() == false) {
+                output.println("    ... no properties");
+                return;
+            }
+            for (FiftyOneAspectPropertyMetaData property : properties) {
+                // Output some details about the property.
+                // If we're outputting to console then we also add some formatting to make it
+                // more readable.
+                output.format("    Property - %s [Category: %s] (%s)\n        " +
+                                "Description: %s\n",
+                        property.getName(),
+                        property.getCategory(),
+                        property.getType().getName(),
+                        property.getDescription());
+
+                // Next, output a list of the possible values this property can have.
+                // Most properties in the Metrics category do not have defined
+                // values so exclude them.
+                if (property.getCategory().equals("Metrics")==false) {
+                    StringBuilder values = new StringBuilder("        Possible " +
+                            "values: ");
+                    try (CloseableIterable<ValueMetaData> propertyValues =
+                                 property.getValues()) {
+                        Spliterator<ValueMetaData> spliterator2 =
+                                propertyValues.spliterator();
+                        StreamSupport.stream(spliterator2, false)
+                                .limit(20)
+                                .forEach(value -> {
+                                    // add value
+                                    values.append(truncateToNl(value.getName()));
+                                    // add description if exists
+                                    String d = value.getDescription();
+                                    if (Objects.nonNull(d) && d.isEmpty() == false) {
+                                        values.append("(")
+                                                .append(d)
+                                                .append(")");
+                                    }
+                                    values.append(",");
+                                });
+
+                        if (spliterator2.estimateSize() > 20) {
+                            values.append(" +  more ...");
+                        }
+                    }
+                    output.println(values);
+                }
+            }
         }
-        component.getProperties()
-                .forEach(property-> {
-                            // Output some details about the property.
-                            // If we're outputting to console then we also add some formatting to make it
-                            // more readable.
-                            output.format("    Property - %s [Category: %s] (%s)\n        " +
-                                            "Description: %s\n",
-                                    property.getName(),
-                                    property.getCategory(),
-                                    property.getType().getName(),
-                                    property.getDescription());
-
-                            // Next, output a list of the possible values this property can have.
-                            // Most properties in the Metrics category do not have defined
-                            // values so exclude them.
-                            if (property.getCategory().equals("Metrics")==false) {
-                                StringBuilder values = new StringBuilder("        Possible " +
-                                        "values: ");
-                                Spliterator<ValueMetaData> spliterator2 =
-                                        property.getValues().spliterator();
-                                StreamSupport.stream(spliterator2, false)
-                                        .limit(20)
-                                        .forEach(value -> {
-                                            // add value
-                                            values.append(truncateToNl(value.getName()));
-                                            // add description if exists
-                                            String d = value.getDescription();
-                                            if (Objects.nonNull(d) && d.isEmpty() == false) {
-                                                values.append("(")
-                                                        .append(d)
-                                                        .append(")");
-                                            }
-                                            values.append(",");
-                                        });
-
-                                if (spliterator2.estimateSize() > 20) {
-                                    values.append(" +  more ...");
-                                }
-                                output.println(values);
-                            }
-                        });
     }
 
 

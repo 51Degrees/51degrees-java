@@ -122,9 +122,12 @@ public class PipelineBuilder
                         "The following builder parameters could not be processed: "
                                 + stringJoin(builderParams, ","));
             }
-        } catch (PipelineConfigurationException ex) {
-            logger.debug("Problem with pipeline configuration, " +
-                "failed to create pipeline.", ex);
+        } catch (Exception | Error ex) {
+            if (ex instanceof PipelineConfigurationException) {
+                logger.debug("Problem with pipeline configuration, " +
+                    "failed to create pipeline.", ex);
+            }
+            closeAfterFailure(flowElements, ex);
             throw ex;
         }
         // As the elements are all created within the builder, the user
@@ -134,7 +137,32 @@ public class PipelineBuilder
 
         // Build and return the pipeline using the list of flow elements
         // that have been created from the configuration options.
-        return build();
+        try {
+            return build();
+        } catch (Exception | Error ex) {
+            closeAfterFailure(flowElements, ex);
+            throw ex;
+        }
+    }
+
+    /**
+     * Closes the elements built so far when building from configuration
+     * fails, as no pipeline exists to close them. A failure to close one is
+     * added to the original failure, which is the one reported.
+     * @param elements the elements built so far, emptied once closed
+     * @param failure the reason building failed
+     */
+    private static void closeAfterFailure(
+        List<FlowElement> elements,
+        Throwable failure) {
+        for (FlowElement element : elements) {
+            try {
+                element.close();
+            } catch (Exception e) {
+                failure.addSuppressed(e);
+            }
+        }
+        elements.clear();
     }
 
     /**
@@ -377,17 +405,24 @@ public class PipelineBuilder
         // Iterate through the sub elements, creating them and
         // adding them to the list.
         int subCounter = 0;
-        for (ElementOptions subElement : elementOptions.subElements) {
-            if (subElement.subElements != null &&
-                subElement.subElements.size() > 0) {
-                throw new PipelineConfigurationException(
-                    "ElementOptions " + elementIndex + " contains nested " +
-                        "sub elements. This is not supported.");
-            } else {
-                addElementToList(parallelElements, subElement,
-                    "element " + subCounter + " in element " + elementIndex);
+        try {
+            for (ElementOptions subElement : elementOptions.subElements) {
+                if (subElement.subElements != null &&
+                    subElement.subElements.size() > 0) {
+                    throw new PipelineConfigurationException(
+                        "ElementOptions " + elementIndex + " contains nested " +
+                            "sub elements. This is not supported.");
+                } else {
+                    addElementToList(parallelElements, subElement,
+                        "element " + subCounter + " in element " + elementIndex);
+                }
+                subCounter++;
             }
-            subCounter++;
+        } catch (RuntimeException | Error ex) {
+            // These elements are not in the builder's list yet, so they are
+            // closed here.
+            closeAfterFailure(parallelElements, ex);
+            throw ex;
         }
         // Now we've created all the elements, create the
         // ParallelElements instance and add it to the pipeline's

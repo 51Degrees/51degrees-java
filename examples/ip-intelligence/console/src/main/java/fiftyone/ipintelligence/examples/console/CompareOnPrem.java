@@ -54,10 +54,11 @@
  * The output CSV file contains the input truth and the result fields for easy
  * evaluation.
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-java-examples/blob/main/console/src/main/java/fiftyone/ipintelligence/examples/console/CompareOnPrem.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/console/src/main/java/fiftyone/ipintelligence/examples/console/CompareOnPrem.java).
  *
- * This example requires an enterprise IP Intelligence data file (.ipi).
- * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-compareonprem.java&utm_term=contact-us).
+ * This example needs the location properties only the Enterprise IP Intelligence data file has.
+ * With the free Lite data file, which it uses by default, it says which and stops. To obtain an
+ * Enterprise data file, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-compareonprem.java&utm_term=contact-us).
  *
  * Required Maven Dependencies:
  * - [com.51degrees:ip-intelligence](https://central.sonatype.com/artifact/com.51degrees/ip-intelligence)
@@ -67,6 +68,7 @@
 
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.ipintelligence.IPIntelligenceOnPremisePipelineBuilder;
 import fiftyone.ipintelligence.IPIntelligencePipelineBuilder;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
 import fiftyone.ipintelligence.examples.console.areas.Calculations;
@@ -87,6 +89,7 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -95,7 +98,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
-import static fiftyone.ipintelligence.examples.shared.DataFileHelper.ENTERPRISE_DATA_FILE_REL_PATH;
+import static fiftyone.ipintelligence.examples.shared.DataFileHelper.LITE_DATA_FILE_REL_PATH;
 import static fiftyone.ipintelligence.examples.shared.PropertyHelper.firstValue;
 import static fiftyone.ipintelligence.examples.shared.PropertyHelper.tryGet;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
@@ -112,15 +115,31 @@ public class CompareOnPrem {
 
     /**
      * Relative path to the CSV file of truth records distributed with the
-     * ip-intelligence-data submodule.
+     * data repository, in cxx/data/ip-intelligence.
      */
     public static final String GEOIP_COMPARISON_EVIDENCE_REL_PATH =
-            "ip-intelligence-data/geoip_comparison_evidence.csv";
+            "ip-intelligence/geoip_comparison_evidence.csv";
 
     /**
      * Default name of the output file written to the working directory.
      */
     public static final String DEFAULT_OUTPUT_FILE = "compare-output.csv";
+
+    /**
+     * The properties the comparison asks the engine for, which only the
+     * Enterprise data file has.
+     */
+    public static final List<String> LOCATION_PROPERTIES = Arrays.asList(
+            "Latitude",
+            "Longitude",
+            "LocationConfidence",
+            "Areas");
+
+    /**
+     * Where to ask for a copy of the Enterprise data file, tagged with this
+     * example.
+     */
+    private static final String CONTACT_US = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-compareonprem.java&utm_term=enterprise-data-file";
 
     /**
      * Mean radius of the earth in kilometers, used in the haversine distance
@@ -159,11 +178,21 @@ public class CompareOnPrem {
         configureLogback(getFilePath("logback.xml"));
 
         // Use the supplied path for the data file
-        String dataFile = args.length > 0 ? args[0] : ENTERPRISE_DATA_FILE_REL_PATH;
+        String dataFile = DataFileHelper.getDataFileLocation(
+                args.length > 0 ? args[0] : LITE_DATA_FILE_REL_PATH);
         // Use the supplied path for the truth CSV file
         String csvTruthFile = args.length > 1 ? args[1] : GEOIP_COMPARISON_EVIDENCE_REL_PATH;
         // Get the location for the output file
         String outputFile = args.length > 2 ? args[2] : DEFAULT_OUTPUT_FILE;
+
+        // The free data files have none of the location properties.
+        if (DataFileHelper.lacksEnterpriseProperties(dataFile,
+                "Comparing known locations with IP Intelligence",
+                LOCATION_PROPERTIES,
+                new PrintWriter(System.out),
+                CONTACT_US)) {
+            return;
+        }
 
         try (PrintWriter writer = new PrintWriter(new FileWriter(outputFile))) {
             run(dataFile, csvTruthFile, writer);
@@ -191,18 +220,18 @@ public class CompareOnPrem {
             throw e;
         }
 
-        File truthFile = getFilePath(csvTruthFile);
+        File truthFile = DataFileHelper.findDataFile(csvTruthFile);
 
         int processors = Runtime.getRuntime().availableProcessors();
 
         // Build a new pipeline with an on-premise IP Intelligence engine using
         // the max performance profile and restricted to the properties needed.
-        try (Pipeline pipeline = new IPIntelligencePipelineBuilder()
+        IPIntelligenceOnPremisePipelineBuilder builder = new IPIntelligencePipelineBuilder()
                 .useOnPremise(dataFileLocation, false)
                 // We use the max performance profile for optimal lookup
                 // speed in this example. See the documentation for more detail
                 // on this and other configuration options.
-                // https://51degrees.com/documentation/_features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-compareonprem.java&utm_term=automatic-datafile-updates
+                // https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-compareonprem.java&utm_term=automatic-datafile-updates
                 .setPerformanceProfile(Constants.PerformanceProfiles.MaxPerformance)
                 // inhibit sharing usage for this example
                 .setShareUsage(false)
@@ -210,14 +239,13 @@ public class CompareOnPrem {
                 .setAutoUpdate(false)
                 .setDataUpdateOnStartup(false)
                 .setDataFileSystemWatcher(false)
-                // Set to only return from processing the properties needed.
-                .setProperty("Latitude")
-                .setProperty("Longitude")
-                .setProperty("LocationConfidence")
-                .setProperty("Areas")
                 // Optimize for the expected parallel workload.
-                .setConcurrency(processors)
-                .build()) {
+                .setConcurrency(processors);
+        // Set to only return from processing the properties needed.
+        for (String property : LOCATION_PROPERTIES) {
+            builder.setProperty(property);
+        }
+        try (Pipeline pipeline = builder.build()) {
 
             // Read the truth records, skipping duplicate IP addresses.
             List<Truth> truths = readTruths(truthFile);

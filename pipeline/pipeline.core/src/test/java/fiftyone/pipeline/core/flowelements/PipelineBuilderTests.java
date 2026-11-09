@@ -42,6 +42,7 @@ import org.slf4j.Logger;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -233,6 +234,35 @@ public class PipelineBuilderTests {
         builder.buildFromConfiguration(opts);
     }
 
+    /**
+     * When an element fails to build, the elements built before it are
+     * closed, and the failure reported is the original one.
+     */
+    @Test
+    public void PipelineBuilder_BuildFromConfiguration_SecondElementFails_FirstClosed() throws Exception {
+        RecordingElementBuilder.BUILT.clear();
+        PipelineOptions opts = new PipelineOptions();
+        ElementOptions first = new ElementOptions();
+        first.builderName = "RecordingElementBuilder";
+        opts.elements.add(first);
+        // The mandatory 'multiple' parameter is not set, so this one fails.
+        ElementOptions second = new ElementOptions();
+        second.builderName = "MultiplyByElementBuilder";
+        opts.elements.add(second);
+
+        maxErrors = 1;
+
+        try {
+            builder.buildFromConfiguration(opts);
+            fail("Expected the second element to fail to build");
+        } catch (PipelineConfigurationException e) {
+            assertEquals(0, e.getSuppressed().length);
+        }
+        assertEquals(1, RecordingElementBuilder.BUILT.size());
+        assertTrue("The first element should have been closed",
+            RecordingElementBuilder.BUILT.get(0).isClosed());
+    }
+
     @Test(expected = PipelineConfigurationException.class)
     public void PipelineBuilder_BuildFromConfiguration_NoBuilder() throws Exception {
         // Create the configuration object.
@@ -416,26 +446,27 @@ public class PipelineBuilderTests {
         options.elements.add(elOpts);
 
         // Pass the configuration to the builder to create the pipeline.
-        Pipeline pipeline = builder.buildFromConfiguration(options);
-        // Get the elements
-        ListSplitterElement splitterElement = pipeline.getElement(ListSplitterElement.class);
-        MultiplyByElement multiplyByElement = pipeline.getElement(MultiplyByElement.class);
+        try (Pipeline pipeline = builder.buildFromConfiguration(options)) {
+            // Get the elements
+            ListSplitterElement splitterElement = pipeline.getElement(ListSplitterElement.class);
+            MultiplyByElement multiplyByElement = pipeline.getElement(MultiplyByElement.class);
 
-        // Create, populate and process flow data.
-        try (FlowData flowData = pipeline.createFlowData()) {
-            flowData
-                .addEvidence(splitterElement.evidenceKeys.get(0), "1,2,abc")
-                .addEvidence(multiplyByElement.evidenceKeys.get(0), 25)
-                .process();
+            // Create, populate and process flow data.
+            try (FlowData flowData = pipeline.createFlowData()) {
+                flowData
+                    .addEvidence(splitterElement.evidenceKeys.get(0), "1,2,abc")
+                    .addEvidence(multiplyByElement.evidenceKeys.get(0), 25)
+                    .process();
     
-            // Get the results and verify them.
-            ListSplitterElementData splitterData = flowData.getFromElement(splitterElement);
-            TestElementData multiplyByData = flowData.getFromElement(multiplyByElement);
+                // Get the results and verify them.
+                ListSplitterElementData splitterData = flowData.getFromElement(splitterElement);
+                TestElementData multiplyByData = flowData.getFromElement(multiplyByElement);
     
-            assertEquals("1", splitterData.getResult().get(0));
-            assertEquals("2", splitterData.getResult().get(1));
-            assertEquals("abc", splitterData.getResult().get(2));
-            assertEquals(75, multiplyByData.getResult());
+                assertEquals("1", splitterData.getResult().get(0));
+                assertEquals("2", splitterData.getResult().get(1));
+                assertEquals("abc", splitterData.getResult().get(2));
+                assertEquals(75, multiplyByData.getResult());
+            }
         }
     }
 
@@ -443,58 +474,60 @@ public class PipelineBuilderTests {
         PipelineOptions options,
         SplitOption splitOn) throws Exception {
         // Pass the configuration to the builder to create the pipeline.
-        Pipeline pipeline = builder.buildFromConfiguration(options);
+        try (Pipeline pipeline = builder.buildFromConfiguration(options)) {
 
-        ListSplitterElement element = pipeline.getElement(ListSplitterElement.class);
-        // Check we've got the expected number of evidence keys.
-        assertEquals(1, element.evidenceKeys.size());
+            ListSplitterElement element = pipeline.getElement(ListSplitterElement.class);
+            // Check we've got the expected number of evidence keys.
+            assertEquals(1, element.evidenceKeys.size());
 
-        // Create, populate and process flow data.
-        try (FlowData flowData = pipeline.createFlowData()) {
-            flowData.addEvidence(element.evidenceKeys.get(0), "123,456|789,0")
-                .process();
+            // Create, populate and process flow data.
+            try (FlowData flowData = pipeline.createFlowData()) {
+                flowData.addEvidence(element.evidenceKeys.get(0), "123,456|789,0")
+                    .process();
     
-            // Get the result and verify it.
-            ListSplitterElementData elementData = flowData.getFromElement(element);
-            switch (splitOn) {
-                case Comma:
-                    assertEquals("123", elementData.getResult().get(0));
-                    assertEquals("456|789", elementData.getResult().get(1));
-                    assertEquals("0", elementData.getResult().get(2));
-                    break;
-                case Pipe:
-                    assertEquals("123,456", elementData.getResult().get(0));
-                    assertEquals("789,0", elementData.getResult().get(1));
-                    break;
-                case CommaMaxLengthThree:
-                    assertEquals("123", elementData.getResult().get(0));
-                    assertEquals("456", elementData.getResult().get(1));
-                    assertEquals("|78", elementData.getResult().get(2));
-                    assertEquals("9", elementData.getResult().get(3));
-                    assertEquals("0", elementData.getResult().get(4));
-                    break;
-                default:
-                    break;
+                // Get the result and verify it.
+                ListSplitterElementData elementData = flowData.getFromElement(element);
+                switch (splitOn) {
+                    case Comma:
+                        assertEquals("123", elementData.getResult().get(0));
+                        assertEquals("456|789", elementData.getResult().get(1));
+                        assertEquals("0", elementData.getResult().get(2));
+                        break;
+                    case Pipe:
+                        assertEquals("123,456", elementData.getResult().get(0));
+                        assertEquals("789,0", elementData.getResult().get(1));
+                        break;
+                    case CommaMaxLengthThree:
+                        assertEquals("123", elementData.getResult().get(0));
+                        assertEquals("456", elementData.getResult().get(1));
+                        assertEquals("|78", elementData.getResult().get(2));
+                        assertEquals("9", elementData.getResult().get(3));
+                        assertEquals("0", elementData.getResult().get(4));
+                        break;
+                    default:
+                        break;
+                }
             }
         }
     }
 
     private void VerifyMultiplyByElementPipeline(PipelineOptions options) throws Exception {
         // Pass the configuration to the builder to create the pipeline.
-        Pipeline pipeline = builder.buildFromConfiguration(options);
-        MultiplyByElement element = pipeline.getElement(MultiplyByElement.class);
+        try (Pipeline pipeline = builder.buildFromConfiguration(options)) {
+            MultiplyByElement element = pipeline.getElement(MultiplyByElement.class);
 
-        // Check we've got the expected number of evidence keys.
-        assertEquals(1, element.evidenceKeys.size());
+            // Check we've got the expected number of evidence keys.
+            assertEquals(1, element.evidenceKeys.size());
 
-        // Create, populate and process flow data.
-        try (FlowData flowData = pipeline.createFlowData()) {
-            flowData.addEvidence(element.evidenceKeys.get(0), 5)
-                .process();
+            // Create, populate and process flow data.
+            try (FlowData flowData = pipeline.createFlowData()) {
+                flowData.addEvidence(element.evidenceKeys.get(0), 5)
+                    .process();
     
-            // Get the result and verify it.
-            TestElementData elementData = flowData.getFromElement(element);
-            assertEquals(40, elementData.getResult());
+                // Get the result and verify it.
+                TestElementData elementData = flowData.getFromElement(element);
+                assertEquals(40, elementData.getResult());
+            }
         }
     }
 

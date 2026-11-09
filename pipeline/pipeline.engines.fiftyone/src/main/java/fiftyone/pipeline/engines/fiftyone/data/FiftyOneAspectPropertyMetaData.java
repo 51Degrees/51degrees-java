@@ -91,9 +91,10 @@ public interface FiftyOneAspectPropertyMetaData
     /**
      * Get the values which relate to the property i.e. the values which can be
      * returned for this property.
+     * The caller closes the collection, which can hold the engine's data set.
      * @return values which relate to the property
      */
-    Iterable<ValueMetaData> getValues();
+    CloseableIterable<ValueMetaData> getValues();
 
     /**
      * Get the default value for the property.

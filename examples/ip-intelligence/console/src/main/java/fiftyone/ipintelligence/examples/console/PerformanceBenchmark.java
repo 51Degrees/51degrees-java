@@ -32,10 +32,12 @@
  * This can help you optimize your IP Intelligence configuration for your specific use case
  * and understand the performance characteristics of different settings.
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-java-examples/blob/main/console/src/main/java/fiftyone/ipintelligence/examples/console/PerformanceBenchmark.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/console/src/main/java/fiftyone/ipintelligence/examples/console/PerformanceBenchmark.java).
  *
- * This example requires an enterprise IP Intelligence data file (.ipi).
- * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-performancebenchmark.java&utm_term=header).
+ * By default the example uses the free Asn IP Intelligence data file, which it downloads when it
+ * is missing, and is far smaller than the Lite file. It asks for RegisteredName and AsnName, so
+ * it runs with any of the data files. To obtain an Enterprise data file, please
+ * [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-performancebenchmark.java&utm_term=header).
  *
  * Required Maven Dependencies:
  * - [com.51degrees:ip-intelligence](https://central.sonatype.com/artifact/com.51degrees/ip-intelligence)
@@ -54,6 +56,7 @@ import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.IWeightedValue;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.Constants;
+import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.util.FileFinder;
 import org.apache.commons.lang3.BooleanUtils;
 import org.slf4j.Logger;
@@ -83,6 +86,18 @@ public class PerformanceBenchmark {
 
     public static final Logger logger = LoggerFactory.getLogger(PerformanceBenchmark.class);
 
+    /**
+     * Where to ask for a copy of the Enterprise data file, tagged with this
+     * example.
+     */
+    private static final String CONTACT_US = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-performancebenchmark.java&utm_term=enterprise-data-file";
+
+    // true when the benchmarks ran on a free data file
+    private boolean usedFreeDataFile;
+    // true when the data file has RegisteredName, which the free Asn data
+    // file does not, having AsnName in its place
+    private boolean readRegisteredName;
+
     // where the results of the tests are gathered
     private List<Future<BenchmarkResult>> resultList;
     private int numberOfThreads = DEFAULT_NUMBER_OF_THREADS;
@@ -100,7 +115,8 @@ public class PerformanceBenchmark {
     public static void main(String[] args) throws Exception {
         LogbackHelper.configureLogback(FileFinder.getFilePath("logback.xml"));
 
-        String dataFilename = args.length > 0 ? args[0] : null;
+        String dataFilename = args.length > 0 ? args[0] :
+                DataFileHelper.ASN_DATA_FILE_REL_PATH;
         String evidenceFilename = args.length > 1 ? args[1] : null;
         int numberOfThreads = DEFAULT_NUMBER_OF_THREADS;
         if (args.length > 2) {
@@ -147,6 +163,9 @@ public class PerformanceBenchmark {
             }
             executeBenchmark(config);
         }
+        if (usedFreeDataFile) {
+            DataFileHelper.writeEnterpriseOffer(writer, CONTACT_US);
+        }
 
         logger.info("Finished Performance example");
     }
@@ -173,7 +192,11 @@ public class PerformanceBenchmark {
             setPipelinePerformanceProperties(builder, config);
             pipeline = builder.build();
 
-            DataFileHelper.logDataFileInfo(pipeline.getElement(IPIntelligenceOnPremiseEngine.class));
+            IPIntelligenceOnPremiseEngine engine =
+                    pipeline.getElement(IPIntelligenceOnPremiseEngine.class);
+            DataFileHelper.logDataFileInfo(engine);
+            usedFreeDataFile = DataFileHelper.isFreeDataFile(engine);
+            readRegisteredName = DataFileHelper.hasProperty(engine, "RegisteredName");
 
             // run the benchmarks twice, once to warm up the JVM
             logger.info("Warming up");
@@ -215,8 +238,12 @@ public class PerformanceBenchmark {
         // reduces processing time compared with requesting properties from multiple components.
         // If you don't specify any properties, then all properties are returned,
         // here we choose "all properties" by specifying none, or just "RegisteredName"
+        // and "AsnName". The free Asn data file has AsnName, and the Lite and
+        // Enterprise data files have RegisteredName, so the benchmark runs
+        // with any of them.
         if (BooleanUtils.isFalse(config.allProperties)) {
             builder.setProperty("RegisteredName");
+            builder.setProperty("AsnName");
         }
     }
 
@@ -260,7 +287,7 @@ public class PerformanceBenchmark {
         // create a list of callables
         List<Callable<BenchmarkResult>> callables = new ArrayList<>();
         for (int i = 0; i < numberOfThreads; i++) {
-            callables.add(new BenchmarkRunnable(pipeline, evidence));
+            callables.add(new BenchmarkRunnable(pipeline, evidence, readRegisteredName));
         }
         // start multiple threads in a fixed pool
         ExecutorService service = Executors.newFixedThreadPool(numberOfThreads);
@@ -286,11 +313,15 @@ public class PerformanceBenchmark {
         private final BenchmarkResult result;
         private final List<Map<String, String>> testList;
         private final Pipeline pipeline;
+        private final boolean readRegisteredName;
 
-        BenchmarkRunnable(Pipeline pipeline, List<Map<String, String>> evidence) {
+        BenchmarkRunnable(Pipeline pipeline,
+                          List<Map<String, String>> evidence,
+                          boolean readRegisteredName) {
             this.testList = evidence;
             // initialise the benchmark variables
             this.pipeline = pipeline;
+            this.readRegisteredName = readRegisteredName;
             this.result = new BenchmarkResult();
 
             result.elapsedMillis = 0;
@@ -318,8 +349,10 @@ public class PerformanceBenchmark {
                     // the same data.
                     IPIntelligenceData ipData = flowData.get(IPIntelligenceData.class);
                     if (ipData != null) {
-                        if (ipData.getRegisteredName().hasValue()) {
-                            String value = ipData.getRegisteredName().getValue();
+                        AspectPropertyValue<String> name = readRegisteredName ?
+                                ipData.getRegisteredName() : ipData.getAsnName();
+                        if (name.hasValue()) {
+                            String value = name.getValue();
                             if (value != null) {
                                 result.checkSum += value.hashCode();
 //                                for (IWeightedValue<?> weightedValue : value) {

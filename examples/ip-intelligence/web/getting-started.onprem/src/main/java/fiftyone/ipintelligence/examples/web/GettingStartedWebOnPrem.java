@@ -31,10 +31,11 @@
  * 2. How evidence from the web request is automatically passed to the Pipeline
  * 3. How to retrieve the results in your web application
  * 
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-java-examples/blob/master/web/getting-started.onprem/src/main/java/fiftyone/ipintelligence/examples/web/GettingStartedWebOnPrem.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/web/getting-started.onprem/src/main/java/fiftyone/ipintelligence/examples/web/GettingStartedWebOnPrem.java).
  *
- * This example requires an enterprise IP Intelligence data file (.ipi). 
- * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-getting-started.onprem-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedwebonprem.java&utm_term=header).
+ * By default the example uses the free Lite IP Intelligence data file, which it downloads when
+ * it is missing, and shows each property only the Enterprise data file has as needing it. To
+ * obtain an Enterprise data file, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-getting-started.onprem-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedwebonprem.java&utm_term=header).
  *
  * Required Maven Dependencies:
  * - [com.51degrees:ip-intelligence](https://central.sonatype.com/artifact/com.51degrees/ip-intelligence)
@@ -45,8 +46,9 @@
  * The `PipelineFilter` is used to intercept requests and perform IP Intelligence. The results
  * will be stored in the HttpServletRequest object.
  *
- * The results of the lookup can be accessed by using a FlowDataProvider which
- * is responsible for managing the lifecycle of the flowData - do NOT dispose
+ * The results of the lookup can be accessed by using a FlowDataProvider. The
+ * PipelineFilter closes the FlowData at the end of the request, so it is not
+ * closed by the example.
  * ```{java}
  * FlowData flowData = flowDataProvider.getFlowData(request);
  * IPIntelligenceData ipData = flowData.get(IPIntelligenceData.class);
@@ -59,9 +61,12 @@
 
 package fiftyone.ipintelligence.examples.web;
 
+import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
+import fiftyone.ipintelligence.examples.shared.DataFileHelper;
 import fiftyone.ipintelligence.shared.IPIntelligenceData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.FlowElement;
+import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.web.services.FlowDataProviderCore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,16 +80,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
-import static fiftyone.ipintelligence.examples.shared.DataFileHelper.ENTERPRISE_DATA_FILE_REL_PATH;
+import static fiftyone.ipintelligence.examples.shared.DataFileHelper.LITE_DATA_FILE_REL_PATH;
 import static fiftyone.ipintelligence.examples.shared.DataFileHelper.IPI_PATH_ENV_VAR;
-import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asStringProperty;
-import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asIntegerProperty;
-import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asFloatProperty;
-import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asIPAddressProperty;
-import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asWktStringProperty;
-import static fiftyone.ipintelligence.examples.shared.PropertyHelper.tryGet;
+import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asString;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
 /**
@@ -101,8 +102,9 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * 
  * The configuration file for the pipeline is at src/main/webapp/WEB-INF/51Degrees-OnPrem.xml
  * 
- * This example requires an enterprise IP Intelligence data file (.ipi). 
- * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-getting-started.onprem-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedwebonprem.java&utm_term=gettingstartedwebonprem).
+ * By default the example uses the free Lite IP Intelligence data file, which it downloads when
+ * it is missing, and shows each property only the Enterprise data file has as needing it. To
+ * obtain an Enterprise data file, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-getting-started.onprem-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedwebonprem.java&utm_term=gettingstartedwebonprem).
  */
 public class GettingStartedWebOnPrem extends HttpServlet {
     private static final long serialVersionUID = 1734154705981153540L;
@@ -113,11 +115,11 @@ public class GettingStartedWebOnPrem extends HttpServlet {
         logger.info("Running Example {}", GettingStartedWebOnPrem.class);
 
         // Use the supplied path for the data file
-        String dataFile = args.length > 0 ? args[0] : ENTERPRISE_DATA_FILE_REL_PATH;
+        String dataFile = args.length > 0 ? args[0] : LITE_DATA_FILE_REL_PATH;
 
         // Set data file location using DataFileHelper
         try {
-            String dataFilePath = fiftyone.ipintelligence.examples.shared.DataFileHelper.getDataFileLocation(dataFile);
+            String dataFilePath = DataFileHelper.getDataFileLocation(dataFile);
             System.setProperty("TestDataFile", dataFilePath);
             logger.info("Using data file: {}", dataFilePath);
         } catch (Exception e) {
@@ -155,7 +157,8 @@ public class GettingStartedWebOnPrem extends HttpServlet {
         String inputIpAddress = request.getParameter("client-ip");
         
         // The lookup has already been carried out by the PipelineFilter
-        // which is responsible for the lifecycle of the flowData - do NOT dispose
+        // which closes the FlowData at the end of the request, so it is not
+        // closed here.
         FlowData flowData = flowDataProvider.getFlowData(request);
         
         // Determine target IP for display.
@@ -183,14 +186,6 @@ public class GettingStartedWebOnPrem extends HttpServlet {
             String htmlTemplate = loadTemplate(resourceBase + "/WEB-INF/html/index.html");
             String processedHtml = substituteTemplateValues(htmlTemplate, ipiData, targetIp, flowData);
             out.println(processedHtml);
-        } finally {
-            if (flowData != null) {
-                try {
-                    flowData.close();
-                } catch (Exception e) {
-                    logger.warn("Error closing flow data", e);
-                }
-            }
         }
     }
     
@@ -207,41 +202,50 @@ public class GettingStartedWebOnPrem extends HttpServlet {
      * Replace template variables with IP Intelligence data
      */
     private String substituteTemplateValues(String template, IPIntelligenceData ipiData, String inputIp, FlowData flowData) {
+        // The engine says which properties its data file has.
+        IPIntelligenceOnPremiseEngine ipiEngine =
+            flowData.getPipeline().getElement(IPIntelligenceOnPremiseEngine.class);
         return template
             .replace("${DATA_FILE_WARNING}", HtmlContentHelper.getDataFileAgeWarning(flowData))
             .replace("${INPUT_IP_ADDRESS}", inputIp != null ? inputIp : "")
-            .replace("${REGISTERED_NAME}", asStringProperty(tryGet(ipiData::getRegisteredName)))
-            .replace("${REGISTERED_OWNER}", asStringProperty(tryGet(ipiData::getRegisteredOwner)))
-            .replace("${REGISTERED_COUNTRY}", asStringProperty(tryGet(ipiData::getRegisteredCountry)))
-            .replace("${IP_RANGE_START}", asIPAddressProperty(tryGet(ipiData::getIpRangeStart)))
-            .replace("${IP_RANGE_END}", asIPAddressProperty(tryGet(ipiData::getIpRangeEnd)))
-            .replace("${COUNTRY}", asStringProperty(tryGet(ipiData::getCountry)))
-            .replace("${COUNTRY_CODE}", asStringProperty(tryGet(ipiData::getCountryCode)))
-            .replace("${COUNTRY_CODE3}", asStringProperty(tryGet(ipiData::getCountryCode3)))
-            .replace("${REGION}", asStringProperty(tryGet(ipiData::getRegion)))
-            .replace("${STATE}", asStringProperty(tryGet(ipiData::getState)))
-            .replace("${TOWN}", asStringProperty(tryGet(ipiData::getTown)))
-            .replace("${LATITUDE}", asFloatProperty(tryGet(ipiData::getLatitude)))
-            .replace("${LONGITUDE}", asFloatProperty(tryGet(ipiData::getLongitude)))
-            .replace("${AREAS}", asWktStringProperty(tryGet(ipiData::getAreas)))
-            .replace("${AREAS_JS}", escapeForJs(asWktStringProperty(tryGet(ipiData::getAreas))))
-            .replace("${ACCURACY_RADIUS}", asIntegerProperty(tryGet(ipiData::getAccuracyRadiusMin)))
-            .replace("${TIME_ZONE_OFFSET}", asIntegerProperty(tryGet(ipiData::getTimeZoneOffset)))
+            .replace("${REGISTERED_NAME}", value(ipiEngine, "RegisteredName", ipiData::getRegisteredName))
+            .replace("${REGISTERED_OWNER}", value(ipiEngine, "RegisteredOwner", ipiData::getRegisteredOwner))
+            .replace("${REGISTERED_COUNTRY}", value(ipiEngine, "RegisteredCountry", ipiData::getRegisteredCountry))
+            .replace("${IP_RANGE_START}", value(ipiEngine, "IpRangeStart", ipiData::getIpRangeStart))
+            .replace("${IP_RANGE_END}", value(ipiEngine, "IpRangeEnd", ipiData::getIpRangeEnd))
+            .replace("${COUNTRY}", value(ipiEngine, "Country", ipiData::getCountry))
+            .replace("${COUNTRY_CODE}", value(ipiEngine, "CountryCode", ipiData::getCountryCode))
+            .replace("${COUNTRY_CODE3}", value(ipiEngine, "CountryCode3", ipiData::getCountryCode3))
+            .replace("${REGION}", value(ipiEngine, "Region", ipiData::getRegion))
+            .replace("${STATE}", value(ipiEngine, "State", ipiData::getState))
+            .replace("${TOWN}", value(ipiEngine, "Town", ipiData::getTown))
+            .replace("${LATITUDE}", value(ipiEngine, "Latitude", ipiData::getLatitude))
+            .replace("${LONGITUDE}", value(ipiEngine, "Longitude", ipiData::getLongitude))
+            .replace("${AREAS}", value(ipiEngine, "Areas", ipiData::getAreas))
+            // The map shows nothing when the data file has no areas.
+            .replace("${AREAS_JS}", DataFileHelper.hasProperty(ipiEngine, "Areas") ?
+                escapeForJs(asString(ipiData.getAreas())) : "")
+            .replace("${ACCURACY_RADIUS}", value(ipiEngine, "AccuracyRadiusMin", ipiData::getAccuracyRadiusMin))
+            .replace("${TIME_ZONE_OFFSET}", value(ipiEngine, "TimeZoneOffset", ipiData::getTimeZoneOffset))
             .replace("${EVIDENCE_ROWS}", buildEvidenceRows(flowData))
-            // On-premise engine: only invite the user to contact us about more
-            // properties and features when running against the free Lite tier.
+            // On-premise engine: only invite the user to contact us about the
+            // Enterprise data file when running on a free data file.
             .replace("${CONTACT_MESSAGE}", HtmlContentHelper.getContactMessage(
-                HtmlContentHelper.ContactMessageVariant.ON_PREMISE, isLiteDataFile(flowData)));
+                HtmlContentHelper.ContactMessageVariant.ON_PREMISE,
+                DataFileHelper.isFreeDataFile(ipiEngine)));
     }
 
     /**
-     * Determine whether the on-premise engine is using the free Lite tier data file.
+     * The value of a property for the page, or that it needs the Enterprise
+     * data file when the data file in use does not have it. The value is
+     * only read when the data file has the property.
      */
-    private boolean isLiteDataFile(FlowData flowData) {
-        fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine engine =
-            flowData.getPipeline().getElement(
-                fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine.class);
-        return engine != null && engine.getDataSourceTier().equals("Lite");
+    private static String value(IPIntelligenceOnPremiseEngine engine,
+                                String property,
+                                Supplier<AspectPropertyValue<?>> value) {
+        return DataFileHelper.hasProperty(engine, property) ?
+                asString(value.get()) :
+                DataFileHelper.NEEDS_ENTERPRISE;
     }
     
     /**

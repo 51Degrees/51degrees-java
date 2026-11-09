@@ -28,6 +28,7 @@ import fiftyone.ipintelligence.shared.testhelpers.Wrapper;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
 import fiftyone.pipeline.engines.Constants;
+import fiftyone.pipeline.engines.fiftyone.data.CloseableIterable;
 import fiftyone.pipeline.engines.fiftyone.data.ComponentMetaData;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
 import fiftyone.pipeline.engines.fiftyone.data.ProfileMetaData;
@@ -69,15 +70,15 @@ public class WrapperHash implements Wrapper {
     }
 
     @Override
-    public Iterable<ValueMetaData> getValues() {
+    public CloseableIterable<ValueMetaData> getValues() {
         return engine.getValues();
     }
 
-    public Iterable<ProfileMetaData> getProfiles() {
+    public CloseableIterable<ProfileMetaData> getProfiles() {
         return engine.getProfiles();
     }
 
-    public Iterable<ComponentMetaData> getComponents() {
+    public CloseableIterable<ComponentMetaData> getComponents() {
         return engine.getComponents();
     }
 

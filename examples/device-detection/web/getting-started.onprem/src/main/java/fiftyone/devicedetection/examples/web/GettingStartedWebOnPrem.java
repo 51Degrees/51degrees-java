@@ -22,6 +22,7 @@
 
 package fiftyone.devicedetection.examples.web;
 
+import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import fiftyone.devicedetection.shared.DeviceData;
 import fiftyone.pipeline.core.configuration.PipelineOptions;
 import fiftyone.pipeline.core.configuration.PipelineOptionsFactory;
@@ -34,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.File;
 import java.io.PrintWriter;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
@@ -48,7 +50,8 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * <p>
  * The data file is taken from the 51DEGREES_DD_PATH environment variable, then
  * from TestDataFile (an environment variable or system property), and otherwise
- * the free Lite file in device-detection-data is used.
+ * the free Lite file in cxx/data/device-detection is used, which is downloaded
+ * before the server starts if it is missing.
  * <p>
  * The server listens on port 8081 and stops when Enter is pressed. If the PORT
  * environment variable is set, the server listens on that port instead and runs
@@ -62,6 +65,16 @@ public class GettingStartedWebOnPrem extends HttpServlet {
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
         logger.info("Running Example {}", GettingStartedWebOnPrem.class);
+
+        // If the data file the configuration names is not at that path, it
+        // is searched for, and the free Lite file is downloaded if missing.
+        String dataFile = PipelineOptionsFactory.getOptionsFromFile(
+                getFilePath(resourceBase) + "/WEB-INF/51Degrees-OnPrem.xml")
+                .findAndSubstitute("DeviceDetectionHashEngine", "DataFile");
+        if (!new File(dataFile).exists()) {
+            System.setProperty("TestDataFile",
+                    DataFileHelper.getDataFileLocation(dataFile));
+        }
 
         String portEnv = System.getenv("PORT");
         if (portEnv != null) {
@@ -145,7 +158,7 @@ public class GettingStartedWebOnPrem extends HttpServlet {
  *
  * @include{doc} example-getting-started-web.txt
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/device-detection-java-examples/blob/master/web/getting-started.onprem/src/main/java/fiftyone/devicedetection/examples/web/GettingStartedWebOnPrem.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/device-detection/web/getting-started.onprem/src/main/java/fiftyone/devicedetection/examples/web/GettingStartedWebOnPrem.java).
  *
  * @include{doc} example-require-datafile.txt
  *

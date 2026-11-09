@@ -72,7 +72,7 @@ public class TacCloud {
         // For a demonstration of how to do this in code instead, see the
         // NativeModelLookup example.
         // For more information about builders in general see the documentation at
-        // https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-taccloud.java&utm_term=run
+        // https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-taccloud.java&utm_term=run
 
         // the configuration file is in the resources directory
         File optionsFile = getFilePath("tacCloud.xml");
@@ -138,7 +138,7 @@ public class TacCloud {
  * [pricing page](https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-taccloud.java&utm_term=top). Once this is done, a resource key with the
  * properties required by this example can be created [here](https://configure.51degrees.com/QKyYH5XT?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-taccloud.java&utm_term=top).
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/device-detection-java-examples/blob/master/console/src/main/java/fiftyone/devicedetection/examples/console/TacCloud.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/device-detection/console/src/main/java/fiftyone/devicedetection/examples/console/TacCloud.java).
  *
  * @include{doc} example-require-resourcekey.txt
  */

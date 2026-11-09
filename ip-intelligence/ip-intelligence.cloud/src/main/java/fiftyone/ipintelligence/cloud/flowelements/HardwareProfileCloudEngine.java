@@ -35,7 +35,7 @@ import org.slf4j.Logger;
  * Engine that takes the JSON response from the {@link CloudRequestEngine} and
  * uses it to populate a {@link MultiIPIDataCloud} instance for easier
  * consumption.
- * @see <a href="https://github.com/51Degrees/specifications/blob/main/ip-intelligence-specification/pipeline-elements/hardware-profile-lookup-cloud.md">Specification</a>
+ * @see <a href="https://github.com/51Degrees/specifications/blob/main/device-detection-specification/pipeline-elements/hardware-profile-lookup-cloud.md">Specification</a>
  */
 public class HardwareProfileCloudEngine
     extends PropertyKeyedCloudEngineBase<MultiIPIDataCloud, IPIntelligenceData> {

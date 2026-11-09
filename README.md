@@ -1,10 +1,31 @@
-# 51Degrees Java
+# 51Degrees Device Detection and IP Intelligence for Java
 
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-java "Data rewards the curious") **Java packages for the Pipeline API, Device Detection, IP Intelligence and Location**
+<img src=".github/images/logo.png" alt="51Degrees" title="Data rewards the curious" width="160">
 
-This repository holds the 51Degrees Java packages. Each package is still
-published to Maven Central under its own coordinates, and the examples show
-how a project of your own uses them.
+**Java packages for the Pipeline API, Device Detection, IP Intelligence and Location**
+
+Our User-Agent parser for Java supports Device Detection, browser detection, mobile detection, and crawler detection on-premise or in the cloud. IP Intelligence adds IP geolocation, including IP to country data.
+
+It reads User-Agent and User-Agent Client Hints, HTTP request headers that carry browser and device information. For cloud bot detection, Human Confidence reports confidence that a person is viewing the page.
+
+## Install
+
+Each product is a separate Maven Central package. For Device Detection, cloud or on-premise:
+
+```xml
+<!-- Make sure to select the latest version from https://mvnrepository.com/artifact/com.51degrees/pipeline.device-detection -->
+<dependency>
+    <groupId>com.51degrees</groupId>
+    <artifactId>device-detection</artifactId>
+    <version>4.5.x</version>
+</dependency>
+```
+
+The product guides below list the other packages. To build from source, see [Getting the code](#getting-the-code).
+
+Try the [User-Agent tester](https://51degrees.com/developers/user-agent-tester?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=install) and [IP tester](https://51degrees.com/developers/ip-tester?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=install). For cloud use, [create a Resource Key](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=install).
+
+Created from `pipeline-java`, `device-detection-java`, `ip-intelligence-java`, `location-java`, `device-detection-java-examples`, and `ip-intelligence-java-examples`, this repository continues their work.
 
 | Product | Read first | Documentation |
 | --- | --- | --- |
@@ -23,7 +44,7 @@ how a project of your own uses them.
 | `location` | The Location packages, `com.51degrees:geo-location*` |
 | `examples/device-detection` | Console and web examples for Device Detection |
 | `examples/ip-intelligence` | Console and web examples for IP Intelligence, including the mixed examples that run both products |
-| `cxx` | Submodule of [51degrees-cxx](https://github.com/51Degrees/51degrees-cxx), with the C and C++ code the on-premise engines are built from and the data file submodules |
+| `cxx` | Submodule of [51degrees-cxx](https://github.com/51Degrees/51degrees-cxx), with the C and C++ code the on-premise engines are built from and the [data](https://github.com/51Degrees/data) submodule in `cxx/data` |
 | `pom.xml` | The reactor that builds everything here. It is never published |
 | `ci` | The scripts the shared 51Degrees CI workflows call |
 
@@ -34,10 +55,20 @@ git clone --recurse-submodules https://github.com/51Degrees/51degrees-java.git
 cd 51degrees-java
 ```
 
-The free Device Detection Lite data file in `cxx/device-detection-data` is
-stored with [Git LFS](https://git-lfs.github.com/). Run `git lfs pull` in that
-folder to fetch it. The IP Intelligence ASN file in `cxx/ip-intelligence-data`
-is plain git.
+The free data files come from the [data](https://github.com/51Degrees/data)
+repository, which is the `cxx/data` submodule. Each one is listed there as a
+`.link` file, and a script downloads them all into place:
+
+```
+cxx/data/get-data-files.sh
+```
+
+On Windows, run `cxx\data\get-data-files.ps1` in PowerShell instead. The
+examples run the script themselves for a free file they need that is missing.
+
+In a clone made before the data repository was added, delete the
+`cxx/device-detection-data` and `cxx/ip-intelligence-data` folders once cxx no
+longer includes them, because Git leaves a removed submodule's folder on disk.
 
 ## Building
 
@@ -67,9 +98,10 @@ mvn install -DskipTests -pl device-detection -am
 mvn surefire:test
 ```
 
-The cloud tests need a resource key, passed as `-DTestResourceKey=<key>`. The
-on-premise IP Intelligence tests need the Lite or Enterprise data file, which
-is not in the repository; see `ip-intelligence/README.md` for how to get it.
+The cloud tests need a Resource Key, passed as `-DTestResourceKey=<key>`. The
+on-premise tests need the free data files, which the script in
+[Getting the code](#getting-the-code) downloads. For the Enterprise IP
+Intelligence data file, see `ip-intelligence/README.md`.
 Tests find data files by searching from the root of this repository, so run
 Maven from here rather than from inside a package folder.
 
@@ -106,6 +138,16 @@ with the plain version, such as `4.5.127`.
 
 ## History
 
+| Earlier repository | What it held |
+| --- | --- |
+| [pipeline-java](https://github.com/51Degrees/pipeline-java) | The Pipeline API |
+| [device-detection-java](https://github.com/51Degrees/device-detection-java) | Device Detection |
+| [ip-intelligence-java](https://github.com/51Degrees/ip-intelligence-java) | IP Intelligence |
+| [location-java](https://github.com/51Degrees/location-java) | Location |
+| [device-detection-java-examples](https://github.com/51Degrees/device-detection-java-examples) | Device Detection examples |
+| [ip-intelligence-java-examples](https://github.com/51Degrees/ip-intelligence-java-examples) | IP Intelligence examples |
+
+
 The folders `pipeline`, `device-detection`, `ip-intelligence`, `location` and
 the two example folders were brought in from the separate repositories
 [pipeline-java](https://github.com/51Degrees/pipeline-java),
@@ -120,6 +162,14 @@ SHA. The history of a file before the import is under its old path, so read it
 from the imported commit, for example `git log aff7c544 -- pom.xml` for what is
 now `pipeline/pom.xml`.
 
-## Licence
+## License
 
 [European Union Public Licence v1.2](LICENSE)
+
+## Find out more
+
+- [Device Detection](https://51degrees.com/device-detection?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=find-out-more)
+- [IP Intelligence](https://51degrees.com/ip-intelligence?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=find-out-more)
+- [Bots and humans](https://51degrees.com/bots-and-humans?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=find-out-more)
+- [Documentation](https://51degrees.com/documentation/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=find-out-more)
+- https://github.com/51Degrees/51degrees-cxx

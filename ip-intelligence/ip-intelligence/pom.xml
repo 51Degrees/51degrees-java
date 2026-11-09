@@ -13,7 +13,7 @@
     <artifactId>ip-intelligence</artifactId>
     <name>51Degrees :: IP Intelligence</name>
     <description>IP Intelligence and IP geolocation for Java. Finds an IP address's likely location (country, region, town, and coordinates), connection type, and network. Works on-premise with a data file or in the cloud. Built on the 51Degrees Pipeline API. An alternative to MaxMind and IPinfo.</description>
-    <url>https://51degrees.com?utm_source=maven&amp;utm_medium=package&amp;utm_campaign=51degrees-java&amp;utm_content=ip-intelligence-pom.xml&amp;utm_term=url</url>
+    <url>https://github.com/51Degrees/51degrees-java</url>
 
     <dependencies>
         <dependency>

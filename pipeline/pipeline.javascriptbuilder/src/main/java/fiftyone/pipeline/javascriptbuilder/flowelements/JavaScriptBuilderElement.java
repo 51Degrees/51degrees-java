@@ -42,6 +42,7 @@ import org.slf4j.Logger;
 import java.io.*;
 import java.net.URLEncoder;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 import static fiftyone.pipeline.core.Constants.*;
@@ -67,6 +68,12 @@ public class JavaScriptBuilderElement
     protected final String objName;
     protected final boolean enableCookies;
     private final Mustache mustache;
+
+    /**
+     * Set once a callback URL that is not valid has been logged, because a
+     * misconfigured element would otherwise log on every request.
+     */
+    private final AtomicBoolean invalidUrlLogged = new AtomicBoolean(false);
 
     /**
      * The object name is written into the script as the name of a global
@@ -392,35 +399,48 @@ public class JavaScriptBuilderElement
         return jsonObject.toString(0);
     }
 
+    /**
+     * Gets the callback URL, or null when the protocol, host or endpoint is
+     * not set or the URL is not valid, as {@link CallbackUrl} decides. A URL
+     * that is not valid is logged as an error the first time only, quoted
+     * and escaped so that it cannot start a new log line.
+     */
     private String getUrl(String protocol, String host) {
-        String url = null;
-        if (protocol != null && !protocol.isEmpty() &&
-                host != null && !host.isEmpty() &&
-                endpoint != null && !endpoint.isEmpty()) {
-            boolean contextRootPopulated = contextRoot != null &&
-                    !contextRoot.isEmpty() && !contextRoot.equals("/");
-
-            // Make sure that each part of the URL except host starts with a '/'
-            // and each part except endpoint does NOT end with one.
-            if (endpoint.charAt(0) != '/') {
-                endpoint = "/" + endpoint;
-            }
-            if (contextRootPopulated && contextRoot.charAt(0) != '/') {
-                contextRoot = "/" + contextRoot;
-            }
-            if (host.charAt(host.length() - 1) == '/') {
-                host = host.substring(0, host.length() - 1);
-            }
-            if (contextRootPopulated && contextRoot.charAt(contextRoot.length() - 1) == '/') {
-                contextRoot = contextRoot.substring(0, contextRoot.length() - 1);
-            }
-
-            url = protocol + "://" + host +
-                    (contextRootPopulated ? contextRoot : "") +
-                    endpoint;
+        CallbackUrl url = CallbackUrl.of(protocol, host, getPath());
+        if (url == null) {
+            return null;
         }
+        if (url.valid) {
+            return url.url;
+        }
+        if (invalidUrlLogged.compareAndSet(false, true)) {
+            logger.error("The generated URL " + JSONObject.quote(url.url) +
+                " is not valid, so the JavaScript has no callback URL. " +
+                "Check the JavaScript builder's protocol, host, context " +
+                "root and endpoint, and the protocol and host evidence. " +
+                "This is reported once.");
+        }
+        return null;
+    }
 
-        return url;
+    /**
+     * Gets the endpoint with the context root in front of it, where there is
+     * a context root. The context root starts with a '/' and does not end
+     * with one, and a '/' joins it to the endpoint.
+     */
+    private String getPath() {
+        boolean contextRootPopulated = contextRoot != null &&
+            contextRoot.isEmpty() == false && contextRoot.equals("/") == false;
+        if (contextRootPopulated == false || CallbackUrl.isBlank(endpoint)) {
+            return endpoint;
+        }
+        String root = contextRoot.charAt(0) == '/'
+            ? contextRoot
+            : "/" + contextRoot;
+        if (root.charAt(root.length() - 1) == '/') {
+            root = root.substring(0, root.length() - 1);
+        }
+        return root + (endpoint.charAt(0) == '/' ? endpoint : "/" + endpoint);
     }
 
     /**

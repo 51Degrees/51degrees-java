@@ -25,7 +25,7 @@ package fiftyone.devicedetection.cloud;
 import fiftyone.devicedetection.shared.testhelpers.UserAgentGenerator;
 import fiftyone.pipeline.util.FileFinder;
 
-import static fiftyone.devicedetection.shared.testhelpers.FileUtils.UA_FILE_NAME;
+import static fiftyone.devicedetection.shared.testhelpers.FileUtils.UA_FILE_PATH;
 
 public class TestsBase {
 
@@ -43,7 +43,7 @@ public class TestsBase {
     protected void testInitialize() throws Exception {
         wrapper = new WrapperCloud();
         userAgents = new UserAgentGenerator(
-            FileFinder.getFilePath(UA_FILE_NAME));
+            FileFinder.getFilePath(UA_FILE_PATH));
     }
 
     public void testCleanup() {

@@ -31,7 +31,7 @@
  * 2. How evidence from the web request is automatically passed to the Pipeline
  * 3. How to retrieve the results in your web application
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-java-examples/blob/main/web/getting-started.cloud/src/main/java/fiftyone/ipintelligence/examples/web/GettingStartedWebCloud.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/web/getting-started.cloud/src/main/java/fiftyone/ipintelligence/examples/web/GettingStartedWebCloud.java).
  *
  * To run this example, you will eventually need to create a Resource Key. A Resource Key is used as
  * shorthand to store the particular set of properties you are interested in as well as any
@@ -47,8 +47,9 @@
  * The `PipelineFilter` is used to intercept requests and perform IP Intelligence. The results
  * will be stored in the HttpServletRequest object.
  *
- * The results of the lookup can be accessed by using a FlowDataProvider which
- * is responsible for managing the lifecycle of the flowData - do NOT dispose
+ * The results of the lookup can be accessed by using a FlowDataProvider. The
+ * PipelineFilter closes the FlowData at the end of the request, so it is not
+ * closed by the example.
  * ```{java}
  * FlowData flowData = flowDataProvider.getFlowData(request);
  * IPIntelligenceData ipData = flowData.get(IPIntelligenceData.class);
@@ -137,7 +138,8 @@ public class GettingStartedWebCloud extends HttpServlet {
         String inputIpAddress = request.getParameter("client-ip");
 
         // The lookup has already been carried out by the PipelineFilter
-        // which is responsible for the lifecycle of the flowData - do NOT dispose
+        // which closes the FlowData at the end of the request, so it is not
+        // closed here.
         FlowData flowData = flowDataProvider.getFlowData(request);
 
         // Determine target IP for display.
@@ -165,14 +167,6 @@ public class GettingStartedWebCloud extends HttpServlet {
             String htmlTemplate = loadTemplate(resourceBase + "/WEB-INF/html/index.html");
             String processedHtml = substituteTemplateValues(htmlTemplate, ipiData, targetIp, flowData);
             out.println(processedHtml);
-        } finally {
-            if (flowData != null) {
-                try {
-                    flowData.close();
-                } catch (Exception e) {
-                    logger.warn("Error closing flow data", e);
-                }
-            }
         }
     }
 

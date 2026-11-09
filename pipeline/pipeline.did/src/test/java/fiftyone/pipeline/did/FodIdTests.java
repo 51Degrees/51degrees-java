@@ -46,6 +46,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
@@ -456,7 +457,7 @@ public class FodIdTests {
 
     @Test
     public void fromBase64_AcceptsStandardUrlSafeAndUnpadded() throws Exception {
-        String standard = factory.signedOwidBase64(canonicalPayload());
+        String standard = standardWithBothSpecials();
         String urlSafe = standard.replace('+', '-').replace('/', '_');
         String unpadded = urlSafe.replace("=", "");
         // The envelope is 124 bytes, so the standard form always ends in
@@ -511,6 +512,111 @@ public class FodIdTests {
         assertEquals("+/8=", FodId.toStandardBase64(" -_8 "));
         assertEquals("+/==", FodId.toStandardBase64("-_\r\n"));
         assertEquals("abcd", FodId.toStandardBase64("  abcd  "));
+        assertEquals("YQ==", FodId.toStandardBase64(" YQ\n"));
+        assertEquals("+/==", FodId.toStandardBase64("\u3000-_\u3000"));
+    }
+
+    // ----- White space and the two alphabets -----
+
+    @Test
+    public void toStandardBase64_WhiteSpaceInsideOrBothAlphabets_GivesNull() {
+        String[] refused = {
+            "YW Jj", "YW\tJj", "YW\r\nJj", "YW\u00A0Jj", "YW\u3000Jj",
+            "+_", "-/", "+-", "/_"
+        };
+        for (String text : refused) {
+            assertNull(show(text), FodId.toStandardBase64(text));
+        }
+    }
+
+    @Test
+    public void toStandardBase64_EachWhiteSpace_TrimmedAroundRefusedInside() {
+        assertEquals(25, WHITE_SPACE.length());
+        for (char space : WHITE_SPACE.toCharArray()) {
+            String shown = show(String.valueOf(space));
+            assertEquals(shown,
+                "YQ==", FodId.toStandardBase64(space + "YQ" + space));
+            assertNull(shown, FodId.toStandardBase64("YW" + space + "Jj"));
+        }
+    }
+
+    @Test
+    public void tryFromBase64_WhiteSpaceAroundTheText_Parses() throws Exception {
+        String standard = standardWithBothSpecials();
+        String[][] around = {
+            { " ", "\n" },
+            { "\t", "\r\n" },
+            { "\u00A0", "\u00A0" },
+            { "\u3000", "\u3000" },
+            { WHITE_SPACE, WHITE_SPACE }
+        };
+        for (String text : forms(standard)) {
+            for (String[] pair : around) {
+                assertParsesAs(standard, pair[0] + text + pair[1]);
+            }
+            for (char space : WHITE_SPACE.toCharArray()) {
+                assertParsesAs(standard, space + text + space);
+            }
+        }
+    }
+
+    @Test
+    public void tryFromBase64_WhiteSpaceInsideTheText_InvalidBase64()
+            throws Exception {
+        String[] spaces = { " ", " ", " ", "\t", "\r\n", "\u00A0", "\u3000" };
+        int[] counts = { 1, 2, 3, 4, 2, 4, 1 };
+        for (String text : forms(standardWithBothSpecials())) {
+            for (int i = 0; i < spaces.length; i++) {
+                assertRefusedBeforeDecoding(
+                    spaced(text, spaces[i], counts[i]));
+            }
+            for (char space : WHITE_SPACE.toCharArray()) {
+                assertRefusedBeforeDecoding(
+                    spaced(text, String.valueOf(space), 1));
+            }
+        }
+    }
+
+    @Test
+    public void tryFromBase64_BothAlphabets_InvalidBase64() throws Exception {
+        String[] forms = forms(standardWithBothSpecials());
+        // The standard text with one + or / changed to its URL-safe partner.
+        assertRefusedBeforeDecoding(replaceFirst(forms[0], '+', '-'));
+        assertRefusedBeforeDecoding(replaceFirst(forms[0], '/', '_'));
+        // Both URL-safe texts with one - or _ changed to its standard
+        // partner.
+        for (String urlSafe : new String[] { forms[1], forms[2] }) {
+            assertRefusedBeforeDecoding(replaceFirst(urlSafe, '-', '+'));
+            assertRefusedBeforeDecoding(replaceFirst(urlSafe, '_', '/'));
+        }
+    }
+
+    @Test
+    public void tryFromBase64_OnlyWhiteSpace_MissingInput() {
+        String[] texts = { " ", "\r\n", "\u00A0", "\u3000", WHITE_SPACE };
+        for (String text : texts) {
+            FodIdParseResult read = FodId.tryFromBase64(text);
+            assertFalse(show(text), read.isSuccess());
+            assertEquals(show(text),
+                FodIdParseStatus.MISSING_INPUT, read.getStatus());
+        }
+    }
+
+    @Test
+    public void tryFromBase64_OtherCharacterAroundTheText_InvalidBase64()
+            throws Exception {
+        // Characters without the Unicode White_Space property that are
+        // easy to take for it, being controls String.trim removes, U+180E,
+        // which had the property before Unicode 6.3, and two zero width
+        // characters.
+        char[] others = {
+            '\u0000', '\u001C', '\u001F', '\u180E', '\u200B', '\uFEFF'
+        };
+        for (String text : forms(standardWithBothSpecials())) {
+            for (char other : others) {
+                assertReadersRefuse(other + text + other);
+            }
+        }
     }
 
     @Test
@@ -568,5 +674,109 @@ public class FodIdTests {
 
         assertTrue(fodId.verify(factory.publicPem));
         assertFalse(fodId.verify(Crypto.generate().publicKeyPem()));
+    }
+
+    // ----- Helpers -----
+
+    /**
+     * Every character with the Unicode White_Space property, as listed in
+     * the Unicode Character Database file PropList.txt.
+     */
+    private static final String WHITE_SPACE =
+        "\t\n\u000B\f\r \u0085\u00A0\u1680"
+        + "\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009"
+        + "\u200A\u2028\u2029\u202F\u205F\u3000";
+
+    /**
+     * A signed envelope whose standard base64 holds both characters that
+     * differ between the alphabets, so every conversion is exercised. The
+     * signature is random, so envelopes are signed until one qualifies,
+     * which usually takes a few tries.
+     */
+    private String standardWithBothSpecials() throws OwidException {
+        for (int attempt = 0; attempt < 100; attempt++) {
+            String base64 = factory.signedOwidBase64(canonicalPayload());
+            if (base64.indexOf('+') >= 0 && base64.indexOf('/') >= 0) {
+                return base64;
+            }
+        }
+        throw new IllegalStateException(
+            "No signed envelope held both + and / in 100 tries.");
+    }
+
+    /**
+     * The standard text, and the URL-safe text with and without its
+     * padding.
+     */
+    private static String[] forms(String standard) {
+        String urlSafe = standard.replace('+', '-').replace('/', '_');
+        return new String[] { standard, urlSafe, urlSafe.replace("=", "") };
+    }
+
+    /**
+     * The text with the white space put in at a number of points spread
+     * evenly through it.
+     */
+    private static String spaced(String text, String space, int count) {
+        StringBuilder spaced = new StringBuilder(text);
+        for (int point = count; point >= 1; point--) {
+            spaced.insert(text.length() * point / (count + 1), space);
+        }
+        return spaced.toString();
+    }
+
+    /** The text with its first {@code from} changed to {@code to}. */
+    private static String replaceFirst(String text, char from, char to) {
+        int index = text.indexOf(from);
+        assertTrue(show(text) + " holds no " + from, index >= 0);
+        return text.substring(0, index) + to + text.substring(index + 1);
+    }
+
+    /**
+     * The text with every character outside printable ASCII written as its
+     * code, so a failure message shows where it is.
+     */
+    private static String show(String text) {
+        StringBuilder shown = new StringBuilder();
+        for (char c : text.toCharArray()) {
+            if (c > ' ' && c < 0x7F) {
+                shown.append(c);
+            } else {
+                shown.append(String.format("\\u%04X", (int) c));
+            }
+        }
+        return shown.toString();
+    }
+
+    private static void assertParsesAs(String standard, String text)
+            throws OwidException {
+        FodIdParseResult read = FodId.tryFromBase64(text);
+        assertTrue(read.getStatus() + " for " + show(text), read.isSuccess());
+        assertEquals(show(text), standard, read.getValue().asBase64());
+        assertEquals(show(text), standard, FodId.fromBase64(text).asBase64());
+    }
+
+    /**
+     * Checks that both readers refuse the text as invalid base64, the one
+     * that throws naming the status.
+     */
+    private static void assertReadersRefuse(String text) {
+        FodIdParseResult read = FodId.tryFromBase64(text);
+        assertFalse("Parsed " + show(text), read.isSuccess());
+        assertNull(show(text), read.getValue());
+        assertEquals(show(text),
+            FodIdParseStatus.INVALID_BASE64, read.getStatus());
+        OwidException thrown = assertThrows(show(text),
+            OwidException.class, () -> FodId.fromBase64(text));
+        assertTrue(thrown.getMessage().contains("INVALID_BASE64"));
+    }
+
+    /**
+     * Checks that both readers refuse the text, and that the step they
+     * share refuses it before the envelope library decodes anything.
+     */
+    private static void assertRefusedBeforeDecoding(String text) {
+        assertReadersRefuse(text);
+        assertNull(show(text), FodId.toStandardBase64(text));
     }
 }

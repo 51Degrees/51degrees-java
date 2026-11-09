@@ -13,7 +13,7 @@
     <artifactId>device-detection</artifactId>
     <name>51Degrees :: Device Detection</name>
     <description>Device Detection and User-Agent parser for Java. Detects the device type and model, browser, operating system, and crawlers from the User-Agent and User-Agent Client Hints. Works on-premise with a data file or in the cloud. Built on the 51Degrees Pipeline API. An alternative to UAParser.js, DeviceAtlas, and WURFL.</description>
-    <url>https://51degrees.com?utm_source=maven&amp;utm_medium=package&amp;utm_campaign=51degrees-java&amp;utm_content=device-detection-pom.xml&amp;utm_term=url</url>
+    <url>https://github.com/51Degrees/51degrees-java</url>
 
     <dependencies>
         <dependency>

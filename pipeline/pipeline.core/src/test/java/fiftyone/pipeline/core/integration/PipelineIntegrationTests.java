@@ -54,11 +54,10 @@ public class PipelineIntegrationTests {
     @Test
     public void PipelineIntegration_SingleElement() throws Exception {
         MultiplyByFiveElement fiveElement = new MultiplyByFiveElement(mock(Logger.class));
-        Pipeline pipeline = new PipelineBuilder(loggerFactory)
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
             .addFlowElement(fiveElement)
             .build();
-
-        try (FlowData flowData = pipeline.createFlowData()) {
+             FlowData flowData = pipeline.createFlowData()) {
             flowData.addEvidence(fiveElement.evidenceKeys.get(0), 2);
     
             flowData.process();
@@ -71,12 +70,11 @@ public class PipelineIntegrationTests {
     public void PipelineIntegration_MultipleElements() throws Exception {
         MultiplyByFiveElement fiveElement = new MultiplyByFiveElement(mock(Logger.class));
         MultiplyByTenElement tenElement = new MultiplyByTenElement(mock(Logger.class));
-        Pipeline pipeline = new PipelineBuilder(loggerFactory)
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
             .addFlowElement(fiveElement)
             .addFlowElement(tenElement)
             .build();
-
-        try (FlowData flowData = pipeline.createFlowData()) {
+             FlowData flowData = pipeline.createFlowData()) {
             flowData.addEvidence(fiveElement.evidenceKeys.get(0), 2);
 
             flowData.process();
@@ -91,11 +89,10 @@ public class PipelineIntegrationTests {
     public void PipelineIntegration_MultipleElementsParallel() throws Exception {
         MultiplyByFiveElement fiveElement = new MultiplyByFiveElement(mock(Logger.class));
         MultiplyByTenElement tenElement = new MultiplyByTenElement(mock(Logger.class));
-        Pipeline pipeline = new PipelineBuilder(loggerFactory)
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
             .addFlowElementsParallel(new FlowElement[]{fiveElement, tenElement})
             .build();
-
-        try (FlowData flowData = pipeline.createFlowData()) {
+             FlowData flowData = pipeline.createFlowData()) {
             flowData.addEvidence(fiveElement.evidenceKeys.get(0), 2);
     
             flowData.process();
@@ -113,19 +110,20 @@ public class PipelineIntegrationTests {
         FlowElement testElement = mock(FlowElement.class);
         when(testElement.getElementDataKey()).thenReturn("test");
         when(testElement.getProperties()).thenReturn(Collections.emptyList());
-        Pipeline pipeline = new PipelineBuilder(loggerFactory)
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
             .addFlowElement(stopElement)
             .addFlowElement(testElement)
-            .build();
+            .build()) {
 
-        // Create and process flow data
-        try (FlowData flowData = pipeline.createFlowData()) {
-            flowData.process();
+            // Create and process flow data
+            try (FlowData flowData = pipeline.createFlowData()) {
+                flowData.process();
     
-            // Check that the stop flag is set
-            assertTrue(flowData.isStopped());
-            // Check that the second element was never processed
-            verify(testElement, never()).process(any(FlowData.class));
+                // Check that the stop flag is set
+                assertTrue(flowData.isStopped());
+                // Check that the second element was never processed
+                verify(testElement, never()).process(any(FlowData.class));
+            }
         }
     }
 }

@@ -46,6 +46,7 @@ import java.util.concurrent.*;
 
 import static fiftyone.devicedetection.examples.shared.DataFileHelper.getDataFileLocation;
 import static fiftyone.devicedetection.examples.shared.DataFileHelper.getEvidenceFile;
+import static fiftyone.devicedetection.shared.testhelpers.FileUtils.LITE_HASH_DATA_FILE_PATH;
 import static fiftyone.pipeline.engines.Constants.PerformanceProfiles.*;
 
 /**
@@ -63,6 +64,15 @@ public class PerformanceBenchmark {
     public static final int TESTS_PER_THREAD = 10000;
 
     public static final Logger logger = LoggerFactory.getLogger(PerformanceBenchmark.class);
+
+    /**
+     * Where to ask for a copy of the Enterprise data file, tagged with this
+     * example.
+     */
+    private static final String CONTACT_US = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-performancebenchmark.java&utm_term=enterprise-data-file";
+
+    // true when the benchmarks ran on the free Lite data file
+    private boolean usedLiteDataFile;
 
     // where the results of the tests are gathered
     private List<Future<BenchmarkResult>> resultList;
@@ -82,7 +92,9 @@ public class PerformanceBenchmark {
     public static void main(String[] args) throws Exception {
         LogbackHelper.configureLogback(FileFinder.getFilePath("logback.xml"));
 
-        String dataFilename = args.length > 0 ? args[0] : null;
+        // Use the supplied data file, or the free Lite file, which is
+        // downloaded if it is missing
+        String dataFilename = args.length > 0 ? args[0] : LITE_HASH_DATA_FILE_PATH;
         String evidenceFilename = args.length > 1 ? args[1] : null;
         int numberOfThreads = DEFAULT_NUMBER_OF_THREADS;
         if (args.length > 2) {
@@ -132,6 +144,9 @@ public class PerformanceBenchmark {
         for (PerformanceConfiguration config: performanceConfigurations){
             executeBenchmark(true, config);
         }
+        if (usedLiteDataFile) {
+            DataFileHelper.writeEnterpriseOffer(writer, CONTACT_US);
+        }
 
         logger.info("Finished Performance example");
     }
@@ -166,7 +181,10 @@ public class PerformanceBenchmark {
                 setPipelinePerformanceProperties(builder, config);
                 pipeline = builder.build();
 
-                DataFileHelper.logDataFileInfo(pipeline.getElement(DeviceDetectionHashEngine.class));
+                DeviceDetectionHashEngine engine =
+                        pipeline.getElement(DeviceDetectionHashEngine.class);
+                DataFileHelper.logDataFileInfo(engine);
+                usedLiteDataFile = DataFileHelper.isLiteDataFile(engine);
             } else {
                 logger.info("Load memory from {}", dataFileLocation);
                 byte[] fileContent = Files.readAllBytes(new File(dataFileLocation).toPath());
@@ -388,8 +406,9 @@ public class PerformanceBenchmark {
  * @example PerformanceBenchmark.java
  * The example illustrates a "clock-time" benchmark for assessing detection speed.
  *
- * Using a YAML formatted evidence file - "20000 Evidence Records.yml" - supplied with the
- * distribution or can be obtained from the [data repository on Github](https://github.com/51Degrees/device-detection-data/blob/master/20000%20Evidence%20Records.yml).
+ * Using a YAML formatted evidence file - "20000 Evidence Records.yml" - which is downloaded by
+ * the scripts in the [data repository on GitHub](https://github.com/51Degrees/data), and by the
+ * example itself when the file is missing.
  *
  * It's important to understand the trade-offs between performance, memory usage and accuracy, that
  * the 51Degrees pipeline configuration makes available, and this example shows a range of
@@ -403,7 +422,7 @@ public class PerformanceBenchmark {
  * and [hash dataset options](/documentation/4.5/_device_detection__hash.html#DeviceDetection_Hash_DataSetProduction_Performance)
  * for more information about adjusting performance.
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/device-detection-java-examples/blob/master/console/src/main/java/fiftyone/devicedetection/examples/console/PerformanceBenchmark.java).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/device-detection/console/src/main/java/fiftyone/devicedetection/examples/console/PerformanceBenchmark.java).
  *
  * @include{doc} example-require-datafile.txt
  */

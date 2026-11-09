@@ -70,6 +70,14 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     private final List<OnUpdateComplete> onUpdateCompleteList = new ArrayList<>();
     private final Object configLock = new Object();
     /**
+     * Held for every read and write this service makes of a data file's
+     * future, so a check cannot read or clear its future before
+     * {@link #registerDataFile} has stored it. Only the future is scheduled,
+     * cancelled and stored while holding it, so it is never held while
+     * waiting for the configuration lock or a data file's update lock.
+     */
+    private final Object futureLock = new Object();
+    /**
      * HTTP client used to download new data files.
      */
     private final HttpClient httpClient;
@@ -226,16 +234,18 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 // This will repeat until the update is acquired.
                 if (manualUpdate == false) {
                     logger.debug("Cancelling and resetting update timer");
-                    if (dataFile.getFuture() != null) {
-                        dataFile.getFuture().cancel(true);
-                        dataFile.setFuture(futureFactory.schedule(
-                                new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        checkForUpdate(dataFile, false);
-                                    }
-                                },
-                                getInterval(dataFile.getConfiguration())));
+                    synchronized (futureLock) {
+                        if (dataFile.getFuture() != null) {
+                            dataFile.getFuture().cancel(true);
+                            dataFile.setFuture(futureFactory.schedule(
+                                    new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            checkForUpdate(dataFile, false);
+                                        }
+                                    },
+                                    getIntervalMillis(dataFile.getConfiguration())));
+                        }
                     }
                 }
             }
@@ -268,10 +278,12 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     private AutoUpdateStatus updatedFileAvailable(AspectEngineDataFile dataFile) {
         AspectEngineDataFileDefault aspectDataFile = (AspectEngineDataFileDefault) dataFile;
 
-        if (aspectDataFile.getFuture() != null) {
-            // Dispose of the old timer object
-            aspectDataFile.getFuture().cancel(true);
-            aspectDataFile.setFuture(null);
+        synchronized (futureLock) {
+            if (aspectDataFile.getFuture() != null) {
+                // Dispose of the old timer object
+                aspectDataFile.getFuture().cancel(true);
+                aspectDataFile.setFuture(null);
+            }
         }
 
         if (dataFile.getEngine() == null) {
@@ -417,39 +429,45 @@ public class DataUpdateServiceDefault implements DataUpdateService {
 
             // Only create an automatic update timer if auto updates are
             // enabled for this engine and there is not already an associated
-            // timer.
-            if (aspectDataFile.getAutomaticUpdatesEnabled() &&
-                    aspectDataFile.getFuture() == null) {
-                long delay = getInterval(aspectDataFile.getConfiguration());
-                if (aspectDataFile.getUpdateAvailableTime() != null) {
-                    if (aspectDataFile.getUpdateAvailableTime().getTime()
-                            > System.currentTimeMillis()) {
-                        delay = applyIntervalRandomisation(
-                                aspectDataFile.getUpdateAvailableTime().getTime()
-                                        - System.currentTimeMillis(),
-                                aspectDataFile.getConfiguration());
+            // timer. The lock is held from scheduling to storing, because
+            // the check can start as soon as it is scheduled and must find
+            // its own future.
+            synchronized (futureLock) {
+                if (aspectDataFile.getAutomaticUpdatesEnabled() &&
+                        aspectDataFile.getFuture() == null) {
+                    long delayMillis =
+                            getIntervalMillis(aspectDataFile.getConfiguration());
+                    if (aspectDataFile.getUpdateAvailableTime() != null) {
+                        if (aspectDataFile.getUpdateAvailableTime().getTime()
+                                > System.currentTimeMillis()) {
+                            delayMillis = applyIntervalRandomisationMillis(
+                                    aspectDataFile.getUpdateAvailableTime().getTime()
+                                            - System.currentTimeMillis(),
+                                    aspectDataFile.getConfiguration());
+                        }
                     }
-                }
-                // Create a timer that will go off when the engine expects
-                // updated data to be available.
-                logger.debug("Scheduling update check with delay {}", delay);
-                try {
-                    ScheduledFuture<?> future = futureFactory.schedule(
-                            new Runnable() {
-                                @Override
-                                public void run() {
-                                    logger.debug("running checkForUpdate {}",
-                                            aspectDataFile.getDataFilePath());
-                                    checkForUpdate(aspectDataFile, false);
-                                    logger.debug("Returning from checkForUpdate");
-                                }
-                            },
-                            delay);
-                    logger.debug("Update check scheduled for {} millis",
-                            future.getDelay(TimeUnit.MILLISECONDS));
-                    aspectDataFile.setFuture(future);
-                } catch (Throwable t) {
-                    logger.error("Exception when scheduling update check", t);
+                    // Create a timer that will go off when the engine expects
+                    // updated data to be available.
+                    logger.debug("Scheduling update check with delay {} millis",
+                            delayMillis);
+                    try {
+                        ScheduledFuture<?> future = futureFactory.schedule(
+                                new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        logger.debug("running checkForUpdate {}",
+                                                aspectDataFile.getDataFilePath());
+                                        checkForUpdate(aspectDataFile, false);
+                                        logger.debug("Returning from checkForUpdate");
+                                    }
+                                },
+                                delayMillis);
+                        logger.debug("Update check scheduled for {} millis",
+                                future.getDelay(TimeUnit.MILLISECONDS));
+                        aspectDataFile.setFuture(future);
+                    } catch (Throwable t) {
+                        logger.error("Exception when scheduling update check", t);
+                    }
                 }
             }
 
@@ -539,44 +557,48 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                     aspectDataFile.getConfiguration().getWatchKey().cancel();
                     aspectDataFile.getConfiguration().setWatchKey(null);
                 }
-                if (aspectDataFile.getFuture() != null) {
-                    aspectDataFile.getFuture().cancel(true);
-                    aspectDataFile.setFuture(null);
+                synchronized (futureLock) {
+                    if (aspectDataFile.getFuture() != null) {
+                        aspectDataFile.getFuture().cancel(true);
+                        aspectDataFile.setFuture(null);
+                    }
                 }
             }
         }
     }
 
     /**
-     * Get the random delay in milliseconds to add on to the scheduled time
-     * for a specific Engine, no greater than the Engine's max randomisation.
+     * Get the polling interval for a data file plus a random number of
+     * seconds, no greater than the configured maximum randomisation.
      *
-     * @param config to get the delay for
-     * @return a random delay in milliseconds.
+     * @param config to get the interval for
+     * @return the interval in milliseconds.
      */
-    private long getInterval(DataFileConfiguration config) {
-        int seconds = 0;
+    private long getIntervalMillis(DataFileConfiguration config) {
+        long intervalMillis = 0;
         if (config.getPollingIntervalSeconds() > 0) {
-            seconds = config.getPollingIntervalSeconds();
+            intervalMillis = config.getPollingIntervalSeconds() * 1000L;
         }
-        return applyIntervalRandomisation(seconds, config) * 1000;
-
+        return applyIntervalRandomisationMillis(intervalMillis, config);
     }
 
     /**
-     * Add a random amount of time to the specified interval
+     * Add a random number of whole seconds, up to the maximum in the
+     * configuration, to the specified interval.
      *
-     * @param interval the interval to add a random amount of time to
-     * @param config   the {@link DataFileConfiguration} object that specifies the
-     *                 maximum number of seconds to add
-     * @return the new interval
+     * @param intervalMillis the interval in milliseconds to add to
+     * @param config         the {@link DataFileConfiguration} object that
+     *                       specifies the maximum number of seconds to add
+     * @return the new interval in milliseconds
      */
-    private long applyIntervalRandomisation(long interval, DataFileConfiguration config) {
-        long seconds = 0;
+    private long applyIntervalRandomisationMillis(
+            long intervalMillis,
+            DataFileConfiguration config) {
+        long randomSeconds = 0;
         if (config.getMaxRandomisationSeconds() > 0) {
-            seconds = random.nextInt(config.getMaxRandomisationSeconds());
+            randomSeconds = random.nextInt(config.getMaxRandomisationSeconds());
         }
-        return interval + seconds;
+        return intervalMillis + randomSeconds * 1000;
     }
 
     /**

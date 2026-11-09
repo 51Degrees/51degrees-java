@@ -102,30 +102,31 @@ public class PipelineTests {
             new FlowElement[]{element1, element2});
         // Don't create the flow data via the pipeline as we just want
         // to test Process.
-        FlowData data = new FlowDataDefault(
+        try (FlowData data = new FlowDataDefault(
             mock(Logger.class),
             pipeline,
-            new EvidenceDefault(mock(Logger.class)));
+            new EvidenceDefault(mock(Logger.class)))) {
 
-        // Act
-        data.process();
+            // Act
+            data.process();
 
-        // Assert
-        assertTrue("Expected no errors",
-            data.getErrors() == null || data.getErrors().size() == 0);
-        // Check that the resulting data has the expected values
-        assertTrue("data from element 1 is missing in the result",
-            data.getDataKeys().contains("element1"));
-        assertTrue("data from element 2 is missing in the result", data.getDataKeys().contains("element2"));
-        assertEquals("done", data.get("element1").get("key").toString());
-        assertEquals("done", data.get("element2").get("key").toString());
-        // Check that element 1 was called before element 2.
-        verify(element2, times(1)).process(argThat(new ArgumentMatcher<FlowData>() {
-            @Override
-            public boolean matches(FlowData flowData) {
-                return flowData.getDataKeys().contains("element1");
-            }
-        }));
+            // Assert
+            assertTrue("Expected no errors",
+                data.getErrors() == null || data.getErrors().size() == 0);
+            // Check that the resulting data has the expected values
+            assertTrue("data from element 1 is missing in the result",
+                data.getDataKeys().contains("element1"));
+            assertTrue("data from element 2 is missing in the result", data.getDataKeys().contains("element2"));
+            assertEquals("done", data.get("element1").get("key").toString());
+            assertEquals("done", data.get("element2").get("key").toString());
+            // Check that element 1 was called before element 2.
+            verify(element2, times(1)).process(argThat(new ArgumentMatcher<FlowData>() {
+                @Override
+                public boolean matches(FlowData flowData) {
+                    return flowData.getDataKeys().contains("element1");
+                }
+            }));
+        }
     }
 
     @Test
