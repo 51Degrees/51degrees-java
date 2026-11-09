@@ -27,10 +27,12 @@ import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
 import fiftyone.pipeline.engines.fiftyone.data.SequenceData;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 
 /**
@@ -39,6 +41,8 @@ import org.slf4j.Logger;
  */
 public class SequenceElement 
     extends FlowElementBase<ElementData, ElementPropertyMetaData> {
+
+    private static final Pattern DIGITS = Pattern.compile("[0-9]+");
 
     private final List<ElementPropertyMetaData> properties;
 
@@ -74,35 +78,59 @@ public class SequenceElement
     @Override
     protected void processInternal(FlowData data) throws Exception {
         Map<String, Object> evidence = data.getEvidence().asKeyMap();
-        
-        // If the evidence does not contain a session id then create a new one.
-        if (evidence.containsKey(Constants.EVIDENCE_SESSIONID) == false) {
-            data.addEvidence(Constants.EVIDENCE_SESSIONID, getNewSessionId());
-        }
 
-        // If the evidence does not have a sequence then add one.
-        if (evidence.containsKey(Constants.EVIDENCE_SEQUENCE) == false) {
-            data.addEvidence(Constants.EVIDENCE_SEQUENCE, 1);
-        } else {
-            Object sequence = evidence.get(Constants.EVIDENCE_SEQUENCE);
-            int seq = (int) sequence;
-            data.addEvidence(Constants.EVIDENCE_SEQUENCE, seq + 1);
-        }
-        addElementData(data);
-    }
+        // The session id and the sequence are each used only when they are
+        // valid, and otherwise count as absent.
+        Object givenSession = evidence.get(Constants.EVIDENCE_SESSIONID);
+        String sessionId =
+            givenSession instanceof String &&
+            ((String) givenSession).isEmpty() == false ?
+                (String) givenSession : getNewSessionId();
+        Integer previous = toSequence(evidence.get(Constants.EVIDENCE_SEQUENCE));
+        int sequence = previous == null ? 1 : previous + 1;
 
-    /**
-     * Write the session id and sequence now in Evidence to the element data.
-     */
-    private void addElementData(FlowData data) {
-        Map<String, Object> evidence = data.getEvidence().asKeyMap();
+        data.addEvidence(Constants.EVIDENCE_SESSIONID, sessionId);
+        data.addEvidence(Constants.EVIDENCE_SEQUENCE, sequence);
+
         SequenceData sequenceData = (SequenceData) data.getOrAdd(
             getElementDataKey(),
             getDataFactory());
-        sequenceData.setSessionId(
-            String.valueOf(evidence.get(Constants.EVIDENCE_SESSIONID)));
-        sequenceData.setSequence(
-            ((Number) evidence.get(Constants.EVIDENCE_SEQUENCE)).intValue());
+        sequenceData.setSessionId(sessionId);
+        sequenceData.setSequence(sequence);
+    }
+
+    /**
+     * The sequence in Evidence, which is a whole number or text made only of
+     * decimal digits. A value that is anything else, does not fit in an int
+     * or has no larger int after it counts as no sequence, so that adding
+     * one never overflows.
+     * @return the sequence, or null if there is none
+     */
+    private static Integer toSequence(Object sequence) {
+        long value;
+        if (sequence instanceof Integer || sequence instanceof Long ||
+            sequence instanceof Short || sequence instanceof Byte) {
+            value = ((Number) sequence).longValue();
+        } else if (sequence instanceof BigInteger) {
+            BigInteger big = (BigInteger) sequence;
+            if (big.bitLength() > 31) {
+                return null;
+            }
+            value = big.longValue();
+        } else if (sequence instanceof String &&
+            DIGITS.matcher((String) sequence).matches()) {
+            // More digits than any int has cannot fit, however many zeros
+            // come first, so only the value of a short string is read.
+            String digits = ((String) sequence).replaceFirst("^0+(?=.)", "");
+            if (digits.length() > 10) {
+                return null;
+            }
+            value = Long.parseLong(digits);
+        } else {
+            return null;
+        }
+        return value < Integer.MAX_VALUE && value >= Integer.MIN_VALUE ?
+            Integer.valueOf((int) value) : null;
     }
 
     @Override
