@@ -276,6 +276,14 @@ public class Calculations {
                     transformed.y);
         }
 
+        // The first and last points are the same input, but compiled code can
+        // project them one bit apart, which JTS rejects as an open ring. The
+        // last point is therefore copied from the first.
+        if (coordinates.length > 1 && ring.isClosed()) {
+            coordinates[coordinates.length - 1] =
+                    new Coordinate(coordinates[0]);
+        }
+
         return ring.getFactory().createLinearRing(coordinates);
     }
 
