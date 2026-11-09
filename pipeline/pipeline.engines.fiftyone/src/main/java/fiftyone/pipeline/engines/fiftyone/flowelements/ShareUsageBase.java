@@ -750,7 +750,7 @@ public abstract class ShareUsageBase
             logger.warn("Interrupted while awaiting close down");
         }
         if (evidenceCollection.isEmpty() == false &&
-            backOff.remaining(System.currentTimeMillis()) > 0) {
+            backOff.remaining(ShareUsageBackOff.now()) > 0) {
             logger.info(
                 "{} usage sharing entries were not sent, as sending was " +
                     "paused after failed sends when usage sharing closed.",
@@ -925,7 +925,7 @@ public abstract class ShareUsageBase
      */
     protected boolean waitWhilePaused() {
         long pause;
-        while ((pause = backOff.remaining(System.currentTimeMillis())) > 0) {
+        while ((pause = backOff.remaining(ShareUsageBackOff.now())) > 0) {
             try {
                 if (closing.await(pause, TimeUnit.MILLISECONDS)) {
                     return false;
@@ -950,7 +950,7 @@ public abstract class ShareUsageBase
                 logger.info("Usage sharing resumed after a send succeeded.");
             }
         } else {
-            long pause = backOff.failed(System.currentTimeMillis());
+            long pause = backOff.failed(ShareUsageBackOff.now());
             if (pause > 0) {
                 logger.warn(
                     "Usage sharing paused for {} seconds after failed " +

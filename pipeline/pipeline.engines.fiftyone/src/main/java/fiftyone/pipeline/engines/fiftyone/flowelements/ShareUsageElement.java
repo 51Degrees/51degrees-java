@@ -670,6 +670,9 @@ public class ShareUsageElement extends ShareUsageBase {
         }
 
         HttpURLConnection connection = httpClient.connect(new URI(shareUsageUrl.trim()).toURL());
+        // A send that is never answered must end, or it stops all sending.
+        connection.setConnectTimeout(httpSendTimeout);
+        connection.setReadTimeout(httpSendTimeout);
         String response = httpClient.postData(connection, headers, baos.toByteArray());
         int responseCode = connection.getResponseCode();
         String responseMessage = connection.getResponseMessage() + "data: '" + response + "'";
