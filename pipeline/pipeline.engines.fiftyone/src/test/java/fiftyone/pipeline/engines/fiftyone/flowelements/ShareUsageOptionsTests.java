@@ -263,6 +263,36 @@ public class ShareUsageOptionsTests {
     }
 
     @Test
+    public void neverSharedKeys_TurkishLocale_StillRefused() {
+        java.util.Locale original = java.util.Locale.getDefault();
+        java.util.Locale.setDefault(java.util.Locale.forLanguageTag("tr-TR"));
+        try {
+            EvidenceKeyFilterShareUsage filter = new EvidenceKeyFilterShareUsage(
+                new ArrayList<String>(),
+                new ArrayList<String>(),
+                false,
+                DEFAULT_SESSION_COOKIE_NAME);
+            EvidenceKeyFilterShareUsage shareAll =
+                new EvidenceKeyFilterShareUsage(
+                    new ArrayList<String>(),
+                    new ArrayList<String>(),
+                    false,
+                    DEFAULT_SESSION_COOKIE_NAME,
+                    true,
+                    true);
+
+            for (String key : new String[] {
+                "ID.EMAIL", "Query.ID.Email", "HEADER.COOKIE",
+                "Server.Request-Path", "SERVER.REQUEST-QUERY", "ID.SALT"}) {
+                assertFalse(filter.include(key), key);
+                assertFalse(shareAll.include(key), key);
+            }
+        } finally {
+            java.util.Locale.setDefault(original);
+        }
+    }
+
+    @Test
     public void tracker_BuildsOneCache() {
         CountingCacheBuilder builder = new CountingCacheBuilder();
 
