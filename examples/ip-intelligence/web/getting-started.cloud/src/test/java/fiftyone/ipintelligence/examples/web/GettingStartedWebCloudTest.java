@@ -23,7 +23,6 @@
 package fiftyone.ipintelligence.examples.web;
 
 import fiftyone.ipintelligence.examples.shared.KeyHelper;
-import fiftyone.ipintelligence.shared.testhelpers.KeyUtils;
 import org.eclipse.jetty.server.Server;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -38,7 +37,6 @@ import static fiftyone.ipintelligence.examples.web.GettingStartedWebCloud.getRes
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeFalse;
 
 public class GettingStartedWebCloudTest {
     private static Server SERVER;
@@ -46,9 +44,9 @@ public class GettingStartedWebCloudTest {
 
     @BeforeClass
     public static void startJetty() throws Exception {
-        String resourceKey = KeyUtils.getNamedKey(KeyHelper.TEST_RESOURCE_KEY);
-        assumeFalse("Skipping test, no resource key found",
-                KeyUtils.isInvalidKey(resourceKey));
+        String resourceKey = KeyHelper.requireTestResourceKey(
+            "the network and location of the address a request comes from",
+            "ip");
         // Make the resource key available to the pipeline configuration file
         System.setProperty(KeyHelper.TEST_RESOURCE_KEY, resourceKey);
 

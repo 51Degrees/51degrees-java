@@ -12,9 +12,9 @@ repositories used to do for one package tree each.
   generated accessors. The other scripts loop over it rather than naming
   folders themselves.
 - The root `pom.xml` builds every tree in one reactor but is not their parent,
-  so [build-package.ps1](build-package.ps1) sets the version in each tree
-  before it deploys from the root. The examples are built and tested but left
-  out of the deploy.
+  so [build-package.ps1](build-package.ps1) has common-ci set the version in
+  each tree before it deploys from the root. The examples are built and tested
+  but left out of the deploy.
 - [build-project.ps1](build-project.ps1) and
   [run-unit-tests.ps1](run-unit-tests.ps1) use the `dev` profile, so a pull
   request tests the examples against the libraries it changes. The publish
