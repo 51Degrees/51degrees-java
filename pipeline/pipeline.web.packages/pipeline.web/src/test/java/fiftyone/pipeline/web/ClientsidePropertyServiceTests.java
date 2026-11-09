@@ -99,7 +99,7 @@ public class ClientsidePropertyServiceTests {
 
     flowData = mock(FlowData.class);
     dataKey = mock(DataKey.class);
-    when(flowData.generateKey(any(EvidenceKeyFilter.class))).thenReturn(dataKey);
+    when(flowData.generateSuppliedKey(any(EvidenceKeyFilter.class))).thenReturn(dataKey);
     jsData = mock(JavaScriptBuilderData.class);
     when(jsData.getJavaScript()).thenReturn(JS_CONTENT);
     when(flowData.getFromElement(jsElement)).thenReturn(jsData);
@@ -211,7 +211,7 @@ public class ClientsidePropertyServiceTests {
         "(KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36")
       .add(0, "header.sec-ch-ua-mobile", "?0")
       .build();
-    when(flowData.generateKey(any(EvidenceKeyFilter.class))).thenReturn(key);
+    when(flowData.generateSuppliedKey(any(EvidenceKeyFilter.class))).thenReturn(key);
     Configure(null);
 
     service.serveJavascript(request, response);

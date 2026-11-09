@@ -203,9 +203,12 @@ public interface ClientsidePropertyServiceCore {
             HttpServletRequest request,
             HttpServletResponse response,
             ContentTypes contentType) throws IOException {
-            // Get the hash code.
-            FlowData flowData = flowDataProviderCore.getFlowData(request);            
-            int hash = flowData.generateKey(pipeline.getEvidenceKeyFilter()).hashCode();
+            // Get the hash code from the evidence the request supplied. A
+            // Flow Element can add evidence while processing, such as a new
+            // session id, which would give every request a different ETag.
+            FlowData flowData = flowDataProviderCore.getFlowData(request);
+            int hash = flowData.generateSuppliedKey(
+                pipeline.getEvidenceKeyFilter()).hashCode();
 
             // A response built while processing recorded errors may lack the
             // data of the element that failed, so it must not be revalidated

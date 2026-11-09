@@ -60,6 +60,13 @@ class FlowDataDefault implements FlowData {
 
     private final AtomicBoolean processed = new AtomicBoolean(false);
 
+    /**
+     * A copy of the evidence taken when processing started, which leaves out
+     * any value a Flow Element adds or replaces while processing. Null until
+     * then.
+     */
+    private volatile Map<String, Object> suppliedEvidence;
+
     FlowDataDefault(Logger logger, Pipeline pipeline, Evidence evidence) {
         this.logger = logger;
         this.pipeline = (PipelineInternal) pipeline;
@@ -86,6 +93,7 @@ class FlowDataDefault implements FlowData {
         } else if (pipeline.isClosed()) {
             throw new IllegalStateException("Pipeline has been closed.");
         } else {
+            suppliedEvidence = new HashMap<>(evidence.asKeyMap());
             pipeline.process(this);
         }
     }
@@ -364,7 +372,20 @@ class FlowDataDefault implements FlowData {
 
     @Override
     public DataKey generateKey(EvidenceKeyFilter filter) {
-        Map<String, Object> evidenceMap = evidence.asKeyMap();
+        return generateKey(filter, evidence.asKeyMap());
+    }
+
+    @Override
+    public DataKey generateSuppliedKey(EvidenceKeyFilter filter) {
+        Map<String, Object> supplied = suppliedEvidence;
+        return generateKey(
+            filter,
+            supplied != null ? supplied : evidence.asKeyMap());
+    }
+
+    private static DataKey generateKey(
+        EvidenceKeyFilter filter,
+        Map<String, Object> evidenceMap) {
         DataKeyBuilder builder = new DataKeyBuilderDefault();
         for (String key : evidenceMap.keySet()) {
             if (filter.include(key)) {
