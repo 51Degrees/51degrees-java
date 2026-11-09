@@ -22,9 +22,14 @@
 
 package fiftyone.pipeline.engines.services;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import com.sun.net.httpserver.HttpServer;
+
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -79,6 +84,35 @@ public class DataUploaderHttpTests {
             } catch (SocketTimeoutException expected) {
                 // The wait for an answer ended.
             }
+        }
+    }
+
+    @Test(timeout = LIMIT_MILLIS)
+    public void DataUploaderHttp_FailedAnswer_GivesTheContent()
+        throws Exception {
+        byte[] answer = "the service says no".getBytes(StandardCharsets.UTF_8);
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/usage", exchange -> {
+            exchange.sendResponseHeaders(500, answer.length);
+            exchange.getResponseBody().write(answer);
+            exchange.close();
+        });
+        server.start();
+        try {
+            DataUploaderHttp uploader = new DataUploaderHttp(
+                "http://localhost:" + server.getAddress().getPort() + "/usage",
+                new HashMap<>(),
+                TIMEOUT_MILLIS * 10);
+            try (OutputStream out = uploader.getOutputStream()) {
+                out.write(new byte[] {1});
+            }
+
+            assertEquals(500, uploader.getResponseCode());
+            assertEquals(
+                "the service says no",
+                uploader.getResponseContent());
+        } finally {
+            server.stop(0);
         }
     }
 }
