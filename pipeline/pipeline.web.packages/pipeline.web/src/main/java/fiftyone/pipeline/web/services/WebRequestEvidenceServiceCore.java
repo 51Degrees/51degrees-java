@@ -59,6 +59,12 @@ public interface WebRequestEvidenceServiceCore {
      */
     class Default implements WebRequestEvidenceServiceCore {
 
+        private static final String EVIDENCE_REQUEST_METHOD =
+            EVIDENCE_SERVER_PREFIX + EVIDENCE_SEPERATOR + "request-method";
+
+        private static final String EVIDENCE_REQUEST_PATH =
+            EVIDENCE_SERVER_PREFIX + EVIDENCE_SEPERATOR + "request-path";
+
         @Override
         public void addEvidenceFromRequest(
             FlowData flowData,
@@ -120,6 +126,13 @@ public interface WebRequestEvidenceServiceCore {
             checkAndAdd(flowData, EVIDENCE_CLIENTIP_KEY, request.getRemoteAddr());
             
             checkAndAdd(flowData, EVIDENCE_PROTOCOL, request.getScheme());
+
+            // The method and the path of the request line, as sent.
+            checkAndAdd(flowData, EVIDENCE_REQUEST_METHOD, request.getMethod());
+            checkAndAdd(
+                flowData,
+                EVIDENCE_REQUEST_PATH,
+                request.getRequestURI());
         }
 
         /**

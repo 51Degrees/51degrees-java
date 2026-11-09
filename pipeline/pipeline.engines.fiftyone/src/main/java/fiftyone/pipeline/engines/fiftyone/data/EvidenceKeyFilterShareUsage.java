@@ -83,6 +83,7 @@ public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
      * Evidence keys that are never shared, matched without regard to case as
      * the whole key or after a '.'. 'id.email' and 'id.salt' are a raw email
      * address and the salt used to make hashed email identifiers.
+     * 'header.cookie' is the Cookie header, which carries every cookie.
      * 'request-query' is the whole query string, which would undo the rules
      * for its parameters. 'request-path' would make each page a visitor opens
      * look like a new session to the tracker.
@@ -90,6 +91,7 @@ public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
     private static final String[] NEVER_SHARED_EVIDENCE_KEYS = {
         "id.email",
         "id.salt",
+        "header.cookie",
         "request-query",
         "request-path"
     };
