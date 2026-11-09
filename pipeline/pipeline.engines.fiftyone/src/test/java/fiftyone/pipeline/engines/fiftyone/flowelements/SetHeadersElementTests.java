@@ -49,8 +49,11 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -234,6 +237,79 @@ public class SetHeadersElementTests {
 		}
 	}
 	
+	/**
+	 * Once every element of the Pipeline has loaded its properties, the
+	 * configuration built from the Pipeline's available properties is kept,
+	 * so later requests do not build it again.
+	 */
+	@Test
+	public void setHeadersElement_ConfigKeptOnceLoaded() throws Exception {
+		FlowElement source = mock(FlowElement.class);
+		when(source.hasLoadedProperties()).thenReturn(true);
+		Pipeline mockPipeline = mockPipeline(source);
+		createElement();
+
+		for (int i = 0; i < 3; i++) {
+			element.processInternal(mockFlowData(mockPipeline));
+		}
+
+		verify(mockPipeline, times(1)).getElementAvailableProperties();
+	}
+
+	/**
+	 * While an element has not loaded its properties, as a cloud element
+	 * after a failure to reach its service when the Pipeline was built, the
+	 * configuration is built again on each request, and kept once every
+	 * element has loaded.
+	 */
+	@Test
+	public void setHeadersElement_ConfigBuiltAgainUntilLoaded() throws Exception {
+		FlowElement source = mock(FlowElement.class);
+		when(source.hasLoadedProperties()).thenReturn(false, true);
+		Pipeline mockPipeline = mockPipeline(source);
+		createElement();
+
+		for (int i = 0; i < 4; i++) {
+			element.processInternal(mockFlowData(mockPipeline));
+		}
+
+		verify(mockPipeline, times(2)).getElementAvailableProperties();
+	}
+
+	@SuppressWarnings({"rawtypes", "unchecked"})
+	private static Pipeline mockPipeline(FlowElement source) {
+		Pipeline mockPipeline = mock(Pipeline.class);
+		List<FlowElement> elements = new ArrayList<>();
+		elements.add(source);
+		when(mockPipeline.getFlowElements()).thenReturn(elements);
+		when(mockPipeline.getElementAvailableProperties()).thenReturn(
+			new HashMap<String, Map<String, ElementPropertyMetaData>>());
+		return mockPipeline;
+	}
+
+	private static FlowData mockFlowData(Pipeline mockPipeline) {
+		FlowData data = mock(FlowData.class);
+		when(data.getPipeline()).thenReturn(mockPipeline);
+		when(data.getOrAdd(anyString(), any())).thenReturn(mock(SetHeadersData.class));
+		return data;
+	}
+
+	private void createElement() {
+		element = new SetHeadersElement(
+			loggerFactory.getLogger(SetHeadersElement.class.getName()),
+			new ElementDataFactory<SetHeadersData>() {
+				@Override
+				public SetHeadersData create(
+					FlowData flowData,
+					FlowElement<SetHeadersData, ?> flowElement) {
+					return new SetHeadersData(
+						loggerFactory.getLogger(
+							SetHeadersData.class.getName()),
+						flowData);
+				}
+			});
+	}
+
 	private void createPipeline(
 		Map<String, Object> propertyNameValues) throws Exception {
 		sourceElement = new ActivePropertySourceElement(
