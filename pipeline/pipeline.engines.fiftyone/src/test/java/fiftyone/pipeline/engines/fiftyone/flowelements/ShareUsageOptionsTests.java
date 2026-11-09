@@ -237,6 +237,15 @@ public class ShareUsageOptionsTests {
     }
 
     @Test
+    public void builder_ShareOptionsDefaultToFalse() {
+        ShareUsageBuilder builder = new ShareUsageBuilder(
+            LoggerFactory.getILoggerFactory());
+
+        assertFalse(builder.isShareAllEvidence());
+        assertFalse(builder.isShareAllQueryStringParameters());
+    }
+
+    @Test
     public void keysAreReadWithoutRegardToCase() throws Exception {
         Map<String, Object> evidence = new HashMap<>();
         evidence.put("Server.Client-IP", "1.2.3.4");

@@ -396,6 +396,79 @@ public abstract class ShareUsageBase
         List<Map.Entry<String, String>> ignoreDataEvidenceFilter,
         String sessionCookieName,
         Tracker tracker) {
+        this(
+            logger,
+            sharePercentage,
+            minimumEntriesPerMessage,
+            maximumQueueSize,
+            addTimeout,
+            takeTimeout,
+            repeatEvidenceIntervalMinutes,
+            trackSession,
+            shareUsageUrl,
+            blockedHttpHeaders,
+            includedQueryStringParameters,
+            ignoreDataEvidenceFilter,
+            sessionCookieName,
+            tracker,
+            false,
+            false);
+    }
+
+    /**
+     * Constructor
+     * @param logger the logger to use
+     * @param sharePercentage the approximate proportion of requests to share.
+     *                        1 = 100%, 0.5 = 50%, etc.
+     * @param minimumEntriesPerMessage the minimum number of request entries per
+     *                                 message sent to 51Degrees
+     * @param maximumQueueSize the maximum number of items to hold in the queue
+     *                         at one time. This must be larger than minimum
+     *                         entries
+     * @param addTimeout the timeout in milliseconds to allow when attempting to
+     *                   add an item to the queue. If this timeout is exceeded
+     *                   then usage sharing will be disabled
+     * @param takeTimeout the timeout in milliseconds to allow when attempting
+     *                    to take an item to the queue
+     * @param repeatEvidenceIntervalMinutes the interval (in minutes) which is
+     *                                      used to decide if repeat evidence is
+     *                                      old enough to consider a new session
+     * @param trackSession set if the tracker should consider sessions in share
+     *                     usage
+     * @param shareUsageUrl the URL to send data to
+     * @param blockedHttpHeaders a list of the names of the HTTP headers that
+     *                           share usage should not send to 51Degrees
+     * @param includedQueryStringParameters a list of the names of query string
+     *                                      parameters that share usage should
+     *                                      send to 51Degrees
+     * @param ignoreDataEvidenceFilter the filter used to determine if an item
+     *                                 of evidence should be ignored or not
+     * @param sessionCookieName the name of the cookie that contains the session
+     *                          id
+     * @param tracker the {@link Tracker} to use to determine if a given
+     *                {@link FlowData} instance should be shared or not
+     * @param shareAllEvidence if true then all Evidence is shared, apart from
+     *                         the keys that are never shared
+     * @param shareAllQueryStringParameters if true then all query string
+     *                                      parameters are shared
+     */
+    protected ShareUsageBase(
+        Logger logger,
+        double sharePercentage,
+        int minimumEntriesPerMessage,
+        int maximumQueueSize,
+        int addTimeout,
+        int takeTimeout,
+        int repeatEvidenceIntervalMinutes,
+        boolean trackSession,
+        String shareUsageUrl,
+        List<String> blockedHttpHeaders,
+        List<String> includedQueryStringParameters,
+        List<Map.Entry<String, String>> ignoreDataEvidenceFilter,
+        String sessionCookieName,
+        Tracker tracker,
+        boolean shareAllEvidence,
+        boolean shareAllQueryStringParameters) {
         super(logger, null);
 
         if (minimumEntriesPerMessage > maximumQueueSize) {
@@ -430,7 +503,12 @@ public abstract class ShareUsageBase
         includedQueryStringParameters.add(Constants.EVIDENCE_SEQUENCE_SUFIX);
 
         evidenceKeyFilterExclSession = new EvidenceKeyFilterShareUsage(
-            blockedHttpHeaders, includedQueryStringParameters, false, sessionCookieName);
+            blockedHttpHeaders,
+            includedQueryStringParameters,
+            false,
+            sessionCookieName,
+            shareAllEvidence,
+            shareAllQueryStringParameters);
 
         this.ignoreDataEvidenceFilter = ignoreDataEvidenceFilter;
 
@@ -444,7 +522,12 @@ public abstract class ShareUsageBase
                 cacheConfiguration,
                     intervalMillis,
                 new EvidenceKeyFilterShareUsageTracker(
-                    blockedHttpHeaders, includedQueryStringParameters, trackSession, sessionCookieName));
+                    blockedHttpHeaders,
+                    includedQueryStringParameters,
+                    trackSession,
+                    sessionCookieName,
+                    shareAllEvidence,
+                    shareAllQueryStringParameters));
         }
 
         properties = new ArrayList<>();
@@ -711,7 +794,9 @@ public abstract class ShareUsageBase
                 continue;
             }
 
-            switch (entry.getKey()) {
+            // The keys are compared without regard to case, and the constants
+            // are lower case.
+            switch (entry.getKey().toLowerCase(Locale.ROOT)) {
                 case fiftyone.pipeline.core.Constants.EVIDENCE_CLIENTIP_KEY:
                     // The client IP is dealt with separately for backwards
                     // compatibility purposes.
