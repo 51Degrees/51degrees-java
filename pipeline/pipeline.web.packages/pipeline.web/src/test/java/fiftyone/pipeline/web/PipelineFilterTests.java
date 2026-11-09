@@ -28,6 +28,7 @@ import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.fiftyone.flowelements.SequenceElement;
 import fiftyone.pipeline.engines.fiftyone.flowelements.SetHeadersElement;
+import fiftyone.pipeline.javascriptbuilder.data.JavaScriptBuilderData;
 import fiftyone.pipeline.javascriptbuilder.flowelements.JavaScriptBuilderElement;
 import fiftyone.pipeline.jsonbuilder.flowelements.JsonBuilderElement;
 
@@ -249,7 +250,7 @@ public class PipelineFilterTests {
         assertTrue(hasElement(elements, SetHeadersElement.class));
         assertTrue(hasElement(elements, JsonBuilderElement.class));
         assertTrue(hasElement(elements, JavaScriptBuilderElement.class));
-        assertEquals("/51Degrees.core.json", endpointOf(elements));
+        assertEquals("/51dpipeline/json", endpointOf(elements));
     }
 
     @Test
@@ -286,6 +287,31 @@ public class PipelineFilterTests {
         assertTrue(hasElement(elements, SetHeadersElement.class));
         assertFalse(hasElement(elements, JsonBuilderElement.class));
         assertFalse(hasElement(elements, JavaScriptBuilderElement.class));
+    }
+
+    /**
+     * Check that the script the JavaScript Builder Element renders calls back
+     * to the specification's JSON path when the init parameter is not set.
+     */
+    @Test
+    public void PipelineFilter_Defaults_ScriptCallsTheNewJsonPath()
+        throws Exception {
+        filter = new PipelineFilter();
+        filter.init(config);
+        Field field = PipelineFilter.class.getDeclaredField("pipeline");
+        field.setAccessible(true);
+        Pipeline built = (Pipeline) field.get(filter);
+
+        try (FlowData processed = built.createFlowData()) {
+            processed.addEvidence("header.Host", "example.com");
+            processed.addEvidence("header.protocol", "https");
+            processed.process();
+
+            String script = processed
+                .get(JavaScriptBuilderData.class)
+                .getJavaScript();
+            assertTrue(script.contains("https://example.com/51dpipeline/json"));
+        }
     }
 
     /**

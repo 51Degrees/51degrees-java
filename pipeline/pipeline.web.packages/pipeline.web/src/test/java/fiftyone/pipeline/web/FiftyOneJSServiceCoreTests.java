@@ -69,11 +69,28 @@ public class FiftyOneJSServiceCoreTests {
 
         requestPath("/51Degrees.core.js");
         assertTrue(service.serveJS(request, response));
-        requestPath("/51Degrees.core.json");
+        requestPath("/51dpipeline/json");
         assertTrue(service.serveJson(request, response));
 
         verify(clientside, times(1)).serveJavascript(request, response);
         verify(clientside, times(1)).serveJson(request, response);
+    }
+
+    /**
+     * The path the JSON was served from before the specification's path
+     * became the default is still answered.
+     */
+    @Test
+    public void DefaultPaths_OldJsonPathStillServed() throws IOException {
+        FiftyOneJSServiceCore service =
+            new FiftyOneJSServiceCore.Default(clientside, true);
+
+        requestPath("/51Degrees.core.json");
+        assertTrue(service.serveJson(request, response));
+        requestPath("/app/51Degrees.core.json");
+        assertTrue(service.serveJson(request, response));
+
+        verify(clientside, times(2)).serveJson(request, response);
     }
 
     @Test
@@ -89,7 +106,7 @@ public class FiftyOneJSServiceCoreTests {
 
         requestPath("/51Degrees.core.js");
         assertFalse(service.serveJS(request, response));
-        requestPath("/51Degrees.core.json");
+        requestPath("/other/json");
         assertFalse(service.serveJson(request, response));
 
         verify(clientside, times(1)).serveJavascript(request, response);
@@ -103,7 +120,7 @@ public class FiftyOneJSServiceCoreTests {
 
         requestPath("/51Degrees.core.js");
         assertTrue(service.serveJS(request, response));
-        requestPath("/51Degrees.core.json");
+        requestPath("/51dpipeline/json");
         assertTrue(service.serveJson(request, response));
     }
 

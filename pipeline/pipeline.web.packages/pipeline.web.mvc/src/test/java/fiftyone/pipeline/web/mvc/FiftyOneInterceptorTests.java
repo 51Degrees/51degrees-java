@@ -40,6 +40,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import fiftyone.pipeline.core.data.FlowData;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.engines.fiftyone.flowelements.SequenceElement;
 import fiftyone.pipeline.engines.fiftyone.flowelements.SetHeadersElement;
@@ -243,6 +244,21 @@ public class FiftyOneInterceptorTests {
         FiftyOneJSService jsService = mock(FiftyOneJSService.class);
         newInterceptor(newConfig(true, true, null, null), jsService);
 
-        verify(jsService).setPaths(null, "51Degrees.core.json");
+        verify(jsService).setPaths(null, "/51dpipeline/json");
+    }
+
+    /**
+     * Check that the paths the application can call are mapped, the old JSON
+     * path included.
+     */
+    @Test
+    public void FiftyOneInterceptor_EnableClientsideProperties_MapsBothJsonPaths() {
+        ViewControllerRegistry registry = mock(ViewControllerRegistry.class);
+
+        FiftyOneInterceptor.enableClientsideProperties(registry);
+
+        verify(registry).addViewController("/51Degrees.core.js");
+        verify(registry).addViewController("/51dpipeline/json");
+        verify(registry).addViewController("/51Degrees.core.json");
     }
 }
