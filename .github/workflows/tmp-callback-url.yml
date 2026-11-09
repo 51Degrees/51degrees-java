@@ -34,5 +34,5 @@ jobs:
           git log --oneline -1
           mvn -B -f pipeline/pom.xml -pl pipeline.javascriptbuilder -am test `
             '-Dtest=CallbackUrlTests,JavaScriptUrlTests' `
-            -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false
+            '-DfailIfNoTests=false' '-Dsurefire.failIfNoSpecifiedTests=false'
           if ($LASTEXITCODE -ne 0) { exit 1 }
