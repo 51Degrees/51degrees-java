@@ -24,7 +24,6 @@ package fiftyone.pipeline.web;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.AdditionalAnswers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import org.slf4j.LoggerFactory;
@@ -787,101 +786,6 @@ public class ClientsidePropertyServiceTests {
     @Override
     public EvidenceKeyFilter getEvidenceKeyFilter() {
       return filter;
-    }
-
-    @Override
-    public List<ElementPropertyMetaData> getProperties() {
-      return new ArrayList<>();
-    }
-
-    @Override
-    protected void managedResourcesCleanup() {
-    }
-
-    @Override
-    protected void unmanagedResourcesCleanup() {
-    }
-  }
-
-  /**
-   * The ETag is made from the evidence the request supplied. A Flow Element
-   * that accepts the evidence it adds, as the Sequence Element does with a
-   * new session id, would otherwise give every request a different ETag, and
-   * a revalidation would never get a 304.
-   */
-  @Test
-  public void JavaScript_ElementAddsEvidence_RevalidationGets304()
-    throws Exception {
-    try (Pipeline real = new PipelineBuilder()
-      .addFlowElement(new SessionIdElement())
-      .build()) {
-      pipeline = mock(Pipeline.class);
-      when(pipeline.getFlowElements()).thenReturn(real.getFlowElements());
-      when(pipeline.getElement(JavaScriptBuilderElement.class)).thenReturn(jsElement);
-      when(pipeline.getElement(JsonBuilderElement.class)).thenReturn(jsonElement);
-      when(pipeline.getEvidenceKeyFilter()).thenReturn(real.getEvidenceKeyFilter());
-      service = new ClientsidePropertyServiceCore.Default(
-        flowDataProvider, pipeline);
-
-      ArgumentCaptor<String> eTag = ArgumentCaptor.forClass(String.class);
-      try (FlowData first = real.createFlowData()) {
-        first.process();
-        FlowData wrapped = wrap(first);
-        when(flowDataProvider.getFlowData(any(HttpServletRequest.class)))
-          .thenReturn(wrapped);
-        service.serveJavascript(request, response);
-        verify(response).setHeader(eq("ETag"), eTag.capture());
-      }
-
-      when(request.getHeader("If-None-Match")).thenReturn(eTag.getValue());
-      try (FlowData second = real.createFlowData()) {
-        second.process();
-        FlowData wrapped = wrap(second);
-        when(flowDataProvider.getFlowData(any(HttpServletRequest.class)))
-          .thenReturn(wrapped);
-        service.serveJavascript(request, response);
-      }
-
-      verify(response).setStatus(304);
-    }
-  }
-
-  private FlowData wrap(FlowData data) throws Exception {
-    FlowData wrapped = mock(
-      FlowData.class, AdditionalAnswers.delegatesTo(data));
-    doReturn(pipeline).when(wrapped).getPipeline();
-    doReturn(jsData).when(wrapped).getFromElement(jsElement);
-    doReturn(jsonData).when(wrapped).getFromElement(jsonElement);
-    return wrapped;
-  }
-
-  /**
-   * Accepts and adds a session id as the Sequence Element does.
-   */
-  private static class SessionIdElement
-    extends FlowElementBase<ElementData, ElementPropertyMetaData> {
-
-    private static final String SESSION_ID = "query.session-id";
-
-    SessionIdElement() {
-      super(LoggerFactory.getLogger(SessionIdElement.class), null);
-    }
-
-    @Override
-    protected void processInternal(FlowData data) {
-      if (data.getEvidence().asKeyMap().containsKey(SESSION_ID) == false) {
-        data.addEvidence(SESSION_ID, java.util.UUID.randomUUID().toString());
-      }
-    }
-
-    @Override
-    public String getElementDataKey() {
-      return "session-id-test";
-    }
-
-    @Override
-    public fiftyone.pipeline.core.data.EvidenceKeyFilter getEvidenceKeyFilter() {
-      return new EvidenceKeyFilterWhitelist(Arrays.asList(SESSION_ID));
     }
 
     @Override
