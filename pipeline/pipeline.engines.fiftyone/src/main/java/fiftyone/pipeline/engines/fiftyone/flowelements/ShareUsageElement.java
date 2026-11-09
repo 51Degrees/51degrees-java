@@ -509,7 +509,10 @@ public class ShareUsageElement extends ShareUsageBase {
         // check for completion
         int code = dataUploader.getResponseCode();
         if (code != 200) {
-            throw new Exception(String.format("Share Usage response code was %d ", code));
+            throw new Exception(String.format(
+                "Share Usage response code was %d with content '%s'",
+                code,
+                dataUploader.getResponseContent()));
         }
         logger.debug(threadMarker, "Send elements done");
     }

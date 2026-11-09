@@ -23,9 +23,11 @@
 package fiftyone.pipeline.engines.services;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.zip.GZIPOutputStream;
 
@@ -34,6 +36,11 @@ public class DataUploaderHttp implements DataUploader{
     private final String url;
     private final Map<String, String> headers;
     private final int timeout;
+
+    /**
+     * The most characters of an answer's content that are given.
+     */
+    private static final int LOGGED_CONTENT_LENGTH = 500;
     HttpURLConnection connection;
 
     /**
@@ -68,6 +75,29 @@ public class DataUploaderHttp implements DataUploader{
     @Override
     public int getResponseCode() throws IOException {
         return connection.getResponseCode();
+    }
+
+    /**
+     * Reads the content of a failed answer, as far as the most characters
+     * that are logged.
+     */
+    @Override
+    public String getResponseContent() {
+        try (InputStream error = connection.getErrorStream()) {
+            if (error == null) {
+                return "";
+            }
+            byte[] content = new byte[LOGGED_CONTENT_LENGTH];
+            int length = 0;
+            int read;
+            while (length < content.length && (read = error.read(
+                    content, length, content.length - length)) > 0) {
+                length += read;
+            }
+            return new String(content, 0, length, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            return "";
+        }
     }
 }
 
