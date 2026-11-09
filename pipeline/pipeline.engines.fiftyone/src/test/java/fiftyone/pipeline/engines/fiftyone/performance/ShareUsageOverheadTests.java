@@ -50,6 +50,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -115,50 +116,29 @@ public class ShareUsageOverheadTests {
         pipeline.close();
     }
 
-    // The FlowData are all processed before any is closed, so that closing
-    // them is not part of the time measured. They are closed together in a
-    // finally block rather than one by one with try-with-resources.
-    @Test
+    private static final String USER_AGENT =
+        "Mozilla/5.0 (iPad; U; CPU OS 3_2_1 like Mac OS X; en-us) " +
+        "AppleWebKit/531.21.10 (KHTML, like Gecko) Mobile/7B405";
+
+    /**
+     * Rounds measured, and the number discarded first so that the JIT has
+     * compiled the code. The median of the rounds is checked, so one round
+     * slowed by a busy runner or a garbage collection does not fail a test,
+     * whilst a cost on every call does.
+     */
+    private static final int MeasuredRounds = 7;
+    private static final int WarmUpRounds = 2;
+
+    /**
+     * Returns the milliseconds per Process call, for one round of calls with
+     * the evidence given. The FlowData are all processed before any is closed,
+     * so that closing them is not part of the time measured. They are closed
+     * together in a finally block rather than one by one with
+     * try-with-resources.
+     */
     @SuppressWarnings("PMD.FlowDataInTryWithResources")
-    public void ShareUsageOverhead_SingleEvidence() throws Exception {
-        int iterations = 10_000;
-        double maxOverheadPerCall = 0.1;
-        List<FlowData> data = new ArrayList<>();
-        long start;
-        long end;
-        try {
-            for (int i = 0; i < iterations; i++) {
-                FlowData flowData = pipeline.createFlowData();
-                data.add(flowData);
-                flowData.addEvidence("header.user-agent", "Mozilla/5.0 (iPad; U; CPU OS 3_2_1 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Mobile/7B405");
-            }
-
-            start = System.currentTimeMillis();
-            for (FlowData entry : data) {
-                entry.process();
-            }
-            end = System.currentTimeMillis();
-        } finally {
-            closeAll(data);
-        }
-
-        double msOverheadPerCall = (double)(end - start) / iterations;
-        overheadMillis.put("ShareUsageOverhead_SingleEvidence_ms", msOverheadPerCall);
-		System.out.println("ShareUsageOverhead_SingleEvidence: " + msOverheadPerCall + "ms per call");
-        logger.info("Overhead was {} millis", msOverheadPerCall);
-        Assertions.assertTrue(msOverheadPerCall < maxOverheadPerCall,
-                "Pipeline with share usage overhead per Process call was " +
-                        msOverheadPerCall + "ms. Maximum permitted is " + maxOverheadPerCall);
-    }
-
-    // See ShareUsageOverhead_SingleEvidence for why the FlowData are closed
-    // in a finally block.
-    @Test
-    @SuppressWarnings("PMD.FlowDataInTryWithResources")
-    public void ShareUsageOverhead_ThousandEvidence() throws Exception {
-        int iterations = 1_000;
-        int evidenceCount = 1_000;
-        int maxOverheadPerCallMillis = 10;
+    private double measureRound(int iterations, int evidenceCount)
+            throws Exception {
         List<FlowData> data = new ArrayList<>();
         long start;
         long end;
@@ -169,20 +149,59 @@ public class ShareUsageOverheadTests {
                 for (int j = 0; j < evidenceCount; j++) {
                     flowData.addEvidence("header." + j, j);
                 }
-                flowData.addEvidence("header.user-agent", "Mozilla/5.0 (iPad; U; CPU OS 3_2_1 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Mobile/7B405");
+                flowData.addEvidence("header.user-agent", USER_AGENT);
             }
-            start = System.currentTimeMillis();
+            start = System.nanoTime();
             for (FlowData entry : data) {
                 entry.process();
             }
-            end = System.currentTimeMillis();
+            end = System.nanoTime();
         } finally {
             closeAll(data);
         }
+        return (end - start) / 1_000_000.0 / iterations;
+    }
 
-        double msOverheadPerCall = (double)(end - start) / iterations;
+    /**
+     * Returns the median over the measured rounds, after the warm up rounds.
+     */
+    private double measureMedian(int iterations, int evidenceCount)
+            throws Exception {
+        for (int i = 0; i < WarmUpRounds; i++) {
+            measureRound(iterations, evidenceCount);
+        }
+        double[] rounds = new double[MeasuredRounds];
+        for (int i = 0; i < rounds.length; i++) {
+            rounds[i] = measureRound(iterations, evidenceCount);
+        }
+        Arrays.sort(rounds);
+        logger.info("Rounds in millis per call {}", Arrays.toString(rounds));
+        return rounds[rounds.length / 2];
+    }
+
+    @Test
+    public void ShareUsageOverhead_SingleEvidence() throws Exception {
+        int iterations = 10_000;
+        double maxOverheadPerCall = 0.1;
+
+        double msOverheadPerCall = measureMedian(iterations, 0);
+        overheadMillis.put("ShareUsageOverhead_SingleEvidence_ms", msOverheadPerCall);
+        System.out.println("ShareUsageOverhead_SingleEvidence: " + msOverheadPerCall + "ms per call");
+        logger.info("Overhead was {} millis", msOverheadPerCall);
+        Assertions.assertTrue(msOverheadPerCall < maxOverheadPerCall,
+                "Pipeline with share usage overhead per Process call was " +
+                        msOverheadPerCall + "ms. Maximum permitted is " + maxOverheadPerCall);
+    }
+
+    @Test
+    public void ShareUsageOverhead_ThousandEvidence() throws Exception {
+        int iterations = 250;
+        int evidenceCount = 1_000;
+        int maxOverheadPerCallMillis = 10;
+
+        double msOverheadPerCall = measureMedian(iterations, evidenceCount);
         overheadMillis.put("ShareUsageOverhead_HundredEvidence_ms", msOverheadPerCall);
-		System.out.println("ShareUsageOverhead_HundredEvidence: " + msOverheadPerCall + "ms per call");
+        System.out.println("ShareUsageOverhead_HundredEvidence: " + msOverheadPerCall + "ms per call");
         logger.info("Overhead was {} millis", msOverheadPerCall);
         Assertions.assertTrue(msOverheadPerCall < maxOverheadPerCallMillis,
                 "Pipeline with share usage overhead per Process call was " +
