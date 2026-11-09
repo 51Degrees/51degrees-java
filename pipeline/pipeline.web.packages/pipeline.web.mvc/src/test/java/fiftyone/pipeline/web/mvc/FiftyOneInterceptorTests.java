@@ -208,6 +208,8 @@ public class FiftyOneInterceptorTests {
         throws Exception {
         FiftyOneInterceptorConfig config = newConfig(false, false, null, null);
         when(config.getClientsidePropertiesEnabled()).thenReturn(false);
+        when(config.getDataFilePath())
+            .thenReturn("src/test/resources/NoJson.xml");
         FiftyOneInterceptor created = newInterceptor(
             config, mock(FiftyOneJSService.class));
 
