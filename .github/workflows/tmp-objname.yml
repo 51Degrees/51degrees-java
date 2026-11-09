@@ -1,0 +1,25 @@
+name: Temporary object name tests
+
+on:
+  push:
+    branches:
+      - 'tmp/objname-java-*'
+
+jobs:
+  Test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Show head
+        run: git log -1 --format=%H
+      - name: Test
+        run: >
+          mvn -B -f pipeline/pom.xml -pl pipeline.javascriptbuilder -am
+          test -Dtest=JavaScriptObjectNameTests
+          -Dsurefire.failIfNoSpecifiedTests=false
