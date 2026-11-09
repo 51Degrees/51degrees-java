@@ -157,12 +157,15 @@ public class SuspiciousOnPrem {
         Note that we wrap the creation of a pipeline in a try/resources to control its lifecycle */
         try (Pipeline pipeline = new IPIntelligencePipelineBuilder()
                 .useOnPremise(dataFileLocation, false)
-                // We use the max performance profile for optimal lookup speed in this
-                // example. See the documentation for more detail on this and other
-                // configuration options.
+                // We use the low memory profile, because this example needs
+                // properties only the Enterprise data file has, and that file
+                // is over 6 GB. MaxPerformance loads the whole data file into
+                // memory, which makes each lookup faster where there is memory
+                // to hold it. See the documentation for more detail on this and
+                // other configuration options.
                 // https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=automatic-datafile-updates
                 // https://51degrees.com/documentation/_pipeline_api__features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=usage-sharing
-                .setPerformanceProfile(Constants.PerformanceProfiles.MaxPerformance)
+                .setPerformanceProfile(Constants.PerformanceProfiles.LowMemory)
                 // inhibit sharing usage for this example, usually this should be set to "true"
                 .setShareUsage(false)
                 // inhibit auto-update of the data file for this example

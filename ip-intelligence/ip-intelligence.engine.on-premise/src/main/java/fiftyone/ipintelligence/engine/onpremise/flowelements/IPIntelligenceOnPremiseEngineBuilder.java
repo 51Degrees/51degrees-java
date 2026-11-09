@@ -62,9 +62,27 @@ public class IPIntelligenceOnPremiseEngineBuilder
     private final String dataDownloadType = "IPIV41";
    
     /**
-     * Native configuration instance for this engine.
+     * Native configuration instance for this engine, which starts from the
+     * Balanced performance profile.
      */
-    private final ConfigIpiSwig config = new ConfigIpiSwig();
+    private final ConfigIpiSwig config = balancedConfig();
+
+    /**
+     * A native configuration with the Balanced profile applied. The profile
+     * is applied here rather than left to the native library, so that a
+     * builder whose caller sets no profile is Balanced whatever
+     * configuration the native library starts from. A field initializer
+     * runs before the constructor sets the concurrency, which matters
+     * because applying a profile replaces the concurrency of every
+     * collection.
+     *
+     * @return a new Balanced configuration
+     */
+    private static ConfigIpiSwig balancedConfig() {
+        ConfigIpiSwig config = new ConfigIpiSwig();
+        config.setBalanced();
+        return config;
+    }
 
     /**
      * Default constructor which uses the {@link ILoggerFactory} implementation

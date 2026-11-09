@@ -154,9 +154,11 @@ status in the message, a payload shorter than its type's minimum throws
 
 Both string readers accept the standard alphabet the cloud issues (`+`, `/`,
 padded) and the URL-safe alphabet a page puts in a link (`-`, `_`, padding
-optional), with or without whitespace around the value. `asBase64Url()` gives
-the URL-safe form back, so an identifier can go into a URL without any
-conversion by the caller.
+optional), with or without white space around the value. A value with white
+space inside it, or with characters from both alphabets, is refused as
+`INVALID_BASE64`, because the issuer writes neither and either is a sign of a
+damaged value. `asBase64Url()` gives the URL-safe form back, so an identifier
+can go into a URL without any conversion by the caller.
 
 ### What the status means
 
@@ -167,8 +169,8 @@ found it, and adds its own for the payload rules.
 | Status | Meaning | Layer |
 |---|---|---|
 | `PARSED` | A structurally valid 51Did. Says nothing about the signature. | |
-| `MISSING_INPUT` | Null or empty input. | OWID |
-| `INVALID_BASE64` | The string is not base64. | OWID |
+| `MISSING_INPUT` | Null or empty input, or white space alone. | OWID |
+| `INVALID_BASE64` | The string is not base64 in one alphabet. White space inside it, and characters from both alphabets, report this. | OWID, or 51Did for white space inside the text and mixed alphabets |
 | `UNSUPPORTED_VERSION` | The first byte names an envelope version the reader does not know. | OWID |
 | `UNEXPECTED_END` | The data stopped in the middle of an envelope field. | OWID |
 | `INVALID_DOMAIN_ENCODING` | The creator domain is unterminated or longer than a domain name can be. | OWID |

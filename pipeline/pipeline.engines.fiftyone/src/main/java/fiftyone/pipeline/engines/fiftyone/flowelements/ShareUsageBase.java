@@ -30,6 +30,7 @@ import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.configuration.CacheConfiguration;
 import fiftyone.pipeline.engines.fiftyone.data.EvidenceKeyFilterShareUsage;
 import fiftyone.pipeline.engines.fiftyone.data.EvidenceKeyFilterShareUsageTracker;
+import fiftyone.pipeline.engines.fiftyone.data.ShareUsageEvidence;
 import fiftyone.pipeline.engines.fiftyone.exceptions.HttpException;
 import fiftyone.pipeline.engines.fiftyone.trackers.ShareUsageTracker;
 import fiftyone.pipeline.engines.trackers.Tracker;
@@ -106,12 +107,15 @@ public abstract class ShareUsageBase
     protected final String shareUsageUrl;
 
     /**
-     * Evidence key filter including the session id.
+     * The Evidence this element accepts, which is none, so that cache keys,
+     * the ETag and the Vary header never depend on it. It finds what to share
+     * with {@link ShareUsageEvidence#find} instead.
      */
-    private final EvidenceKeyFilter evidenceKeyFilter;
+    private final EvidenceKeyFilter acceptedEvidence =
+        new EvidenceKeyFilterWhitelist(new ArrayList<String>());
 
     /**
-     * Evidence key filter excluding the session id
+     * Which of the values found are shared, leaving out the session cookie.
      */
     private final EvidenceKeyFilter evidenceKeyFilterExclSession;
 
@@ -525,8 +529,6 @@ public abstract class ShareUsageBase
         includedQueryStringParameters.add(Constants.EVIDENCE_SESSIONID_SUFFIX);
         includedQueryStringParameters.add(Constants.EVIDENCE_SEQUENCE_SUFIX);
 
-        evidenceKeyFilter = new EvidenceKeyFilterShareUsage(
-            blockedHttpHeaders, includedQueryStringParameters, true, sessionCookieName);
         evidenceKeyFilterExclSession = new EvidenceKeyFilterShareUsage(
             blockedHttpHeaders, includedQueryStringParameters, false, sessionCookieName);
 
@@ -618,15 +620,16 @@ public abstract class ShareUsageBase
     @Override
     protected void processInternal(FlowData flowData){
         boolean ignoreData = false;
-        Map<String, Object> evidence = flowData.getEvidence().asKeyMap();
+        Map<String, Object> found =
+            ShareUsageEvidence.find(flowData.getEvidence());
 
         logger.debug("processInternal()");
 
         if (ignoreDataEvidenceFilter != null) {
             for (Map.Entry<String, String> entry : ignoreDataEvidenceFilter) {
                 String key = entry.getKey();
-                if (evidence.containsKey(key)) {
-                    if (evidence.get(key).toString().equals(entry.getValue())) {
+                if (found.containsKey(key)) {
+                    if (found.get(key).toString().equals(entry.getValue())) {
                         ignoreData = true;
                         break;
                     }
@@ -635,13 +638,13 @@ public abstract class ShareUsageBase
         }
 
         if (isCanceled() == false && ignoreData == false) {
-            processData(flowData);
+            processData(flowData, found);
         }
     }
 
     @Override
     public EvidenceKeyFilter getEvidenceKeyFilter() {
-        return evidenceKeyFilter;
+        return acceptedEvidence;
     }
 
     @Override
@@ -761,8 +764,9 @@ public abstract class ShareUsageBase
     /**
      * Process the supplied request data
      * @param data the {@link FlowData} instance that provides the evidence
+     * @param found the values {@link ShareUsageEvidence#find} found for it
      */
-    private void processData(FlowData data) {
+    private void processData(FlowData data, Map<String, Object> found) {
         logger.debug("processData()");
         if (random.nextDouble() <= sharePercentage) {
             // Check if the tracker will allow sharing of this data
@@ -771,7 +775,7 @@ public abstract class ShareUsageBase
                 // it to the collection.
                 try {
                     if (evidenceCollection.offer(
-                            getDataFromEvidence(data.getEvidence()),
+                            getDataFromEvidence(found),
                             addTimeout,
                             TimeUnit.MILLISECONDS)) {
                         logger.debug("Queued {} entries", evidenceCollection.size());
@@ -797,18 +801,19 @@ public abstract class ShareUsageBase
     }
 
     /**
-     * Extract the desired data from the evidence.
+     * Extract the desired data from the values found.
      * In order to avoid problems with the evidence data being disposed before
      * it is sent, the data placed into a new object rather than being a
      * reference to the existing evidence instance.
      *
-     * @param evidence an {@link Evidence} instance that contains the data to be extracted
-     * @return a {@link ShareUsageData} instance populated with data from the evidence
+     * @param found the values {@link ShareUsageEvidence#find} found
+     * @return a {@link ShareUsageData} instance populated with the values
+     * the sharing rules allow
      */
-    private ShareUsageData getDataFromEvidence(Evidence evidence) {
+    private ShareUsageData getDataFromEvidence(Map<String, Object> found) {
         ShareUsageData shareUsageData = new ShareUsageData();
 
-        for (Map.Entry<String, Object> entry : evidence.asKeyMap().entrySet()) {
+        for (Map.Entry<String, Object> entry : found.entrySet()) {
             // Check if we can send this piece of evidence
             if (evidenceKeyFilterExclSession.include(entry.getKey()) == false) {
                 continue;
