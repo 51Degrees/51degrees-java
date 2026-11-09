@@ -93,6 +93,13 @@ public class Constants {
      * Default lost data count for share usage before it wraps
      */
     static final int LOST_DATA_RESET_DEFAULT = 5000000;
+
+    /**
+     * While the queue is full, a message is logged for the first entry
+     * discarded and then once for every this many more, never one for each
+     * entry.
+     */
+    static final int QUEUE_FULL_LOG_EVERY = 1000;
     /**
      * The default URL to send usage data to.
      */

@@ -229,6 +229,13 @@ public abstract class ShareUsageBase
     protected long lostDataReset = LOST_DATA_RESET_DEFAULT;
 
     /**
+     * True from the first entry discarded because the queue is full until an
+     * entry is next queued. While true, a message is logged only for every
+     * {@link Constants#QUEUE_FULL_LOG_EVERY} entries discarded.
+     */
+    private volatile boolean queueFullReported = false;
+
+    /**
      * Decides when sending may happen after failed sends.
      */
     private final ShareUsageBackOff backOff;
@@ -796,6 +803,7 @@ public abstract class ShareUsageBase
                             getDataFromEvidence(found),
                             addTimeout,
                             TimeUnit.MILLISECONDS)) {
+                        queueFullReported = false;
                         logger.debug("Queued {} entries", evidenceCollection.size());
                         // If the collection has enough entries then start
                         // taking data from it to be sent.
@@ -803,11 +811,17 @@ public abstract class ShareUsageBase
                             trySendData();
                         }
                     } else {
-                        if (++lostData >= lostDataReset) {
-                            logger.warn("Could not queue data for Share Usage. This could mean that" +
-                                    " the queue is too small, that the proportion of data shared is" +
-                                    " too high - or that the sending process has encountered" +
-                                    " problems sending.");
+                        long lost = ++lostData;
+                        if (queueFullReported == false ||
+                            lost % Constants.QUEUE_FULL_LOG_EVERY == 0) {
+                            queueFullReported = true;
+                            logger.warn("The usage sharing queue is full, so usage data is " +
+                                    "being discarded. This could mean that the queue is too " +
+                                    "small, that the proportion of data shared is too high, " +
+                                    "or that sending is failing. {} entries have been " +
+                                    "discarded.", lost);
+                        }
+                        if (lost >= lostDataReset) {
                             lostData = 0;
                         }
                     }
