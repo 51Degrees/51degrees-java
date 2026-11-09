@@ -105,7 +105,12 @@ public interface FiftyOneJSServiceCore {
             String jsonPath) {
             this.clientsidePropertyServiceCore = clientsidePropertyServiceCore;
             this.enabled = enabled;
-            setPaths(javaScriptPath, jsonPath);
+            this.javaScriptPath = orDefault(javaScriptPath, CORE_JS_NAME);
+            this.jsonPath = orDefault(jsonPath, CORE_JSON_NAME);
+        }
+
+        private static String orDefault(String path, String defaultPath) {
+            return path == null || path.isEmpty() ? defaultPath : path;
         }
 
         /**
@@ -117,10 +122,8 @@ public interface FiftyOneJSServiceCore {
          *                 served for, or null or empty for the default
          */
         public void setPaths(String javaScriptPath, String jsonPath) {
-            this.javaScriptPath = javaScriptPath == null ||
-                javaScriptPath.isEmpty() ? CORE_JS_NAME : javaScriptPath;
-            this.jsonPath = jsonPath == null || jsonPath.isEmpty() ?
-                CORE_JSON_NAME : jsonPath;
+            this.javaScriptPath = orDefault(javaScriptPath, CORE_JS_NAME);
+            this.jsonPath = orDefault(jsonPath, CORE_JSON_NAME);
         }
 
         @Override
