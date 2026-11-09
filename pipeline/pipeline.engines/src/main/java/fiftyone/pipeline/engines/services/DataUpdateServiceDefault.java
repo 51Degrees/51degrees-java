@@ -659,11 +659,8 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                             downloaded = downloadOkResponse(
                                     connection, dataFile, tempFile, automatic);
                         } catch (Exception e) {
-                            logger.warn("An error occurred while downloading " +
-                                    "a data file update for " + engineType +
-                                    " from " + url + "." +
-                                    retryNote(automatic) +
-                                    " Error detail: " + e.getMessage(), e);
+                            logger.warn(downloadFailure(url, engineType,
+                                    automatic, e.getMessage()), e);
                             return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
                         }
                         if (downloaded == AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS) {
@@ -675,21 +672,20 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                     // Note: needed because TooManyRequests is not available
                     // in some versions of the HttpStatusCode enum.
                     case (429):
-                        logger.error("Too many requests to '{}' for {}",
-                                dataFile.getFormattedUrl(), getIdForLogging(dataFile));
+                        logger.warn(downloadFailure(url, engineType, automatic,
+                                "HTTP status code 429 (too many requests)"));
                         return AutoUpdateStatus.AUTO_UPDATE_ERR_429_TOO_MANY_ATTEMPTS;
                     case HttpURLConnection.HTTP_NOT_MODIFIED:
                         logger.info("No data newer than {} found at '{}' for Engine '{}'",
                                 Instant.ofEpochMilli(ifModifiedSince), url, engineType);
                         return AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED;
                     case HttpURLConnection.HTTP_FORBIDDEN:
-                        logger.error("Access denied to data update service at '{}' for {}",
-                                dataFile.getFormattedUrl(), getIdForLogging(dataFile));
+                        logger.warn(downloadFailure(url, engineType, automatic,
+                                "HTTP status code 403 (access denied)"));
                         return AutoUpdateStatus.AUTO_UPDATE_ERR_403_FORBIDDEN;
                     default:
-                        logger.error("HTTP status code '{}' from data update service at '{}' for {}",
-                                connection.getResponseCode(), dataFile.getFormattedUrl(),
-                                getIdForLogging(dataFile));
+                        logger.warn(downloadFailure(url, engineType, automatic,
+                                "HTTP status code " + connection.getResponseCode()));
                         return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
                 }
             } finally {
@@ -731,6 +727,16 @@ public class DataUpdateServiceDefault implements DataUpdateService {
         return "An error occurred when connecting to " + url +
                 " in order to check for data file updates for " + engineType +
                 "." + retryNote(automatic) + " Error detail: " + detail;
+    }
+
+    private static String downloadFailure(
+            String url,
+            String engineType,
+            boolean automatic,
+            String detail) {
+        return "An error occurred while downloading a data file update for " +
+                engineType + " from " + url + "." + retryNote(automatic) +
+                " Error detail: " + detail;
     }
 
     private void logRefreshFailure(AspectEngineDataFile dataFile, Exception ex) {
