@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.cloudrequestengine.flowelements;
 
+import fiftyone.pipeline.cloudrequestengine.CloudDiscoveryState;
 import fiftyone.pipeline.cloudrequestengine.CloudRequestException;
 import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
 import fiftyone.pipeline.core.Constants;
@@ -101,6 +102,12 @@ public class CloudRequestEngineDefault
      * accessibleproperties request, or null until that request succeeds.
      */
     private volatile Map<String, AccessiblePropertyMetaData.ProductMetaData> publicProperties;
+
+    /**
+     * The answer to the accessibleproperties request that gave
+     * {@link #publicProperties}, kept for {@link #getDiscoveryState()}.
+     */
+    private volatile String accessibleProperties;
 
     /**
      * The accepted Evidence, from the evidencekeys request. It is the same
@@ -289,6 +296,33 @@ public class CloudRequestEngineDefault
             first.addSuppressed(failures.get(i));
         }
         logger.warn(MessageDiscoveryDeferred, first);
+    }
+
+    /**
+     * A copy of what discovery fetched, which a later builder can use in
+     * place of the discovery requests.
+     * @return the copy, or null unless both the accepted evidence keys and
+     * the accessible properties are known
+     */
+    public CloudDiscoveryState getDiscoveryState() {
+        synchronized (discoveryLock) {
+            List<String> keys = evidenceKeyFilter.getKeys();
+            return keys == null || accessibleProperties == null ?
+                null :
+                new CloudDiscoveryState(keys, accessibleProperties);
+        }
+    }
+
+    /**
+     * Use a copy of what an earlier discovery fetched, in place of the
+     * discovery requests.
+     * @param state the copy
+     */
+    public void useDiscoveryState(CloudDiscoveryState state) {
+        synchronized (discoveryLock) {
+            evidenceKeyFilter.setKeys(state.getEvidenceKeys());
+            setPublicProperties(state.getAccessibleProperties());
+        }
     }
 
     /**
@@ -574,16 +608,8 @@ public class CloudRequestEngineDefault
             jsonResult = httpClient.getResponseString(connection, headers);
             validateResponse(jsonResult, connection);
 
-            JSONObject jsonObj = null;
             if (jsonResult.isEmpty() == false) {
-                jsonObj = new JSONObject(jsonResult);
-            }
-
-            if (jsonObj != null) {
-                AccessiblePropertyMetaData.LicencedProducts accessiblePropertyData =
-                        new AccessiblePropertyMetaData.LicencedProducts(jsonObj.getJSONObject("Products"));
-
-                publicProperties = accessiblePropertyData.products;
+                setPublicProperties(jsonResult);
             } else {
                 throw new RuntimeException("Failed to retrieve available properties " +
                         "from cloud service at " + propertiesEndpoint + ".");
@@ -591,6 +617,18 @@ public class CloudRequestEngineDefault
         } catch (IOException e) {
             throw new PropertyNotLoadedException(e);
         }
+    }
+
+    /**
+     * Read the answer to the accessibleproperties request.
+     * @param json the answer
+     */
+    private void setPublicProperties(String json) {
+        AccessiblePropertyMetaData.LicencedProducts accessiblePropertyData =
+                new AccessiblePropertyMetaData.LicencedProducts(
+                        new JSONObject(json).getJSONObject("Products"));
+        accessibleProperties = json;
+        publicProperties = accessiblePropertyData.products;
     }
 
     private void fetchEvidenceKeys() throws CloudRequestException, AggregateException, PropertyNotLoadedException {

@@ -24,6 +24,7 @@ package fiftyone.pipeline.cloudrequestengine.flowelements;
 
 import fiftyone.common.testhelpers.TestLogger;
 import fiftyone.common.testhelpers.TestLoggerFactory;
+import fiftyone.pipeline.cloudrequestengine.CloudDiscoveryState;
 import fiftyone.pipeline.cloudrequestengine.CloudRequestException;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
@@ -334,6 +335,57 @@ public class CloudRequestEngineDiscoveryTests {
             verify(connection).setConnectTimeout(TIMEOUT_SECONDS * 1000);
             verify(connection).setReadTimeout(TIMEOUT_SECONDS * 1000);
         }
+    }
+
+    /**
+     * A copy of what discovery fetched is read from the builder after a
+     * build, kept as JSON, and given to a later build, which makes no
+     * discovery request and is ready to process.
+     */
+    @Test
+    public void DiscoveryState_KeptAndUsedWithNoRequest() throws Exception {
+        CloudRequestEngineBuilder first = builder();
+        first.build();
+        CloudDiscoveryState state = first.getDiscoveryState();
+        assertNotNull(state);
+        String kept = state.toJson();
+
+        answers.put(PROPERTIES, UNREACHABLE);
+        answers.put(EVIDENCE_KEYS, UNREACHABLE);
+        requests.clear();
+        CloudRequestEngine engine = builder()
+            .setDiscoveryState(CloudDiscoveryState.fromJson(kept))
+            .build();
+
+        assertEquals(0, requests(PROPERTIES), "accessibleproperties");
+        assertEquals(0, requests(EVIDENCE_KEYS), "evidencekeys");
+        assertTrue(engine.getPublicProperties().containsKey("device"));
+        assertTrue(engine.getEvidenceKeyFilter().include("header.user-agent"));
+        assertEquals(0, warnings().size(), warnings().toString());
+
+        process(engine, false);
+
+        assertEquals(0, requests(PROPERTIES), "accessibleproperties");
+        assertEquals(0, requests(EVIDENCE_KEYS), "evidencekeys");
+        assertEquals(1, requests(DATA), "json");
+    }
+
+    /**
+     * A build that does not know both lists gives no copy.
+     */
+    @Test
+    public void DiscoveryState_NoneWithoutBothLists() throws Exception {
+        answers.put(EVIDENCE_KEYS, 503);
+        CloudRequestEngineBuilder builder = builder();
+        builder.build();
+
+        assertNull(builder.getDiscoveryState());
+    }
+
+    private CloudRequestEngineBuilder builder() {
+        return new CloudRequestEngineBuilder(loggerFactory, httpClient)
+            .setResourceKey("resource_key")
+            .setTimeOutSeconds(TIMEOUT_SECONDS);
     }
 
     private CloudRequestEngine build() throws Exception {
