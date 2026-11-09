@@ -107,7 +107,7 @@ public class SequenceElement
 
     @Override
     public String getElementDataKey() {
-        return "sequence-element";
+        return "sequence";
     }
 
     @Override
