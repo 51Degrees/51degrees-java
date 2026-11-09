@@ -96,10 +96,23 @@ public class CloudRequestEngineDefault
 
     /**
      * The lowest HTTP status of a client error. A discovery request answered
-     * with a status from this up to {@link #HTTP_SERVER_ERROR_MIN} is a
-     * definitive configuration error.
+     * with a status from this up to {@link #HTTP_SERVER_ERROR_MIN}, other
+     * than {@link #HTTP_REQUEST_TIMEOUT} or {@link #HTTP_TOO_MANY_REQUESTS},
+     * is a definitive configuration error.
      */
     private static final int HTTP_CLIENT_ERROR_MIN = 400;
+
+    /**
+     * Request Timeout, a client error that a later retry can pass, as RFC
+     * 9110 section 15.5.9 says.
+     */
+    private static final int HTTP_REQUEST_TIMEOUT = 408;
+
+    /**
+     * Too Many Requests, a client error that a later retry can pass, as RFC
+     * 6585 section 4 says.
+     */
+    private static final int HTTP_TOO_MANY_REQUESTS = 429;
 
     /**
      * The lowest HTTP status of a server error.
@@ -266,14 +279,15 @@ public class CloudRequestEngineDefault
      * Fetch the accepted Evidence keys and the accessible properties that
      * are not known yet. The builder calls this when it builds the engine,
      * so in the normal case a built engine is ready to process. Both
-     * requests are made. A 4xx answer to either is a definitive
-     * configuration error, and its {@link CloudRequestException} is thrown,
-     * because retrying with the same configuration can never succeed. Any
-     * other failure, such as the service being unreachable, a timeout, a
-     * 5xx answer or a body that cannot be read, is logged as one warning
-     * and the list that did arrive is kept. Processing fetches what is
-     * still missing.
-     * @throws CloudRequestException for a 4xx answer to either request
+     * requests are made. A 4xx answer to either, other than 408 or 429, is
+     * a definitive configuration error, and its
+     * {@link CloudRequestException} is thrown, because retrying with the
+     * same configuration can never succeed. Any other failure, such as the
+     * service being unreachable, a timeout, a 5xx, 408 or 429 answer or a
+     * body that cannot be read, is logged as one warning and the list that
+     * did arrive is kept. Processing fetches what is still missing.
+     * @throws CloudRequestException for a 4xx answer to either request,
+     * other than 408 or 429
      */
     public void discover() {
         List<RuntimeException> failures = new ArrayList<>();
@@ -355,16 +369,18 @@ public class CloudRequestEngineDefault
 
     /**
      * The failure of a discovery request that the cloud service received
-     * and rejected with a 4xx status, so that retrying with the same
-     * configuration can never succeed.
+     * and rejected with a 4xx status other than 408 or 429, so that
+     * retrying with the same configuration can never succeed.
      * @param failure the failure of a discovery request
-     * @return the exception with the 4xx status, or null if there is none
+     * @return the exception with that status, or null if there is none
      */
     private static CloudRequestException definitiveError(Throwable failure) {
         if (failure instanceof CloudRequestException) {
             int status = ((CloudRequestException) failure).getHttpStatusCode();
             return status >= HTTP_CLIENT_ERROR_MIN &&
-                status < HTTP_SERVER_ERROR_MIN ?
+                status < HTTP_SERVER_ERROR_MIN &&
+                status != HTTP_REQUEST_TIMEOUT &&
+                status != HTTP_TOO_MANY_REQUESTS ?
                 (CloudRequestException) failure :
                 null;
         }

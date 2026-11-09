@@ -191,7 +191,7 @@ public class CloudRequestEngineDiscoveryTests {
 
     private static Stream<Arguments> definitiveFailures() {
         List<Arguments> arguments = new ArrayList<>();
-        for (int status : new int[] { 400, 401, 403, 404, 429 }) {
+        for (int status : new int[] { 400, 401, 403, 404 }) {
             arguments.add(Arguments.of(PROPERTIES, status));
             arguments.add(Arguments.of(EVIDENCE_KEYS, status));
         }
@@ -199,8 +199,9 @@ public class CloudRequestEngineDiscoveryTests {
     }
 
     /**
-     * A 4xx answer to either request is a definitive configuration error,
-     * which fails the build once both requests have been made.
+     * A 4xx answer to either request, other than 408 or 429, is a
+     * definitive configuration error, which fails the build once both
+     * requests have been made.
      */
     @ParameterizedTest(name = "{1} from {0}")
     @MethodSource("definitiveFailures")
@@ -235,6 +236,10 @@ public class CloudRequestEngineDiscoveryTests {
             Arguments.of("500 from accessibleproperties", 500, 200),
             Arguments.of("503 from evidencekeys", 200, 503),
             Arguments.of("502 from both", 502, 502),
+            Arguments.of("408 from accessibleproperties", 408, 200),
+            Arguments.of("408 from evidencekeys", 200, 408),
+            Arguments.of("429 from accessibleproperties", 429, 200),
+            Arguments.of("429 from evidencekeys", 200, 429),
             Arguments.of("unreadable accessibleproperties", UNREADABLE, 200),
             Arguments.of("unreadable evidencekeys", 200, UNREADABLE),
             Arguments.of("connection refused to both", UNREACHABLE, UNREACHABLE),
@@ -242,9 +247,9 @@ public class CloudRequestEngineDiscoveryTests {
     }
 
     /**
-     * Any other failure, the service unreachable, a timeout, a 5xx answer or
-     * a body that cannot be read, is logged as one warning and the build
-     * completes.
+     * Any other failure, the service unreachable, a timeout, a 5xx, 408 or
+     * 429 answer or a body that cannot be read, is logged as one warning and
+     * the build completes.
      */
     @ParameterizedTest(name = "{0}")
     @MethodSource("transientFailures")
