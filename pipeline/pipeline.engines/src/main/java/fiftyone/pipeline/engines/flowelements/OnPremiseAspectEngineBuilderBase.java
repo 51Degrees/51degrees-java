@@ -23,6 +23,7 @@
 package fiftyone.pipeline.engines.flowelements;
 
 import fiftyone.pipeline.annotations.DefaultValue;
+import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.engines.Constants;
 import fiftyone.pipeline.engines.configuration.DataFileConfiguration;
 import fiftyone.pipeline.engines.data.AspectEngineDataFile;
@@ -187,20 +188,63 @@ public abstract class OnPremiseAspectEngineBuilderBase<
             dataFile.setConfiguration(dataFileConfig);
             dataFile.setTempDataDirPath(tempDir);
 
-            if (dataFileConfig.getAutomaticUpdatesEnabled()) {
+            boolean autoUpdate = dataFileConfig.getAutomaticUpdatesEnabled();
+            boolean updateOnStartup = dataFileConfig.getUpdateOnStartup();
+            if (autoUpdate || updateOnStartup) {
+                String features = (autoUpdate ? "auto update" : "") +
+                    (autoUpdate && updateOnStartup ? " and " : "") +
+                    (updateOnStartup ? "update on startup" : "");
                 if (dataUpdateService == null) {
                     throw new RuntimeException(
-                        "Auto update enabled by data update service does not exist. " +
+                        "The data update service does not exist but is " +
+                            "needed for " + features + ". " +
                             "This can be corrected by passing an DataUpdateService " +
                             "instance to the engine builder constructor. " +
                             "If building from configuration, this can be corrected " +
                             "by adding an DataUpdateService instance to the " +
                             "the pipeline builder via addService() method.");
                 }
+                if (isLicenseKeyRequired(dataFileConfig) &&
+                    hasLicenseKey(dataFileConfig) == false) {
+                    throw new PipelineConfigurationException(
+                        "No license key is set, and the data update URL " +
+                            "serves nothing without one, so the engine cannot " +
+                            "be built with " + features + " on. Set a license " +
+                            "key with setDataUpdateLicenseKey, or turn off " +
+                            (autoUpdate ? "auto update with setAutoUpdate(false)" : "") +
+                            (autoUpdate && updateOnStartup ? " and " : "") +
+                            (updateOnStartup ?
+                                "update on startup with setDataUpdateOnStartup(false)" : "") +
+                            ".");
+                }
                 dataUpdateService.registerDataFile(dataFile);
             }
             dataFiles.add(dataFile);
         }
+    }
+
+    /**
+     * Whether the data update URL in the configuration serves nothing
+     * without a license key. Engines whose update source needs a key
+     * override this, and the engine then refuses to build with a data update
+     * option on and no key set.
+     * @param dataFileConfig the data file configuration to check
+     * @return true if the update source needs a license key
+     */
+    protected boolean isLicenseKeyRequired(DataFileConfiguration dataFileConfig) {
+        return false;
+    }
+
+    private static boolean hasLicenseKey(DataFileConfiguration dataFileConfig) {
+        List<String> keys = dataFileConfig.getDataUpdateLicenseKeys();
+        if (keys != null) {
+            for (String key : keys) {
+                if (key != null && key.isEmpty() == false) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     @SuppressWarnings("unchecked")

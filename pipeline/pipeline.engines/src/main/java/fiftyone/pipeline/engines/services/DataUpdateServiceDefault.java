@@ -45,6 +45,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.file.*;
+import java.time.Instant;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -193,6 +194,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
         if (dataFile != null) {
             // Only check the file system if the file system watcher
             // is not enabled and the engine is using a temporary file.
+            logger.info("Checking for update");
             logger.debug("CheckForUpdate {}", dataFile.getDataFilePath());
             if (dataFile.getConfiguration().getFileSystemWatcherEnabled() == false &&
                     dataFile.getDataFilePath() != null &&
@@ -215,7 +217,11 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             if (newDataAvailable == false &&
                     dataFile.getConfiguration().getDataUpdateUrl() != null &&
                     dataFile.getConfiguration().getDataUpdateUrl().isEmpty() == false) {
-                result = checkForUpdateFromUrl(dataFile);
+                // A failed update is tried again only when the timer is on.
+                result = checkForUpdateFromUrl(
+                        dataFile,
+                        manualUpdate == false &&
+                                dataFile.getAutomaticUpdatesEnabled());
                 newDataAvailable =
                         result == AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS ||
                                 result == AutoUpdateStatus.AUTO_UPDATE_SUCCESS;
@@ -293,15 +299,18 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             return AutoUpdateStatus.AUTO_UPDATE_SUCCESS;
         }
 
+        logger.info("Attempting to refresh Engine '{}' with new data",
+                getEngineType(dataFile));
         // Try to update the file multiple times to ensure the file is not locked.
         int tries = 0;
+        Exception lastFailure = null;
         while (tries < 10) {
             try {
                 dataFile.getEngine().refreshData(dataFile.getIdentifier());
                 return AUTO_UPDATE_SUCCESS;
             } catch (Exception ex) {
-                logger.warn("File Update: Error applying a data update to engine '{}'",
-                        dataFile.getEngine().getClass().getSimpleName(), ex);
+                lastFailure = ex;
+                logger.debug("Refresh attempt {} failed", tries + 1, ex);
                 try {
                     Thread.sleep(200);
                 } catch (InterruptedException ignored) {
@@ -309,6 +318,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             }
             tries++;
         }
+        logRefreshFailure(dataFile, lastFailure);
         return AUTO_UPDATE_REFRESH_FAILED;
     }
 
@@ -380,22 +390,19 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                         .writeBytes(data);
             } catch (Exception ex) {
                 logger.error("An error occurred when writing to " +
-                                "'" + dataFile.getDataFilePath() +
-                                "'. The engine will be updated to use the new data " +
-                                "but the file on disk will still contain old data.",
-                        ex);
+                                dataFile.getDataFilePath() +
+                                ". Error detail: " + ex.getMessage(), ex);
             }
         }
 
         try {
             // Refresh the engine using the new data.
+            logger.info("Attempting to refresh Engine '{}' with new data",
+                    getEngineType(dataFile));
             dataFile.getEngine().refreshData(dataFile.getIdentifier(), data);
             result = AUTO_UPDATE_SUCCESS;
         } catch (Exception ex) {
-            logger.error("An error occurred when applying a " +
-                            "data update to engine '" + dataFile.getEngine().getClass().getSimpleName() +
-                            "'.",
-                    ex);
+            logRefreshFailure(dataFile, ex);
             result = AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED;
         }
 
@@ -416,6 +423,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
         // We also want to do this synchronously so that execution
         // will block until the engine is ready.
         if (dataFile.getConfiguration().getUpdateOnStartup() && isFalse(alreadyRegistered)) {
+            logger.info("Updating on start-up");
             logger.debug("Checking for Update on Startup {}", dataFile.getDataFilePath());
             AutoUpdateStatus status = checkForUpdate(dataFile, false);
             if (ObjectUtils.notEqual(status, AUTO_UPDATE_SUCCESS) &&
@@ -471,11 +479,15 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 }
             }
 
-            // If file system watcher is enabled then set it up.
-            if (aspectDataFile.getConfiguration().getFileSystemWatcherEnabled() &&
+            // If file system watcher is enabled then set it up. The
+            // automatic update switch governs the watcher as well as the
+            // polling timer.
+            if (aspectDataFile.getAutomaticUpdatesEnabled() &&
+                    aspectDataFile.getConfiguration().getFileSystemWatcherEnabled() &&
                     aspectDataFile.getConfiguration().getWatchKey() == null &&
                     aspectDataFile.getDataFilePath() != null &&
                     aspectDataFile.getDataFilePath().isEmpty() == false) {
+                logger.info("Creating file system watcher");
                 logger.debug("Initialising watch service");
                 final Path aspectDataFilePath =
                         Paths.get(aspectDataFile.getDataFilePath()).toAbsolutePath();
@@ -606,32 +618,35 @@ public class DataUpdateServiceDefault implements DataUpdateService {
      * If the data currently used by the engine is the newest available then
      * nothing will be downloaded.
      *
-     * @param dataFile the data file to use
-     * @param tempFile the temp file to write the data to
+     * @param dataFile  the data file to use
+     * @param tempFile  the temp file to write the data to
+     * @param automatic true if the update will be tried again if it fails
      * @return the {@link AutoUpdateStatus} value indicating the result
      */
     private AutoUpdateStatus downloadFile(
             AspectEngineDataFile dataFile,
-            FileWrapper tempFile) {
+            FileWrapper tempFile,
+            boolean automatic) {
 
         String url = dataFile.getFormattedUrl();
+        String engineType = getEngineType(dataFile);
         logger.debug("downloadFile from {}", url);
 
         try {
+            logger.info("Checking for update from '{}' for Engine '{}'",
+                    url, engineType);
             HttpURLConnection connection = httpClient.connect(new URI(url.trim()).toURL());
             if (connection == null) {
-                logger.error("No response from data update service at '{}' for engine '{}'",
-                        dataFile.getFormattedUrl(), Objects.nonNull(dataFile.getEngine()) ?
-                                dataFile.getEngine().getClass().getSimpleName() : "No Engine");
+                logger.warn(connectFailure(url, engineType, automatic,
+                        "No response from the data update service"));
                 return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
             }
             try {
                 // Set last-modified header to ensure that a file will only
                 // be downloaded if it is newer than the data we already have.
+                long ifModifiedSince = 0;
                 if (dataFile.getConfiguration().getVerifyModifiedSince() == true) {
-                    long ifModifiedSince = dataFile
-                            .getDataPublishedDateTime()
-                            .getTime();
+                    ifModifiedSince = getIfModifiedSince(dataFile);
                     connection.setIfModifiedSince(ifModifiedSince);
                 }
 
@@ -639,7 +654,23 @@ public class DataUpdateServiceDefault implements DataUpdateService {
 
                 switch (connection.getResponseCode()) {
                     case (HttpURLConnection.HTTP_OK):
-                        return downloadOkResponse(connection, dataFile, tempFile);
+                        AutoUpdateStatus downloaded;
+                        try {
+                            downloaded = downloadOkResponse(
+                                    connection, dataFile, tempFile, automatic);
+                        } catch (Exception e) {
+                            logger.warn("An error occurred while downloading " +
+                                    "a data file update for " + engineType +
+                                    " from " + url + "." +
+                                    retryNote(automatic) +
+                                    " Error detail: " + e.getMessage(), e);
+                            return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
+                        }
+                        if (downloaded == AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS) {
+                            logger.info("Downloaded new data from '{}' for Engine '{}'",
+                                    url, engineType);
+                        }
+                        return downloaded;
 
                     // Note: needed because TooManyRequests is not available
                     // in some versions of the HttpStatusCode enum.
@@ -648,8 +679,8 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                                 dataFile.getFormattedUrl(), getIdForLogging(dataFile));
                         return AutoUpdateStatus.AUTO_UPDATE_ERR_429_TOO_MANY_ATTEMPTS;
                     case HttpURLConnection.HTTP_NOT_MODIFIED:
-                        logger.debug("No data update available from '{}' for {}",
-                                dataFile.getFormattedUrl(), getIdForLogging(dataFile));
+                        logger.info("No data newer than {} found at '{}' for Engine '{}'",
+                                Instant.ofEpochMilli(ifModifiedSince), url, engineType);
                         return AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED;
                     case HttpURLConnection.HTTP_FORBIDDEN:
                         logger.error("Access denied to data update service at '{}' for {}",
@@ -665,9 +696,53 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 connection.disconnect();
             }
         } catch (Exception e) {
-            logger.error("Error while processing data file download", e);
+            logger.warn(connectFailure(url, engineType, automatic, e.getMessage()), e);
             return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
         }
+    }
+
+    /**
+     * Get the time to send as If-Modified-Since. This is the publication date
+     * of the data file, or the last modified time of the data file on disk
+     * where the data file has no publication date.
+     */
+    private long getIfModifiedSince(AspectEngineDataFile dataFile) {
+        Date published = dataFile.getDataPublishedDateTime();
+        long publishedMillis = published == null ? 0 : published.getTime();
+        if (publishedMillis > 0) {
+            return publishedMillis;
+        }
+        String path = dataFile.getDataFilePath();
+        if (path != null && path.isEmpty() == false) {
+            return fileWrapperFactory.getLastModified(path);
+        }
+        return publishedMillis;
+    }
+
+    private static String retryNote(boolean automatic) {
+        return automatic ? " Update will be attempted again later." : "";
+    }
+
+    private static String connectFailure(
+            String url,
+            String engineType,
+            boolean automatic,
+            String detail) {
+        return "An error occurred when connecting to " + url +
+                " in order to check for data file updates for " + engineType +
+                "." + retryNote(automatic) + " Error detail: " + detail;
+    }
+
+    private void logRefreshFailure(AspectEngineDataFile dataFile, Exception ex) {
+        logger.error("An error occurred while applying a data file update to " +
+                getEngineType(dataFile) + ". Error detail: " +
+                (ex == null ? "none" : ex.getMessage()), ex);
+    }
+
+    private String getEngineType(AspectEngineDataFile dataFile) {
+        return dataFile.getEngine() == null ?
+                "No Engine" :
+                dataFile.getEngine().getClass().getSimpleName();
     }
 
     /**
@@ -682,7 +757,8 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     private AutoUpdateStatus downloadOkResponse(
             HttpURLConnection connection,
             AspectEngineDataFile dataFile,
-            FileWrapper tempFile) throws IOException {
+            FileWrapper tempFile,
+            boolean automatic) throws IOException {
         logger.debug("HTTP Status is OK");
         boolean verifyMd5 = dataFile.getConfiguration().getVerifyMd5();
         boolean decompress = dataFile.getConfiguration().getDecompressContent();
@@ -706,6 +782,11 @@ public class DataUpdateServiceDefault implements DataUpdateService {
         writeBodyTo(tempFile, src);
 
         if (verifyMd5 && !md5Matches(md, connection)) {
+            logger.warn("An error occurred during the integrity check of new " +
+                    "data file for " + getEngineType(dataFile) + "." +
+                    retryNote(automatic) +
+                    " Error detail: the MD5 hash of the download does not " +
+                    "match the Content-MD5 header");
             return AutoUpdateStatus.AUTO_UPDATE_ERR_MD5_VALIDATION_FAILED;
         }
         return AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS;
@@ -782,14 +863,17 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 "engine '" + dataFile.getEngine().getClass().getSimpleName() + "'";
     }
 
-    private AutoUpdateStatus checkForUpdateFromUrl(AspectEngineDataFile dataFile) {
+    private AutoUpdateStatus checkForUpdateFromUrl(
+            AspectEngineDataFile dataFile,
+            boolean automatic) {
         if (dataFile.getDataFilePath() == null || dataFile.getDataFilePath().isEmpty()) {
             // There is no data file path specified so perform the
             // update entirely in memory.
             try {
                 FileWrapper uncompressedData = new FileWrapperMemory();
 
-                AutoUpdateStatus memoryDownloadResult = downloadFile(dataFile, uncompressedData);
+                AutoUpdateStatus memoryDownloadResult =
+                        downloadFile(dataFile, uncompressedData, automatic);
                 if (memoryDownloadResult != AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS) {
                     return memoryDownloadResult;
                 }
@@ -797,6 +881,8 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                     if (dataFile.getEngine() != null) {
                         // Tell the engine to refresh itself with
                         // the new data.
+                        logger.info("Attempting to refresh Engine '{}' with new data",
+                                getEngineType(dataFile));
                         dataFile.getEngine().refreshData(dataFile.getIdentifier(),
                                 reader.toByteArray());
                     } else {
@@ -807,21 +893,26 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 }
                 return memoryDownloadResult;
             } catch (Exception ex) {
-                logger.error("An error occurred when applying a data update to engine '{}'" ,
-                                Objects.nonNull(dataFile.getEngine())?
-                                        dataFile.getEngine().getClass().getName(): "no engine",ex);
+                logRefreshFailure(dataFile, ex);
                 return AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED;
             }
         }
 
-
+        if (dataFile.getTempDataDirPath() == null ||
+                dataFile.getTempDataDirPath().isEmpty()) {
+            logger.error("The data file '" + dataFile.getIdentifier() +
+                    "' is checking for updates but does not have a temporary " +
+                    "file path configured.");
+            return AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED;
+        }
         Path uncompressedTempFile = Paths.get(
                 dataFile.getTempDataDirPath(),
                 dataFile.getIdentifier() + "-" + randomUUID() + ".tmp");
         FileWrapper uncompressedData = fileWrapperFactory.build(uncompressedTempFile.toString());
         try {
             // Check if there is an update and download it if there is
-            AutoUpdateStatus result = downloadFile(dataFile, uncompressedData);
+            AutoUpdateStatus result =
+                    downloadFile(dataFile, uncompressedData, automatic);
 
             if (result == AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS) {
                 WatchKey watchKey = dataFile.getConfiguration().getWatchKey();
@@ -847,12 +938,9 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                         logger.debug("Reading file {}", d.read());
                     }
                 } catch (Exception ex) {
-                    logger.error("An error occurred when moving a data file to replace " +
-                                    "the existing one at {} for engine '{}'.",
-                            dataFile.getDataFilePath(),
-                            Objects.nonNull(dataFile.getEngine()) ?
-                                    dataFile.getEngine().getClass().getSimpleName() : "No engine defined",
-                            ex);
+                    logger.error("An error occurred when copying a data file to " +
+                                    "replace the existing one at '{}'.",
+                            dataFile.getDataFilePath(), ex);
                     result = AutoUpdateStatus.AUTO_UPDATE_NEW_FILE_CANT_RENAME;
                 }
                 // Make sure to enable the file watcher again if needed.
