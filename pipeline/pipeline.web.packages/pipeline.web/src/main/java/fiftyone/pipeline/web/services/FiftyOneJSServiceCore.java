@@ -132,12 +132,31 @@ public interface FiftyOneJSServiceCore {
             HttpServletRequest request,
             HttpServletResponse response) throws IOException {
             boolean result = false;
-            if (request.getRequestURL().toString().toLowerCase()
-                .endsWith(javaScriptPath.toLowerCase())) {
+            if (matches(request, javaScriptPath)) {
                 serveCoreJS(request, response);
                 result = true;
             }
             return result;
+        }
+
+        /**
+         * Whether the request is for the path, which is compared with the
+         * whole path of the request inside the application, ignoring case
+         * and the context path, and with or without a leading slash.
+         */
+        private static boolean matches(
+            HttpServletRequest request,
+            String path) {
+            String requested = request.getRequestURI();
+            String contextPath = request.getContextPath();
+            if (contextPath != null && requested.startsWith(contextPath)) {
+                requested = requested.substring(contextPath.length());
+            }
+            return withSlash(requested).equalsIgnoreCase(withSlash(path));
+        }
+
+        private static String withSlash(String path) {
+            return path.startsWith("/") ? path : "/" + path;
         }
 
         private void serveCoreJS(
@@ -161,9 +180,8 @@ public interface FiftyOneJSServiceCore {
 
 
             boolean result = false;
-            String uri = request.getRequestURI().toString().toLowerCase();
-            if (uri.endsWith(jsonPath.toLowerCase()) ||
-                uri.endsWith(CORE_JSON_NAME.toLowerCase())) {
+            if (matches(request, jsonPath) ||
+                matches(request, CORE_JSON_NAME)) {
                 serveCoreJson(request, response);
                 result = true;
             }

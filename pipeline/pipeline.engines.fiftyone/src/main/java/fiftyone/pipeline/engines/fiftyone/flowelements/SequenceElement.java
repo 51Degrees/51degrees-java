@@ -113,10 +113,10 @@ public class SequenceElement
     }
 
     /**
-     * The sequence in Evidence, which is a whole number or text made only of
-     * decimal digits. A value that is anything else, does not fit in an int
-     * or has no larger int after it counts as no sequence, so that adding
-     * one never overflows.
+     * The sequence in Evidence, which is a whole number from 0 up, or text
+     * made only of decimal digits. A value that is anything else, is
+     * negative or has no larger int after it counts as no sequence, so that
+     * adding one never overflows.
      * @return the sequence, or null if there is none
      */
     private static Integer toSequence(Object sequence) {
@@ -142,7 +142,7 @@ public class SequenceElement
         } else {
             return null;
         }
-        return value < Integer.MAX_VALUE && value >= Integer.MIN_VALUE ?
+        return value < Integer.MAX_VALUE && value >= 0 ?
             Integer.valueOf((int) value) : null;
     }
 
