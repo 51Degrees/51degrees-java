@@ -465,6 +465,36 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
     }
 
     /**
+     * The web integration adds the whole web request as server.http-request
+     * for usage sharing to read. It holds every header and cookie, so it is
+     * never sent to the cloud service.
+     */
+    @Test
+    public void getFormData_LeavesOutTheWebRequest() throws Exception {
+        configureMockedClient();
+        CloudRequestEngineDefault engine = (CloudRequestEngineDefault) new CloudRequestEngineBuilder(loggerFactory, httpClient)
+                .setResourceKey("resourcekey")
+                .build();
+
+        Map<String, Object> request = new HashMap<>();
+        request.put("header.Cookie", "session=secret");
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+                .addFlowElement(engine)
+                .build();
+             FlowData data = pipeline.createFlowData()) {
+            data.addEvidence("header.User-Agent", "iPhone");
+            data.addEvidence("server.client-ip", "1.2.3.4");
+            data.addEvidence("server.http-request", request);
+
+            Map<String, Object> result = engine.getFormData(data);
+            assertEquals("iPhone", result.get("User-Agent"));
+            assertEquals("1.2.3.4", result.get("client-ip"));
+            assertFalse(result.containsKey("http-request"),
+                "The web request was sent to the cloud service.");
+        }
+    }
+
+    /**
      * An evidence key whose name itself holds a dot, such as
      * {@code query.id.usage}, must reach the cloud service under its whole
      * name, {@code id.usage}. The cloud service creates no 51Did unless

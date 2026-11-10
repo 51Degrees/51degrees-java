@@ -28,10 +28,10 @@ package fiftyone.pipeline.engines.fiftyone.flowelements;
 public class Constants {
 
     /**
-     * The maximum length of a piece of evidence's value which can be added to
-     * the usage data being sent.
+     * The maximum length, in characters, of a piece of evidence's value which
+     * can be added to the usage data being sent.
      */
-    public static final int SHARE_USAGE_MAX_EVIDENCE_LENGTH = 512;
+    public static final int SHARE_USAGE_MAX_EVIDENCE_LENGTH = 10000;
 
     /**
      * Session id evidence suffix. This is prefixed by the query constant.
