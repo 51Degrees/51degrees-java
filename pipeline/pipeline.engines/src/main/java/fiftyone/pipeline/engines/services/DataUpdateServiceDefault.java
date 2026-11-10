@@ -610,15 +610,6 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     }
 
     /**
-     * Get the most recent data file available from the configured update URL.
-     * If the data currently used by the engine is the newest available then
-     * nothing will be downloaded.
-     *
-     * @param dataFile the data file to use
-     * @param tempFile the temp file to write the data to
-     * @return the {@link AutoUpdateStatus} value indicating the result
-     */
-    /**
      * The license keys to mask in messages that name the data update URL,
      * being the data update license keys and any key in the URL's
      * LicenseKeys parameter, such as one typed straight into the data
@@ -657,6 +648,15 @@ public class DataUpdateServiceDefault implements DataUpdateService {
         return keys;
     }
 
+    /**
+     * Get the most recent data file available from the configured update URL.
+     * If the data currently used by the engine is the newest available then
+     * nothing will be downloaded.
+     *
+     * @param dataFile the data file to use
+     * @param tempFile the temp file to write the data to
+     * @return the {@link AutoUpdateStatus} value indicating the result
+     */
     private AutoUpdateStatus downloadFile(
             AspectEngineDataFile dataFile,
             FileWrapper tempFile) {
