@@ -25,6 +25,7 @@ package fiftyone.pipeline.cloudrequestengine.flowelements;
 
 import fiftyone.pipeline.annotations.DefaultValue;
 import fiftyone.pipeline.annotations.ElementBuilder;
+import fiftyone.pipeline.cloudrequestengine.Constants.Messages;
 import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
@@ -36,7 +37,9 @@ import fiftyone.pipeline.engines.services.HttpClient;
 import fiftyone.pipeline.engines.services.HttpClientDefault;
 import org.slf4j.ILoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Function;
 
 /**
@@ -75,12 +78,13 @@ public class CloudRequestEngineBuilder extends
 
     @Override
     protected CloudRequestEngine newEngine(List<String> properties) throws Exception {
-        if(resourceKey == null || resourceKey.isEmpty()){
-            throw new PipelineConfigurationException("A resource key is " +
-                    "required to access the cloud server. Please use the " +
-                    "'setResourceKey(String) method to supply your resource " +
-                    "key obtained from https://configure.51degrees.com?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=pipeline.cloudrequestengine-src-main-java-fiftyone-pipeline-cloudrequestengine-flowelements-cloudrequestenginebuilder.java&utm_term=resource-key-required");
-        }
+        String trimmedResourceKey = trimmed(resourceKey);
+        String trimmedLicenseKey = trimmed(licenseKey);
+        List<String> requestedProperties = normalized(properties);
+        checkCredentials(
+            trimmedResourceKey,
+            trimmedLicenseKey,
+            requestedProperties);
 
         /*
          *  Check if endPoint has been explicitly set via setEndpoint.
@@ -103,12 +107,56 @@ public class CloudRequestEngineBuilder extends
             new CloudRequestDataFactory(loggerFactory),
             httpClient,
             dataEndpoint,
-            resourceKey,
-            licenseKey,
+            trimmedResourceKey,
+            trimmedLicenseKey,
             propertiesEndpoint,
             evidenceKeysEndpoint,
-                timeoutMillis,
-            cloudRequestOrigin);
+            timeoutMillis,
+            cloudRequestOrigin,
+            requestedProperties);
+    }
+
+    private static String trimmed(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    /**
+     * The property names to send as values, trimmed and lower-cased, as the
+     * cloud service answers in lower case, with blank names and repeats
+     * left out.
+     */
+    private static List<String> normalized(List<String> names) {
+        List<String> result = new ArrayList<>();
+        for (String name : names) {
+            String normal = trimmed(name).toLowerCase(Locale.ROOT);
+            if (normal.isEmpty() == false && result.contains(normal) == false) {
+                result.add(normal);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Refuse the two combinations of keys and requested properties that the
+     * cloud service refuses on every request, so that a deployment sees one
+     * configuration error when the engine is built. A blank value counts as
+     * absent.
+     */
+    private static void checkCredentials(
+        String resourceKey,
+        String licenseKey,
+        List<String> requestedProperties) {
+        boolean hasResourceKey = resourceKey.isEmpty() == false;
+        boolean hasLicenseKey = licenseKey.isEmpty() == false;
+
+        if (hasResourceKey == false && hasLicenseKey == false) {
+            throw new PipelineConfigurationException(
+                Messages.NoCredential);
+        }
+        if (hasResourceKey == false && requestedProperties.isEmpty()) {
+            throw new PipelineConfigurationException(
+                Messages.LicenseKeyNeedsProperties);
+        }
     }
     
     private String getEnvironmentVariable(String name) {
@@ -133,7 +181,8 @@ public class CloudRequestEngineBuilder extends
             uri += '/';
         }
         endPoint = uri;
-        return setDataEndpoint(uri + (resourceKey != null ? resourceKey + "." : "") + "json")
+        String key = trimmed(resourceKey);
+        return setDataEndpoint(uri + (key.isEmpty() ? "" : key + ".") + "json")
             .setPropertiesEndpoint(uri + "accessibleproperties")
             .setEvidenceKeysEndpoint(uri + "evidencekeys");
 
@@ -142,7 +191,8 @@ public class CloudRequestEngineBuilder extends
     /**
      * The endpoint the CloudRequestEngine will query to get a processing result.
      * <p>
-     * By default, this is the endpoint value suffixed with the resourcekey and ".json"
+     * By default, this is the endpoint value suffixed with the resourcekey and
+     * ".json", or with "json" alone when no resource key is set
      * @param uri data endpoint
      * @return this builder
      */
@@ -183,11 +233,11 @@ public class CloudRequestEngineBuilder extends
     /**
      * The resource key to query the endpoint with.
      * <p>
-     * No default, a value must be supplied
+     * No default. Either a resource key or a license key must be supplied.
      * @param resourceKey resource key
      * @return this builder
      */
-    @DefaultValue("No default - a resource key must be supplied")
+    @DefaultValue("No default - a resource key or a license key must be supplied")
     public CloudRequestEngineBuilder setResourceKey(String resourceKey) {
         this.resourceKey = resourceKey;
         return this;
@@ -195,6 +245,12 @@ public class CloudRequestEngineBuilder extends
 
     /**
      * The license key to query the endpoint with.
+     * <p>
+     * A license key used without a resource key needs the properties
+     * wanted, named with {@link #setProperty(String)} or
+     * {@link #setProperties(List)}, which are sent as values. Beside a
+     * resource key it adds the requested properties the license grants to
+     * what the resource key carries.
      * <p>
      * There is no default
      * @param licenseKey license key
