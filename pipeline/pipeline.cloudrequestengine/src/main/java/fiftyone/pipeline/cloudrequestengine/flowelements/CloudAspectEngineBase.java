@@ -111,7 +111,6 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
     private volatile List<AspectPropertyMetaData> aspectProperties;
     private String dataSourceTier;
     private RequestEngineAccessor requestEngine;
-    private volatile boolean productMissing = false;
     private final AtomicBoolean productMissingLogged = new AtomicBoolean(false);
 
     /**
@@ -242,10 +241,11 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
 
     /**
      * Find this engine's product among the products the Cloud Request Engine
-     * reports for the resource key. A valid resource key can include no
-     * product that holds this engine's properties. That is logged once for
-     * this engine, and an empty product is returned, so the engine builds
-     * with empty property metadata and logs nothing on each request.
+     * reports for the resource key. A valid resource key can include no product
+     * that holds this engine's properties. That is logged once for this engine,
+     * as a warning naming its Data Key, and an empty product is returned, so
+     * the engine builds with empty property metadata and logs nothing on each
+     * request.
      * @param products the products from
      * {@link CloudRequestEngine#getPublicProperties()}, or null if they have
      * not been loaded
@@ -260,12 +260,10 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
         AccessiblePropertyMetaData.ProductMetaData product =
             products.get(getElementDataKey());
         if (product != null) {
-            productMissing = false;
             return product;
         }
-        productMissing = true;
         if (productMissingLogged.compareAndSet(false, true)) {
-            logger.error(String.format(
+            logger.warn(String.format(
                 MessageProductNotInResourceKey,
                 getElementDataKey(),
                 getClass().getSimpleName()));
@@ -277,29 +275,16 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
     }
 
     /**
-     * True when the resource key does not include this engine's product, so
-     * the cloud response holds nothing for this engine.
-     * @return true if the product is missing
-     */
-    protected boolean isProductMissing() {
-        return productMissing;
-    }
-
-    /**
-     * This engine's part of the cloud response. When the resource key does
-     * not include this engine's product the response has no such part, and
-     * an empty object is returned, so the element data holds no values.
+     * This engine's part of the cloud response. Where the response has no
+     * part for this engine, as when the resource key does not include its
+     * product, an empty object is returned, so the element data holds no
+     * values and no error is raised.
      * @param response the whole cloud response
      * @return this engine's part of the response
-     * @throws org.json.JSONException if the product is included and the
-     * response has no part for this engine
      */
     protected JSONObject getElementJson(JSONObject response) {
-        if (productMissing) {
-            JSONObject element = response.optJSONObject(getElementDataKey());
-            return element == null ? new JSONObject() : element;
-        }
-        return response.getJSONObject(getElementDataKey());
+        JSONObject element = response.optJSONObject(getElementDataKey());
+        return element == null ? new JSONObject() : element;
     }
 
     private List<ElementPropertyMetaData> loadElementProperties(

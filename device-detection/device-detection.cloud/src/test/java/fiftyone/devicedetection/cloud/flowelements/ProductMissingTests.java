@@ -47,6 +47,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -80,6 +81,7 @@ public class ProductMissingTests {
             assertEquals(0, engine.getProperties().size());
             List<String> logged = warningsAndErrors();
             assertEquals(logged.toString(), 1, logged.size());
+            assertTrue(logged.get(0), logged.get(0).startsWith("warn "));
             assertTrue(logged.get(0), logged.get(0).contains("'device'"));
         }
     }
@@ -92,6 +94,24 @@ public class ProductMissingTests {
             }
             List<String> logged = warningsAndErrors();
             assertEquals(logged.toString(), 1, logged.size());
+        }
+    }
+
+    /**
+     * With the Device Detection product included, a response that holds no
+     * part for it leaves the element data without values and throws
+     * nothing, as the Processing section of the cloud aspect engine
+     * specification says.
+     */
+    @Test
+    public void ProductPresent_ResponseWithoutPart_NoValues()
+        throws Exception {
+        try (DeviceDetectionCloudEngine engine = buildEngine("device", "hardwarevendor")) {
+            DeviceDataCloud data = process(
+                engine,
+                "{ 'ip': { 'registeredname': 'Example' }, " +
+                    "'javascriptProperties': [] }");
+            assertFalse(data.getHardwareVendor().hasValue());
         }
     }
 
@@ -148,21 +168,23 @@ public class ProductMissingTests {
     }
 
     /**
-     * An engine whose Cloud Request Engine reports the accessible products
-     * of a resource key that includes IP Intelligence alone.
+     * An engine whose Cloud Request Engine reports one product, holding
+     * one string property.
      */
     // thenReturn has a varargs overload, so a generic Map is an unchecked array.
     @SuppressWarnings("unchecked")
-    private DeviceDetectionCloudEngine buildEngine() throws Exception {
+    private DeviceDetectionCloudEngine buildEngine(
+        String productKey,
+        String property) throws Exception {
         DeviceDetectionCloudEngine engine =
             new DeviceDetectionCloudEngineBuilder(loggerFactory).build();
 
         ProductMetaData product = new ProductMetaData();
         product.dataTier = "test";
         product.properties = Arrays.asList(
-            new PropertyMetaData("registeredname", "String", "cat", null));
+            new PropertyMetaData(property, "String", "cat", null));
         Map<String, ProductMetaData> publicProperties = new HashMap<>();
-        publicProperties.put("ip", product);
+        publicProperties.put(productKey, product);
 
         CloudRequestEngine requestEngine = mock(CloudRequestEngine.class);
         when(requestEngine.getPublicProperties()).thenReturn(publicProperties);
@@ -176,14 +198,13 @@ public class ProductMissingTests {
     }
 
     /**
-     * Process a cloud response that holds nothing for the Device Detection
-     * product.
+     * Process the given cloud response.
      */
-    private DeviceDataCloud process(DeviceDetectionCloudEngine engine) {
+    private DeviceDataCloud process(
+        DeviceDetectionCloudEngine engine,
+        String response) {
         CloudRequestData cloudData = mock(CloudRequestData.class);
-        when(cloudData.getJsonResponse()).thenReturn(
-            "{ 'ip': { 'registeredname': 'Example' }, " +
-                "'javascriptProperties': [] }");
+        when(cloudData.getJsonResponse()).thenReturn(response);
 
         FlowData flowData = mock(FlowData.class);
         when(flowData.getFromElement(any(CloudRequestEngine.class)))
@@ -196,6 +217,24 @@ public class ProductMissingTests {
             MissingPropertyServiceDefault.getInstance());
         engine.processEngine(flowData, device);
         return device;
+    }
+
+    /**
+     * An engine on a resource key that includes IP Intelligence alone.
+     */
+    private DeviceDetectionCloudEngine buildEngine() throws Exception {
+        return buildEngine("ip", "registeredname");
+    }
+
+    /**
+     * Process a cloud response that holds nothing for the Device Detection
+     * product.
+     */
+    private DeviceDataCloud process(DeviceDetectionCloudEngine engine) {
+        return process(
+            engine,
+            "{ 'ip': { 'registeredname': 'Example' }, " +
+                "'javascriptProperties': [] }");
     }
 
     /**

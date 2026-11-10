@@ -49,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -82,6 +83,7 @@ public class GeoLocationCloudEngineTests {
             assertEquals(0, engine.getProperties().size());
             List<String> logged = warningsAndErrors();
             assertEquals(logged.toString(), 1, logged.size());
+            assertTrue(logged.get(0), logged.get(0).startsWith("warn "));
             assertTrue(logged.get(0), logged.get(0).contains("'location'"));
         }
     }
@@ -94,6 +96,24 @@ public class GeoLocationCloudEngineTests {
             }
             List<String> logged = warningsAndErrors();
             assertEquals(logged.toString(), 1, logged.size());
+        }
+    }
+
+    /**
+     * With the Location product included, a response that holds no
+     * part for it leaves the element data without values and throws
+     * nothing, as the Processing section of the cloud aspect engine
+     * specification says.
+     */
+    @Test
+    public void ProductPresent_ResponseWithoutPart_NoValues()
+        throws Exception {
+        try (GeoLocationCloudEngine engine = buildEngine("location", "town")) {
+            CloudGeoData data = process(
+                engine,
+                "{ 'ip': { 'registeredname': 'Example' }, " +
+                    "'javascriptProperties': [] }");
+            assertFalse(data.getTown().hasValue());
         }
     }
 
@@ -151,12 +171,14 @@ public class GeoLocationCloudEngineTests {
     }
 
     /**
-     * An engine whose Cloud Request Engine reports the accessible products
-     * of a resource key that includes IP Intelligence alone.
+     * An engine whose Cloud Request Engine reports one product, holding
+     * one string property.
      */
     // thenReturn has a varargs overload, so a generic Map is an unchecked array.
     @SuppressWarnings("unchecked")
-    private GeoLocationCloudEngine buildEngine() throws Exception {
+    private GeoLocationCloudEngine buildEngine(
+        String productKey,
+        String property) throws Exception {
         GeoLocationCloudEngine engine =
             new GeoLocationCloudEngineBuilder(loggerFactory)
                 .build(Enums.GeoLocationProvider.FiftyOneDegrees);
@@ -164,9 +186,9 @@ public class GeoLocationCloudEngineTests {
         ProductMetaData product = new ProductMetaData();
         product.dataTier = "test";
         product.properties = Arrays.asList(
-            new PropertyMetaData("registeredname", "String", "cat", null));
+            new PropertyMetaData(property, "String", "cat", null));
         Map<String, ProductMetaData> publicProperties = new HashMap<>();
-        publicProperties.put("ip", product);
+        publicProperties.put(productKey, product);
 
         CloudRequestEngine requestEngine = mock(CloudRequestEngine.class);
         when(requestEngine.getPublicProperties()).thenReturn(publicProperties);
@@ -180,14 +202,13 @@ public class GeoLocationCloudEngineTests {
     }
 
     /**
-     * Process a cloud response that holds nothing for the Location
-     * product.
+     * Process the given cloud response.
      */
-    private CloudGeoData process(GeoLocationCloudEngine engine) {
+    private CloudGeoData process(
+        GeoLocationCloudEngine engine,
+        String response) {
         CloudRequestData cloudData = mock(CloudRequestData.class);
-        when(cloudData.getJsonResponse()).thenReturn(
-            "{ 'ip': { 'registeredname': 'Example' }, " +
-                "'javascriptProperties': [] }");
+        when(cloudData.getJsonResponse()).thenReturn(response);
 
         FlowData flowData = mock(FlowData.class);
         when(flowData.getFromElement(any(CloudRequestEngine.class)))
@@ -200,6 +221,24 @@ public class GeoLocationCloudEngineTests {
             MissingPropertyServiceDefault.getInstance());
         engine.processEngine(flowData, data);
         return data;
+    }
+
+    /**
+     * An engine on a resource key that includes IP Intelligence alone.
+     */
+    private GeoLocationCloudEngine buildEngine() throws Exception {
+        return buildEngine("ip", "registeredname");
+    }
+
+    /**
+     * Process a cloud response that holds nothing for the Location
+     * product.
+     */
+    private CloudGeoData process(GeoLocationCloudEngine engine) {
+        return process(
+            engine,
+            "{ 'ip': { 'registeredname': 'Example' }, " +
+                "'javascriptProperties': [] }");
     }
 
     /**
