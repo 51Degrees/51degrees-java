@@ -36,6 +36,7 @@ import fiftyone.pipeline.engines.data.AspectPropertyMetaDataDefault;
 import fiftyone.pipeline.engines.flowelements.AspectEngineBase;
 import fiftyone.pipeline.engines.services.HttpClient;
 import fiftyone.pipeline.exceptions.AggregateException;
+import fiftyone.pipeline.util.LicenseKeyMask;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -425,6 +426,19 @@ public class CloudRequestEngineDefault
         }
     }
 
+    /**
+     * The license key sent with each request, and each key in it when it
+     * holds several separated by '|', to mask in messages.
+     */
+    private List<String> getLicenseKeys() {
+        List<String> keys = new ArrayList<>();
+        if (licenseKey != null && licenseKey.isEmpty() == false) {
+            keys.add(licenseKey);
+            keys.addAll(Arrays.asList(licenseKey.split(Pattern.quote("|"))));
+        }
+        return keys;
+    }
+
     private void getCloudProperties() throws CloudRequestException, AggregateException, PropertyNotLoadedException {
         try {
             String jsonResult;
@@ -543,6 +557,9 @@ public class CloudRequestEngineDefault
                 jsonResult);
             messages.add(message);
         }
+
+        // The cloud's errors can name the license key it was sent.
+        messages.replaceAll(m -> LicenseKeyMask.maskIn(m, getLicenseKeys()));
 
         Map<String, List<String>> headers = null;
         if (messages.size() > 0){
