@@ -265,8 +265,8 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 // Re-register the engine with the data update service
                 // so it knows when next set of data should be available.
                 // A manual update of a registered data file does this too,
-                // whether or not the refresh worked, as the refresh clears
-                // the timer, so polling resumes after it.
+                // whether or not the refresh worked, as a refresh from the
+                // data file clears the timer, so polling resumes after it.
                 registerDataFile(dataFile);
             }
 
