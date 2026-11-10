@@ -1378,8 +1378,8 @@ public class DataUpdateServiceTests {
      */
     @Test
     public void DataUpdateService_CheckForUpdate_FileRefreshFails_TimerSetAgain() {
-        // updatedFileAvailable warns on each of its 10 tries.
-        ignoreWranings = 10;
+        // updatedFileAvailable logs one error once its tries are used up.
+        ignoreErrors = 1;
 
         // Arrange
         OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
