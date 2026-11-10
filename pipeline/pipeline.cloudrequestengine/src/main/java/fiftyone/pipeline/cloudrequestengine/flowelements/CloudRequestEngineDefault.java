@@ -497,16 +497,15 @@ public class CloudRequestEngineDefault
     }
 
     /**
-     * Whether Evidence is sent to the cloud service. Only keys the service
-     * accepts are sent, never one that strips to a name in
-     * {@link #ENGINE_FIELDS}, compared without regard to case, and never
-     * the web request.
+     * Whether Evidence is sent to the cloud service. Every key is sent,
+     * including keys the service does not list as accepted, apart from one
+     * that strips to a name in {@link #ENGINE_FIELDS}, compared without
+     * regard to case, and the web request.
      * @param key the Evidence key
      * @return true if the Evidence is sent
      */
     private boolean isSent(String key) {
-        if (HTTP_REQUEST_KEY.equalsIgnoreCase(key) ||
-            evidenceKeyFilter.include(key) == false) {
+        if (HTTP_REQUEST_KEY.equalsIgnoreCase(key)) {
             return false;
         }
         String[] parts = key.split(
