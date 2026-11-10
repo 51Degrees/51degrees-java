@@ -685,10 +685,10 @@ public class DataUpdateServiceDefault implements DataUpdateService {
 
         try {
             logger.info("Checking for update from '{}' for Engine '{}'",
-                    url, engineType);
+                    loggedUrl, engineType);
             HttpURLConnection connection = httpClient.connect(new URI(url.trim()).toURL());
             if (connection == null) {
-                logger.warn(connectFailure(url, engineType, automatic,
+                logger.warn(connectFailure(loggedUrl, engineType, automatic,
                         "No response from the data update service"));
                 return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
             }
@@ -710,32 +710,37 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                             downloaded = downloadOkResponse(
                                     connection, dataFile, tempFile, automatic);
                         } catch (Exception e) {
-                            logger.warn(downloadFailure(url, engineType,
-                                    automatic, e.getMessage()), e);
+                            // An HTTP library's exception often names the
+                            // URL it requested.
+                            logger.warn(downloadFailure(loggedUrl, engineType,
+                                    automatic, LicenseKeyMask.maskIn(
+                                            e.getMessage(), licenseKeys)),
+                                    LicenseKeyMask.maskIn(e, licenseKeys));
                             return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
                         }
                         if (downloaded == AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS) {
                             logger.info("Downloaded new data from '{}' for Engine '{}'",
-                                    url, engineType);
+                                    loggedUrl, engineType);
                         }
                         return downloaded;
 
                     // Note: needed because TooManyRequests is not available
                     // in some versions of the HttpStatusCode enum.
                     case (429):
-                        logger.warn(downloadFailure(url, engineType, automatic,
+                        logger.warn(downloadFailure(loggedUrl, engineType, automatic,
                                 "HTTP status code 429 (too many requests)"));
                         return AutoUpdateStatus.AUTO_UPDATE_ERR_429_TOO_MANY_ATTEMPTS;
                     case HttpURLConnection.HTTP_NOT_MODIFIED:
                         logger.info("No data newer than {} found at '{}' for Engine '{}'",
-                                Instant.ofEpochMilli(ifModifiedSince), url, engineType);
+                                Instant.ofEpochMilli(ifModifiedSince), loggedUrl,
+                                engineType);
                         return AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED;
                     case HttpURLConnection.HTTP_FORBIDDEN:
-                        logger.warn(downloadFailure(url, engineType, automatic,
+                        logger.warn(downloadFailure(loggedUrl, engineType, automatic,
                                 "HTTP status code 403 (access denied)"));
                         return AutoUpdateStatus.AUTO_UPDATE_ERR_403_FORBIDDEN;
                     default:
-                        logger.warn(downloadFailure(url, engineType, automatic,
+                        logger.warn(downloadFailure(loggedUrl, engineType, automatic,
                                 "HTTP status code " + connection.getResponseCode()));
                         return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
                 }
@@ -743,7 +748,10 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 connection.disconnect();
             }
         } catch (Exception e) {
-            logger.warn(connectFailure(url, engineType, automatic, e.getMessage()), e);
+            // An HTTP library's exception often names the URL it requested.
+            logger.warn(connectFailure(loggedUrl, engineType, automatic,
+                    LicenseKeyMask.maskIn(e.getMessage(), licenseKeys)),
+                    LicenseKeyMask.maskIn(e, licenseKeys));
             return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
         }
     }
@@ -770,23 +778,31 @@ public class DataUpdateServiceDefault implements DataUpdateService {
         return automatic ? " Update will be attempted again later." : "";
     }
 
+    /**
+     * The warning for a failed connection. The URL and the detail are
+     * given with each license key already masked.
+     */
     private static String connectFailure(
-            String url,
+            String loggedUrl,
             String engineType,
             boolean automatic,
             String detail) {
-        return "An error occurred when connecting to " + url +
+        return "An error occurred when connecting to " + loggedUrl +
                 " in order to check for data file updates for " + engineType +
                 "." + retryNote(automatic) + " Error detail: " + detail;
     }
 
+    /**
+     * The warning for a failed download. The URL and the detail are given
+     * with each license key already masked.
+     */
     private static String downloadFailure(
-            String url,
+            String loggedUrl,
             String engineType,
             boolean automatic,
             String detail) {
         return "An error occurred while downloading a data file update for " +
-                engineType + " from " + url + "." + retryNote(automatic) +
+                engineType + " from " + loggedUrl + "." + retryNote(automatic) +
                 " Error detail: " + detail;
     }
 
@@ -918,12 +934,6 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 logger.error("Error closing future factory.", e);
             }
         }
-    }
-
-    private String getIdForLogging(AspectEngineDataFile dataFile) {
-        return dataFile.getEngine() == null ?
-                "data file '" + dataFile.getIdentifier() + "'" :
-                "engine '" + dataFile.getEngine().getClass().getSimpleName() + "'";
     }
 
     private AutoUpdateStatus checkForUpdateFromUrl(
