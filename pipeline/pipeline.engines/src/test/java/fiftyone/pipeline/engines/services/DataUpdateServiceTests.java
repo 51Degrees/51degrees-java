@@ -72,6 +72,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static fiftyone.pipeline.engines.services.DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
 import static fiftyone.pipeline.engines.services.DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED;
+import static fiftyone.pipeline.engines.services.DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_SUCCESS;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 import static org.mockito.Mockito.*;
