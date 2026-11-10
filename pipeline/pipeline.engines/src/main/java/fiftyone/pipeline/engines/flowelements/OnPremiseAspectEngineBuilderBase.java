@@ -183,6 +183,9 @@ public abstract class OnPremiseAspectEngineBuilderBase<
         // will be updated now.
         // Create the auto-update configuration and register it.
         for (DataFileConfiguration dataFileConfig : dataFileConfigs) {
+            checkUpdateConfiguration(dataFileConfig);
+        }
+        for (DataFileConfiguration dataFileConfig : dataFileConfigs) {
             AspectEngineDataFile dataFile = newAspectEngineDataFile();
             dataFile.setIdentifier(dataFileConfig.getIdentifier());
             dataFile.setConfiguration(dataFileConfig);
@@ -197,38 +200,50 @@ public abstract class OnPremiseAspectEngineBuilderBase<
                         builderName);
             }
 
-            boolean autoUpdate = dataFileConfig.getAutomaticUpdatesEnabled();
-            boolean updateOnStartup = dataFileConfig.getUpdateOnStartup();
-            if (autoUpdate || updateOnStartup) {
-                String features = (autoUpdate ? "auto update" : "") +
-                    (autoUpdate && updateOnStartup ? " and " : "") +
-                    (updateOnStartup ? "update on startup" : "");
-                if (dataUpdateService == null) {
-                    throw new RuntimeException(
-                        "The data update service does not exist but is " +
-                            "needed for " + features + ". " +
-                            "This can be corrected by passing an DataUpdateService " +
-                            "instance to the engine builder constructor. " +
-                            "If building from configuration, this can be corrected " +
-                            "by adding an DataUpdateService instance to the " +
-                            "the pipeline builder via addService() method.");
-                }
-                if (isLicenseKeyRequired(dataFileConfig) &&
-                    hasLicenseKey(dataFileConfig) == false) {
-                    throw new PipelineConfigurationException(
-                        "No license key is set, and the data update URL " +
-                            "serves nothing without one, so the engine cannot " +
-                            "be built with " + features + " on. Set a license " +
-                            "key with setDataUpdateLicenseKey, or turn off " +
-                            (autoUpdate ? "auto update with setAutoUpdate(false)" : "") +
-                            (autoUpdate && updateOnStartup ? " and " : "") +
-                            (updateOnStartup ?
-                                "update on startup with setDataUpdateOnStartup(false)" : "") +
-                            ".");
-                }
+            if (dataFileConfig.getAutomaticUpdatesEnabled() ||
+                dataFileConfig.getUpdateOnStartup()) {
                 dataUpdateService.registerDataFile(dataFile);
             }
             dataFiles.add(dataFile);
+        }
+    }
+
+    /**
+     * Refuse a data file configuration that needs a data update service or
+     * a license key it does not have. Every data file is checked before any
+     * is registered, so a refused build leaves nothing registered.
+     */
+    private void checkUpdateConfiguration(DataFileConfiguration dataFileConfig) {
+        boolean autoUpdate = dataFileConfig.getAutomaticUpdatesEnabled();
+        boolean updateOnStartup = dataFileConfig.getUpdateOnStartup();
+        if (autoUpdate == false && updateOnStartup == false) {
+            return;
+        }
+        String features = (autoUpdate ? "auto update" : "") +
+            (autoUpdate && updateOnStartup ? " and " : "") +
+            (updateOnStartup ? "update on startup" : "");
+        if (dataUpdateService == null) {
+            throw new RuntimeException(
+                "The data update service does not exist but is " +
+                    "needed for " + features + ". " +
+                    "This can be corrected by passing an DataUpdateService " +
+                    "instance to the engine builder constructor. " +
+                    "If building from configuration, this can be corrected " +
+                    "by adding an DataUpdateService instance to the " +
+                    "the pipeline builder via addService() method.");
+        }
+        if (isLicenseKeyRequired(dataFileConfig) &&
+            hasLicenseKey(dataFileConfig) == false) {
+            throw new PipelineConfigurationException(
+                "No license key is set, and the data update URL " +
+                    "serves nothing without one, so the engine cannot " +
+                    "be built with " + features + " on. Set a license " +
+                    "key with setDataUpdateLicenseKey, or turn off " +
+                    (autoUpdate ? "auto update with setAutoUpdate(false)" : "") +
+                    (autoUpdate && updateOnStartup ? " and " : "") +
+                    (updateOnStartup ?
+                        "update on startup with setDataUpdateOnStartup(false)" : "") +
+                    ".");
         }
     }
 
