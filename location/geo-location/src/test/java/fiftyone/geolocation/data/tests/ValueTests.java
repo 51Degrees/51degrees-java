@@ -71,11 +71,12 @@ public class ValueTests {
                         value instanceof AspectPropertyValue);
                     AspectPropertyValue<?> propertyValue =
                         (AspectPropertyValue<?>) value;
-                    // The cloud can have no value for a property at these
-                    // coordinates, such as Suburb, and then gives the reason.
+                    // A property can have no value at these coordinates, such
+                    // as Suburb. Its type cannot be read then, so only that it
+                    // carries a message is checked.
                     if (propertyValue.hasValue() == false) {
                         assertNotNull("Property '" + property.getName() +
-                                "' has no value and no reason was given.",
+                                "' has no value and no message.",
                             propertyValue.getNoValueMessage());
                         continue;
                     }
