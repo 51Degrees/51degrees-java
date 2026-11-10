@@ -30,6 +30,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -289,7 +290,7 @@ public class CloudAspectEngineBaseTests {
 
         assertEquals(0, engine.getProperties().size());
         assertProductMissingLoggedOnce();
-        maxErrors = 1;
+        maxWarnings = 1;
     }
 
     /**
@@ -315,7 +316,7 @@ public class CloudAspectEngineBaseTests {
             assertEquals(0, engine.getProperties().size());
         }
         assertProductMissingLoggedOnce();
-        maxErrors = 1;
+        maxWarnings = 1;
     }
 
     /**
@@ -377,7 +378,44 @@ public class CloudAspectEngineBaseTests {
         }
         assertEquals(0, keyed.getProperties().size());
         assertProductMissingLoggedOnce();
-        maxErrors = 1;
+        maxWarnings = 1;
+    }
+
+    /**
+     * A property keyed engine whose product the resource key includes gives
+     * no profiles, and throws nothing, for a response that holds no part
+     * for it or a part without profiles, as the Processing section of the
+     * cloud aspect engine specification says.
+     * @throws Exception
+     */
+    @Test
+    public void propertyKeyed_productPresent_noProfiles() throws Exception {
+        List<AccessiblePropertyMetaData.PropertyMetaData> properties = new ArrayList<>();
+        properties.add(new AccessiblePropertyMetaData.PropertyMetaData("ismobile", "Boolean", null, null));
+        AccessiblePropertyMetaData.ProductMetaData product = new AccessiblePropertyMetaData.ProductMetaData();
+        product.properties = properties;
+        propertiesReturnedByRequestEngine.put("test", product);
+        TestKeyedInstance keyed = new TestKeyedInstance();
+        requestEngine = new TestRequestEngine();
+        requestEngine.setPublicProperties(propertiesReturnedByRequestEngine);
+        pipeline = new PipelineBuilder(loggerFactory)
+            .addFlowElement(requestEngine)
+            .addFlowElement(keyed)
+            .build();
+
+        for (String response : Arrays.asList(
+            "{ \"test2\": { \"ismobile\": true } }",
+            "{ \"test\": { } }")) {
+            TestProfiles profiles = new TestProfiles(
+                null,
+                Mockito.mock(FlowData.class),
+                keyed);
+            keyed.processCloudEngine(
+                Mockito.mock(FlowData.class),
+                profiles,
+                response);
+            assertEquals(0, profiles.getProfiles().size(), response);
+        }
     }
 
     private void assertProductMissingLoggedOnce() {
@@ -387,9 +425,9 @@ public class CloudAspectEngineBaseTests {
             errors.addAll(logger.errorsLogged);
             warnings.addAll(logger.warningsLogged);
         }
-        assertEquals(1, errors.size(), errors.toString());
-        assertTrue(errors.get(0).contains("'test'"), errors.get(0));
-        assertEquals(0, warnings.size(), warnings.toString());
+        assertEquals(1, warnings.size(), warnings.toString());
+        assertTrue(warnings.get(0).contains("'test'"), warnings.get(0));
+        assertEquals(0, errors.size(), errors.toString());
     }
 
     /**
