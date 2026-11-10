@@ -36,7 +36,7 @@ import java.util.Map;
  * them replaced by '*', so a reader can tell two keys apart but cannot use
  * either. A key of 4 characters or fewer is replaced in full, because its
  * last 4 characters would be the whole key.
- * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/logging.md#license-keys">Specification</a>
+ * @see <a href="https://github.com/51Degrees/specifications/blob/rc/pipeline-specification/features/logging.md#license-keys">Specification</a>
  */
 public final class LicenseKeyMask {
 
@@ -74,7 +74,11 @@ public final class LicenseKeyMask {
 
     /**
      * The text with every occurrence of each key masked, both as the key is
-     * written and as it is encoded in a URL.
+     * written and as it is encoded in a URL, with upper or lower case
+     * hexadecimal digits. An encoded key is replaced by the encoded form of
+     * its masked plain form, so it shows the same last 4 characters. Every
+     * occurrence of a key's text is masked, so a key of only a few
+     * characters also masks those characters wherever else they appear.
      * @param text the text, such as a URL or an error message, or null
      * @param keys the license keys, or null
      * @return the masked text, or null if the text is null
@@ -85,10 +89,15 @@ public final class LicenseKeyMask {
         }
         String result = text;
         for (String key : longestFirst(keys)) {
-            result = result.replace(key, mask(key));
+            String masked = mask(key);
+            result = result.replace(key, masked);
             String encoded = urlEncode(key);
             if (encoded.equals(key) == false) {
-                result = result.replace(encoded, mask(encoded));
+                String maskedEncoded = urlEncode(masked);
+                result = result.replace(encoded, maskedEncoded);
+                result = result.replace(
+                    lowerCaseEscapes(encoded),
+                    lowerCaseEscapes(maskedEncoded));
             }
         }
         return result;
@@ -179,6 +188,21 @@ public final class LicenseKeyMask {
         }
         Collections.sort(result, (a, b) -> b.length() - a.length());
         return result;
+    }
+
+    /**
+     * The text with the two hexadecimal digits after each '%' in lower
+     * case.
+     */
+    private static String lowerCaseEscapes(String text) {
+        StringBuilder result = new StringBuilder(text);
+        for (int i = text.indexOf('%');
+             i >= 0 && i + 2 < text.length();
+             i = text.indexOf('%', i + 1)) {
+            result.setCharAt(i + 1, Character.toLowerCase(text.charAt(i + 1)));
+            result.setCharAt(i + 2, Character.toLowerCase(text.charAt(i + 2)));
+        }
+        return result.toString();
     }
 
     private static String urlEncode(String key) {

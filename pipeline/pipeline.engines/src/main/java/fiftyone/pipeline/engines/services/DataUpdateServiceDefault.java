@@ -45,6 +45,7 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URLDecoder;
 import java.nio.file.*;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
@@ -64,6 +65,12 @@ import static org.apache.commons.lang3.BooleanUtils.isFalse;
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/data-updates.md">Specification</a>
  */
 public class DataUpdateServiceDefault implements DataUpdateService {
+
+    /**
+     * The query parameter of a data update URL that holds the license keys,
+     * as the 51Degrees URL formatter writes it.
+     */
+    private static final String LICENSE_KEYS_PARAMETER = "LicenseKeys";
 
     final List<AspectEngineDataFile> configurations = new ArrayList<>();
     private final Logger logger;
@@ -611,6 +618,45 @@ public class DataUpdateServiceDefault implements DataUpdateService {
      * @param tempFile the temp file to write the data to
      * @return the {@link AutoUpdateStatus} value indicating the result
      */
+    /**
+     * The license keys to mask in messages that name the data update URL,
+     * being the data update license keys and any key in the URL's
+     * LicenseKeys parameter, such as one typed straight into the data
+     * update URL.
+     * @param dataFile the data file being updated
+     * @param url the formatted data update URL
+     * @return the keys to mask
+     */
+    private static List<String> licenseKeysToMask(
+            AspectEngineDataFile dataFile,
+            String url) {
+        List<String> keys = new ArrayList<>();
+        List<String> configured =
+                dataFile.getConfiguration().getDataUpdateLicenseKeys();
+        if (configured != null) {
+            keys.addAll(configured);
+        }
+        int query = url == null ? -1 : url.indexOf('?');
+        if (query < 0) {
+            return keys;
+        }
+        for (String parameter : url.substring(query + 1).split("&")) {
+            int equals = parameter.indexOf('=');
+            if (equals > 0 && parameter.substring(0, equals)
+                    .equalsIgnoreCase(LICENSE_KEYS_PARAMETER)) {
+                String value = parameter.substring(equals + 1);
+                try {
+                    value = URLDecoder.decode(value, "UTF-8");
+                } catch (UnsupportedEncodingException |
+                         IllegalArgumentException e) {
+                    // Masked as it is written.
+                }
+                keys.addAll(Arrays.asList(value.split("\\|")));
+            }
+        }
+        return keys;
+    }
+
     private AutoUpdateStatus downloadFile(
             AspectEngineDataFile dataFile,
             FileWrapper tempFile) {
@@ -618,8 +664,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
         String url = dataFile.getFormattedUrl();
         // The URL carries the license keys, so every message names it with
         // each key masked.
-        List<String> licenseKeys =
-                dataFile.getConfiguration().getDataUpdateLicenseKeys();
+        List<String> licenseKeys = licenseKeysToMask(dataFile, url);
         String loggedUrl = LicenseKeyMask.maskIn(url, licenseKeys);
         logger.debug("downloadFile from {}", loggedUrl);
 
