@@ -32,6 +32,7 @@ import fiftyone.pipeline.core.data.AccessiblePropertyMetaData.PropertyMetaData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
+import fiftyone.pipeline.engines.exceptions.PropertyMissingException;
 import fiftyone.pipeline.engines.services.MissingPropertyServiceDefault;
 import org.junit.Test;
 import org.slf4j.ILoggerFactory;
@@ -44,6 +45,7 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -51,9 +53,11 @@ import static org.mockito.Mockito.when;
 /**
  * A property the cloud response gives as null has no value, and its message
  * is the text under the property's name followed by nullreason, as the
- * Processing section of the cloud aspect engine specification says. Each
- * test reads the property by name, from the map the JSON Builder reads, and
- * from the typed getter, and expects the same from all three.
+ * Processing section of the cloud aspect engine specification says. A
+ * property the response leaves out is missing, so reading it throws, as the
+ * Missing Properties section of the properties specification says. The tests
+ * read each property by name, from the map the JSON Builder reads, and from
+ * the typed getter.
  */
 public class GeoLocationCloudEngineNullValueTests {
 
@@ -65,6 +69,10 @@ public class GeoLocationCloudEngineNullValueTests {
             "'suburb': null, " +
             "'suburbnullreason': '" + SUBURB_NULL_REASON + "', " +
             "'town': 'Reading' }, " +
+        "'javascriptProperties': [] }";
+
+    private static final String NULL_SUBURB_WITHOUT_REASON_RESPONSE =
+        "{ 'location': { 'suburb': null, 'town': 'Reading' }, " +
         "'javascriptProperties': [] }";
 
     private static final String NO_SUBURB_RESPONSE =
@@ -97,13 +105,50 @@ public class GeoLocationCloudEngineNullValueTests {
     }
 
     @Test
-    public void NoEntry_NoValue() throws Exception {
+    public void NullValueWithoutReason_NoValueUnknown() throws Exception {
         try (GeoLocationCloudEngine engine = buildEngine()) {
-            CloudGeoData data = process(engine, NO_SUBURB_RESPONSE);
+            CloudGeoData data = process(
+                engine,
+                NULL_SUBURB_WITHOUT_REASON_RESPONSE);
 
             assertNoValue("Unknown", data.get("Suburb"));
             assertNoValue("Unknown", data.asKeyMap().get("Suburb"));
             assertNoValue("Unknown", data.getSuburb());
+        }
+    }
+
+    @Test
+    public void NoEntry_PropertyIsMissing() throws Exception {
+        try (GeoLocationCloudEngine engine = buildEngine()) {
+            CloudGeoData data = process(engine, NO_SUBURB_RESPONSE);
+
+            assertFalse(data.asKeyMap().containsKey("Suburb"));
+            assertMissing(() -> data.get("Suburb"));
+            assertMissing(() -> data.getSuburb());
+        }
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    public void SetNoValueReasons_ChangesNothing() throws Exception {
+        try (GeoLocationCloudEngine engine = buildEngine()) {
+            CloudGeoData data = process(engine, NULL_SUBURB_RESPONSE);
+            Map<String, String> reasons = new HashMap<>();
+            reasons.put("suburb", "Another reason");
+            data.setNoValueReasons(reasons);
+
+            assertNoValue(SUBURB_NULL_REASON, data.get("Suburb"));
+            assertNoValue(SUBURB_NULL_REASON, data.getSuburb());
+        }
+    }
+
+    private static void assertMissing(Runnable read) {
+        try {
+            read.run();
+            fail("Expected a PropertyMissingException");
+        }
+        catch (PropertyMissingException e) {
+            // The property is not in the result, as expected.
         }
     }
 
