@@ -35,6 +35,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 
@@ -112,6 +113,11 @@ public class CloudRequestEngineDiscoveryTests {
     private HttpClient httpClient;
     private final Map<String, Integer> requests = new ConcurrentHashMap<>();
     private final Map<String, Integer> answers = new HashMap<>();
+
+    /**
+     * A body to answer with in place of the usual one, by endpoint.
+     */
+    private final Map<String, String> bodies = new HashMap<>();
     private final List<HttpURLConnection> connections =
         Collections.synchronizedList(new ArrayList<HttpURLConnection>());
 
@@ -211,6 +217,25 @@ public class CloudRequestEngineDiscoveryTests {
             assertThrows(CloudRequestException.class, this::build);
 
         assertEquals(status, error.getHttpStatusCode());
+        assertEquals(1, requests(PROPERTIES), "accessibleproperties");
+        assertEquals(1, requests(EVIDENCE_KEYS), "evidencekeys");
+    }
+
+    /**
+     * A 4xx answer fails the build even when its body is not JSON, such as
+     * an error page from a proxy, because the status alone makes it
+     * definitive.
+     */
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = { PROPERTIES, EVIDENCE_KEYS })
+    public void Build_4xxWithBodyNotJson_FailsTheBuild(String endpoint) {
+        answers.put(endpoint, 403);
+        bodies.put(endpoint, "<html>Forbidden</html>");
+
+        CloudRequestException error =
+            assertThrows(CloudRequestException.class, this::build);
+
+        assertEquals(403, error.getHttpStatusCode());
         assertEquals(1, requests(PROPERTIES), "accessibleproperties");
         assertEquals(1, requests(EVIDENCE_KEYS), "evidencekeys");
     }
@@ -501,6 +526,9 @@ public class CloudRequestEngineDiscoveryTests {
         }
         if (answer == UNREADABLE) {
             return "<html>proxy error</html>";
+        }
+        if (bodies.containsKey(name)) {
+            return bodies.get(name);
         }
         if (answer != 200) {
             return "{\"errors\": [\"" + name + " answered " + answer + "\"]}";
