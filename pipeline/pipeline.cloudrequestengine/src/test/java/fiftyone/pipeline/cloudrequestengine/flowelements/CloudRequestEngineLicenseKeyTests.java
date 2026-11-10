@@ -225,6 +225,7 @@ public class CloudRequestEngineLicenseKeyTests {
     private void assertRefused(
         CloudRequestEngineBuilder builder,
         String... expectedInMessage) {
+        int sent = cloud.calls.size();
         PipelineConfigurationException e = assertThrows(
             PipelineConfigurationException.class,
             () -> build(builder));
@@ -234,7 +235,7 @@ public class CloudRequestEngineLicenseKeyTests {
                 "Message should contain '" + expected + "' but was: " +
                     e.getMessage());
         }
-        assertTrue(cloud.calls.isEmpty(), "A refused build sends nothing.");
+        assertEquals(sent, cloud.calls.size(), "A refused build sends nothing.");
     }
 
     // The rows of the specification's table of accepted combinations.
