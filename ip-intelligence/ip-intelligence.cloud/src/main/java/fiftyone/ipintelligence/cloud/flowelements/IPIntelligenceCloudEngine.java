@@ -63,8 +63,9 @@ import org.json.JSONArray;
  */
 public class IPIntelligenceCloudEngine
     extends CloudAspectEngineBase<IPIntelligenceDataCloud> {
-    List<AspectPropertyMetaData> aspectProperties;
+    volatile List<AspectPropertyMetaData> aspectProperties;
     private String dataSourceTier;
+    private final Object metadataLock = new Object();
     // Lower-cased names of properties the cloud returns as weighted lists
     // (cloud type "Weighted..."), so processEngine can read their value/weight
     // pairs rather than treating them as a plain list.
@@ -84,9 +85,37 @@ public class IPIntelligenceCloudEngine
         this.cloudRequestEngine = null;
     }
 
+    /**
+     * The property metadata, from the products the Cloud Request Engine
+     * reports. Until they are known, after a failure at build that can
+     * pass, this is empty and is read again on the next call.
+     * @return the property metadata
+     */
     @Override
     public List<AspectPropertyMetaData> getProperties() {
-        return aspectProperties;
+        List<AspectPropertyMetaData> loaded = aspectProperties;
+        if (loaded == null && cloudRequestEngine != null) {
+            synchronized (metadataLock) {
+                if (aspectProperties == null) {
+                    loadAspectProperties(cloudRequestEngine);
+                }
+                loaded = aspectProperties;
+            }
+        }
+        return loaded == null ?
+            new ArrayList<AspectPropertyMetaData>() :
+            loaded;
+    }
+
+    /**
+     * Whether the property metadata is loaded, which reads it if the Cloud
+     * Request Engine now knows the accessible properties.
+     * @return true once the property metadata is loaded
+     */
+    @Override
+    public boolean hasLoadedProperties() {
+        getProperties();
+        return aspectProperties != null;
     }
 
     @Override
@@ -123,7 +152,7 @@ public class IPIntelligenceCloudEngine
 
             // Extract data from json to the aspectData instance.
             JSONObject jsonObj = new JSONObject(json);
-            JSONObject ipiObj = jsonObj.getJSONObject("ip");
+            JSONObject ipiObj = getElementJson(jsonObj);
 
             Map<String, Object> propertyMap =
                 new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
@@ -222,9 +251,10 @@ public class IPIntelligenceCloudEngine
         if (cloudRequestEngine == null) {
             cloudRequestEngine = pipeline.getElement(CloudRequestEngine.class);
             if (cloudRequestEngine != null) {
-                if (loadAspectProperties(cloudRequestEngine) == false) {
-                    logger.error("Failed to load aspect properties");
-                }
+                // The products are not known after a failure at build that
+                // can pass, which the Cloud Request Engine has logged.
+                // getProperties reads them once they are.
+                loadAspectProperties(cloudRequestEngine);
             }
 
         }
@@ -239,18 +269,16 @@ public class IPIntelligenceCloudEngine
      * {@link #aspectProperties}
      */
     private boolean loadAspectProperties(CloudRequestEngine engine) {
-        Map<String, AccessiblePropertyMetaData.ProductMetaData> map =
-            engine.getPublicProperties();
+        AccessiblePropertyMetaData.ProductMetaData product =
+            findProduct(engine.getPublicProperties());
 
-        if (map != null &&
-            map.size() > 0 &&
-            map.containsKey(getElementDataKey())) {
-            aspectProperties = new ArrayList<>();
+        if (product != null) {
+            List<AspectPropertyMetaData> properties = new ArrayList<>();
             weightedPropertyNames.clear();
-            dataSourceTier = map.get(getElementDataKey()).dataTier;
+            dataSourceTier = product.dataTier;
 
             for (AccessiblePropertyMetaData.PropertyMetaData item :
-                map.get(getElementDataKey()).properties) {
+                product.properties) {
                 if (item.type != null && item.type.startsWith("Weighted")) {
                     weightedPropertyNames.add(item.name.toLowerCase());
                 }
@@ -261,13 +289,12 @@ public class IPIntelligenceCloudEngine
                     resolvePropertyType(item),
                     new ArrayList<String>(),
                     true);
-                aspectProperties.add(property);
+                properties.add(property);
             }
+            aspectProperties = properties;
             return true;
         }
         else {
-            logger.error("Aspect properties could not be loaded for" +
-                " the IP Intelligence cloud engine", this);
             return false;
         }
     }
