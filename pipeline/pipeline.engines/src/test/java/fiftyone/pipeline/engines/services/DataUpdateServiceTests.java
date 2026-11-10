@@ -72,6 +72,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static fiftyone.pipeline.engines.services.DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
 import static fiftyone.pipeline.engines.services.DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED;
+import static fiftyone.pipeline.engines.services.DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_SUCCESS;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 import static org.mockito.Mockito.*;
@@ -420,14 +421,17 @@ public class DataUpdateServiceTests {
                 }
             });
 
-            // Configure a flag to be set when processing
-            // is complete.
+            // Configure a flag to be set when the watcher has applied the
+            // update. The polling timer's own check also completes, with no
+            // update found, and must not release the flag.
             final Semaphore completeFlag = new Semaphore(1);
             completeFlag.acquire();
             dataUpdate.onUpdateComplete(new OnUpdateComplete() {
                 @Override
                 public void call(Object sender, DataUpdateService.DataUpdateCompleteArgs args) {
-                    completeFlag.release();
+                    if (args.getStatus() == AUTO_UPDATE_SUCCESS) {
+                        completeFlag.release();
+                    }
                 }
             });
 
