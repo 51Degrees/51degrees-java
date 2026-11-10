@@ -290,9 +290,10 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     /**
      * Called when a data update is available and the file at
      * engine.DataFilePath contains this new data.
-     * 1. Refresh the engine.
-     * 2. Dispose of the existing update timer if there is one.
-     * 3. Re-register the engine with the update service.
+     * 1. Dispose of the existing update timer if there is one.
+     * 2. Refresh the engine.
+     * Where the data file is registered, the caller then registers it again,
+     * which sets a new update timer.
      *
      * @param dataFile the data file to update
      * @return {@link AutoUpdateStatus#AUTO_UPDATE_SUCCESS} if the data file was
@@ -382,6 +383,11 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                                 logger.warn("Exception while reading the data file at '{}'",
                                         aspectDataFile.getDataFilePath(), e);
                             }
+                        }
+                        // The refresh cancelled the polling timer, so
+                        // register the file again to set a new one.
+                        if (dataFile.getIsRegistered()) {
+                            registerDataFile(dataFile);
                         }
                     }
                 }
