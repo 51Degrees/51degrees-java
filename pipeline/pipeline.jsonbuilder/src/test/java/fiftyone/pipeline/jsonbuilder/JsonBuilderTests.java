@@ -482,6 +482,42 @@ public class JsonBuilderTests {
         }
     }
 
+    /**
+     * A weighted value is written as an object with the lower-case keys
+     * rawweighting and value, and no others.
+     * See the Serializing section of the weighted values page of the
+     * specification.
+     */
+    @Test
+    public void JsonBuilder_WeightedValues() throws Exception {
+        List<IWeightedValue<String>> weighted = new ArrayList<>();
+        weighted.add(new WeightedValue<>(32768, "value 1"));
+        weighted.add(new WeightedValue<>(32767, "value 2"));
+        Map<String, Object> map = new HashMap<>();
+        map.put("weighted",
+            new AspectPropertyValueDefault<List<IWeightedValue<String>>>(
+                weighted));
+        when(elementDataMock.asKeyMap()).thenReturn(map);
+
+        String json = testIteration(1);
+
+        JSONArray values = new JSONObject(json)
+            .getJSONObject("test")
+            .getJSONArray("weighted");
+        assertEquals(2, values.length(), json);
+        for (int i = 0; i < values.length(); i++) {
+            JSONObject value = values.getJSONObject(i);
+            assertEquals(
+                new HashSet<>(Arrays.asList("rawweighting", "value")),
+                value.keySet(),
+                json);
+            assertEquals(weighted.get(i).getRawWeighting(),
+                value.getInt("rawweighting"), json);
+            assertEquals(weighted.get(i).getValue(),
+                value.getString("value"), json);
+        }
+    }
+
     private String testIteration(int iteration) throws Exception {
         return testIteration(iteration, null);
     }
