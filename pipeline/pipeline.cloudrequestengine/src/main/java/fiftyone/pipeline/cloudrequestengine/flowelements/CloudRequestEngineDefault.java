@@ -77,6 +77,17 @@ public class CloudRequestEngineDefault
      */
     private static final String HTTP_REQUEST_KEY = "server.http-request";
 
+    /**
+     * Form fields the request reserves for the credentials and the list of
+     * Properties, with licence, which the cloud service reads as the
+     * license key where license is absent. Evidence whose key strips to one
+     * of them is never sent, as the Processing section of the
+     * specification requires.
+     */
+    private static final Set<String> ENGINE_FIELDS =
+        Collections.unmodifiableSet(new HashSet<>(
+            Arrays.asList("resource", "license", "licence", "values")));
+
     private HttpClient httpClient;
 
     private String endPoint;
@@ -456,10 +467,21 @@ public class CloudRequestEngineDefault
         return string.getBytes(StandardCharsets.UTF_8);
     }
 
+    /**
+     * The Evidence to send, keyed by the name the cloud service expects.
+     * Only Evidence that {@link #isSent(String)} allows is included, and
+     * where two prefixes give the same name the precedence order decides.
+     * @param flowData the FlowData
+     * @return the form fields to send
+     */
     Map<String, Object> getFormData(FlowData flowData) {
-        Map<String, Object> evidence = new HashMap<>(
-            flowData.getEvidence().asKeyMap());
-        evidence.keySet().removeIf(HTTP_REQUEST_KEY::equalsIgnoreCase);
+        Map<String, Object> evidence = new HashMap<>();
+        for (Map.Entry<String, Object> entry :
+            flowData.getEvidence().asKeyMap().entrySet()) {
+            if (isSent(entry.getKey())) {
+                evidence.put(entry.getKey(), entry.getValue());
+            }
+        }
         Map<String, Object> formData = new HashMap<>();
 
         // Add evidence in reverse alphabetical order, excluding special keys.
@@ -475,9 +497,28 @@ public class CloudRequestEngineDefault
     }
 
     /**
+     * Whether Evidence is sent to the cloud service. Only keys the service
+     * accepts are sent, never one that strips to a name in
+     * {@link #ENGINE_FIELDS}, compared without regard to case, and never
+     * the web request.
+     * @param key the Evidence key
+     * @return true if the Evidence is sent
+     */
+    private boolean isSent(String key) {
+        if (HTTP_REQUEST_KEY.equalsIgnoreCase(key) ||
+            evidenceKeyFilter.include(key) == false) {
+            return false;
+        }
+        String[] parts = key.split(
+            Pattern.quote(Constants.EVIDENCE_SEPERATOR), 2);
+        return parts.length == 2 &&
+            ENGINE_FIELDS.contains(parts[1].toLowerCase(Locale.ROOT)) == false;
+    }
+
+    /**
      * Add form data to the evidence.
      * @param formData the destination map to add the data to
-     * @param allEvidence all evidence in the FlowData. This is used to
+     * @param allEvidence all the Evidence being sent. This is used to
      *                    report which evidence keys are conflicting
      * @param evidence evidence to add to the form data
      */
@@ -539,7 +580,7 @@ public class CloudRequestEngineDefault
 
     /**
      * Get evidence with specified prefix.
-     * @param evidence all evidence in the FlowData
+     * @param evidence the Evidence being sent
      * @param type required evidence key prefix
      * @return evidence with the required key prefix
      */
