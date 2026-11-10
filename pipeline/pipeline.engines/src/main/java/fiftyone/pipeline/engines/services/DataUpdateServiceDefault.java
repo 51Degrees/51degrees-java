@@ -259,12 +259,14 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 }
             }
             if (manualUpdate == false ||
-                    (result == AUTO_UPDATE_SUCCESS &&
+                    ((result == AUTO_UPDATE_SUCCESS ||
+                            result == AUTO_UPDATE_REFRESH_FAILED) &&
                             dataFile.getIsRegistered())) {
                 // Re-register the engine with the data update service
                 // so it knows when next set of data should be available.
                 // A manual update of a registered data file does this too,
-                // so polling resumes after it.
+                // whether or not the refresh worked, as the refresh clears
+                // the timer, so polling resumes after it.
                 registerDataFile(dataFile);
             }
 
@@ -577,6 +579,9 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                     }
                 }
             }
+        }
+        if (dataFile != null) {
+            dataFile.setDataUpdateService(null);
         }
     }
 
