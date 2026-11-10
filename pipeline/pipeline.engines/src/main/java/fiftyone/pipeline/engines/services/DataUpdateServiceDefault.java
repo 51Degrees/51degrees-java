@@ -234,6 +234,15 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 // yet been refreshed.
                 logger.debug("Calling updatedFileAvailable");
                 result = updatedFileAvailable(dataFile);
+            } else if (result == AUTO_UPDATE_SUCCESS) {
+                // The update was applied in memory. Clear the timer, as
+                // updatedFileAvailable does, so a new one is registered.
+                synchronized (futureLock) {
+                    if (dataFile.getFuture() != null) {
+                        dataFile.getFuture().cancel(true);
+                        dataFile.setFuture(null);
+                    }
+                }
             } else {
                 // No update available.
                 // If this was a manual call to update then do nothing.
@@ -257,9 +266,15 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                     }
                 }
             }
-            if (manualUpdate == false) {
+            if (manualUpdate == false ||
+                    ((result == AUTO_UPDATE_SUCCESS ||
+                            result == AUTO_UPDATE_REFRESH_FAILED) &&
+                            dataFile.getIsRegistered())) {
                 // Re-register the engine with the data update service
                 // so it knows when next set of data should be available.
+                // A manual update of a registered data file does this too,
+                // whether or not the refresh worked, as a refresh from the
+                // data file clears the timer, so polling resumes after it.
                 registerDataFile(dataFile);
             }
 
@@ -573,6 +588,9 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 }
             }
         }
+        if (dataFile != null) {
+            dataFile.setDataUpdateService(null);
+        }
     }
 
     /**
@@ -858,7 +876,8 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                         dataFile.getConfiguration().setData(reader.toByteArray());
                     }
                 }
-                return memoryDownloadResult;
+                // The engine, or the configuration, now holds the new data.
+                return AUTO_UPDATE_SUCCESS;
             } catch (Exception ex) {
                 logger.error("An error occurred when applying a data update to engine '{}'" ,
                                 Objects.nonNull(dataFile.getEngine())?

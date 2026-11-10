@@ -55,9 +55,10 @@ import org.json.JSONArray;
  */
 public class DeviceDetectionCloudEngine
     extends CloudAspectEngineBase<DeviceDataCloud> {
-    List<AspectPropertyMetaData> aspectProperties;
+    volatile List<AspectPropertyMetaData> aspectProperties;
     private String dataSourceTier;
     CloudRequestEngine cloudRequestEngine;
+    private final Object metadataLock = new Object();
 
     /**
      * Construct a new instance of the {@link DeviceDetectionCloudEngine}.
@@ -72,9 +73,37 @@ public class DeviceDetectionCloudEngine
         this.cloudRequestEngine = null;
     }
 
+    /**
+     * The property metadata, from the products the Cloud Request Engine
+     * reports. Until they are known, after a failure at build that can
+     * pass, this is empty and is read again on the next call.
+     * @return the property metadata
+     */
     @Override
     public List<AspectPropertyMetaData> getProperties() {
-        return aspectProperties;
+        List<AspectPropertyMetaData> loaded = aspectProperties;
+        if (loaded == null && cloudRequestEngine != null) {
+            synchronized (metadataLock) {
+                if (aspectProperties == null) {
+                    loadAspectProperties(cloudRequestEngine);
+                }
+                loaded = aspectProperties;
+            }
+        }
+        return loaded == null ?
+            new ArrayList<AspectPropertyMetaData>() :
+            loaded;
+    }
+
+    /**
+     * Whether the property metadata is loaded, which reads it if the Cloud
+     * Request Engine now knows the accessible properties.
+     * @return true once the property metadata is loaded
+     */
+    @Override
+    public boolean hasLoadedProperties() {
+        getProperties();
+        return aspectProperties != null;
     }
 
     @Override
@@ -111,7 +140,7 @@ public class DeviceDetectionCloudEngine
 
             // Extract data from json to the aspectData instance.
             JSONObject jsonObj = new JSONObject(json);
-            JSONObject deviceObj = jsonObj.getJSONObject("device");
+            JSONObject deviceObj = getElementJson(jsonObj);
 
             Map<String, Object> deviceMap =
                 new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
@@ -188,9 +217,10 @@ public class DeviceDetectionCloudEngine
         if (cloudRequestEngine == null) {
             cloudRequestEngine = pipeline.getElement(CloudRequestEngine.class);
             if (cloudRequestEngine != null) {
-                if (loadAspectProperties(cloudRequestEngine) == false) {
-                    logger.error("Failed to load aspect properties");
-                }
+                // The products are not known after a failure at build that
+                // can pass, which the Cloud Request Engine has logged.
+                // getProperties reads them once they are.
+                loadAspectProperties(cloudRequestEngine);
             }
 
         }
@@ -205,17 +235,15 @@ public class DeviceDetectionCloudEngine
      * {@link #aspectProperties}
      */
     private boolean loadAspectProperties(CloudRequestEngine engine) {
-        Map<String, AccessiblePropertyMetaData.ProductMetaData> map =
-            engine.getPublicProperties();
+        AccessiblePropertyMetaData.ProductMetaData product =
+            findProduct(engine.getPublicProperties());
 
-        if (map != null &&
-            map.size() > 0 &&
-            map.containsKey(getElementDataKey())) {
-            aspectProperties = new ArrayList<>();
-            dataSourceTier = map.get(getElementDataKey()).dataTier;
+        if (product != null) {
+            List<AspectPropertyMetaData> properties = new ArrayList<>();
+            dataSourceTier = product.dataTier;
 
             for (AccessiblePropertyMetaData.PropertyMetaData item :
-                map.get(getElementDataKey()).properties) {
+                product.properties) {
                 AspectPropertyMetaData property = new AspectPropertyMetaDataDefault(
                     item.name,
                     this,
@@ -223,13 +251,12 @@ public class DeviceDetectionCloudEngine
                     item.getPropertyType(),
                     new ArrayList<String>(),
                     true);
-                aspectProperties.add(property);
+                properties.add(property);
             }
+            aspectProperties = properties;
             return true;
         }
         else {
-            logger.error("Aspect properties could not be loaded for" +
-                " the Device Detection cloud engine", this);
             return false;
         }
     }
