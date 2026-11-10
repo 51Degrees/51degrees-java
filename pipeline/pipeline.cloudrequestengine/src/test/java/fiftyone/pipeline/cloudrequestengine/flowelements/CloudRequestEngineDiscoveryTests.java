@@ -191,7 +191,7 @@ public class CloudRequestEngineDiscoveryTests {
 
     private static Stream<Arguments> definitiveFailures() {
         List<Arguments> arguments = new ArrayList<>();
-        for (int status : new int[] { 400, 401, 403, 404, 429 }) {
+        for (int status : new int[] { 400, 401, 403, 404, 408, 429 }) {
             arguments.add(Arguments.of(PROPERTIES, status));
             arguments.add(Arguments.of(EVIDENCE_KEYS, status));
         }
