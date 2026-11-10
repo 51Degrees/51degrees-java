@@ -1,0 +1,71 @@
+name: Red run for 89
+
+on: push
+
+jobs:
+  red:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: 2f6a4de tests on ea5fc04
+            ref: 2f6a4deab6fdc25221bc6f99f2b7e685f16d3269
+            werror: 'on'
+            modules: pipeline/pipeline.cloudrequestengine
+            tests: CloudRequestEngineTests#process_SendsOnlyAcceptedEvidence+process_LeavesOutEvidenceNamedResourceLicenseOrValues
+          - name: c2a5e9c test on f522ddc
+            ref: c2a5e9c9baf8bd90638e5f6c5ffa3b1c674bfc33
+            werror: 'on'
+            modules: pipeline/pipeline.cloudrequestengine
+            tests: CloudRequestEngineTests#process_LeavesOutEvidenceNamedLicence
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref || github.sha }}
+      - name: Show the commit under test
+        run: git log -1 --format='%H %s'
+      - name: Fetch the submodules the Java build reads
+        run: >-
+          git submodule update --init --depth 1
+          pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates
+          pipeline/owid-java
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Treat compiler warnings as warnings
+        if: matrix.werror == 'off'
+        run: sed -i '/<arg>-Werror<\/arg>/d' pipeline/pom.xml device-detection/pom.xml ip-intelligence/pom.xml
+      - name: Build
+        run: mvn -B -ntp -pl "${{ matrix.modules }}" -am install -DskipTests
+      - name: Run the tests
+        run: >-
+          mvn -B -ntp -pl "${{ matrix.modules }}" surefire:test
+          "-Dtest=${{ matrix.tests }}"
+          -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false
+          -Dmaven.test.failure.ignore=true
+      - name: Report each test
+        shell: python3 {0}
+        run: |
+          import glob, sys, xml.etree.ElementTree as ET
+          failed = 0
+          paths = sorted(glob.glob('**/target/surefire-reports/TEST-*.xml', recursive=True))
+          for path in paths:
+              for case in ET.parse(path).getroot().iter('testcase'):
+                  name = '%s#%s' % (case.get('classname'), case.get('name'))
+                  problem = case.find('failure')
+                  if problem is None:
+                      problem = case.find('error')
+                  if problem is not None:
+                      failed += 1
+                      lines = (problem.get('message') or '').strip().splitlines()
+                      print('RED-FAILED  %s  %s: %s' % (name, problem.get('type'), lines[0] if lines else ''))
+                  elif case.find('skipped') is not None:
+                      print('RED-SKIPPED %s' % name)
+                  else:
+                      print('RED-PASSED  %s' % name)
+          print('RED-SUMMARY %d reports, %d failed' % (len(paths), failed))
+          sys.exit(1 if failed else 0)
