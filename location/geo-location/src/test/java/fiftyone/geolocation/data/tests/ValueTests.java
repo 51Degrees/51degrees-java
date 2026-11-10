@@ -67,9 +67,25 @@ public class ValueTests {
                     assertNotNull("Value of " + property.getName() + " is null. ", value);
                     assertTrue("Value of '" + property.getName() +
                             "' was of type " + value.getClass().getSimpleName() +
+                            " but should have been AspectPropertyValue.",
+                        value instanceof AspectPropertyValue);
+                    AspectPropertyValue<?> propertyValue =
+                        (AspectPropertyValue<?>) value;
+                    // The cloud can have no value for a property at these
+                    // coordinates, such as Suburb, and then gives the reason.
+                    if (propertyValue.hasValue() == false) {
+                        assertNotNull("Property '" + property.getName() +
+                                "' has no value and no reason was given.",
+                            propertyValue.getNoValueMessage());
+                        continue;
+                    }
+                    assertTrue("Value of '" + property.getName() +
+                            "' was of type " +
+                            propertyValue.getValue().getClass().getSimpleName() +
                             " but should have been " + expectedType.getSimpleName() +
                             ".",
-                        expectedType.isAssignableFrom(value.getClass()));
+                        expectedType.isAssignableFrom(
+                            propertyValue.getValue().getClass()));
                 }
             }
         }

@@ -37,6 +37,8 @@ import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaDataDefault;
+import fiftyone.pipeline.engines.data.AspectPropertyValue;
+import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
 
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -112,39 +114,29 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
             Map<String, Object> methodData = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
             for (AspectPropertyMetaData property : getProperties()) {
+                String key = property.getName().toLowerCase();
+                Object value;
                 switch(property.getType().getSimpleName()) {
                     case ("List"):
-                        JSONArray jsonArray = geoObj.optJSONArray(property.getName().toLowerCase());
-                        methodData.put(
-                            property.getName(),
-                            jsonArray == null ? null : jsonArray.toList());
+                        JSONArray jsonArray = geoObj.optJSONArray(key);
+                        value = jsonArray == null ? null : jsonArray.toList();
                         break;
                     case ("JavaScript"):
-                        String javascript = geoObj.optString(property.getName().toLowerCase(), null);
-                        methodData.put(
-                            property.getName(),
-                            javascript == null ? null : new JavaScript(javascript));
+                        String javascript = geoObj.optString(key, null);
+                        value = javascript == null ?
+                            null :
+                            new JavaScript(javascript);
                         break;
                     default:
-                        methodData.put(
-                            property.getName(),
-                            geoObj.opt(property.getName().toLowerCase()));
-                            break;
+                        value = geoObj.opt(key);
+                        break;
                 }
+                methodData.put(
+                    property.getName(),
+                    toAspectPropertyValue(geoObj, key, value));
             }
 
             aspectData.populateFromMap(methodData);
-
-            Map<String, String> noValueReasonsMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-            for(Map.Entry<String, Object> entry : methodData.entrySet()){
-                if("null".equals(String.valueOf(entry.getValue()))){
-                    String key = entry.getKey().toLowerCase();
-                    Object reason = tryToGet(geoObj, key);
-                    noValueReasonsMap.put(entry.getKey().toLowerCase(), (reason == null ? "" : reason.toString()));
-                }
-            }
-
-            aspectData.setNoValueReasons(noValueReasonsMap);
         }
         else {
             throw new PipelineConfigurationException(
@@ -156,6 +148,40 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
 
     public static Object tryToGet(JSONObject jsonObj, String key) {
         return jsonObj.opt(key + "nullreason");
+    }
+
+    /**
+     * The message for a property with no value when the response gives no
+     * reason.
+     */
+    private static final String UNKNOWN_NULL_REASON = "Unknown";
+
+    /**
+     * Wrap a value read from the response. A JSON null, or no entry, is no
+     * value, with the reason the response gives under the property's name
+     * followed by nullreason.
+     * @param geoObj the response's part for this engine
+     * @param key the lower case property name
+     * @param value the value read, null or JSONObject.NULL if there is none
+     * @return the property value
+     */
+    private static AspectPropertyValue<Object> toAspectPropertyValue(
+        JSONObject geoObj,
+        String key,
+        Object value) {
+        AspectPropertyValue<Object> result =
+            new AspectPropertyValueDefault<>();
+        if (value == null || value == JSONObject.NULL) {
+            Object reason = tryToGet(geoObj, key);
+            result.setNoValueMessage(
+                reason == null || reason == JSONObject.NULL ?
+                    UNKNOWN_NULL_REASON :
+                    reason.toString());
+        }
+        else {
+            result.setValue(value);
+        }
+        return result;
     }
 
     @Override

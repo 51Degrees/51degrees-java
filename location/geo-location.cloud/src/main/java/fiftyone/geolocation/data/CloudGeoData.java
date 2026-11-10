@@ -23,12 +23,9 @@
 package fiftyone.geolocation.data;
 
 import fiftyone.geolocation.core.data.GeoData;
-import java.util.Map;
 
 /**
- *
- * @author joseph
+ * The Location Element Data from the cloud.
  */
 public interface CloudGeoData extends GeoData {
-    public void setNoValueReasons(Map<String, String> value);
 }
