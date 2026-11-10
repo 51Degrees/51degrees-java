@@ -36,6 +36,7 @@ import fiftyone.pipeline.core.data.EvidenceKeyFilterAggregator;
 import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.FlowError;
+import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
 import fiftyone.pipeline.core.flowelements.Pipeline;
@@ -54,6 +55,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -170,6 +172,10 @@ public class ClientsidePropertyServiceTests {
     JavaScript_VaryHeader(elements, "User-Agent,Sec-ch-ua");
   }
 
+  /**
+   * An Evidence key filter that names no real header gives no Vary header,
+   * rather than an empty one.
+   */
   @Test
   public void JavaScript_VaryHeader_PSEUDO() throws IOException {
     List<List<String>> elements = new ArrayList<List<String>>();
@@ -177,7 +183,7 @@ public class ClientsidePropertyServiceTests {
       "header.sec-ch-uasec-ch-ua-full-version");
     elements.add(element);
 
-    JavaScript_VaryHeader(elements, "");
+    JavaScript_VaryHeader(elements, null);
   }
 
   @Test
@@ -452,6 +458,48 @@ public class ClientsidePropertyServiceTests {
     service.serveJson(request, response);
 
     Validate304(etag);
+  }
+
+  /**
+   * A Pipeline without the JavaScript builder fails a request for the
+   * JavaScript with a configuration error even when its If-None-Match
+   * matches, rather than answering 304.
+   */
+  @Test
+  public void JavaScript_MissingBuilder_MatchingIfNoneMatch_Throws()
+    throws IOException {
+    Configure(ConfigureElements(
+      Collections.singletonList(Arrays.asList("header.User-Agent"))));
+    String etag = etagSent();
+    ifNoneMatch(etag);
+    when(pipeline.getElement(JavaScriptBuilderElement.class)).thenReturn(null);
+
+    try {
+      service.serveJavascript(request, response);
+      fail("A PipelineConfigurationException should have been thrown");
+    } catch (PipelineConfigurationException e) {
+      verify(response, times(0)).setStatus(eq(304));
+    }
+  }
+
+  /**
+   * As above, for the JSON endpoint without the JSON builder.
+   */
+  @Test
+  public void Json_MissingBuilder_MatchingIfNoneMatch_Throws()
+    throws IOException {
+    Configure(ConfigureElements(
+      Collections.singletonList(Arrays.asList("header.User-Agent"))));
+    String etag = etagSent();
+    ifNoneMatch(etag);
+    when(pipeline.getElement(JsonBuilderElement.class)).thenReturn(null);
+
+    try {
+      service.serveJson(request, response);
+      fail("A PipelineConfigurationException should have been thrown");
+    } catch (PipelineConfigurationException e) {
+      verify(response, times(0)).setStatus(eq(304));
+    }
   }
 
   @Test
