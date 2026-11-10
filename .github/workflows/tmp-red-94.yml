@@ -1,0 +1,67 @@
+name: Red and green run for 94
+
+on: push
+
+jobs:
+  run:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: 79c5504 test on rc
+            ref: 79c55047601644d997a40470af61df171038f207
+          - name: 36630de head
+            ref: 36630de804ecabcca474d0cdf07795cab5fd35c0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
+          submodules: recursive
+      - name: Show the commit under test
+        run: git log -1 --format='%H %s'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Fetch the Lite data file
+        shell: pwsh
+        run: ./cxx/data/get-data-files.ps1 51Degrees-LiteV4.1.hash
+      - name: Show where the Lite data file is
+        run: find . -name '51Degrees-LiteV4.1.hash*' -exec ls -la {} \;
+      - name: Build
+        run: |
+          chmod +x device-detection/device-detection.hash.engine.on-premise/src/main/cxx/PreBuild.sh
+          mvn -B -ntp -pl device-detection/device-detection.hash.engine.on-premise -am install -DskipTests
+      - name: Run the test
+        run: >-
+          mvn -B -ntp -pl device-detection/device-detection.hash.engine.on-premise surefire:test
+          "-Dtest=EngineTests#Engine_Hash_MatchMetricOrder"
+          -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false
+          -Dmaven.test.failure.ignore=true
+      - name: Report each test, failing on a skipped one
+        shell: python3 {0}
+        run: |
+          import glob, sys, xml.etree.ElementTree as ET
+          failed = skipped = ran = 0
+          paths = sorted(glob.glob('**/target/surefire-reports/TEST-*.xml', recursive=True))
+          for path in paths:
+              for case in ET.parse(path).getroot().iter('testcase'):
+                  name = '%s#%s' % (case.get('classname'), case.get('name'))
+                  problem = case.find('failure')
+                  if problem is None:
+                      problem = case.find('error')
+                  if problem is not None:
+                      failed += 1
+                      lines = (problem.get('message') or '').strip().splitlines()
+                      print('RED-FAILED  %s  %s: %s' % (name, problem.get('type'), lines[0] if lines else ''))
+                  elif case.find('skipped') is not None:
+                      skipped += 1
+                      print('RED-SKIPPED %s' % name)
+                  else:
+                      ran += 1
+                      print('RED-PASSED  %s' % name)
+          print('RED-SUMMARY %d reports, %d passed, %d failed, %d skipped' % (len(paths), ran, failed, skipped))
+          sys.exit(1 if failed or skipped or ran == 0 else 0)
