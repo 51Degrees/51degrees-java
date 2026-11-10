@@ -1,0 +1,31 @@
+name: tmp red 92c
+on: push
+jobs:
+  red:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Run the new tests
+        run: >
+          mvn -B -pl pipeline/pipeline.engines -am test
+          -Dtest='DataUpdateServiceTests#*FileRefreshFails_TimerSetAgain*+*Unregister_NoLongerRegistered*'
+          -Dsurefire.failIfNoSpecifiedTests=false
+          -Dmaven.test.failure.ignore=true
+      - name: List the failing tests
+        run: |
+          files=$(grep -l -E '<(failure|error)[ >]' -r --include='TEST-*.xml' . || true)
+          if [ -n "$files" ]; then
+            for f in $files; do
+              echo "== $f"
+              grep -B1 -A2 -E '<(failure|error)[ >]' "$f" | cut -c1-400 | head -60
+            done
+            exit 1
+          fi
+          echo "No failing tests"
