@@ -22,10 +22,15 @@
 
 package fiftyone.pipeline.web;
 
+import fiftyone.pipeline.core.configuration.PipelineOptions;
 import fiftyone.pipeline.core.data.ElementData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.Pipeline;
+import fiftyone.pipeline.core.flowelements.PipelineBuilder;
+import fiftyone.pipeline.engines.services.DataUpdateService;
+import fiftyone.pipeline.engines.services.DataUpdateServiceDefault;
+import fiftyone.pipeline.engines.services.HttpClientDefault;
 import fiftyone.pipeline.engines.fiftyone.flowelements.SequenceElement;
 import fiftyone.pipeline.engines.fiftyone.flowelements.SetHeadersElement;
 import fiftyone.pipeline.javascriptbuilder.data.JavaScriptBuilderData;
@@ -37,7 +42,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.stubbing.Answer;
+import org.slf4j.LoggerFactory;
 
+import jakarta.xml.bind.JAXBContext;
+import jakarta.xml.bind.Unmarshaller;
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -346,5 +354,32 @@ public class PipelineFilterTests {
         filter = initFilterWith("json-path", "/custom/json");
 
         assertEquals("/custom/json", endpointOf(elementsOf(filter)));
+    }
+
+    /**
+     * Check that a caller of the public method that passes no JSON path gets
+     * the default path, rather than a null pointer exception.
+     */
+    @Test
+    public void StartupHelpers_NoJsonPath_IsTheDefault() throws Exception {
+        for (String jsonPath : new String[] { null, "" }) {
+            File configFile = new File(getClass().getClassLoader()
+                .getResource("config.xml").getFile());
+            Unmarshaller unmarshaller = JAXBContext
+                .newInstance(PipelineOptions.class).createUnmarshaller();
+            PipelineOptions options =
+                (PipelineOptions) unmarshaller.unmarshal(configFile);
+            PipelineBuilder builder = new PipelineBuilder()
+                .addService(new DataUpdateServiceDefault(
+                    LoggerFactory.getLogger(
+                        DataUpdateService.class.getSimpleName()),
+                    new HttpClientDefault()));
+
+            try (Pipeline built = StartupHelpers.buildFromConfiguration(
+                builder, options, true, null, jsonPath, true, true)) {
+                assertEquals(DEFAULT_JSON_PATH,
+                    endpointOf(built.getFlowElements()));
+            }
+        }
     }
 }

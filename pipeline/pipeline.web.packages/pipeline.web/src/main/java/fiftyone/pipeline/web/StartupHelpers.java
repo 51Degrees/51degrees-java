@@ -144,8 +144,12 @@ public class StartupHelpers {
                     "Could not find pipeline configuration information");
         }
 
-        String endpoint = "/" + (jsonPath.startsWith("/") ?
-            jsonPath.substring(1) : jsonPath);
+        // A caller that has no path set gives the default, so that the
+        // JavaScript still calls back to somewhere the JSON is served from.
+        String path = jsonPath == null || jsonPath.isEmpty() ?
+            Constants.DEFAULT_JSON_PATH : jsonPath;
+        String endpoint = "/" + (path.startsWith("/") ?
+            path.substring(1) : path);
 
         // Add the sequence element.
         if (sequenceElementEnabled &&
