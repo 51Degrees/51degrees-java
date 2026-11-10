@@ -256,14 +256,14 @@ public class CloudRequestEngineLicenseKeyTests {
         assertNotNull(build(builder()
             .setResourceKey(RESOURCE_KEY)
             .setLicenseKey(LICENSE_KEY)
-            .setProperties(PROPERTY_LIST)));
+            .setRequestedProperties(PROPERTY_LIST)));
     }
 
     @Test
     public void Build_LicenseKeyAndProperties_Accepted() throws Exception {
         assertNotNull(build(builder()
             .setLicenseKey(LICENSE_KEY)
-            .setProperties(PROPERTY_LIST)));
+            .setRequestedProperties(PROPERTY_LIST)));
     }
 
     @Test
@@ -271,20 +271,20 @@ public class CloudRequestEngineLicenseKeyTests {
         assertRefused(
             builder().setLicenseKey(LICENSE_KEY),
             "answers 400",
-            "setProperty");
+            "setRequestedProperties");
     }
 
     @Test
     public void Build_ResourceKeyWithProperties_Accepted() throws Exception {
         assertNotNull(build(builder()
             .setResourceKey(RESOURCE_KEY)
-            .setProperty("device.hardwarevendor")));
+            .setRequestedProperties("device.hardwarevendor")));
     }
 
     @Test
     public void Build_NoCredential_Refused() {
         assertRefused(builder(), "401", "resource key");
-        assertRefused(builder().setProperties(PROPERTY_LIST), "401");
+        assertRefused(builder().setRequestedProperties(PROPERTY_LIST), "401");
     }
 
     @Test
@@ -295,12 +295,12 @@ public class CloudRequestEngineLicenseKeyTests {
         assertRefused(
             builder()
                 .setLicenseKey(LICENSE_KEY)
-                .setProperties(Arrays.asList(" ", "")),
+                .setRequestedProperties(Arrays.asList(" ", "")),
             "answers 400");
         assertNotNull(build(builder()
             .setResourceKey(RESOURCE_KEY)
             .setLicenseKey(" ")
-            .setProperty(" ")));
+            .setRequestedProperties(" ")));
     }
 
     @Test
@@ -318,7 +318,7 @@ public class CloudRequestEngineLicenseKeyTests {
         throws Exception {
         CloudRequestEngine engine = build(builder()
             .setLicenseKey(LICENSE_KEY + "\n")
-            .setProperties(
+            .setRequestedProperties(
                 Arrays.asList(" Device.IsMobile", "device.iscrawler ")));
 
         assertEquals("", process(engine));
@@ -367,7 +367,7 @@ public class CloudRequestEngineLicenseKeyTests {
             "\"hardwarevendornullreason\":\"Paid feature\"}}";
         CloudRequestEngine engine = build(builder()
             .setResourceKey(RESOURCE_KEY)
-            .setProperty("Device.HardwareVendor"));
+            .setRequestedProperties("Device.HardwareVendor"));
 
         assertEquals("", process(engine));
 
@@ -384,7 +384,7 @@ public class CloudRequestEngineLicenseKeyTests {
         CloudRequestEngine engine = build(builder()
             .setResourceKey(RESOURCE_KEY)
             .setLicenseKey(LICENSE_KEY)
-            .setProperty("IP.RegisteredName"));
+            .setRequestedProperties("IP.RegisteredName"));
         cloud.dataResponse = "{\"device\":{\"ismobile\":true}," +
             "\"ip\":{\"registeredname\":\"Example\"}}";
 
@@ -399,6 +399,43 @@ public class CloudRequestEngineLicenseKeyTests {
         }
     }
 
+    @Test
+    public void Process_RequestedPropertiesAsText_Sent() throws Exception {
+        CloudRequestEngine engine = build(builder()
+            .setLicenseKey(LICENSE_KEY)
+            .setRequestedProperties("Device.IsMobile, device.iscrawler ,"));
+
+        assertEquals("", process(engine));
+
+        Map<String, String> fields = dataRequest("/api/v4/json");
+        assertEquals(PROPERTIES, fields.get("values"));
+    }
+
+    /**
+     * Properties set with setProperty or setProperties are not sent, as
+     * before, so a configuration that lists them keeps the answer it had. A
+     * license key with only those properties is refused.
+     */
+    @Test
+    public void Process_SetProperties_NotSent() throws Exception {
+        CloudRequestEngine engine = build(builder()
+            .setResourceKey(RESOURCE_KEY)
+            .setProperties(Arrays.asList("IsMobile", "DeviceId")));
+
+        assertEquals("", process(engine));
+
+        Map<String, String> fields = dataRequest(RESOURCE_KEY + ".json");
+        assertEquals(RESOURCE_KEY, fields.get("resource"));
+        assertFalse(fields.containsKey("values"));
+        verify(logger, never()).warn(anyString());
+
+        assertRefused(
+            builder()
+                .setLicenseKey(LICENSE_KEY)
+                .setProperty("device.ismobile"),
+            "answers 400");
+    }
+
     // Discovery.
 
     @Test
@@ -406,7 +443,7 @@ public class CloudRequestEngineLicenseKeyTests {
         throws Exception {
         CloudRequestEngine engine = build(builder()
             .setLicenseKey(LICENSE_KEY)
-            .setProperties(PROPERTY_LIST));
+            .setRequestedProperties(PROPERTY_LIST));
 
         Map<String, AccessiblePropertyMetaData.ProductMetaData> products =
             engine.getPublicProperties();
@@ -433,7 +470,7 @@ public class CloudRequestEngineLicenseKeyTests {
         throws Exception {
         CloudRequestEngine engine = build(builder()
             .setResourceKey(RESOURCE_KEY)
-            .setProperty("device.hardwarevendor"));
+            .setRequestedProperties("device.hardwarevendor"));
 
         engine.getPublicProperties();
 
@@ -468,7 +505,7 @@ public class CloudRequestEngineLicenseKeyTests {
         throws Exception {
         CloudRequestEngine engine = build(builder()
             .setLicenseKey(LICENSE_KEY)
-            .setProperties(Arrays.asList(
+            .setRequestedProperties(Arrays.asList(
                 "device.ismobile", "device.other")));
         assertEquals("", process(engine));
 
@@ -496,7 +533,7 @@ public class CloudRequestEngineLicenseKeyTests {
         cloud.dataResponse = "{\"device\":{\"ismobile\":true}}";
         CloudRequestEngine engine = build(builder()
             .setLicenseKey(LICENSE_KEY)
-            .setProperties(
+            .setRequestedProperties(
                 Arrays.asList("Device.IsMobile", "Device.IsCrawler")));
 
         assertEquals("", process(engine));
@@ -516,7 +553,7 @@ public class CloudRequestEngineLicenseKeyTests {
             "\"iscrawler\":null,\"iscrawlernullreason\":\"No data\"}}";
         CloudRequestEngine engine = build(builder()
             .setLicenseKey(LICENSE_KEY)
-            .setProperties(PROPERTY_LIST));
+            .setRequestedProperties(PROPERTY_LIST));
 
         assertEquals("", process(engine));
 

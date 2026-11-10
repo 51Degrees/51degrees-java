@@ -38,9 +38,9 @@ public class Constants {
             "The Cloud Request Engine has a license key and no requested "
             + "properties. A license key names no properties of its own, so "
             + "the cloud service answers 400 to every request made with one "
-            + "that does not list the properties it wants. Use setProperty "
-            + "or setProperties to name the fully qualified properties "
-            + "wanted, for example \"device.ismobile\" and "
+            + "that does not list the properties it wants. Use "
+            + "setRequestedProperties to name the fully qualified "
+            + "properties wanted, for example \"device.ismobile\" and "
             + "\"device.iscrawler\".";
 
         public static final String PropertiesNotCovered =

@@ -38,6 +38,7 @@ import fiftyone.pipeline.engines.services.HttpClientDefault;
 import org.slf4j.ILoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Function;
@@ -57,6 +58,7 @@ public class CloudRequestEngineBuilder extends
     private String evidenceKeysEndpoint = null;
     private String resourceKey = null;
     private String licenseKey = null;
+    private final List<String> requestedProperties = new ArrayList<>();
     private String cloudRequestOrigin = null;
     private int timeoutMillis = Constants.DEFAULT_TIMEOUT_MILLIS;
     
@@ -80,11 +82,8 @@ public class CloudRequestEngineBuilder extends
     protected CloudRequestEngine newEngine(List<String> properties) throws Exception {
         String trimmedResourceKey = trimmed(resourceKey);
         String trimmedLicenseKey = trimmed(licenseKey);
-        List<String> requestedProperties = normalized(properties);
-        checkCredentials(
-            trimmedResourceKey,
-            trimmedLicenseKey,
-            requestedProperties);
+        List<String> requested = normalized(requestedProperties);
+        checkCredentials(trimmedResourceKey, trimmedLicenseKey, requested);
 
         /*
          *  Check if endPoint has been explicitly set via setEndpoint.
@@ -113,7 +112,7 @@ public class CloudRequestEngineBuilder extends
             evidenceKeysEndpoint,
             timeoutMillis,
             cloudRequestOrigin,
-            requestedProperties);
+            requested);
     }
 
     private static String trimmed(String value) {
@@ -247,8 +246,7 @@ public class CloudRequestEngineBuilder extends
      * The license key to query the endpoint with.
      * <p>
      * A license key used without a resource key needs the properties
-     * wanted, named with {@link #setProperty(String)} or
-     * {@link #setProperties(List)}, which are sent as values. Beside a
+     * wanted, named with {@link #setRequestedProperties(List)}. Beside a
      * resource key it adds the requested properties the license grants to
      * what the resource key carries.
      * <p>
@@ -260,6 +258,38 @@ public class CloudRequestEngineBuilder extends
     public CloudRequestEngineBuilder setLicenseKey(String licenseKey) {
         this.licenseKey = licenseKey;
         return this;
+    }
+
+    /**
+     * The properties each request asks the cloud service for, as fully
+     * qualified names such as {@code device.ismobile}, sent as values.
+     * Required with a license key alone. Beside a resource key the cloud
+     * service adds them to the properties the resource key carries. Names
+     * are trimmed, lower-cased and de-duplicated. The properties set with
+     * {@link #setProperty(String)} and {@link #setProperties(List)} are not
+     * sent.
+     * <p>
+     * By default no properties are requested
+     * @param properties the fully qualified property names
+     * @return this builder
+     */
+    @DefaultValue("None - required with a license key alone")
+    public CloudRequestEngineBuilder setRequestedProperties(
+        List<String> properties) {
+        requestedProperties.addAll(properties);
+        return this;
+    }
+
+    /**
+     * As {@link #setRequestedProperties(List)}, taking the names as one
+     * comma separated string, as a configuration file gives them.
+     * @param properties comma separated fully qualified property names
+     * @return this builder
+     */
+    @DefaultValue("None - required with a license key alone")
+    public CloudRequestEngineBuilder setRequestedProperties(
+        String properties) {
+        return setRequestedProperties(Arrays.asList(properties.split(",")));
     }
 
     /**
