@@ -631,20 +631,23 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
     }
 
     /**
-     * Only the Evidence whose keys the cloud service accepts is sent, with
-     * the keys compared without regard to case.
+     * Every Evidence value is sent, including Evidence the cloud service
+     * does not list as accepted, apart from the reserved names under any
+     * prefix.
      * See the Processing section of the cloud request engine specification.
      */
     @Test
-    public void process_SendsOnlyAcceptedEvidence() throws Exception {
-        acceptEvidence(Arrays.asList(
-            "query.User-Agent", "header.Accept-Language"));
+    public void process_SendsEveryEvidenceValueButTheReservedNames()
+        throws Exception {
+        acceptEvidence(Arrays.asList("query.User-Agent"));
         Map<String, Object> evidence = new HashMap<>();
         evidence.put("query.User-Agent", "iPhone");
         evidence.put("header.accept-language", "en-GB");
         evidence.put("header.X-Other", "other");
         evidence.put("cookie.session", "abc");
         evidence.put("server.client-ip", "1.2.3.4");
+        evidence.put("other.VALUES", "ismobile");
+        evidence.put("server.licence", "evidence-licence");
 
         List<String> items = postedItems(null, evidence);
 
@@ -652,10 +655,13 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
             new HashSet<>(Arrays.asList(
                 "resource=resourcekey",
                 "User-Agent=iPhone",
-                "accept-language=en-GB")),
+                "accept-language=en-GB",
+                "X-Other=other",
+                "session=abc",
+                "client-ip=1.2.3.4")),
             new HashSet<>(items),
-            "The request carried Evidence the cloud service does not " +
-                "accept: " + items);
+            "The request did not carry every Evidence value apart from " +
+                "the reserved names: " + items);
     }
 
     /**
