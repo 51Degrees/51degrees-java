@@ -183,6 +183,14 @@ public class SequenceElementTests {
         assertSequence("+2", 1);
         assertSequence("2.5", 1);
         assertSequence(2.5, 1);
+        assertSequence(-1, 1);
+        assertSequence(-1L, 1);
+        assertSequence((short) -1, 1);
+        assertSequence(Integer.MIN_VALUE, 1);
+        assertSequence("-1", 1);
+        assertSequence("+5", 1);
+        assertSequence("5 ", 1);
+        assertSequence("	5", 1);
         assertSequence(new Object(), 1);
     }
 

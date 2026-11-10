@@ -57,9 +57,18 @@ public class FiftyOneJSServiceCoreTests {
     }
 
     private void requestPath(String path) {
-        when(request.getRequestURL())
-            .thenReturn(new StringBuffer("http://example.com" + path));
-        when(request.getRequestURI()).thenReturn(path);
+        requestPath("", path);
+    }
+
+    /**
+     * The request URI holds the context path and then the path inside the
+     * application.
+     */
+    private void requestPath(String contextPath, String path) {
+        when(request.getRequestURL()).thenReturn(
+            new StringBuffer("http://example.com" + contextPath + path));
+        when(request.getRequestURI()).thenReturn(contextPath + path);
+        when(request.getContextPath()).thenReturn(contextPath);
     }
 
     @Test
@@ -87,7 +96,7 @@ public class FiftyOneJSServiceCoreTests {
 
         requestPath("/51Degrees.core.json");
         assertTrue(service.serveJson(request, response));
-        requestPath("/app/51Degrees.core.json");
+        requestPath("/app", "/51Degrees.core.json");
         assertTrue(service.serveJson(request, response));
 
         verify(clientside, times(2)).serveJson(request, response);
@@ -111,6 +120,45 @@ public class FiftyOneJSServiceCoreTests {
 
         verify(clientside, times(1)).serveJavascript(request, response);
         verify(clientside, times(1)).serveJson(request, response);
+    }
+
+    /**
+     * The configured path is the whole path inside the application, so a
+     * longer path that ends the same way is not answered.
+     */
+    @Test
+    public void ConfiguredPath_OnlyAnExactMatchIsAnswered()
+        throws IOException {
+        for (String configured : new String[] {"json", "/json"}) {
+            FiftyOneJSServiceCore service = new FiftyOneJSServiceCore.Default(
+                clientside, true, configured, configured);
+
+            requestPath("/json");
+            assertTrue(configured, service.serveJson(request, response));
+            assertTrue(configured, service.serveJS(request, response));
+            requestPath("/anything/json");
+            assertFalse(configured, service.serveJson(request, response));
+            assertFalse(configured, service.serveJS(request, response));
+            requestPath("/json/more");
+            assertFalse(configured, service.serveJson(request, response));
+            requestPath("/notjson");
+            assertFalse(configured, service.serveJson(request, response));
+        }
+    }
+
+    @Test
+    public void ContextPath_IsNotPartOfThePath() throws IOException {
+        FiftyOneJSServiceCore service =
+            new FiftyOneJSServiceCore.Default(clientside, true);
+
+        requestPath("/app", "/51dpipeline/json");
+        assertTrue(service.serveJson(request, response));
+        requestPath("/app", "/other/51dpipeline/json");
+        assertFalse(service.serveJson(request, response));
+        requestPath("/app", "/51Degrees.core.js");
+        assertTrue(service.serveJS(request, response));
+        requestPath("/app", "/other/51Degrees.core.js");
+        assertFalse(service.serveJS(request, response));
     }
 
     @Test
