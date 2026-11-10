@@ -126,6 +126,10 @@ public class EngineTests {
 		try (DeviceDetectionHashEngine engine = createEngine(dataFile)) {
 			List<FiftyOneAspectPropertyMetaData> properties =
 				engine.getProperties();
+			assertTrue(
+				"Expected at least " + expected.size() + " Properties, " +
+					"but there were " + properties.size(),
+				properties.size() >= expected.size());
 			for (FiftyOneAspectPropertyMetaData property : properties.subList(
 				properties.size() - expected.size(),
 				properties.size())) {
