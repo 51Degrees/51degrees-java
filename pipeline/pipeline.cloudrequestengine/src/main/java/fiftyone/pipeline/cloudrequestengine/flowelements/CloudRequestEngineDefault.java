@@ -50,6 +50,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -81,6 +82,9 @@ public class CloudRequestEngineDefault
     private String evidenceKeysEndpoint;
     private String cloudRequestOrigin;
     private Integer timeoutMillis;
+    private final List<String> requestedProperties;
+    private final AtomicBoolean requestedPropertiesChecked =
+        new AtomicBoolean(false);
 
     private List<AspectPropertyMetaData> propertyMetaData;
     private volatile Map<String, AccessiblePropertyMetaData.ProductMetaData> publicProperties;
@@ -133,7 +137,6 @@ public class CloudRequestEngineDefault
             cloudRequestOrigin);
     }
 
-    @SuppressWarnings("this-escape")
     public CloudRequestEngineDefault(
         Logger logger,
         ElementDataFactory<CloudRequestData> aspectDataFactory,
@@ -145,7 +148,43 @@ public class CloudRequestEngineDefault
         String evidenceKeysEndpoint,
         int timeoutMillis,
         String cloudRequestOrigin) {
+        this(
+            logger,
+            aspectDataFactory,
+            httpClient,
+            endPoint,
+            resourceKey,
+            licenseKey,
+            propertiesEndpoint,
+            evidenceKeysEndpoint,
+            timeoutMillis,
+            cloudRequestOrigin,
+            Collections.<String>emptyList());
+    }
+
+    /**
+     * Constructor.
+     * @param requestedProperties the lower-case fully qualified names of the
+     *                            properties to ask for, sent as {@code values}.
+     *                            Only meaningful with a license key and no
+     *                            resource key
+     */
+    @SuppressWarnings("this-escape")
+    public CloudRequestEngineDefault(
+        Logger logger,
+        ElementDataFactory<CloudRequestData> aspectDataFactory,
+        HttpClient httpClient,
+        String endPoint,
+        String resourceKey,
+        String licenseKey,
+        String propertiesEndpoint,
+        String evidenceKeysEndpoint,
+        int timeoutMillis,
+        String cloudRequestOrigin,
+        List<String> requestedProperties) {
         super(logger, aspectDataFactory);
+        this.requestedProperties = Collections.unmodifiableList(
+            new ArrayList<>(requestedProperties));
 
         this.endPoint = endPoint;
         this.resourceKey = resourceKey;
@@ -238,6 +277,51 @@ public class CloudRequestEngineDefault
         ((CloudRequestDataInternal)aspectData).setJsonResponse(response);
 
         validateResponse(response, connection);
+        reportPropertiesNotCovered(response);
+    }
+
+    /**
+     * Compare the properties asked for with the ones the answer carries, and
+     * warn once about any left out. The service drops a property the
+     * license key does not cover without naming it, and lower-cases the
+     * names it answers with. A property that is present but null counts as
+     * answered, as it carries a null reason beside it.
+     */
+    private void reportPropertiesNotCovered(String response) {
+        if (requestedProperties.isEmpty() ||
+            requestedPropertiesChecked.compareAndSet(false, true) == false) {
+            return;
+        }
+        JSONObject answer = new JSONObject(response);
+        List<String> notCovered = new ArrayList<>();
+        for (String name : requestedProperties) {
+            String[] parts = name.split(
+                Pattern.quote(Constants.EVIDENCE_SEPERATOR), 2);
+            if (parts.length < 2 || hasKeyIgnoringCase(
+                    answer.optJSONObject(keyIgnoringCase(answer, parts[0])),
+                    parts[1]) == false) {
+                notCovered.add(name);
+            }
+        }
+        if (notCovered.isEmpty() == false) {
+            logger.warn(String.format(
+                PropertiesNotCovered,
+                stringJoin(notCovered, ", ")));
+        }
+    }
+
+    private static String keyIgnoringCase(JSONObject object, String name) {
+        for (String key : object.keySet()) {
+            if (key.equalsIgnoreCase(name)) {
+                return key;
+            }
+        }
+        return name;
+    }
+
+    private static boolean hasKeyIgnoringCase(JSONObject object, String name) {
+        return object != null &&
+            object.has(keyIgnoringCase(object, name));
     }
 
     /**
@@ -257,9 +341,10 @@ public class CloudRequestEngineDefault
         Map<String, Object> formData = getFormData(data);
         List<String> formItems = new ArrayList<>();
 
-        formItems.add("resource=" + resourceKey);
-        if(licenseKey != null && licenseKey.isEmpty() == false){
-            formItems.add("license=" + licenseKey);
+        formItems.addAll(credentialItems());
+        if (requestedProperties.isEmpty() == false) {
+            formItems.add("values=" + URLEncoder.encode(
+                stringJoin(requestedProperties, ","), "UTF-8"));
         }
 
         List<String> formKeys = Arrays.asList(formData.keySet().toArray(new String[0]));
@@ -272,6 +357,26 @@ public class CloudRequestEngineDefault
         String string = stringJoin(formItems, "&");
 
         return string.getBytes(StandardCharsets.UTF_8);
+    }
+
+    private boolean hasResourceKey() {
+        return resourceKey != null && resourceKey.isEmpty() == false;
+    }
+
+    private boolean hasLicenseKey() {
+        return licenseKey != null && licenseKey.isEmpty() == false;
+    }
+
+    /** The resource and license keys that are set, as form items. */
+    private List<String> credentialItems() throws UnsupportedEncodingException {
+        List<String> items = new ArrayList<>();
+        if (hasResourceKey()) {
+            items.add("resource=" + URLEncoder.encode(resourceKey, "UTF-8"));
+        }
+        if (hasLicenseKey()) {
+            items.add("license=" + URLEncoder.encode(licenseKey, "UTF-8"));
+        }
+        return items;
     }
 
     Map<String, Object> getFormData(FlowData flowData) {
@@ -432,9 +537,24 @@ public class CloudRequestEngineDefault
             Map<String, String> headers = new HashMap<>();
             setCommonHeaders(headers);
 
-            HttpURLConnection connection = httpClient.connect(toUrl(propertiesEndpoint.trim() + (resourceKey != null ? "?Resource=" + resourceKey : "")));
-            jsonResult = httpClient.getResponseString(connection, headers);
-            validateResponse(jsonResult, connection);
+            if (hasLicenseKey()) {
+                // The credentials go in the body, not the URL, so a license
+                // key stays out of request logs.
+                byte[] content = stringJoin(credentialItems(), "&")
+                    .getBytes(StandardCharsets.UTF_8);
+                headers.put(
+                    "Content-Type", "application/x-www-form-urlencoded");
+                headers.put("Content-Length", Integer.toString(content.length));
+                HttpURLConnection connection =
+                    httpClient.connect(toUrl(propertiesEndpoint.trim()));
+                jsonResult = httpClient.postData(connection, headers, content);
+                validateResponse(jsonResult, connection);
+            } else {
+                HttpURLConnection connection = httpClient.connect(toUrl(
+                    propertiesEndpoint.trim() + "?Resource=" + resourceKey));
+                jsonResult = httpClient.getResponseString(connection, headers);
+                validateResponse(jsonResult, connection);
+            }
 
             JSONObject jsonObj = null;
             if (jsonResult.isEmpty() == false) {
@@ -478,6 +598,24 @@ public class CloudRequestEngineDefault
         } catch (IOException e) {
             throw new PropertyNotLoadedException(e);
         }
+    }
+
+    /**
+     * Replace each occurrence of the license key in text with its last 4
+     * characters, preceded by one asterisk for every hidden character. A key
+     * of 8 characters or fewer shows half as many.
+     */
+    private String hideLicenseKey(String text) {
+        if (hasLicenseKey() == false || text == null) {
+            return text;
+        }
+        int visible = Math.min(4, licenseKey.length() / 2);
+        StringBuilder masked = new StringBuilder();
+        for (int i = 0; i < licenseKey.length() - visible; i++) {
+            masked.append('*');
+        }
+        masked.append(licenseKey.substring(licenseKey.length() - visible));
+        return text.replace(licenseKey, masked);
     }
 
     /**
@@ -543,6 +681,12 @@ public class CloudRequestEngineDefault
                 jsonResult);
             messages.add(message);
         }
+
+        // The service can echo a license key in its answer, so no message
+        // carries one in full.
+        messages = messages.stream()
+            .map(this::hideLicenseKey)
+            .collect(Collectors.toList());
 
         Map<String, List<String>> headers = null;
         if (messages.size() > 0){

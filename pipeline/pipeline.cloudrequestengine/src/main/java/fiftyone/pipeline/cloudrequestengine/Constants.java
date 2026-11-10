@@ -27,6 +27,36 @@ public class Constants {
     public static final String OriginHeaderName = "Origin";
 
     public class Messages {
+        public static final String NoCredential =
+            "The Cloud Request Engine needs a resource key or a license key "
+            + "to authenticate with, as the cloud service answers 401 to a "
+            + "request that carries neither. Use setResourceKey(String) with "
+            + "a resource key created for free at "
+            + "https://configure.51degrees.com?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=pipeline.cloudrequestengine-src-main-java-fiftyone-pipeline-cloudrequestengine-constants.java&utm_term=no-credential";
+
+        public static final String LicenseKeyNeedsProperties =
+            "The Cloud Request Engine has a license key and no requested "
+            + "properties. A license key names no properties of its own, so "
+            + "the cloud service answers 400 to every request made with one "
+            + "that does not list the properties it wants. Use "
+            + "setRequestedProperties to name the fully qualified "
+            + "properties wanted, for example "
+            + "\"device.ismobile,device.iscrawler\".";
+
+        public static final String PropertiesIgnoredWithResourceKey =
+            "The Cloud Request Engine has requested properties and a "
+            + "resource key. The cloud service ignores the list whenever a "
+            + "resource key is present and answers with everything the "
+            + "resource key carries, so the caller would believe the "
+            + "response had narrowed when it had not. Either leave out the "
+            + "requested properties, or authenticate with a license key "
+            + "alone.";
+
+        public static final String PropertiesNotCovered =
+            "The cloud service did not return the requested properties %s "
+            + "in its answer. They are not covered by the license key in "
+            + "use, so they will be missing from every result. The other "
+            + "requested properties came back and are usable.";
         public static final String EvidenceConflict =
             "'%s:%s' evidence conflicts with %s";
         public static final String MessageNoDataInResponse =
