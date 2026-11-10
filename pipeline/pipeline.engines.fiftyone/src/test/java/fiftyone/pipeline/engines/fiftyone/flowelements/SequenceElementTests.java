@@ -186,6 +186,36 @@ public class SequenceElementTests {
         assertSequence(new Object(), 1);
     }
 
+    /**
+     * A sequence runs from 0 up, and as text is the digits 0 to 9 alone,
+     * so a negative number, a sign or white space counts as absent.
+     */
+    @Test
+    public void SequenceNegativeSignedOrSpaced_CountsAsAbsent()
+        throws Exception {
+        assertSequence(-1, 1);
+        assertSequence(-1L, 1);
+        assertSequence((short) -1, 1);
+        assertSequence((byte) -1, 1);
+        assertSequence(new java.math.BigInteger("-1"), 1);
+        assertSequence(Integer.MIN_VALUE, 1);
+        assertSequence("-1", 1);
+        assertSequence("+5", 1);
+        assertSequence(" 5", 1);
+        assertSequence("5 ", 1);
+        assertSequence("\t5", 1);
+        assertSequence("5\n", 1);
+        assertSequence("5 6", 1);
+    }
+
+    @Test
+    public void SequenceZero_GivesOne() throws Exception {
+        assertSequence(0, 1);
+        assertSequence(0L, 1);
+        assertSequence("0", 1);
+        assertSequence("000", 1);
+    }
+
     @Test
     public void SequenceOutOfRange_CountsAsAbsent() throws Exception {
         assertSequence("99999999999999999999", 1);
