@@ -1339,6 +1339,91 @@ public class DataUpdateServiceTests {
     }
 
     /**
+     * A manual check whose refresh from the data file fails still leaves
+     * the next update timer set, as a check the timer started does, so
+     * polling resumes.
+     */
+    @Test
+    public void DataUpdateService_CheckForUpdate_FileRefreshFails_TimerSetAgain() {
+        // updatedFileAvailable warns on each of its 10 tries.
+        ignoreWranings = 10;
+
+        // Arrange
+        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
+            mock(OnPremiseAspectEngine.class);
+        doThrow(new IllegalStateException("The refresh failed."))
+            .when(engine).refreshData((String) any());
+        DataFileConfigurationDefault config = new DataFileConfigurationDefault();
+        config.setAutomaticUpdatesEnabled(autoUpdateEnabled);
+        config.setFileSystemWatcherEnabled(false);
+
+        AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
+        file.setEngine(engine);
+        file.setConfiguration(config);
+        when(engine.getDataFileMetaData()).thenReturn(file);
+        configureFileUpdate(engine);
+
+        dataUpdate.registerDataFile(file);
+        int timers = autoUpdateEnabled ? 1 : 0;
+        ScheduledFuture<?> pending = file.getFuture();
+
+        // Act
+        DataUpdateService.AutoUpdateStatus status =
+            dataUpdate.checkForUpdate(engine);
+
+        // Assert
+        assertEquals(
+            DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED,
+            status);
+        verify(futureFactory, times(2 * timers)).schedule(
+            any(Runnable.class),
+            anyLong());
+        assertEquals(
+            "The next update timer was not set after the failed refresh.",
+            autoUpdateEnabled,
+            file.getFuture() != null);
+        if (autoUpdateEnabled) {
+            assertTrue(pending.isCancelled());
+            assertNotSame(pending, file.getFuture());
+        }
+    }
+
+    /**
+     * A data file that has been unregistered is no longer registered, so a
+     * manual update of it sets no update timer.
+     */
+    @Test
+    public void DataUpdateService_Unregister_NoLongerRegistered() {
+        // Arrange
+        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
+            mock(OnPremiseAspectEngine.class);
+        DataFileConfigurationDefault config = new DataFileConfigurationDefault();
+        config.setAutomaticUpdatesEnabled(autoUpdateEnabled);
+        config.setFileSystemWatcherEnabled(false);
+
+        AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
+        file.setEngine(engine);
+        file.setConfiguration(config);
+        when(engine.getDataFileMetaData()).thenReturn(file);
+        configureFileUpdate(engine);
+        dataUpdate.registerDataFile(file);
+        int timers = autoUpdateEnabled ? 1 : 0;
+
+        // Act
+        dataUpdate.unregisterDataFile(file);
+        DataUpdateService.AutoUpdateStatus status =
+            dataUpdate.checkForUpdate(engine);
+
+        // Assert
+        assertFalse(file.getIsRegistered());
+        assertEquals(AUTO_UPDATE_SUCCESS, status);
+        verify(futureFactory, times(timers)).schedule(
+            any(Runnable.class),
+            anyLong());
+        assertNull(file.getFuture());
+    }
+
+    /**
      * A manual check that applies an update in memory to a data file
      * registered for automatic updates sets the next update timer, as a
      * check the timer started does.
