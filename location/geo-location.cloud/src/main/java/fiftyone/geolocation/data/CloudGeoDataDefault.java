@@ -28,16 +28,28 @@ import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import fiftyone.pipeline.engines.flowelements.AspectEngine;
 import fiftyone.pipeline.engines.services.MissingPropertyService;
+import java.util.Map;
 import org.slf4j.Logger;
 
 /**
- * The Location Element Data from the cloud. The cloud engine stores every
- * property as an AspectPropertyValue, so the getters of GeoDataDefault return
- * them as they are.
+ * The Location Element Data from the cloud. The cloud engine stores each
+ * property the response holds as an AspectPropertyValue, so the getters of
+ * GeoDataDefault return them as they are.
  */
 public class CloudGeoDataDefault extends GeoDataDefault implements CloudGeoData {
 
     public CloudGeoDataDefault(Logger logger, FlowData flowData, AspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine, MissingPropertyService missingPropertyService) {
         super(logger, flowData, engine, missingPropertyService);
+    }
+
+    /**
+     * Has no effect.
+     * @param value the messages for properties with no value, by name
+     * @deprecated The cloud engine sets the message of each property with no
+     * value on the value itself.
+     */
+    @Deprecated
+    @Override
+    public void setNoValueReasons(Map<String, String> value) {
     }
 }

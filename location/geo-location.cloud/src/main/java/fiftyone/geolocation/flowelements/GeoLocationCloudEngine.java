@@ -144,6 +144,11 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
 
             for (AspectPropertyMetaData property : getProperties()) {
                 String key = property.getName().toLowerCase();
+                // A property the response leaves out has no entry, so
+                // reading it throws a PropertyMissingException.
+                if (geoObj.has(key) == false) {
+                    continue;
+                }
                 Object value;
                 switch(property.getType().getSimpleName()) {
                     case ("List"):
@@ -186,12 +191,13 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
     private static final String UNKNOWN_NULL_REASON = "Unknown";
 
     /**
-     * Wrap a value read from the response. A JSON null, or no entry, is no
-     * value, with the reason the response gives under the property's name
-     * followed by nullreason.
+     * Wrap a value read from the response. A JSON null is no value, with the
+     * reason the response gives under the property's name followed by
+     * nullreason.
      * @param geoObj the response's part for this engine
      * @param key the lower case property name
-     * @param value the value read, null or JSONObject.NULL if there is none
+     * @param value the value read, null or JSONObject.NULL where the
+     *              response has none
      * @return the property value
      */
     private static AspectPropertyValue<Object> toAspectPropertyValue(

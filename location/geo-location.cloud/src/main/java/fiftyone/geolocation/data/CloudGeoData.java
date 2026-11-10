@@ -23,9 +23,19 @@
 package fiftyone.geolocation.data;
 
 import fiftyone.geolocation.core.data.GeoData;
+import java.util.Map;
 
 /**
  * The Location Element Data from the cloud.
  */
 public interface CloudGeoData extends GeoData {
+
+    /**
+     * Has no effect.
+     * @param value the messages for properties with no value, by name
+     * @deprecated The cloud engine sets the message of each property with no
+     * value on the value itself.
+     */
+    @Deprecated
+    void setNoValueReasons(Map<String, String> value);
 }
