@@ -111,7 +111,7 @@ public class DeviceDetectionCloudEngine
 
             // Extract data from json to the aspectData instance.
             JSONObject jsonObj = new JSONObject(json);
-            JSONObject deviceObj = jsonObj.getJSONObject("device");
+            JSONObject deviceObj = getElementJson(jsonObj);
 
             Map<String, Object> deviceMap =
                 new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
@@ -205,17 +205,15 @@ public class DeviceDetectionCloudEngine
      * {@link #aspectProperties}
      */
     private boolean loadAspectProperties(CloudRequestEngine engine) {
-        Map<String, AccessiblePropertyMetaData.ProductMetaData> map =
-            engine.getPublicProperties();
+        AccessiblePropertyMetaData.ProductMetaData product =
+            findProduct(engine.getPublicProperties());
 
-        if (map != null &&
-            map.size() > 0 &&
-            map.containsKey(getElementDataKey())) {
+        if (product != null) {
             aspectProperties = new ArrayList<>();
-            dataSourceTier = map.get(getElementDataKey()).dataTier;
+            dataSourceTier = product.dataTier;
 
             for (AccessiblePropertyMetaData.PropertyMetaData item :
-                map.get(getElementDataKey()).properties) {
+                product.properties) {
                 AspectPropertyMetaData property = new AspectPropertyMetaDataDefault(
                     item.name,
                     this,

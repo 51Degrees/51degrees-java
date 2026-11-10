@@ -123,7 +123,7 @@ public class IPIntelligenceCloudEngine
 
             // Extract data from json to the aspectData instance.
             JSONObject jsonObj = new JSONObject(json);
-            JSONObject ipiObj = jsonObj.getJSONObject("ip");
+            JSONObject ipiObj = getElementJson(jsonObj);
 
             Map<String, Object> propertyMap =
                 new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
@@ -239,18 +239,16 @@ public class IPIntelligenceCloudEngine
      * {@link #aspectProperties}
      */
     private boolean loadAspectProperties(CloudRequestEngine engine) {
-        Map<String, AccessiblePropertyMetaData.ProductMetaData> map =
-            engine.getPublicProperties();
+        AccessiblePropertyMetaData.ProductMetaData product =
+            findProduct(engine.getPublicProperties());
 
-        if (map != null &&
-            map.size() > 0 &&
-            map.containsKey(getElementDataKey())) {
+        if (product != null) {
             aspectProperties = new ArrayList<>();
             weightedPropertyNames.clear();
-            dataSourceTier = map.get(getElementDataKey()).dataTier;
+            dataSourceTier = product.dataTier;
 
             for (AccessiblePropertyMetaData.PropertyMetaData item :
-                map.get(getElementDataKey()).properties) {
+                product.properties) {
                 if (item.type != null && item.type.startsWith("Weighted")) {
                     weightedPropertyNames.add(item.name.toLowerCase());
                 }
