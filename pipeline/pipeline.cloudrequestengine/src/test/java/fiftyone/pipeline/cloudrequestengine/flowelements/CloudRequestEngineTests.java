@@ -33,20 +33,27 @@ import fiftyone.pipeline.core.exceptions.PropertyNotLoadedException;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
 import fiftyone.pipeline.engines.services.HttpClientDefault;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
+import org.slf4j.ILoggerFactory;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -99,6 +106,66 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
                                         string.contains("User-Agent=" + userAgent); // content contains user agent
                             }));
         }
+    }
+
+    /**
+     * The cloud answers a refused license key with an error that names it.
+     * The exception the engine raises, and every log entry, show the key
+     * only by its last 4 characters.
+     */
+    @Test
+    public void Process_LicenseKeyInCloudError_Masked() throws Exception {
+        final String licenseKey = "TESTKEYNOTREALABCDEFGHIJ1234";
+        final String masked = "************************1234";
+        jsonResponse = "{\"errors\":[\"Invalid license key(s) supplied: " +
+            licenseKey + "\"]}";
+        configureMockedClient();
+        Logger logger = mock(Logger.class);
+        when(logger.isDebugEnabled()).thenReturn(true);
+        when(logger.isInfoEnabled()).thenReturn(true);
+        when(logger.isWarnEnabled()).thenReturn(true);
+        when(logger.isErrorEnabled()).thenReturn(true);
+        ILoggerFactory capturingLoggerFactory = mock(ILoggerFactory.class);
+        when(capturingLoggerFactory.getLogger(anyString())).thenReturn(logger);
+
+        CloudRequestEngine engine = new CloudRequestEngineBuilder(
+                capturingLoggerFactory, httpClient)
+                .setResourceKey("resource_key")
+                .setLicenseKey(licenseKey)
+                .build();
+
+        try (Pipeline pipeline = new PipelineBuilder(capturingLoggerFactory)
+                .setSuppressProcessException(true)
+                .addFlowElement(engine)
+                .build();
+             FlowData data = pipeline.createFlowData()) {
+            data.addEvidence("query.User-Agent", "iPhone");
+            data.process();
+
+            assertFalse(data.getErrors().isEmpty());
+            StringBuilder reported = new StringBuilder();
+            for (FlowError error : data.getErrors()) {
+                reported.append(printed(error.getThrowable()));
+            }
+            for (org.mockito.invocation.Invocation invocation :
+                    mockingDetails(logger).getInvocations()) {
+                for (Object argument : invocation.getArguments()) {
+                    reported.append(argument instanceof Throwable ?
+                            printed((Throwable) argument) :
+                            String.valueOf(argument));
+                }
+            }
+            assertFalse(reported.toString().contains(licenseKey),
+                    reported.toString());
+            assertTrue(reported.toString().contains(masked),
+                    reported.toString());
+        }
+    }
+
+    private static String printed(Throwable throwable) {
+        java.io.StringWriter text = new java.io.StringWriter();
+        throwable.printStackTrace(new java.io.PrintWriter(text));
+        return text.toString();
     }
 
     /**
@@ -263,14 +330,11 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
     }
 
     /**
-     * Test cloud request engine handles errors from the cloud service
-     * as expected.
-     * An AggregateException should be thrown by the cloud request engine
-     * containing the errors from the cloud service
-     * and the pipeline is configured to throw any exceptions up
-     * the stack in an AggregateException.
-     * We also check that the exception message includes the content
-     * from the JSON response.
+     * Errors from the cloud service when the engine is built. A 4xx answer
+     * is a definitive configuration error, which fails the build with a
+     * CloudRequestException that carries the cloud's message. Any other
+     * answer that holds errors is logged as one warning, the build
+     * completes, and the accessible properties are unknown until a retry.
      */
     @ParameterizedTest(name = "response code {1} - {0}")
     @MethodSource("getValidateErrorArgs")
@@ -284,24 +348,33 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
 
         configureMockedClient();
 
-        Exception exception = null;
-
-        try {
-            new CloudRequestEngineBuilder(loggerFactory, httpClient)
-                    .setResourceKey(resourceKey)
-                    .build()
-                    .getPublicProperties();
-        } catch (Exception ex) {
-            exception = ex;
+        if (responseCode >= 400 && responseCode < 500) {
+            CloudRequestException cloudEx = assertThrows(
+                    CloudRequestException.class,
+                    () -> new CloudRequestEngineBuilder(loggerFactory, httpClient)
+                            .setResourceKey(resourceKey)
+                            .build());
+            assertEquals(responseCode, cloudEx.getHttpStatusCode());
+            if (includeMessage) {
+                assertTrue(cloudEx.getMessage().contains(errorMessage),
+                        "Exception message did not contain the expected text.");
+            }
+        } else {
+            CloudRequestEngine engine =
+                    new CloudRequestEngineBuilder(loggerFactory, httpClient)
+                            .setResourceKey(resourceKey)
+                            .build();
+            assertNull(engine.getPublicProperties());
+            assertEquals(1, warningCount());
         }
+    }
 
-        assertNotNull(exception, "Expected exception to occur");
-        assertTrue(exception instanceof CloudRequestException);
-        CloudRequestException cloudEx = (CloudRequestException) exception;
-        if (includeMessage) {
-            assertTrue(cloudEx.getMessage().contains(errorMessage),
-                    "Exception message did not contain the expected text.");
+    private int warningCount() {
+        int count = 0;
+        for (TestLogger logger : loggerFactory.loggers) {
+            count += logger.warningsLogged.size();
         }
+        return count;
     }
 
     private static Stream<Arguments> getPrecidenceArgs() {
@@ -326,6 +399,7 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
         loggerFactory.loggers.clear();
         String[] evidence1Parts = evidence1.split("=");
         String[] evidence2Parts = evidence2.split("=");
+        acceptEvidence(Arrays.asList(evidence1Parts[0], evidence2Parts[0]));
         configureMockedClient();
 
         CloudRequestEngine engine = new CloudRequestEngineBuilder(loggerFactory, httpClient)
@@ -446,6 +520,7 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
     @ParameterizedTest(name = "{0}")
     @MethodSource("getFormDataArgs")
     public void getFormData(String name, Map<String, Object> evidence, String expectedValue) throws Exception {
+        acceptEvidence(evidence.keySet());
         configureMockedClient();
         CloudRequestEngineDefault engine = (CloudRequestEngineDefault) new CloudRequestEngineBuilder(loggerFactory, httpClient)
                 .setResourceKey("resourcekey")
@@ -467,10 +542,12 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
     /**
      * The web integration adds the whole web request as server.http-request
      * for usage sharing to read. It holds every header and cookie, so it is
-     * never sent to the cloud service.
+     * never sent to the cloud service, even where the service lists its key.
      */
     @Test
     public void getFormData_LeavesOutTheWebRequest() throws Exception {
+        acceptEvidence(Arrays.asList(
+            "header.User-Agent", "server.client-ip", "server.http-request"));
         configureMockedClient();
         CloudRequestEngineDefault engine = (CloudRequestEngineDefault) new CloudRequestEngineBuilder(loggerFactory, httpClient)
                 .setResourceKey("resourcekey")
@@ -503,6 +580,7 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
      */
     @Test
     public void getFormData_KeepsDotsInEvidenceName() throws Exception {
+        acceptEvidence(Arrays.asList("query.id.usage", "header.id.email"));
         configureMockedClient();
         CloudRequestEngineDefault engine = (CloudRequestEngineDefault)
             new CloudRequestEngineBuilder(loggerFactory, httpClient)
@@ -530,6 +608,7 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
      */
     @Test
     public void process_PostsWholeEvidenceName() throws Exception {
+        acceptEvidence(Arrays.asList("query.id.usage"));
         configureMockedClient();
         CloudRequestEngine engine =
             new CloudRequestEngineBuilder(loggerFactory, httpClient)
@@ -549,6 +628,142 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
             new String(body.getValue(), StandardCharsets.UTF_8).split("&"));
         assertTrue(items.contains("id.usage=non-marketing"),
             "The posted body does not carry id.usage: " + items);
+    }
+
+    /**
+     * Only the Evidence whose keys the cloud service accepts is sent, with
+     * the keys compared without regard to case.
+     * See the Processing section of the cloud request engine specification.
+     */
+    @Test
+    public void process_SendsOnlyAcceptedEvidence() throws Exception {
+        acceptEvidence(Arrays.asList(
+            "query.User-Agent", "header.Accept-Language"));
+        Map<String, Object> evidence = new HashMap<>();
+        evidence.put("query.User-Agent", "iPhone");
+        evidence.put("header.accept-language", "en-GB");
+        evidence.put("header.X-Other", "other");
+        evidence.put("cookie.session", "abc");
+        evidence.put("server.client-ip", "1.2.3.4");
+
+        List<String> items = postedItems(null, evidence);
+
+        assertEquals(
+            new HashSet<>(Arrays.asList(
+                "resource=resourcekey",
+                "User-Agent=iPhone",
+                "accept-language=en-GB")),
+            new HashSet<>(items),
+            "The request carried Evidence the cloud service does not " +
+                "accept: " + items);
+    }
+
+    /**
+     * Evidence whose key strips to resource, license or values is never
+     * sent, whatever its case and even where the cloud service lists the
+     * key, so the request carries the configured resource key, and the
+     * license key where one is configured, once each.
+     * See the Processing section of the cloud request engine specification.
+     */
+    @ParameterizedTest(name = "license key {0}")
+    @NullSource
+    @ValueSource(strings = {"ABCDEFG"})
+    public void process_LeavesOutEvidenceNamedResourceLicenseOrValues(
+        String licenseKey) throws Exception {
+        acceptEvidence(Arrays.asList(
+            "query.User-Agent",
+            "query.resource",
+            "header.Resource",
+            "query.license",
+            "cookie.LICENSE",
+            "query.values"));
+        Map<String, Object> evidence = new HashMap<>();
+        evidence.put("query.User-Agent", "iPhone");
+        evidence.put("query.resource", "evidence-resource");
+        evidence.put("header.Resource", "header-resource");
+        evidence.put("query.license", "evidence-license");
+        evidence.put("cookie.LICENSE", "cookie-license");
+        evidence.put("query.values", "ismobile");
+
+        List<String> items = postedItems(licenseKey, evidence);
+
+        List<String> expected = new ArrayList<>();
+        expected.add("resource=resourcekey");
+        if (licenseKey != null) {
+            expected.add("license=" + licenseKey);
+        }
+        expected.add("User-Agent=iPhone");
+        assertEquals(expected, items);
+    }
+
+    /**
+     * Evidence whose key strips to licence, whatever its case, is never
+     * sent, because the cloud service reads the license key from licence
+     * where license is absent.
+     * See the Processing section of the cloud request engine specification.
+     */
+    @ParameterizedTest(name = "license key {0}")
+    @NullSource
+    @ValueSource(strings = {"ABCDEFG"})
+    public void process_LeavesOutEvidenceNamedLicence(
+        String licenseKey) throws Exception {
+        acceptEvidence(Arrays.asList(
+            "query.User-Agent",
+            "query.licence",
+            "cookie.LICENCE"));
+        Map<String, Object> evidence = new HashMap<>();
+        evidence.put("query.User-Agent", "iPhone");
+        evidence.put("query.licence", "evidence-licence");
+        evidence.put("cookie.LICENCE", "cookie-licence");
+
+        List<String> items = postedItems(licenseKey, evidence);
+
+        List<String> expected = new ArrayList<>();
+        expected.add("resource=resourcekey");
+        if (licenseKey != null) {
+            expected.add("license=" + licenseKey);
+        }
+        expected.add("User-Agent=iPhone");
+        assertEquals(expected, items);
+    }
+
+    /**
+     * Answer the evidencekeys request with the given keys.
+     * @param keys the Evidence keys the cloud service accepts
+     */
+    private void acceptEvidence(Collection<String> keys) {
+        evidenceKeysResponse = new JSONArray(keys).toString();
+    }
+
+    /**
+     * Process the Evidence with an engine on the resource key
+     * {@code resourcekey} and return the fields of the one request it
+     * posted, in order.
+     * @param licenseKey the license key, or null for none
+     * @param evidence the Evidence to process
+     * @return the posted fields
+     */
+    private List<String> postedItems(
+        String licenseKey,
+        Map<String, Object> evidence) throws Exception {
+        configureMockedClient();
+        CloudRequestEngine engine =
+            new CloudRequestEngineBuilder(loggerFactory, httpClient)
+                .setResourceKey("resourcekey")
+                .setLicenseKey(licenseKey)
+                .build();
+
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+                .addFlowElement(engine).build();
+             FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidence);
+            data.process();
+        }
+
+        ArgumentCaptor<byte[]> body = ArgumentCaptor.forClass(byte[].class);
+        verify(httpClient, times(1)).postData(any(), any(), body.capture());
+        return Arrays.asList(
+            new String(body.getValue(), StandardCharsets.UTF_8).split("&"));
     }
 
     /**
@@ -656,22 +871,22 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
     }
 
     /**
-     * Verify that PropertyNotLoadedException is thrown on getPublicProperties if remote server is unavailable
+     * An unreachable server when the engine is built is a failure that can
+     * pass. The build completes with one warning, and the accessible
+     * properties are unknown until processing fetches them.
      */
     @Test
-    public void getPublicProperties_Throw_Exception_When_Server_Unavailable() throws IOException {
+    public void getPublicProperties_Server_Unavailable_At_Build() throws Exception {
         final String resourceKey = "resource_key";
         configureFailingMockClient();
-        try {
-            new CloudRequestEngineBuilder(loggerFactory, httpClient)
-                    .setResourceKey(resourceKey)
-                    .build()
-                    .getPublicProperties();
 
-            fail("Expected exception was not thrown");
-        } catch (Exception e) {
-            assertInstanceOf(PropertyNotLoadedException.class, e);
-        }
+        CloudRequestEngine engine =
+                new CloudRequestEngineBuilder(loggerFactory, httpClient)
+                        .setResourceKey(resourceKey)
+                        .build();
+
+        assertNull(engine.getPublicProperties());
+        assertEquals(1, warningCount());
     }
 
     /**
@@ -689,21 +904,23 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
     }
 
     /**
-     * Verify that PropertyNotLoadedException is thrown on getEvidenceKeyFilter if remote server is unavailable
+     * An unreachable server when the engine is built leaves the accepted
+     * Evidence empty, rather than failing whatever reads it, until
+     * processing fetches it.
      */
     @Test
-    public void getEvidenceKeyFilter_Throw_Exception_When_Server_Unavailable() throws IOException {
+    public void getEvidenceKeyFilter_Server_Unavailable_At_Build() throws Exception {
         final String resourceKey = "resource_key";
         configureFailingMockClient();
-        try {
-            new CloudRequestEngineBuilder(loggerFactory, httpClient)
-                    .setResourceKey(resourceKey)
-                    .build()
-                    .getEvidenceKeyFilter();
 
-            fail("Expected exception was not thrown");
-        } catch (Exception e) {
-            assertInstanceOf(PropertyNotLoadedException.class, e);
-        }
+        EvidenceKeyFilter filter =
+                new CloudRequestEngineBuilder(loggerFactory, httpClient)
+                        .setResourceKey(resourceKey)
+                        .build()
+                        .getEvidenceKeyFilter();
+
+        assertNotNull(filter);
+        assertFalse(filter.include("query.User-Agent"));
+        assertEquals(1, warningCount());
     }
 }

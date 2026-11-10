@@ -467,6 +467,24 @@ public class DeviceDetectionHashEngine
                 Arrays.asList(),
                 new ValueMetaDataDefault("n/a")),
             new FiftyOneAspectPropertyMetaDataDefault(
+            	Constants.MatchMetrics.ITERATIONS,
+                this,
+                Constants.MatchMetrics.CATEGORY,
+                Integer.class,
+                dataFileList,
+                true,
+                null,
+                (byte) 0,
+                true,
+                false,
+                false,
+                false,
+                false,
+                Constants.MatchMetrics.ITERATIONS_DESCRIPTION,
+                null,
+                Arrays.asList(),
+                new ValueMetaDataDefault("0")),
+            new FiftyOneAspectPropertyMetaDataDefault(
             	Constants.MatchMetrics.METHOD,
                 this,
                 Constants.MatchMetrics.CATEGORY,
@@ -487,25 +505,7 @@ public class DeviceDetectionHashEngine
                     new ValueMetaDataDefault("PERFORMANCE"),
                     new ValueMetaDataDefault("COMBINED"),
                     new ValueMetaDataDefault( "PREDICTIVE")),
-                new ValueMetaDataDefault("NONE")),
-            new FiftyOneAspectPropertyMetaDataDefault(
-            	Constants.MatchMetrics.ITERATIONS,
-                this,
-                Constants.MatchMetrics.CATEGORY,
-                Integer.class,
-                dataFileList,
-                true,
-                null,
-                (byte) 0,
-                true,
-                false,
-                false,
-                false,
-                false,
-                Constants.MatchMetrics.ITERATIONS_DESCRIPTION,
-                null,
-                Arrays.asList(),
-                new ValueMetaDataDefault("0"))
+                new ValueMetaDataDefault("NONE"))
         };
         return Arrays.asList(metricProperties);
     }

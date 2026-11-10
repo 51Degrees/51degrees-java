@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.cloudrequestengine.flowelements;
 
+import fiftyone.pipeline.cloudrequestengine.CloudDiscoveryState;
 import fiftyone.pipeline.cloudrequestengine.CloudRequestException;
 import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
 import fiftyone.pipeline.core.Constants;
@@ -36,7 +37,9 @@ import fiftyone.pipeline.engines.data.AspectPropertyMetaDataDefault;
 import fiftyone.pipeline.engines.flowelements.AspectEngineBase;
 import fiftyone.pipeline.engines.services.HttpClient;
 import fiftyone.pipeline.exceptions.AggregateException;
+import fiftyone.pipeline.util.LicenseKeyMask;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
@@ -50,6 +53,8 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -72,6 +77,17 @@ public class CloudRequestEngineDefault
      */
     private static final String HTTP_REQUEST_KEY = "server.http-request";
 
+    /**
+     * Form fields the request reserves for the credentials and the list of
+     * Properties, with licence, which the cloud service reads as the
+     * license key where license is absent. Evidence whose key strips to one
+     * of them is never sent, as the Processing section of the
+     * specification requires.
+     */
+    private static final Set<String> ENGINE_FIELDS =
+        Collections.unmodifiableSet(new HashSet<>(
+            Arrays.asList("resource", "license", "licence", "values")));
+
     private HttpClient httpClient;
 
     private String endPoint;
@@ -82,12 +98,44 @@ public class CloudRequestEngineDefault
     private String cloudRequestOrigin;
     private Integer timeoutMillis;
 
-    private List<AspectPropertyMetaData> propertyMetaData;
-    private volatile Map<String, AccessiblePropertyMetaData.ProductMetaData> publicProperties;
-    private final Object publicPropertiesLock = new Object();
+    /**
+     * The lowest HTTP status of a client error. A discovery request answered
+     * with a status from this up to {@link #HTTP_SERVER_ERROR_MIN} is a
+     * definitive configuration error.
+     */
+    private static final int HTTP_CLIENT_ERROR_MIN = 400;
 
-    private volatile EvidenceKeyFilter evidenceKeyFilter;
-    private final Object evidenceKeyFilterLock = new Object();
+    /**
+     * The lowest HTTP status of a server error.
+     */
+    private static final int HTTP_SERVER_ERROR_MIN = 500;
+
+    private List<AspectPropertyMetaData> propertyMetaData;
+
+    /**
+     * The products the resource key gives access to, from the
+     * accessibleproperties request, or null until that request succeeds.
+     */
+    private volatile Map<String, AccessiblePropertyMetaData.ProductMetaData> publicProperties;
+
+    /**
+     * The answer to the accessibleproperties request that gave
+     * {@link #publicProperties}, kept for {@link #getDiscoveryState()}.
+     */
+    private volatile String accessibleProperties;
+
+    /**
+     * The accepted Evidence, from the evidencekeys request. It is the same
+     * instance before and after the request succeeds.
+     */
+    private final CloudEvidenceKeyFilter evidenceKeyFilter =
+        new CloudEvidenceKeyFilter();
+
+    /**
+     * Held while the discovery requests are made, so that concurrent first
+     * uses make them once.
+     */
+    private final Object discoveryLock = new Object();
 
     public CloudRequestEngineDefault(
         Logger logger,
@@ -193,40 +241,185 @@ public class CloudRequestEngineDefault
         return "cloud-response";
     }
 
+    /**
+     * The accepted Evidence keys from the evidencekeys request. Until that
+     * request succeeds the filter includes nothing, and it makes no request
+     * itself. A filter that holds this one, such as the Pipeline's, sees
+     * the keys as soon as a retry fetches them.
+     * @return the accepted Evidence
+     */
     @Override
-    public EvidenceKeyFilter getEvidenceKeyFilter() throws CloudRequestException, AggregateException, PropertyNotLoadedException {
-        if (evidenceKeyFilter == null) {
-            synchronized (evidenceKeyFilterLock) {
-                if (evidenceKeyFilter == null) {
-                    getCloudEvidenceKeys();
-                }
-            }
-        }
+    public EvidenceKeyFilter getEvidenceKeyFilter() {
         return evidenceKeyFilter;
     }
 
+    /**
+     * The products the resource key gives access to, from the
+     * accessibleproperties request, which the builder makes when it builds
+     * the engine. After a failure at build that can pass this is null until
+     * processing fetches them. It makes no request itself.
+     * @return the products, or null if they are not known yet
+     */
     @Override
     public Map<String, AccessiblePropertyMetaData.ProductMetaData>
-    getPublicProperties() throws CloudRequestException, AggregateException, PropertyNotLoadedException {
-        if (publicProperties == null) {
-            synchronized (publicPropertiesLock) {
-                if (publicProperties == null) {
-                    getCloudProperties();
+    getPublicProperties() {
+        return publicProperties;
+    }
+
+    /**
+     * Fetch the accepted Evidence keys and the accessible properties that
+     * are not known yet. The builder calls this when it builds the engine,
+     * so in the normal case a built engine is ready to process. Both
+     * requests are made. A 4xx answer to either is a definitive
+     * configuration error, and its {@link CloudRequestException} is thrown,
+     * because retrying with the same configuration can never succeed. Any
+     * other failure, such as the service being unreachable, a timeout, a
+     * 5xx answer or a body that cannot be read, is logged as one warning
+     * and the list that did arrive is kept. Processing fetches what is
+     * still missing.
+     * @throws CloudRequestException for a 4xx answer to either request
+     */
+    public void discover() {
+        List<RuntimeException> failures = new ArrayList<>();
+        synchronized (discoveryLock) {
+            // The two requests are made at once, so a service that does not
+            // answer delays the build by one timeout rather than two.
+            CompletableFuture<Void> evidenceKeys =
+                evidenceKeyFilter.isKnown() ?
+                    CompletableFuture.<Void>completedFuture(null) :
+                    CompletableFuture.runAsync(this::fetchEvidenceKeys);
+            if (publicProperties == null) {
+                try {
+                    fetchPublicProperties();
+                } catch (RuntimeException e) {
+                    failures.add(e);
+                }
+            }
+            try {
+                evidenceKeys.join();
+            } catch (CompletionException e) {
+                failures.add(e.getCause() instanceof RuntimeException ?
+                    (RuntimeException) e.getCause() :
+                    e);
+            }
+        }
+        if (failures.isEmpty()) {
+            return;
+        }
+        for (RuntimeException failure : failures) {
+            CloudRequestException definitive = definitiveError(failure);
+            if (definitive != null) {
+                throw definitive;
+            }
+        }
+        RuntimeException first = failures.get(0);
+        for (int i = 1; i < failures.size(); i++) {
+            first.addSuppressed(failures.get(i));
+        }
+        logger.warn(MessageDiscoveryDeferred, first);
+    }
+
+    /**
+     * Whether discovery has fetched both the accepted evidence keys and the
+     * accessible properties, so that what reads them, such as the
+     * Pipeline's map of available properties, can keep what it reads.
+     * @return true once both are known
+     */
+    @Override
+    public boolean hasLoadedProperties() {
+        return evidenceKeyFilter.isKnown() && publicProperties != null;
+    }
+
+    /**
+     * A copy of what discovery fetched, which a later builder can use in
+     * place of the discovery requests.
+     * @return the copy, or null unless both the accepted evidence keys and
+     * the accessible properties are known
+     */
+    public CloudDiscoveryState getDiscoveryState() {
+        synchronized (discoveryLock) {
+            List<String> keys = evidenceKeyFilter.getKeys();
+            return keys == null || accessibleProperties == null ?
+                null :
+                new CloudDiscoveryState(keys, accessibleProperties);
+        }
+    }
+
+    /**
+     * Use a copy of what an earlier discovery fetched, in place of the
+     * discovery requests.
+     * @param state the copy
+     */
+    public void useDiscoveryState(CloudDiscoveryState state) {
+        synchronized (discoveryLock) {
+            evidenceKeyFilter.setKeys(state.getEvidenceKeys());
+            setPublicProperties(state.getAccessibleProperties());
+        }
+    }
+
+    /**
+     * The failure of a discovery request that the cloud service received
+     * and rejected with a 4xx status, so that retrying with the same
+     * configuration can never succeed.
+     * @param failure the failure of a discovery request
+     * @return the exception with the 4xx status, or null if there is none
+     */
+    private static CloudRequestException definitiveError(Throwable failure) {
+        if (failure instanceof CloudRequestException) {
+            int status = ((CloudRequestException) failure).getHttpStatusCode();
+            return status >= HTTP_CLIENT_ERROR_MIN &&
+                status < HTTP_SERVER_ERROR_MIN ?
+                (CloudRequestException) failure :
+                null;
+        }
+        if (failure instanceof AggregateException) {
+            for (Throwable inner : failure.getSuppressed()) {
+                CloudRequestException definitive = definitiveError(inner);
+                if (definitive != null) {
+                    return definitive;
                 }
             }
         }
-        return publicProperties;
+        return null;
+    }
+
+    /**
+     * Fetch what discovery could not when the engine was built, evidence
+     * keys first, stopping at the first failure, which is a process-time
+     * failure. No data request is sent until both are known.
+     * @throws IOException if a discovery request could not be made
+     */
+    private void completeDiscovery() throws IOException {
+        if (evidenceKeyFilter.isKnown() && publicProperties != null) {
+            return;
+        }
+        synchronized (discoveryLock) {
+            try {
+                if (evidenceKeyFilter.isKnown() == false) {
+                    fetchEvidenceKeys();
+                }
+                if (publicProperties == null) {
+                    fetchPublicProperties();
+                }
+            } catch (PropertyNotLoadedException e) {
+                // A request that could not be made is reported as the
+                // IOException it was, as for the data request.
+                if (e.getCause() instanceof IOException) {
+                    throw (IOException) e.getCause();
+                }
+                throw e;
+            }
+        }
     }
 
     @Override
     protected void processEngine(FlowData data, CloudRequestData aspectData) throws IOException {
+        ((CloudRequestDataInternal)aspectData).setProcessStarted(true);
+        completeDiscovery();
+
         byte[] content = getContent(data);
         HttpURLConnection connection = httpClient.connect(toUrl(endPoint.trim()));
-        if (timeoutMillis != null) {
-            connection.setConnectTimeout(timeoutMillis);
-            connection.setReadTimeout(timeoutMillis);
-        }
-        ((CloudRequestDataInternal)aspectData).setProcessStarted(true);
+        setTimeouts(connection);
 
         Map<String, String> headers = new HashMap<>();
         setCommonHeaders(headers);
@@ -274,10 +467,21 @@ public class CloudRequestEngineDefault
         return string.getBytes(StandardCharsets.UTF_8);
     }
 
+    /**
+     * The Evidence to send, keyed by the name the cloud service expects.
+     * Only Evidence that {@link #isSent(String)} allows is included, and
+     * where two prefixes give the same name the precedence order decides.
+     * @param flowData the FlowData
+     * @return the form fields to send
+     */
     Map<String, Object> getFormData(FlowData flowData) {
-        Map<String, Object> evidence = new HashMap<>(
-            flowData.getEvidence().asKeyMap());
-        evidence.keySet().removeIf(HTTP_REQUEST_KEY::equalsIgnoreCase);
+        Map<String, Object> evidence = new HashMap<>();
+        for (Map.Entry<String, Object> entry :
+            flowData.getEvidence().asKeyMap().entrySet()) {
+            if (isSent(entry.getKey())) {
+                evidence.put(entry.getKey(), entry.getValue());
+            }
+        }
         Map<String, Object> formData = new HashMap<>();
 
         // Add evidence in reverse alphabetical order, excluding special keys.
@@ -293,9 +497,28 @@ public class CloudRequestEngineDefault
     }
 
     /**
+     * Whether Evidence is sent to the cloud service. Only keys the service
+     * accepts are sent, never one that strips to a name in
+     * {@link #ENGINE_FIELDS}, compared without regard to case, and never
+     * the web request.
+     * @param key the Evidence key
+     * @return true if the Evidence is sent
+     */
+    private boolean isSent(String key) {
+        if (HTTP_REQUEST_KEY.equalsIgnoreCase(key) ||
+            evidenceKeyFilter.include(key) == false) {
+            return false;
+        }
+        String[] parts = key.split(
+            Pattern.quote(Constants.EVIDENCE_SEPERATOR), 2);
+        return parts.length == 2 &&
+            ENGINE_FIELDS.contains(parts[1].toLowerCase(Locale.ROOT)) == false;
+    }
+
+    /**
      * Add form data to the evidence.
      * @param formData the destination map to add the data to
-     * @param allEvidence all evidence in the FlowData. This is used to
+     * @param allEvidence all the Evidence being sent. This is used to
      *                    report which evidence keys are conflicting
      * @param evidence evidence to add to the form data
      */
@@ -357,7 +580,7 @@ public class CloudRequestEngineDefault
 
     /**
      * Get evidence with specified prefix.
-     * @param evidence all evidence in the FlowData
+     * @param evidence the Evidence being sent
      * @param type required evidence key prefix
      * @return evidence with the required key prefix
      */
@@ -425,7 +648,30 @@ public class CloudRequestEngineDefault
         }
     }
 
-    private void getCloudProperties() throws CloudRequestException, AggregateException, PropertyNotLoadedException {
+    /**
+     * Apply the configured timeout to a request.
+     */
+    private void setTimeouts(HttpURLConnection connection) {
+        if (timeoutMillis != null) {
+            connection.setConnectTimeout(timeoutMillis);
+            connection.setReadTimeout(timeoutMillis);
+        }
+    }
+
+    /**
+     * The license key sent with each request, and each key in it when it
+     * holds several separated by '|', to mask in messages.
+     */
+    private List<String> getLicenseKeys() {
+        List<String> keys = new ArrayList<>();
+        if (licenseKey != null && licenseKey.isEmpty() == false) {
+            keys.add(licenseKey);
+            keys.addAll(Arrays.asList(licenseKey.split(Pattern.quote("|"))));
+        }
+        return keys;
+    }
+
+    private void fetchPublicProperties() throws CloudRequestException, AggregateException, PropertyNotLoadedException {
         try {
             String jsonResult;
 
@@ -433,19 +679,12 @@ public class CloudRequestEngineDefault
             setCommonHeaders(headers);
 
             HttpURLConnection connection = httpClient.connect(toUrl(propertiesEndpoint.trim() + (resourceKey != null ? "?Resource=" + resourceKey : "")));
+            setTimeouts(connection);
             jsonResult = httpClient.getResponseString(connection, headers);
             validateResponse(jsonResult, connection);
 
-            JSONObject jsonObj = null;
             if (jsonResult.isEmpty() == false) {
-                jsonObj = new JSONObject(jsonResult);
-            }
-
-            if (jsonObj != null) {
-                AccessiblePropertyMetaData.LicencedProducts accessiblePropertyData =
-                        new AccessiblePropertyMetaData.LicencedProducts(jsonObj.getJSONObject("Products"));
-
-                publicProperties = accessiblePropertyData.products;
+                setPublicProperties(jsonResult);
             } else {
                 throw new RuntimeException("Failed to retrieve available properties " +
                         "from cloud service at " + propertiesEndpoint + ".");
@@ -455,7 +694,19 @@ public class CloudRequestEngineDefault
         }
     }
 
-    private void getCloudEvidenceKeys() throws CloudRequestException, AggregateException, PropertyNotLoadedException {
+    /**
+     * Read the answer to the accessibleproperties request.
+     * @param json the answer
+     */
+    private void setPublicProperties(String json) {
+        AccessiblePropertyMetaData.LicencedProducts accessiblePropertyData =
+                new AccessiblePropertyMetaData.LicencedProducts(
+                        new JSONObject(json).getJSONObject("Products"));
+        accessibleProperties = json;
+        publicProperties = accessiblePropertyData.products;
+    }
+
+    private void fetchEvidenceKeys() throws CloudRequestException, AggregateException, PropertyNotLoadedException {
         try {
             String jsonResult;
 
@@ -463,6 +714,7 @@ public class CloudRequestEngineDefault
             setCommonHeaders(headers);
 
             HttpURLConnection connection = httpClient.connect(toUrl(evidenceKeysEndpoint.trim()));
+            setTimeouts(connection);
             jsonResult = httpClient.getResponseString(connection, headers);
             validateResponse(jsonResult, connection, false);
 
@@ -472,8 +724,7 @@ public class CloudRequestEngineDefault
                 for (int i = 0; i < jsonArray.length(); i++) {
                     keys.add(jsonArray.get(i).toString());
                 }
-                evidenceKeyFilter = new EvidenceKeyFilterWhitelist(keys,
-                        String.CASE_INSENSITIVE_ORDER);
+                evidenceKeyFilter.setKeys(keys);
             }
         } catch (IOException e) {
             throw new PropertyNotLoadedException(e);
@@ -507,7 +758,19 @@ public class CloudRequestEngineDefault
         List<String> messages = new ArrayList<>();
 
         if (hasData && checkForErrorMessages) {
-            JSONObject jObj = new JSONObject(jsonResult);
+            JSONObject jObj;
+            try {
+                jObj = new JSONObject(jsonResult);
+            } catch (JSONException e) {
+                // The status says whether the failure is definitive, so it
+                // is kept when the body cannot be read.
+                CloudRequestException error = new CloudRequestException(
+                    String.format(ExceptionResponseNotJson, code),
+                    code,
+                    connection.getHeaderFields());
+                error.initCause(e);
+                throw error;
+            }
             boolean hasErrors = jObj.keySet().contains("errors");
             hasData = hasErrors ?
                 jObj.keySet().size() > 1 :
@@ -543,6 +806,9 @@ public class CloudRequestEngineDefault
                 jsonResult);
             messages.add(message);
         }
+
+        // The cloud's errors can name the license key it was sent.
+        messages.replaceAll(m -> LicenseKeyMask.maskIn(m, getLicenseKeys()));
 
         Map<String, List<String>> headers = null;
         if (messages.size() > 0){

@@ -45,6 +45,7 @@ import org.junit.runners.Parameterized;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import org.mockito.internal.matchers.LessOrEqual;
+import org.mockito.invocation.Invocation;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.LoggerFactory;
@@ -61,6 +62,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
@@ -72,6 +74,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static fiftyone.pipeline.engines.services.DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
 import static fiftyone.pipeline.engines.services.DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED;
+import static fiftyone.pipeline.engines.services.DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_SUCCESS;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 import static org.mockito.Mockito.*;
@@ -415,14 +418,17 @@ public class DataUpdateServiceTests {
                 }
             });
 
-            // Configure a flag to be set when processing
-            // is complete.
+            // Configure a flag to be set when the watcher has applied the
+            // update. The polling timer's own check also completes, with no
+            // update found, and must not release the flag.
             final Semaphore completeFlag = new Semaphore(1);
             completeFlag.acquire();
             dataUpdate.onUpdateComplete(new OnUpdateComplete() {
                 @Override
                 public void call(Object sender, DataUpdateService.DataUpdateCompleteArgs args) {
-                    completeFlag.release();
+                    if (args.getStatus() == AUTO_UPDATE_SUCCESS) {
+                        completeFlag.release();
+                    }
                 }
             });
 
@@ -1227,6 +1233,297 @@ public class DataUpdateServiceTests {
         }
         // The timer factory should have been called once.
         verify(futureFactory, times(1)).schedule(any(Runnable.class), anyLong());
+    }
+
+    /**
+     * A check that finds an update for a data file with no file path
+     * applies it in memory, so it refreshes the engine once, with the
+     * downloaded data, and does not refresh it again.
+     */
+    @Test
+    public void DataUpdateService_CheckForUpdate_InMemory_RefreshesOnce()
+        throws IOException {
+        // Arrange
+        configureNoFileSystem();
+        when(httpClientConnection.getResponseCode())
+            .thenReturn(HttpURLConnection.HTTP_OK);
+        when(httpClientConnection.getResponseMessage()).thenReturn(null);
+        when(httpClientConnection.getHeaderField("Content-MD5"))
+            .thenReturn("08527dcbdd437e7fa6c084423d06dba6");
+        when(httpClientConnection.getInputStream()).thenReturn(
+            DataUpdateServiceTests.class.getClassLoader()
+                .getResourceAsStream("file.gz"));
+
+        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
+            mock(OnPremiseAspectEngine.class);
+        DataFileConfigurationDefault config = new DataFileConfigurationDefault();
+        config.setDataUpdateUrl("http://www.test.com");
+        config.setVerifyMd5(true);
+        config.setDecompressContent(true);
+        config.setVerifyModifiedSince(false);
+
+        AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
+        file.setEngine(engine);
+        file.setConfiguration(config);
+        when(engine.getDataFileMetaData()).thenReturn(file);
+
+        // Act
+        DataUpdateService.AutoUpdateStatus status =
+            dataUpdate.checkForUpdate(engine);
+
+        // Assert
+        assertEquals(AUTO_UPDATE_SUCCESS, status);
+        List<String> refreshes = new ArrayList<>();
+        for (Invocation invocation : mockingDetails(engine).getInvocations()) {
+            if (invocation.getMethod().getName().equals("refreshData")) {
+                refreshes.add(invocation.getMethod().toGenericString());
+            }
+        }
+        assertEquals(
+            "The engine was not refreshed exactly once: " + refreshes,
+            1,
+            refreshes.size());
+        verify(engine, times(1)).refreshData(any(), any(byte[].class));
+    }
+
+    /**
+     * A manual check that applies an update from the data file to a data
+     * file registered for automatic updates sets the next update timer, as
+     * a check the timer started does.
+     */
+    @Test
+    public void DataUpdateService_CheckForUpdate_FileUpdated_TimerSetAgain() {
+        // Arrange
+        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
+            mock(OnPremiseAspectEngine.class);
+        DataFileConfigurationDefault config = new DataFileConfigurationDefault();
+        config.setAutomaticUpdatesEnabled(autoUpdateEnabled);
+        config.setFileSystemWatcherEnabled(false);
+
+        AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
+        file.setEngine(engine);
+        file.setConfiguration(config);
+        when(engine.getDataFileMetaData()).thenReturn(file);
+        configureFileUpdate(engine);
+
+        dataUpdate.registerDataFile(file);
+        int timers = autoUpdateEnabled ? 1 : 0;
+        verify(futureFactory, times(timers)).schedule(
+            any(Runnable.class),
+            anyLong());
+
+        ScheduledFuture<?> pending = file.getFuture();
+
+        // Act
+        DataUpdateService.AutoUpdateStatus status =
+            dataUpdate.checkForUpdate(engine);
+
+        // Assert
+        assertEquals(AUTO_UPDATE_SUCCESS, status);
+        verify(engine, times(1)).refreshData((String) any());
+        verify(futureFactory, times(2 * timers)).schedule(
+            any(Runnable.class),
+            anyLong());
+        assertEquals(
+            "The next update timer was not set after the manual update.",
+            autoUpdateEnabled,
+            file.getFuture() != null);
+
+        if (autoUpdateEnabled) {
+            // The pending timer is cancelled, so only the new one is left.
+            assertTrue(
+                "The timer pending before the manual update was not cancelled.",
+                pending.isCancelled());
+            assertNotSame(pending, file.getFuture());
+        }
+    }
+
+    /**
+     * A manual check whose refresh from the data file fails still leaves
+     * the next update timer set, as a check the timer started does, so
+     * polling resumes.
+     */
+    @Test
+    public void DataUpdateService_CheckForUpdate_FileRefreshFails_TimerSetAgain() {
+        // updatedFileAvailable warns on each of its 10 tries.
+        ignoreWranings = 10;
+
+        // Arrange
+        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
+            mock(OnPremiseAspectEngine.class);
+        doThrow(new IllegalStateException("The refresh failed."))
+            .when(engine).refreshData((String) any());
+        DataFileConfigurationDefault config = new DataFileConfigurationDefault();
+        config.setAutomaticUpdatesEnabled(autoUpdateEnabled);
+        config.setFileSystemWatcherEnabled(false);
+
+        AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
+        file.setEngine(engine);
+        file.setConfiguration(config);
+        when(engine.getDataFileMetaData()).thenReturn(file);
+        configureFileUpdate(engine);
+
+        dataUpdate.registerDataFile(file);
+        int timers = autoUpdateEnabled ? 1 : 0;
+        ScheduledFuture<?> pending = file.getFuture();
+
+        // Act
+        DataUpdateService.AutoUpdateStatus status =
+            dataUpdate.checkForUpdate(engine);
+
+        // Assert
+        assertEquals(
+            DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED,
+            status);
+        verify(futureFactory, times(2 * timers)).schedule(
+            any(Runnable.class),
+            anyLong());
+        assertEquals(
+            "The next update timer was not set after the failed refresh.",
+            autoUpdateEnabled,
+            file.getFuture() != null);
+        if (autoUpdateEnabled) {
+            assertTrue(pending.isCancelled());
+            assertNotSame(pending, file.getFuture());
+        }
+    }
+
+    /**
+     * A data file that has been unregistered is no longer registered, so a
+     * manual update of it sets no update timer.
+     */
+    @Test
+    public void DataUpdateService_Unregister_NoLongerRegistered() {
+        // Arrange
+        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
+            mock(OnPremiseAspectEngine.class);
+        DataFileConfigurationDefault config = new DataFileConfigurationDefault();
+        config.setAutomaticUpdatesEnabled(autoUpdateEnabled);
+        config.setFileSystemWatcherEnabled(false);
+
+        AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
+        file.setEngine(engine);
+        file.setConfiguration(config);
+        when(engine.getDataFileMetaData()).thenReturn(file);
+        configureFileUpdate(engine);
+        dataUpdate.registerDataFile(file);
+        int timers = autoUpdateEnabled ? 1 : 0;
+
+        // Act
+        dataUpdate.unregisterDataFile(file);
+        DataUpdateService.AutoUpdateStatus status =
+            dataUpdate.checkForUpdate(engine);
+
+        // Assert
+        assertFalse(file.getIsRegistered());
+        assertEquals(AUTO_UPDATE_SUCCESS, status);
+        verify(futureFactory, times(timers)).schedule(
+            any(Runnable.class),
+            anyLong());
+        assertNull(file.getFuture());
+    }
+
+    /**
+     * A manual check that applies an update in memory to a data file
+     * registered for automatic updates sets the next update timer, as a
+     * check the timer started does.
+     */
+    @Test
+    public void DataUpdateService_CheckForUpdate_InMemory_TimerSetAgain()
+        throws IOException {
+        // Arrange
+        configureNoFileSystem();
+        when(httpClientConnection.getResponseCode())
+            .thenReturn(HttpURLConnection.HTTP_OK);
+        when(httpClientConnection.getResponseMessage()).thenReturn(null);
+        when(httpClientConnection.getHeaderField("Content-MD5"))
+            .thenReturn("08527dcbdd437e7fa6c084423d06dba6");
+        when(httpClientConnection.getInputStream()).thenReturn(
+            DataUpdateServiceTests.class.getClassLoader()
+                .getResourceAsStream("file.gz"));
+
+        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
+            mock(OnPremiseAspectEngine.class);
+        DataFileConfigurationDefault config = new DataFileConfigurationDefault();
+        config.setAutomaticUpdatesEnabled(autoUpdateEnabled);
+        config.setDataUpdateUrl("http://www.test.com");
+        config.setVerifyMd5(true);
+        config.setDecompressContent(true);
+        config.setVerifyModifiedSince(false);
+
+        AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
+        file.setEngine(engine);
+        file.setConfiguration(config);
+        when(engine.getDataFileMetaData()).thenReturn(file);
+
+        dataUpdate.registerDataFile(file);
+        int timers = autoUpdateEnabled ? 1 : 0;
+        verify(futureFactory, times(timers)).schedule(
+            any(Runnable.class),
+            anyLong());
+
+        ScheduledFuture<?> pending = file.getFuture();
+
+        // Act
+        DataUpdateService.AutoUpdateStatus status =
+            dataUpdate.checkForUpdate(engine);
+
+        // Assert
+        assertEquals(AUTO_UPDATE_SUCCESS, status);
+        verify(futureFactory, times(2 * timers)).schedule(
+            any(Runnable.class),
+            anyLong());
+        assertEquals(
+            "The next update timer was not set after the manual update.",
+            autoUpdateEnabled,
+            file.getFuture() != null);
+
+        if (autoUpdateEnabled) {
+            // The pending timer is cancelled, so only the new one is left.
+            assertTrue(
+                "The timer pending before the manual update was not cancelled.",
+                pending.isCancelled());
+            assertNotSame(pending, file.getFuture());
+        }
+    }
+
+    /**
+     * A manual check that finds no update leaves the timer of a data file
+     * registered for automatic updates as it was.
+     */
+    @Test
+    public void DataUpdateService_CheckForUpdate_NoUpdate_TimerKept()
+        throws IOException {
+        // Arrange
+        configureNoFileSystem();
+        configureHttpNoUpdateAvailable();
+
+        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
+            mock(OnPremiseAspectEngine.class);
+        DataFileConfigurationDefault config = new DataFileConfigurationDefault();
+        config.setAutomaticUpdatesEnabled(autoUpdateEnabled);
+        config.setDataUpdateUrl("http://www.test.com");
+        config.setVerifyModifiedSince(false);
+
+        AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
+        file.setEngine(engine);
+        file.setConfiguration(config);
+        when(engine.getDataFileMetaData()).thenReturn(file);
+
+        dataUpdate.registerDataFile(file);
+        Object timer = file.getFuture();
+
+        // Act
+        DataUpdateService.AutoUpdateStatus status =
+            dataUpdate.checkForUpdate(engine);
+
+        // Assert
+        assertEquals(AUTO_UPDATE_NOT_NEEDED, status);
+        verify(engine, never()).refreshData(anyString());
+        verify(futureFactory, times(autoUpdateEnabled ? 1 : 0)).schedule(
+            any(Runnable.class),
+            anyLong());
+        assertSame(timer, file.getFuture());
     }
 
 
