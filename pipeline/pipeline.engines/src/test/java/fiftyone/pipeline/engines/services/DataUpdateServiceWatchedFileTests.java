@@ -155,8 +155,15 @@ public class DataUpdateServiceWatchedFileTests {
             if (config.getWatchKey() != null) {
                 config.getWatchKey().cancel();
             }
-            Files.deleteIfExists(dataFile);
-            Files.deleteIfExists(directory);
+            // Windows keeps the file until the reader's mapped buffer is
+            // collected, so whatever cannot be deleted now is deleted when
+            // the test run ends. Those are deleted in the reverse order they
+            // are registered, so the folder is registered first.
+            directory.toFile().deleteOnExit();
+            if (dataFile.toFile().delete() == false) {
+                dataFile.toFile().deleteOnExit();
+            }
+            directory.toFile().delete();
         }
     }
 
