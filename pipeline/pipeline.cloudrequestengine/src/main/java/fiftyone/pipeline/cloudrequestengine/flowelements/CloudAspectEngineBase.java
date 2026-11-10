@@ -228,11 +228,11 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
 
     /**
      * Find this engine's product among the products the Cloud Request Engine
-     * reports for the resource key. A valid resource key can include no
-     * product that holds this engine's properties. That is logged once for
-     * this engine, as a warning naming its Data Key, and an empty product is
-     * returned, so the engine builds
-     * with empty property metadata and logs nothing on each request.
+     * reports for the resource key. A valid resource key can include no product
+     * that holds this engine's properties. That is logged once for this engine,
+     * as a warning naming its Data Key, and an empty product is returned, so
+     * the engine builds with empty property metadata and logs nothing on each
+     * request.
      * @param products the products from
      * {@link CloudRequestEngine#getPublicProperties()}, or null if they have
      * not been loaded
