@@ -36,6 +36,7 @@ import fiftyone.pipeline.engines.flowelements.OnPremiseAspectEngine;
 import fiftyone.pipeline.engines.services.update.FutureFactory;
 import fiftyone.pipeline.engines.services.update.FutureFactoryDefault;
 import fiftyone.pipeline.util.Check;
+import fiftyone.pipeline.util.LicenseKeyMask;
 import jakarta.xml.bind.DatatypeConverter;
 import org.apache.commons.lang3.ObjectUtils;
 import org.slf4j.Logger;
@@ -44,6 +45,7 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URLDecoder;
 import java.nio.file.*;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
@@ -63,6 +65,12 @@ import static org.apache.commons.lang3.BooleanUtils.isFalse;
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/data-updates.md">Specification</a>
  */
 public class DataUpdateServiceDefault implements DataUpdateService {
+
+    /**
+     * The query parameter of a data update URL that holds the license keys,
+     * as the 51Degrees URL formatter writes it.
+     */
+    private static final String LICENSE_KEYS_PARAMETER = "LicenseKeys";
 
     final List<AspectEngineDataFile> configurations = new ArrayList<>();
     private final Logger logger;
@@ -602,6 +610,45 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     }
 
     /**
+     * The license keys to mask in messages that name the data update URL,
+     * being the data update license keys and any key in the URL's
+     * LicenseKeys parameter, such as one typed straight into the data
+     * update URL.
+     * @param dataFile the data file being updated
+     * @param url the formatted data update URL
+     * @return the keys to mask
+     */
+    private static List<String> licenseKeysToMask(
+            AspectEngineDataFile dataFile,
+            String url) {
+        List<String> keys = new ArrayList<>();
+        List<String> configured =
+                dataFile.getConfiguration().getDataUpdateLicenseKeys();
+        if (configured != null) {
+            keys.addAll(configured);
+        }
+        int query = url == null ? -1 : url.indexOf('?');
+        if (query < 0) {
+            return keys;
+        }
+        for (String parameter : url.substring(query + 1).split("&")) {
+            int equals = parameter.indexOf('=');
+            if (equals > 0 && parameter.substring(0, equals)
+                    .equalsIgnoreCase(LICENSE_KEYS_PARAMETER)) {
+                String value = parameter.substring(equals + 1);
+                try {
+                    value = URLDecoder.decode(value, "UTF-8");
+                } catch (UnsupportedEncodingException |
+                         IllegalArgumentException e) {
+                    // Masked as it is written.
+                }
+                keys.addAll(Arrays.asList(value.split("\\|")));
+            }
+        }
+        return keys;
+    }
+
+    /**
      * Get the most recent data file available from the configured update URL.
      * If the data currently used by the engine is the newest available then
      * nothing will be downloaded.
@@ -615,13 +662,17 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             FileWrapper tempFile) {
 
         String url = dataFile.getFormattedUrl();
-        logger.debug("downloadFile from {}", url);
+        // The URL carries the license keys, so every message names it with
+        // each key masked.
+        List<String> licenseKeys = licenseKeysToMask(dataFile, url);
+        String loggedUrl = LicenseKeyMask.maskIn(url, licenseKeys);
+        logger.debug("downloadFile from {}", loggedUrl);
 
         try {
             HttpURLConnection connection = httpClient.connect(new URI(url.trim()).toURL());
             if (connection == null) {
                 logger.error("No response from data update service at '{}' for engine '{}'",
-                        dataFile.getFormattedUrl(), Objects.nonNull(dataFile.getEngine()) ?
+                        loggedUrl, Objects.nonNull(dataFile.getEngine()) ?
                                 dataFile.getEngine().getClass().getSimpleName() : "No Engine");
                 return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
             }
@@ -645,19 +696,19 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                     // in some versions of the HttpStatusCode enum.
                     case (429):
                         logger.error("Too many requests to '{}' for {}",
-                                dataFile.getFormattedUrl(), getIdForLogging(dataFile));
+                                loggedUrl, getIdForLogging(dataFile));
                         return AutoUpdateStatus.AUTO_UPDATE_ERR_429_TOO_MANY_ATTEMPTS;
                     case HttpURLConnection.HTTP_NOT_MODIFIED:
                         logger.debug("No data update available from '{}' for {}",
-                                dataFile.getFormattedUrl(), getIdForLogging(dataFile));
+                                loggedUrl, getIdForLogging(dataFile));
                         return AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED;
                     case HttpURLConnection.HTTP_FORBIDDEN:
                         logger.error("Access denied to data update service at '{}' for {}",
-                                dataFile.getFormattedUrl(), getIdForLogging(dataFile));
+                                loggedUrl, getIdForLogging(dataFile));
                         return AutoUpdateStatus.AUTO_UPDATE_ERR_403_FORBIDDEN;
                     default:
                         logger.error("HTTP status code '{}' from data update service at '{}' for {}",
-                                connection.getResponseCode(), dataFile.getFormattedUrl(),
+                                connection.getResponseCode(), loggedUrl,
                                 getIdForLogging(dataFile));
                         return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
                 }
@@ -665,7 +716,9 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 connection.disconnect();
             }
         } catch (Exception e) {
-            logger.error("Error while processing data file download", e);
+            // An HTTP library's exception often names the URL it requested.
+            logger.error("Error while processing data file download",
+                    LicenseKeyMask.maskIn(e, licenseKeys));
             return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
         }
     }

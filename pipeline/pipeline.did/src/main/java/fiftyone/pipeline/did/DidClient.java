@@ -940,7 +940,11 @@ public final class DidClient {
         }
     }
 
-    /** The typed result a redeem answer carries. */
+    /**
+     * The typed result a redeem answer carries. The request sent the
+     * licence key, and the answer can name it, so the messages of the
+     * errors show the key masked.
+     */
     private RedeemResult readRedeem(HttpTransport.Response response) {
         int status = response.getStatusCode();
         JSONObject json = asObject(response.getBody());
@@ -949,21 +953,22 @@ public final class DidClient {
             case 503:
                 if (json == null) {
                     throw new CompletionException(
-                        httpError("Redemption", response));
+                        httpError("Redemption", response, licenceKey));
                 }
                 return RedeemResult.parse(status, json, response.getBody());
             case 400:
                 if (json != null && json.has("errors")) {
-                    throw new IllegalArgumentException(errorsText(json));
+                    throw new IllegalArgumentException(
+                        maskLicence(errorsText(json), licenceKey));
                 }
                 throw new CompletionException(
-                    httpError("Redemption", response));
+                    httpError("Redemption", response, licenceKey));
             case 404:
                 throw new CompletionException(new DidNotSupportedException(
                     endpoint, response.getBody()));
             default:
                 throw new CompletionException(
-                    httpError("Redemption", response));
+                    httpError("Redemption", response, licenceKey));
         }
     }
 
@@ -1045,11 +1050,52 @@ public final class DidClient {
 
     private static DidHttpException httpError(
             String what, HttpTransport.Response response) {
+        return httpError(what, response, null);
+    }
+
+    /**
+     * An error whose message summarises the body, with the licence key the
+     * request sent masked in it.
+     */
+    private static DidHttpException httpError(
+            String what, HttpTransport.Response response, String licence) {
         String body = response.getBody();
-        String summary = body.length() > 200 ? body.substring(0, 200) : body;
+        String masked = maskLicence(body, licence);
+        String summary = masked.length() > 200 ?
+            masked.substring(0, 200) :
+            masked;
         return new DidHttpException(
             what + " answered HTTP " + response.getStatusCode() + ": "
             + summary, response.getStatusCode(), body);
+    }
+
+    /**
+     * The text with the licence key shown only by its last 4 characters,
+     * every character before them replaced by '*', or replaced in full when
+     * it has 4 characters or fewer. This is how every 51Degrees package
+     * writes a licence key in a message, and it matches
+     * fiftyone.pipeline.util.LicenseKeyMask, which this package cannot use
+     * because it depends on nothing in the Pipeline.
+     */
+    private static String maskLicence(String text, String licence) {
+        if (text == null || licence == null || licence.isEmpty()) {
+            return text;
+        }
+        String result = text.replace(licence, maskKey(licence));
+        String encoded = encode(licence);
+        if (encoded.equals(licence) == false) {
+            result = result.replace(encoded, maskKey(encoded));
+        }
+        return result;
+    }
+
+    private static String maskKey(String key) {
+        int hidden = key.length() > 4 ? key.length() - 4 : key.length();
+        StringBuilder masked = new StringBuilder(key.length());
+        for (int i = 0; i < hidden; i++) {
+            masked.append('*');
+        }
+        return masked.append(key, hidden, key.length()).toString();
     }
 
     /** The body as a JSON object, or null when it is not one. */
