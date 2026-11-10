@@ -226,11 +226,11 @@ public abstract class OnPremiseAspectEngineBuilderBase<
             throw new RuntimeException(
                 "The data update service does not exist but is " +
                     "needed for " + features + ". " +
-                    "This can be corrected by passing an DataUpdateService " +
+                    "This can be corrected by passing a DataUpdateService " +
                     "instance to the engine builder constructor. " +
                     "If building from configuration, this can be corrected " +
-                    "by adding an DataUpdateService instance to the " +
-                    "the pipeline builder via addService() method.");
+                    "by adding a DataUpdateService instance to the " +
+                    "pipeline builder via addService() method.");
         }
         if (isLicenseKeyRequired(dataFileConfig) &&
             hasLicenseKey(dataFileConfig) == false) {
