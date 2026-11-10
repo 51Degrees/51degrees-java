@@ -93,11 +93,11 @@ public interface FiftyOneJSServiceCore {
          * @param clientsidePropertyServiceCore used to get the JavaScript to
          *                                      add to the returned file
          * @param enabled true if the service should be enabled
-         * @param javaScriptPath the end of the request path that the
+         * @param javaScriptPath the path inside the application that the
          *                       JavaScript is served for, or null or empty
          *                       for the default
-         * @param jsonPath the end of the request path that the JSON is
-         *                 served for, or null or empty for the default
+         * @param jsonPath the path inside the application that the JSON
+         *                 is served for, or null or empty for the default
          */
         public Default(
             ClientsidePropertyServiceCore clientsidePropertyServiceCore,
@@ -116,11 +116,11 @@ public interface FiftyOneJSServiceCore {
 
         /**
          * Set the paths the JavaScript and the JSON are served from.
-         * @param javaScriptPath the end of the request path that the
+         * @param javaScriptPath the path inside the application that the
          *                       JavaScript is served for, or null or empty
          *                       for the default
-         * @param jsonPath the end of the request path that the JSON is
-         *                 served for, or null or empty for the default
+         * @param jsonPath the path inside the application that the JSON
+         *                 is served for, or null or empty for the default
          */
         public void setPaths(String javaScriptPath, String jsonPath) {
             this.javaScriptPath = orDefault(javaScriptPath, CORE_JS_NAME);
@@ -132,12 +132,34 @@ public interface FiftyOneJSServiceCore {
             HttpServletRequest request,
             HttpServletResponse response) throws IOException {
             boolean result = false;
-            if (request.getRequestURL().toString().toLowerCase()
-                .endsWith(javaScriptPath.toLowerCase())) {
+            if (matches(request, javaScriptPath)) {
                 serveCoreJS(request, response);
                 result = true;
             }
             return result;
+        }
+
+        /**
+         * Whether the request is for the path. The path is compared with
+         * the whole path of the request inside the application, after the
+         * context path, ignoring case and with or without a leading slash.
+         */
+        private static boolean matches(
+            HttpServletRequest request,
+            String path) {
+            String requested = request.getRequestURI();
+            if (requested == null) {
+                return false;
+            }
+            String contextPath = request.getContextPath();
+            if (contextPath != null && requested.startsWith(contextPath)) {
+                requested = requested.substring(contextPath.length());
+            }
+            return withSlash(requested).equalsIgnoreCase(withSlash(path));
+        }
+
+        private static String withSlash(String path) {
+            return path.startsWith("/") ? path : "/" + path;
         }
 
         private void serveCoreJS(
@@ -161,9 +183,8 @@ public interface FiftyOneJSServiceCore {
 
 
             boolean result = false;
-            String uri = request.getRequestURI().toString().toLowerCase();
-            if (uri.endsWith(jsonPath.toLowerCase()) ||
-                uri.endsWith(CORE_JSON_NAME.toLowerCase())) {
+            if (matches(request, jsonPath) ||
+                matches(request, CORE_JSON_NAME)) {
                 serveCoreJson(request, response);
                 result = true;
             }
