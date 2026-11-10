@@ -98,6 +98,41 @@ public class LicenseKeyMaskTests {
         assertTrue(masked, masked.endsWith("9876"));
     }
 
+    /**
+     * A key whose last characters are encoded in a URL shows the same last
+     * 4 characters as its plain form, encoded, rather than the last 4
+     * characters of its encoded form.
+     */
+    @Test
+    public void maskIn_EncodedKeyShowsThePlainLast4() {
+        String key = "ABCDEFGHIJKLMNOPQRST12+=";
+        String url = "https://example.test/?license=" +
+            "ABCDEFGHIJKLMNOPQRST12%2B%3D";
+
+        String masked = LicenseKeyMask.maskIn(url, Collections.singletonList(key));
+
+        assertEquals(
+            "https://example.test/?license=********************12%2B%3D",
+            masked);
+    }
+
+    /**
+     * A key encoded with lower case hexadecimal digits, as some libraries
+     * write them, is masked as well.
+     */
+    @Test
+    public void maskIn_MasksAKeyEncodedInLowerCase() {
+        String key = "ABCDEFGHIJKLMNOPQRST12+=";
+        String url = "https://example.test/?license=" +
+            "ABCDEFGHIJKLMNOPQRST12%2b%3d";
+
+        String masked = LicenseKeyMask.maskIn(url, Collections.singletonList(key));
+
+        assertEquals(
+            "https://example.test/?license=********************12%2b%3d",
+            masked);
+    }
+
     @Test
     public void maskIn_LeavesTextWithoutAKeyAlone() {
         String text = "No key here.";

@@ -151,6 +151,35 @@ public class DataUpdateServiceLicenseKeyTests {
         assertLogsMaskedKeys();
     }
 
+    /**
+     * A key typed straight into the data update URL, rather than given as
+     * a data update license key, is masked too.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void KeyTypedIntoTheUrl_LogsMaskedKey() throws IOException {
+        DataFileConfiguration config = new DataFileConfigurationDefault();
+        config.setDataUpdateUrl(UPDATE_URL + "?LicenseKeys=" + KEY +
+            "&Download=True&Type=HashV41");
+        config.setVerifyModifiedSince(false);
+        config.setFileSystemWatcherEnabled(false);
+        config.setAutomaticUpdatesEnabled(false);
+        AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
+        file.setConfiguration(config);
+        OnPremiseAspectEngine<? extends AspectData,
+            ? extends AspectPropertyMetaData> typed =
+            mock(OnPremiseAspectEngine.class);
+        when(typed.getDataFileMetaData()).thenReturn(file);
+        when(connection.getResponseCode())
+            .thenReturn(HttpURLConnection.HTTP_FORBIDDEN);
+
+        service.checkForUpdate(typed);
+
+        String logged = logged();
+        assertFalse(logged, logged.contains(KEY));
+        assertTrue(logged, logged.contains(MASKED));
+    }
+
     private void assertLogsMaskedKeys() {
         service.checkForUpdate(engine);
 
