@@ -54,8 +54,14 @@ public class FiftyOneInterceptorConfigDefault implements FiftyOneInterceptorConf
      * Set how many seconds a browser may keep the client-side JavaScript or
      * JSON before it asks again, the max-age of their Cache-Control header.
      * @param seconds the max-age, 0 or more
+     * @throws IllegalArgumentException if seconds is negative
      */
     public void setClientsideCacheMaxAge(int seconds) {
+        if (seconds < 0) {
+            throw new IllegalArgumentException(
+                "The max-age of the client-side responses cannot be " +
+                    "negative, and was " + seconds + ".");
+        }
         this.clientsideCacheMaxAge = seconds;
     }
 

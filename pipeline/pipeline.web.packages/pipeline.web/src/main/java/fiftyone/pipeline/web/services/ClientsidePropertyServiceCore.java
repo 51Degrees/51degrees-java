@@ -250,6 +250,41 @@ public interface ClientsidePropertyServiceCore {
             Collection<FlowError> errors = flowData.getErrors();
             boolean failed = errors != null && errors.isEmpty() == false;
 
+            // A Pipeline without the builder for this endpoint is a
+            // configuration error, so it is reported before a matching
+            // If-None-Match could answer 304.
+            JavaScriptBuilderElement jsElement = null;
+            JsonBuilderElement jsonElement = null;
+            switch (contentType) {
+                case JavaScript:
+                    jsElement = flowData.getPipeline().getElement(JavaScriptBuilderElement.class);
+                    if (jsElement == null) {
+                        throw new PipelineConfigurationException(
+                            "Client-side JavaScript has been requested from " +
+                                "the Pipeline. However, the JavaScriptBuilderElement " +
+                                "is not present. To resolve this error, " +
+                                "either disable client-side evidence or ensure " +
+                                "the JavaScriptBuilderElement is added to " +
+                                "your Pipeline.");
+                    }
+                    break;
+                case Json:
+                    jsonElement = flowData.getPipeline().getElement(JsonBuilderElement.class);
+                    if (jsonElement == null) {
+                        throw new PipelineConfigurationException(
+                            "JSON data has been requested from the Pipeline. " +
+                                "However, the JsonBuilderElement is not " +
+                                "present. To resolve this error, either " +
+                                "disable client-side evidence or ensure " +
+                                "the JsonBuilderElement is added to your " +
+                                "Pipeline."
+                        );
+                    }
+                    break;
+                default:
+                    break;
+            }
+
             if (ifNoneMatchMatches(
                 request.getHeaders("If-None-Match"),
                 etag)) {
@@ -269,31 +304,10 @@ public interface ClientsidePropertyServiceCore {
                 String content = null;
                 switch (contentType) {
                     case JavaScript:
-                        JavaScriptBuilderElement jsElement = flowData.getPipeline().getElement(JavaScriptBuilderElement.class);
-                        if (jsElement == null) {
-                            throw new PipelineConfigurationException(
-                                "Client-side JavaScript has been requested from " +
-                                    "the Pipeline. However, the JavaScriptBuilderElement " +
-                                    "is not present. To resolve this error, " +
-                                    "either disable client-side evidence or ensure " +
-                                    "the JavaScriptBuilderElement is added to " +
-                                    "your Pipeline.");
-                        }
                         JavaScriptBuilderData jsData = flowData.getFromElement(jsElement);
                         content = jsData == null ? null : jsData.getJavaScript();
                         break;
                     case Json:
-                        JsonBuilderElement jsonElement = flowData.getPipeline().getElement(JsonBuilderElement.class);
-                        if (jsonElement == null) {
-                            throw new PipelineConfigurationException(
-                                "JSON data has been requested from the Pipeline. " +
-                                    "However, the JsonBuilderElement is not " +
-                                    "present. To resolve this error, either " +
-                                    "disable client-side evidence or ensure " +
-                                    "the JsonBuilderElement is added to your " +
-                                    "Pipeline."
-                            );
-                        }
                         JsonBuilderData jsonData = flowData.getFromElement(jsonElement);
                         content = jsonData == null ? null : jsonData.getJson();
                         break;
@@ -548,7 +562,11 @@ public interface ClientsidePropertyServiceCore {
             HttpServletResponse response,
             String etag,
             boolean failed) {
-            response.setHeader("Vary", stringJoin(headersAffectingJavaScript, ","));
+            // Where no header affects the response there is no Vary header,
+            // rather than an empty one.
+            if (headersAffectingJavaScript.isEmpty() == false) {
+                response.setHeader("Vary", stringJoin(headersAffectingJavaScript, ","));
+            }
             if (failed) {
                 response.setHeader("Cache-Control", FAILED_CACHE_CONTROL);
             } else {
