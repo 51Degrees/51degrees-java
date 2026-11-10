@@ -40,6 +40,10 @@ public class Constants {
 
         public static final String ExceptionCloudError =
             "Error returned from 51Degrees cloud service: %s";
+
+        public static final String ExceptionResponseNotJson =
+            "Cloud service returned status code '%d' with content that is " +
+            "not JSON";
         
         public static final String ExceptionFailedToLoadProperties = 
                 "Failed to load aspect properties for element '%s'. This is "

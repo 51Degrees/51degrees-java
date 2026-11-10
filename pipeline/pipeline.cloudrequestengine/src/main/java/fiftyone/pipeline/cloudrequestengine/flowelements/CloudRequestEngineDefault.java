@@ -38,6 +38,7 @@ import fiftyone.pipeline.engines.flowelements.AspectEngineBase;
 import fiftyone.pipeline.engines.services.HttpClient;
 import fiftyone.pipeline.exceptions.AggregateException;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
@@ -743,7 +744,19 @@ public class CloudRequestEngineDefault
         List<String> messages = new ArrayList<>();
 
         if (hasData && checkForErrorMessages) {
-            JSONObject jObj = new JSONObject(jsonResult);
+            JSONObject jObj;
+            try {
+                jObj = new JSONObject(jsonResult);
+            } catch (JSONException e) {
+                // The status says whether the failure is definitive, so it
+                // is kept when the body cannot be read.
+                CloudRequestException error = new CloudRequestException(
+                    String.format(ExceptionResponseNotJson, code),
+                    code,
+                    connection.getHeaderFields());
+                error.initCause(e);
+                throw error;
+            }
             boolean hasErrors = jObj.keySet().contains("errors");
             hasData = hasErrors ?
                 jObj.keySet().size() > 1 :
