@@ -1,8 +1,9 @@
 # Copies the Surefire reports of every module below Path into Destination.
 #
-# common-ci's Java scripts only look one folder down for modules, which finds
-# the modules of a single package tree but not those of this repository, where
-# each tree is a folder of its own and the examples are a folder further down.
+# common-ci's Java scripts copy the reports of the one Maven run they make. The
+# integration and performance tests here make several runs, each in a tree of
+# its own and each reporting into the same folder, so those two scripts copy
+# the reports themselves. The unit tests are one run, which common-ci makes.
 param (
     [Parameter(Mandatory)][string]$Path,
     [Parameter(Mandatory)][string]$Destination,

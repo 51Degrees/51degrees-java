@@ -43,6 +43,8 @@ import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
+import org.slf4j.ILoggerFactory;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -104,6 +106,66 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
                                         string.contains("User-Agent=" + userAgent); // content contains user agent
                             }));
         }
+    }
+
+    /**
+     * The cloud answers a refused license key with an error that names it.
+     * The exception the engine raises, and every log entry, show the key
+     * only by its last 4 characters.
+     */
+    @Test
+    public void Process_LicenseKeyInCloudError_Masked() throws Exception {
+        final String licenseKey = "TESTKEYNOTREALABCDEFGHIJ1234";
+        final String masked = "************************1234";
+        jsonResponse = "{\"errors\":[\"Invalid license key(s) supplied: " +
+            licenseKey + "\"]}";
+        configureMockedClient();
+        Logger logger = mock(Logger.class);
+        when(logger.isDebugEnabled()).thenReturn(true);
+        when(logger.isInfoEnabled()).thenReturn(true);
+        when(logger.isWarnEnabled()).thenReturn(true);
+        when(logger.isErrorEnabled()).thenReturn(true);
+        ILoggerFactory capturingLoggerFactory = mock(ILoggerFactory.class);
+        when(capturingLoggerFactory.getLogger(anyString())).thenReturn(logger);
+
+        CloudRequestEngine engine = new CloudRequestEngineBuilder(
+                capturingLoggerFactory, httpClient)
+                .setResourceKey("resource_key")
+                .setLicenseKey(licenseKey)
+                .build();
+
+        try (Pipeline pipeline = new PipelineBuilder(capturingLoggerFactory)
+                .setSuppressProcessException(true)
+                .addFlowElement(engine)
+                .build();
+             FlowData data = pipeline.createFlowData()) {
+            data.addEvidence("query.User-Agent", "iPhone");
+            data.process();
+
+            assertFalse(data.getErrors().isEmpty());
+            StringBuilder reported = new StringBuilder();
+            for (FlowError error : data.getErrors()) {
+                reported.append(printed(error.getThrowable()));
+            }
+            for (org.mockito.invocation.Invocation invocation :
+                    mockingDetails(logger).getInvocations()) {
+                for (Object argument : invocation.getArguments()) {
+                    reported.append(argument instanceof Throwable ?
+                            printed((Throwable) argument) :
+                            String.valueOf(argument));
+                }
+            }
+            assertFalse(reported.toString().contains(licenseKey),
+                    reported.toString());
+            assertTrue(reported.toString().contains(masked),
+                    reported.toString());
+        }
+    }
+
+    private static String printed(Throwable throwable) {
+        java.io.StringWriter text = new java.io.StringWriter();
+        throwable.printStackTrace(new java.io.PrintWriter(text));
+        return text.toString();
     }
 
     /**

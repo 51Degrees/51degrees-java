@@ -72,16 +72,11 @@ public abstract class PropertyKeyedCloudEngineBase<
     	
         // Extract data from json to the aspectData instance.
         JSONObject map = new JSONObject(json);
-        // Load the property meta-data, which finds whether the resource key
-        // includes this engine's product.
-        getProperties();
         // Access the data relating to this engine.
         JSONObject propertyKeyed = getElementJson(map);
-        // Access the 'Profiles' property. The response holds none for a
-        // product the resource key does not include.
-        JSONArray profiles = isProductMissing() ?
-            propertyKeyed.optJSONArray("profiles") :
-            propertyKeyed.getJSONArray("profiles");
+        // Access the 'Profiles' property. A response without it, as for a
+        // product the resource key does not include, gives no profiles.
+        JSONArray profiles = propertyKeyed.optJSONArray("profiles");
         if (profiles == null) {
             return;
         }
