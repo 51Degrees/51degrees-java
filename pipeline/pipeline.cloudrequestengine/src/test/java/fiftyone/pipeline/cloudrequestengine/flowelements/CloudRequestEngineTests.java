@@ -325,14 +325,11 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
     }
 
     /**
-     * Test cloud request engine handles errors from the cloud service
-     * as expected.
-     * An AggregateException should be thrown by the cloud request engine
-     * containing the errors from the cloud service
-     * and the pipeline is configured to throw any exceptions up
-     * the stack in an AggregateException.
-     * We also check that the exception message includes the content
-     * from the JSON response.
+     * Errors from the cloud service when the engine is built. A 4xx answer
+     * is a definitive configuration error, which fails the build with a
+     * CloudRequestException that carries the cloud's message. Any other
+     * answer that holds errors is logged as one warning, the build
+     * completes, and the accessible properties are unknown until a retry.
      */
     @ParameterizedTest(name = "response code {1} - {0}")
     @MethodSource("getValidateErrorArgs")
@@ -346,24 +343,33 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
 
         configureMockedClient();
 
-        Exception exception = null;
-
-        try {
-            new CloudRequestEngineBuilder(loggerFactory, httpClient)
-                    .setResourceKey(resourceKey)
-                    .build()
-                    .getPublicProperties();
-        } catch (Exception ex) {
-            exception = ex;
+        if (responseCode >= 400 && responseCode < 500) {
+            CloudRequestException cloudEx = assertThrows(
+                    CloudRequestException.class,
+                    () -> new CloudRequestEngineBuilder(loggerFactory, httpClient)
+                            .setResourceKey(resourceKey)
+                            .build());
+            assertEquals(responseCode, cloudEx.getHttpStatusCode());
+            if (includeMessage) {
+                assertTrue(cloudEx.getMessage().contains(errorMessage),
+                        "Exception message did not contain the expected text.");
+            }
+        } else {
+            CloudRequestEngine engine =
+                    new CloudRequestEngineBuilder(loggerFactory, httpClient)
+                            .setResourceKey(resourceKey)
+                            .build();
+            assertNull(engine.getPublicProperties());
+            assertEquals(1, warningCount());
         }
+    }
 
-        assertNotNull(exception, "Expected exception to occur");
-        assertTrue(exception instanceof CloudRequestException);
-        CloudRequestException cloudEx = (CloudRequestException) exception;
-        if (includeMessage) {
-            assertTrue(cloudEx.getMessage().contains(errorMessage),
-                    "Exception message did not contain the expected text.");
+    private int warningCount() {
+        int count = 0;
+        for (TestLogger logger : loggerFactory.loggers) {
+            count += logger.warningsLogged.size();
         }
+        return count;
     }
 
     private static Stream<Arguments> getPrecidenceArgs() {
@@ -718,22 +724,22 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
     }
 
     /**
-     * Verify that PropertyNotLoadedException is thrown on getPublicProperties if remote server is unavailable
+     * An unreachable server when the engine is built is a failure that can
+     * pass. The build completes with one warning, and the accessible
+     * properties are unknown until processing fetches them.
      */
     @Test
-    public void getPublicProperties_Throw_Exception_When_Server_Unavailable() throws IOException {
+    public void getPublicProperties_Server_Unavailable_At_Build() throws Exception {
         final String resourceKey = "resource_key";
         configureFailingMockClient();
-        try {
-            new CloudRequestEngineBuilder(loggerFactory, httpClient)
-                    .setResourceKey(resourceKey)
-                    .build()
-                    .getPublicProperties();
 
-            fail("Expected exception was not thrown");
-        } catch (Exception e) {
-            assertInstanceOf(PropertyNotLoadedException.class, e);
-        }
+        CloudRequestEngine engine =
+                new CloudRequestEngineBuilder(loggerFactory, httpClient)
+                        .setResourceKey(resourceKey)
+                        .build();
+
+        assertNull(engine.getPublicProperties());
+        assertEquals(1, warningCount());
     }
 
     /**
@@ -751,21 +757,23 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
     }
 
     /**
-     * Verify that PropertyNotLoadedException is thrown on getEvidenceKeyFilter if remote server is unavailable
+     * An unreachable server when the engine is built leaves the accepted
+     * Evidence empty, rather than failing whatever reads it, until
+     * processing fetches it.
      */
     @Test
-    public void getEvidenceKeyFilter_Throw_Exception_When_Server_Unavailable() throws IOException {
+    public void getEvidenceKeyFilter_Server_Unavailable_At_Build() throws Exception {
         final String resourceKey = "resource_key";
         configureFailingMockClient();
-        try {
-            new CloudRequestEngineBuilder(loggerFactory, httpClient)
-                    .setResourceKey(resourceKey)
-                    .build()
-                    .getEvidenceKeyFilter();
 
-            fail("Expected exception was not thrown");
-        } catch (Exception e) {
-            assertInstanceOf(PropertyNotLoadedException.class, e);
-        }
+        EvidenceKeyFilter filter =
+                new CloudRequestEngineBuilder(loggerFactory, httpClient)
+                        .setResourceKey(resourceKey)
+                        .build()
+                        .getEvidenceKeyFilter();
+
+        assertNotNull(filter);
+        assertFalse(filter.include("query.User-Agent"));
+        assertEquals(1, warningCount());
     }
 }

@@ -25,6 +25,7 @@ package fiftyone.pipeline.cloudrequestengine.flowelements;
 
 import fiftyone.pipeline.annotations.DefaultValue;
 import fiftyone.pipeline.annotations.ElementBuilder;
+import fiftyone.pipeline.cloudrequestengine.CloudDiscoveryState;
 import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
@@ -56,6 +57,8 @@ public class CloudRequestEngineBuilder extends
     private String licenseKey = null;
     private String cloudRequestOrigin = null;
     private int timeoutMillis = Constants.DEFAULT_TIMEOUT_MILLIS;
+    private CloudDiscoveryState discoveryState = null;
+    private CloudRequestEngineDefault built = null;
     
     // Function to get environment variable value. This enable testable code.
     private Function<String, String> getEnvVar = (name) -> {
@@ -98,7 +101,7 @@ public class CloudRequestEngineBuilder extends
         	}
         }
         
-        return new CloudRequestEngineDefault(
+        CloudRequestEngineDefault engine = new CloudRequestEngineDefault(
             loggerFactory.getLogger(CloudRequestEngine.class.getName()),
             new CloudRequestDataFactory(loggerFactory),
             httpClient,
@@ -109,6 +112,43 @@ public class CloudRequestEngineBuilder extends
             evidenceKeysEndpoint,
                 timeoutMillis,
             cloudRequestOrigin);
+        if (discoveryState != null) {
+            engine.useDiscoveryState(discoveryState);
+        }
+        else {
+            // Fetch the accessible properties and the accepted evidence
+            // keys now, so that the built engine is ready. A 4xx answer
+            // fails the build, and any other failure is retried on first
+            // use.
+            engine.discover();
+        }
+        built = engine;
+        return engine;
+    }
+
+    /**
+     * Build the engine from a copy of what an earlier engine discovered for
+     * the same resource key, so that the build makes no discovery request.
+     * The copy comes from {@link #getDiscoveryState()} after a successful
+     * build, and can be kept with {@link CloudDiscoveryState#toJson()}.
+     * @param state the copy, or null to discover when building
+     * @return this builder
+     */
+    public CloudRequestEngineBuilder setDiscoveryState(
+        CloudDiscoveryState state) {
+        this.discoveryState = state;
+        return this;
+    }
+
+    /**
+     * A copy of what the engine this builder last built discovered, to give
+     * to a later build with {@link #setDiscoveryState(CloudDiscoveryState)}.
+     * @return the copy, or null if no engine has been built or it does not
+     * yet know both the accepted evidence keys and the accessible properties
+     */
+    public CloudDiscoveryState getDiscoveryState() {
+        CloudRequestEngineDefault engine = built;
+        return engine == null ? null : engine.getDiscoveryState();
     }
     
     private String getEnvironmentVariable(String name) {
@@ -207,9 +247,10 @@ public class CloudRequestEngineBuilder extends
     }
 
     /**
-     * Timeout in seconds for the request to the endpoint.
+     * Timeout in seconds for each request to the cloud service, the two
+     * discovery requests when the engine is built and each data request.
      * <p>
-     * Default value is 100 seconds
+     * Default value is 2 seconds
      * @param timeout in seconds
      * @return this builder
      */

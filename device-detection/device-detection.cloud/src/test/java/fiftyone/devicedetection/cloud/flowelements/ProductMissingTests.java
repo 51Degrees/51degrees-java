@@ -135,6 +135,39 @@ public class ProductMissingTests {
     }
 
     /**
+     * After a failure at build that can pass, the Cloud Request Engine does
+     * not know the accessible products yet. The engine builds without
+     * logging anything, and reads its metadata once the products are known
+     * rather than keeping none.
+     */
+    @Test
+    public void DiscoveryNotComplete_LoadsTheMetadataLater() throws Exception {
+        ProductMetaData product = new ProductMetaData();
+        product.dataTier = "test";
+        product.properties = Arrays.asList(
+            new PropertyMetaData("hardwarevendor", "String", "cat", null));
+        Map<String, ProductMetaData> products = new HashMap<>();
+        products.put("device", product);
+        CloudRequestEngine requestEngine = mock(CloudRequestEngine.class);
+        when(requestEngine.getPublicProperties())
+            .thenReturn(null)
+            .thenReturn(products);
+        Pipeline pipeline = mock(Pipeline.class);
+        when(pipeline.getElement(CloudRequestEngine.class))
+            .thenReturn(requestEngine);
+
+        try (DeviceDetectionCloudEngine engine =
+            new DeviceDetectionCloudEngineBuilder(loggerFactory).build()) {
+            engine.addPipeline(pipeline);
+            List<String> logged = warningsAndErrors();
+            assertEquals(logged.toString(), 0, logged.size());
+
+            assertEquals(1, engine.getProperties().size());
+            assertEquals("hardwarevendor", engine.getProperties().get(0).getName());
+        }
+    }
+
+    /**
      * An engine whose Cloud Request Engine reports one product, holding
      * one string property.
      */

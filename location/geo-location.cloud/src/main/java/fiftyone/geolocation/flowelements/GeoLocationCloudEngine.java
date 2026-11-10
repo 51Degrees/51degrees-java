@@ -47,15 +47,44 @@ import org.json.JSONArray;
 public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> {
 
     private CloudRequestEngine cloudRequestEngine = null;
-    private List<AspectPropertyMetaData> properties;
+    private volatile List<AspectPropertyMetaData> properties;
+    private final Object metadataLock = new Object();
     private String dataSourceTier;
     private String elementDataKey;
     private EvidenceKeyFilter evidenceKeyFilter = new EvidenceKeyFilterWhitelist(Collections.emptyList());
     private String dataProviderPrefix;
 
+    /**
+     * The property metadata, from the products the Cloud Request Engine
+     * reports. Until they are known, after a failure at build that can
+     * pass, this is empty and is read again on the next call.
+     * @return the property metadata
+     */
     @Override
     public List<AspectPropertyMetaData> getProperties() {
-        return properties;
+        List<AspectPropertyMetaData> loaded = properties;
+        if (loaded == null && cloudRequestEngine != null) {
+            synchronized (metadataLock) {
+                if (properties == null) {
+                    loadAspectProperties(cloudRequestEngine);
+                }
+                loaded = properties;
+            }
+        }
+        return loaded == null ?
+            new ArrayList<AspectPropertyMetaData>() :
+            loaded;
+    }
+
+    /**
+     * Whether the property metadata is loaded, which reads it if the Cloud
+     * Request Engine now knows the accessible properties.
+     * @return true once the property metadata is loaded
+     */
+    @Override
+    public boolean hasLoadedProperties() {
+        getProperties();
+        return properties != null;
     }
 
     @Override
@@ -167,9 +196,10 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
         if (cloudRequestEngine == null) {
             cloudRequestEngine = pipeline.getElement(CloudRequestEngine.class);
             if (cloudRequestEngine != null) {
-                if (loadAspectProperties(cloudRequestEngine) == false) {
-                    logger.error("Failed to load aspect properties");
-                }
+                // The products are not known after a failure at build that
+                // can pass, which the Cloud Request Engine has logged.
+                // getProperties reads them once they are.
+                loadAspectProperties(cloudRequestEngine);
             }
 
         }
@@ -181,7 +211,7 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
             findProduct(engine.getPublicProperties());
 
         if (product != null) {
-            properties = new ArrayList<>();
+            List<AspectPropertyMetaData> loaded = new ArrayList<>();
             dataSourceTier = product.dataTier;
 
             for (AccessiblePropertyMetaData.PropertyMetaData item : product.properties)
@@ -197,13 +227,12 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
                     item.delayExecution,
                     item.evidenceProperties);
                 
-                properties.add(property);
+                loaded.add(property);
             }
+            properties = loaded;
             return true;
         }
         else {
-            logger.error("Aspect properties could not be loaded for" +
-                " the Location cloud engine", this);
             return false;
         }
     }
