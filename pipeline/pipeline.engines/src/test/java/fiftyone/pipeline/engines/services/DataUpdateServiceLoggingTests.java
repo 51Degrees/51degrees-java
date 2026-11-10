@@ -24,8 +24,10 @@ package fiftyone.pipeline.engines.services;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.classic.spi.ThrowableProxyUtil;
 import ch.qos.logback.core.read.ListAppender;
 import fiftyone.common.wrappers.io.FileWrapperFactoryDefault;
+import fiftyone.pipeline.engines.configuration.DataFileConfiguration;
 import fiftyone.pipeline.engines.configuration.DataFileConfigurationDefault;
 import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectEngineDataFileDefault;
@@ -42,9 +44,11 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -65,6 +69,13 @@ public class DataUpdateServiceLoggingTests {
     private static final String UPDATE_URL = "http://test.com";
     // 13 September 2020, 12:26:40 UTC.
     private static final long FILE_MODIFIED_MILLIS = 1600000000000L;
+    // A license key of the length and characters the Distributor issues.
+    private static final String LICENSE_KEY = "QF8ZR2KD7NMB4XWT9HJC3LPA";
+    private static final String MASKED_KEY = "********************3LPA";
+    private static final String KEYED_URL = UPDATE_URL + "?LicenseKeys=" +
+        LICENSE_KEY + "&Download=True&Type=HashV41";
+    private static final String MASKED_URL = UPDATE_URL + "?LicenseKeys=" +
+        MASKED_KEY + "&Download=True&Type=HashV41";
 
     private ch.qos.logback.classic.Logger logger;
     private ListAppender<ILoggingEvent> appender;
@@ -347,6 +358,39 @@ public class DataUpdateServiceLoggingTests {
         assertStatusWarned(500, "HTTP status code 500");
     }
 
+    /**
+     * The download is written to a temporary file in a folder that does not
+     * exist, so the write fails while the download itself succeeds.
+     */
+    @Test
+    public void TemporaryFileCannotBeWritten_LogsTheWriteError()
+        throws Exception {
+        when(connection.getResponseCode())
+            .thenReturn(HttpURLConnection.HTTP_OK);
+        when(connection.getInputStream())
+            .thenReturn(new ByteArrayInputStream(new byte[]{1, 2, 3}));
+        AspectEngineDataFileDefault file = newDataFile(false, false, false);
+        String missingDirectory = new File(
+            System.getProperty("java.io.tmpdir"),
+            "no-such-directory-" + System.nanoTime()).getAbsolutePath();
+        file.setTempDataDirPath(missingDirectory);
+        // The engine's copy is the data file itself, so the file on disk is
+        // not newer and the update is downloaded.
+        file.setTempDataFilePath(dataFile.getAbsolutePath());
+
+        dataUpdate.checkForUpdate(engine);
+
+        verify(connection).getInputStream();
+        boolean found = false;
+        for (String message : logged(Level.ERROR)) {
+            found |= message.startsWith("An error occurred when writing to " +
+                missingDirectory) && message.contains(". Error detail: ");
+        }
+        assertTrue("No write error in " + logged(Level.ERROR) +
+            ", and the warnings are " + logged(Level.WARN), found);
+        assertTrue(logged(Level.WARN).isEmpty());
+    }
+
     @Test
     public void Md5DoesNotMatch_WarnsAboutIntegrityCheck() throws Exception {
         when(connection.getResponseCode())
@@ -375,5 +419,132 @@ public class DataUpdateServiceLoggingTests {
 
         assertLogged(Level.ERROR, "The data file 'default' is checking for " +
             "updates but does not have a temporary file path configured.");
+    }
+
+    /**
+     * A data file whose formatted URL carries a license key, as the
+     * Distributor's URL does, with every level logged.
+     */
+    private AspectEngineDataFileDefault newKeyedDataFile(boolean inMemory) {
+        logger.setLevel(Level.DEBUG);
+        AspectEngineDataFileDefault file = newDataFile(inMemory, false, false);
+        DataFileConfiguration config = file.getConfiguration();
+        config.setDataUpdateLicenseKeys(
+            Collections.singletonList(LICENSE_KEY));
+        config.setUrlFormatter(dataFile -> KEYED_URL);
+        return file;
+    }
+
+    /**
+     * Fails if any log entry, or any throwable logged with one, holds the
+     * license key in full.
+     */
+    private void assertKeyOnlyMasked() {
+        assertFalse(appender.list.isEmpty());
+        for (ILoggingEvent event : appender.list) {
+            String text = event.getFormattedMessage();
+            if (event.getThrowableProxy() != null) {
+                text += "\n" +
+                    ThrowableProxyUtil.asString(event.getThrowableProxy());
+            }
+            assertFalse(
+                "The license key is in full in: " + text,
+                text.contains(LICENSE_KEY));
+        }
+    }
+
+    @Test
+    public void LicenseKey_NotModified_LogsTheMaskedUrl() throws Exception {
+        when(connection.getResponseCode())
+            .thenReturn(HttpURLConnection.HTTP_NOT_MODIFIED);
+        AspectEngineDataFileDefault file = newKeyedDataFile(false);
+        file.getConfiguration().setVerifyModifiedSince(true);
+
+        dataUpdate.checkForUpdate(engine);
+
+        assertLogged(Level.INFO, "Checking for update from '" + MASKED_URL +
+            "' for Engine '" + engineType + "'");
+        assertLogged(Level.INFO, "No data newer than 2020-09-13T12:26:40Z " +
+            "found at '" + MASKED_URL + "' for Engine '" + engineType + "'");
+        assertKeyOnlyMasked();
+    }
+
+    @Test
+    public void LicenseKey_Downloaded_LogsTheMaskedUrl() throws Exception {
+        when(connection.getResponseCode())
+            .thenReturn(HttpURLConnection.HTTP_OK);
+        when(connection.getInputStream())
+            .thenReturn(new ByteArrayInputStream(new byte[]{1, 2, 3}));
+        newKeyedDataFile(true);
+
+        dataUpdate.checkForUpdate(engine);
+
+        assertLogged(Level.INFO, "Downloaded new data from '" + MASKED_URL +
+            "' for Engine '" + engineType + "'");
+        assertKeyOnlyMasked();
+    }
+
+    /**
+     * An HTTP library's exception often names the URL it requested, so the
+     * error detail and the logged exception are masked too.
+     */
+    @Test
+    public void LicenseKey_ConnectFails_MasksTheUrlAndTheException()
+        throws Exception {
+        when(httpClient.connect(any(URL.class)))
+            .thenThrow(new IOException("Connection refused: " + KEYED_URL));
+        newKeyedDataFile(false);
+
+        dataUpdate.checkForUpdate(engine);
+
+        assertLogged(Level.WARN, "An error occurred when connecting to " +
+            MASKED_URL + " in order to check for data file updates for " +
+            engineType + ". Error detail: Connection refused: " + MASKED_URL);
+        assertKeyOnlyMasked();
+    }
+
+    @Test
+    public void LicenseKey_DownloadFails_MasksTheUrlAndTheException()
+        throws Exception {
+        when(connection.getResponseCode())
+            .thenReturn(HttpURLConnection.HTTP_OK);
+        when(connection.getInputStream())
+            .thenThrow(new IOException("Premature EOF from " + KEYED_URL));
+        newKeyedDataFile(true);
+
+        dataUpdate.checkForUpdate(engine);
+
+        assertLogged(Level.WARN, "An error occurred while downloading a data " +
+            "file update for " + engineType + " from " + MASKED_URL + ". " +
+            "Error detail: Premature EOF from " + MASKED_URL);
+        assertKeyOnlyMasked();
+    }
+
+    @Test
+    public void LicenseKey_Forbidden_LogsTheMaskedUrl() throws Exception {
+        when(connection.getResponseCode())
+            .thenReturn(HttpURLConnection.HTTP_FORBIDDEN);
+        newKeyedDataFile(true);
+
+        dataUpdate.checkForUpdate(engine);
+
+        assertLogged(Level.WARN, "An error occurred while downloading a data " +
+            "file update for " + engineType + " from " + MASKED_URL + ". " +
+            "Error detail: HTTP status code 403 (access denied)");
+        assertKeyOnlyMasked();
+    }
+
+    @Test
+    public void LicenseKey_NoResponse_LogsTheMaskedUrl() throws Exception {
+        when(httpClient.connect(any(URL.class))).thenReturn(null);
+        newKeyedDataFile(false);
+
+        dataUpdate.checkForUpdate(engine);
+
+        assertLogged(Level.WARN, "An error occurred when connecting to " +
+            MASKED_URL + " in order to check for data file updates for " +
+            engineType + ". Error detail: No response from the data update " +
+            "service");
+        assertKeyOnlyMasked();
     }
 }
