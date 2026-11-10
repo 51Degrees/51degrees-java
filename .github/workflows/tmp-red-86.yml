@@ -1,0 +1,86 @@
+name: Red run for 86
+
+on: push
+
+jobs:
+  red:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: c72baac tests on the code of 84
+            ref: c72baaceff8b8eb50ed51afc5ffca2f31d7b1871
+            werror: 'off'
+            modules: pipeline/pipeline.cloudrequestengine,device-detection/device-detection.cloud,ip-intelligence/ip-intelligence.cloud,location/geo-location.cloud
+            tests: CloudRequestEngineDiscoveryTests,CloudRequestEngineTests#validateErrorHandling+getPublicProperties_Server_Unavailable_At_Build+getEvidenceKeyFilter_Server_Unavailable_At_Build,CloudAspectEngineBaseTests#loadProperties_notLoaded,ProductMissingTests#DiscoveryNotComplete_LoadsTheMetadataLater,GeoLocationCloudEngineTests#DiscoveryNotComplete_LoadsTheMetadataLater
+          - name: 4f62134 tests on 4defa2a
+            ref: 4f62134b6d12ed6044fb630abe7aecbde07d5132
+            werror: 'on'
+            modules: pipeline/pipeline.cloudrequestengine
+            tests: CloudRequestEngineDiscoveryTests#Build_MakesBothRequestsAtOnce+Build_DefaultTimeoutIsTwoSeconds,CloudAspectEngineBaseTests#elementAvailableProperties_ReadAgainOnceKnown
+          - name: be26bcf tests on bef79b0
+            ref: be26bcf32d6c5f7429e36a8d2b7791ef066fe542
+            werror: 'off'
+            modules: pipeline/pipeline.engines.fiftyone
+            tests: SetHeadersElementTests#setHeadersElement_ConfigKeptOnceLoaded+setHeadersElement_ConfigBuiltAgainUntilLoaded
+          - name: 408 test of 1e1dae8 on 7bc481c
+            ref: ''
+            werror: 'on'
+            modules: pipeline/pipeline.cloudrequestengine
+            tests: CloudRequestEngineDiscoveryTests#Build_4xx_FailsTheBuild
+          - name: 127b173 test on 1e1dae8
+            ref: 127b173e15c9c97744650b41ec3571bcee03d344
+            werror: 'on'
+            modules: pipeline/pipeline.cloudrequestengine
+            tests: CloudRequestEngineDiscoveryTests#Build_4xxWithBodyNotJson_FailsTheBuild
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref || github.sha }}
+      - name: Show the commit under test
+        run: git log -1 --format='%H %s'
+      - name: Fetch the submodules the Java build reads
+        run: >-
+          git submodule update --init --depth 1
+          pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates
+          pipeline/owid-java
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Treat compiler warnings as warnings
+        if: matrix.werror == 'off'
+        run: sed -i '/<arg>-Werror<\/arg>/d' pipeline/pom.xml device-detection/pom.xml ip-intelligence/pom.xml
+      - name: Build
+        run: mvn -B -ntp -pl "${{ matrix.modules }}" -am install -DskipTests
+      - name: Run the tests
+        run: >-
+          mvn -B -ntp -pl "${{ matrix.modules }}" surefire:test
+          "-Dtest=${{ matrix.tests }}"
+          -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false
+          -Dmaven.test.failure.ignore=true
+      - name: Report each test
+        shell: python3 {0}
+        run: |
+          import glob, sys, xml.etree.ElementTree as ET
+          failed = 0
+          paths = sorted(glob.glob('**/target/surefire-reports/TEST-*.xml', recursive=True))
+          for path in paths:
+              for case in ET.parse(path).getroot().iter('testcase'):
+                  name = '%s#%s' % (case.get('classname'), case.get('name'))
+                  problem = case.find('failure')
+                  if problem is None:
+                      problem = case.find('error')
+                  if problem is not None:
+                      failed += 1
+                      lines = (problem.get('message') or '').strip().splitlines()
+                      print('RED-FAILED  %s  %s: %s' % (name, problem.get('type'), lines[0] if lines else ''))
+                  elif case.find('skipped') is not None:
+                      print('RED-SKIPPED %s' % name)
+                  else:
+                      print('RED-PASSED  %s' % name)
+          print('RED-SUMMARY %d reports, %d failed' % (len(paths), failed))
+          sys.exit(1 if failed else 0)
