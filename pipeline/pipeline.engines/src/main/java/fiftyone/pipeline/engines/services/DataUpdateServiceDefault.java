@@ -832,6 +832,10 @@ public class DataUpdateServiceDefault implements DataUpdateService {
      * {@link GZIPInputStream}, so the JDK's concatenated-gzip-member
      * decoder behaves correctly on top of {@link HttpURLConnection} on
      * every JDK from 7 upwards. See that method for the gory details.
+     * <p>
+     * A failure reading the download is thrown, for the caller to report.
+     * A failure writing {@code tempFile} is logged here as the
+     * specification's write error.
      */
     private AutoUpdateStatus downloadOkResponse(
             HttpURLConnection connection,
@@ -858,7 +862,18 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             src = new GZIPInputStream(src);
         }
 
-        writeBodyTo(tempFile, src);
+        ReadFailureRecorder body = new ReadFailureRecorder(src);
+        try {
+            writeBodyTo(tempFile, body);
+        } catch (IOException e) {
+            if (body.readFailed) {
+                // The download failed, which the caller reports.
+                throw e;
+            }
+            logger.error("An error occurred when writing to " +
+                    tempFile.getPath() + ". Error detail: " + e.getMessage(), e);
+            return AutoUpdateStatus.AUTO_UPDATE_ERR_READING_STREAM;
+        }
 
         if (verifyMd5 && !md5Matches(md, connection)) {
             logger.warn("An error occurred during the integrity check of new " +
@@ -901,6 +916,38 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             }
         };
         return new BufferedInputStream(lying);
+    }
+
+    /**
+     * Records whether a read of the download failed, so that a failure to
+     * write the temporary file can be told from a failure to download.
+     */
+    private static final class ReadFailureRecorder extends FilterInputStream {
+        private boolean readFailed;
+
+        ReadFailureRecorder(InputStream in) {
+            super(in);
+        }
+
+        @Override
+        public int read() throws IOException {
+            try {
+                return super.read();
+            } catch (IOException e) {
+                readFailed = true;
+                throw e;
+            }
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+            try {
+                return super.read(b, off, len);
+            } catch (IOException e) {
+                readFailed = true;
+                throw e;
+            }
+        }
     }
 
     private void writeBodyTo(FileWrapper tempFile, InputStream body) throws IOException {
