@@ -37,13 +37,19 @@ $script:DigitInitialPattern = [regex]::new(
 # list dash, which is how a workflow declares one as a key in an env: block
 # and how a readme lists one.
 #
+# The env token is matched on its own, in any case and with a following
+# backslash allowed, because PowerShell braces a name as well as prefixing
+# it, reads one through the Env: drive, and because the pipeline config
+# lookup and a workflow expression both brace one too. Wanting the dollar
+# and the token adjacent misses every braced form.
+#
 # These keep their case. The cloud request engine's tests name the query string
 # parameter resource_key, which differs from RESOURCE_KEY only by case, and a
 # query string parameter is on the wire rather than in the environment, so
 # matching in any case would fail on a name that is not an environment
 # variable at all.
 $script:FallbackPattern = [regex]::new(
-    '(?:["'']|\$env:|\$\{|getenv\(\s*["'']|^[\t\- ]*)' +
+    '(?:["'']|(?i:env)[:.]\\?|\$\{|getenv\(\s*["'']|^[\t\- ]*)' +
     '(?:RESOURCE_KEY|LICENSE_KEY|FOD_CLOUD_API_URL)(?![A-Za-z0-9_])|' +
     '\bLEGACY_[A-Z_]*ENV_VARS?\b')
 
