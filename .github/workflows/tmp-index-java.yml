@@ -1,18 +1,18 @@
-name: Temporary property index cost
+name: Temporary property index tests
 
 on:
   push:
     branches:
-      - 'tmp/index-java-cost-**'
+      - 'tmp/index-java-**'
 
 permissions:
   contents: read
 
 jobs:
-  measure:
-    name: Property index cost
+  test:
+    name: Property index tests
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 90
     steps:
       - name: Checkout common-ci at the root, as the shared workflows do
         uses: actions/checkout@v4
@@ -44,21 +44,19 @@ jobs:
           git log --oneline -1
           mvn -B install -DskipTests -Pdev
           if ($LASTEXITCODE -ne 0) { exit 1 }
-      - name: Measure
+      - name: Device Detection property index tests
         shell: pwsh
         run: |
           Push-Location 51degrees-java
-          $ua = (Resolve-Path 'cxx/data/device-detection/20000 User Agents.csv').Path
-          foreach ($case in @(
-            @{ File = 'cxx/data/device-detection/TAC-HashV41.hash'; Label = 'TAC' },
-            @{ File = 'cxx/data/device-detection/51Degrees-LiteV4.1.hash'; Label = 'Lite' })) {
-            $path = (Resolve-Path $case.File).Path
-            foreach ($profile in 'MaxPerformance', 'LowMemory') {
-              mvn -B -f device-detection/pom.xml -pl device-detection.hash.engine.on-premise test `
-                '-Dtest=IndexCostTiming' '-DfailIfNoTests=false' `
-                '-Dsurefire.failIfNoSpecifiedTests=false' `
-                "-DcostDataFile=$path" "-DcostUaFile=$ua" `
-                "-DcostProfile=$profile" "-DcostLabel=$($case.Label)"
-              if ($LASTEXITCODE -ne 0) { exit 1 }
-            }
-          }
+          mvn -B -f device-detection/pom.xml -pl device-detection.hash.engine.on-premise test `
+            '-Dtest=PropertyIndexTests' '-DfailIfNoTests=false' `
+            '-Dsurefire.failIfNoSpecifiedTests=false'
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: IP Intelligence property index tests
+        shell: pwsh
+        run: |
+          Push-Location 51degrees-java
+          mvn -B -f ip-intelligence/pom.xml -pl ip-intelligence.engine.on-premise test `
+            '-Dtest=PropertyIndexTests' '-DfailIfNoTests=false' `
+            '-Dsurefire.failIfNoSpecifiedTests=false'
+          if ($LASTEXITCODE -ne 0) { exit 1 }
