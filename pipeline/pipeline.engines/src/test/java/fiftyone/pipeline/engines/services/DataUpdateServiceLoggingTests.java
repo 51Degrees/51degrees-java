@@ -70,10 +70,10 @@ public class DataUpdateServiceLoggingTests {
     // 13 September 2020, 12:26:40 UTC.
     private static final long FILE_MODIFIED_MILLIS = 1600000000000L;
     // A license key of the length and characters the Distributor issues.
-    private static final String LICENSE_KEY = "QF8ZR2KD7NMB4XWT9HJC3LPA";
+    private static final String FULL_KEY = "QF8ZR2KD7NMB4XWT9HJC3LPA";
     private static final String MASKED_KEY = "********************3LPA";
     private static final String KEYED_URL = UPDATE_URL + "?LicenseKeys=" +
-        LICENSE_KEY + "&Download=True&Type=HashV41";
+        FULL_KEY + "&Download=True&Type=HashV41";
     private static final String MASKED_URL = UPDATE_URL + "?LicenseKeys=" +
         MASKED_KEY + "&Download=True&Type=HashV41";
 
@@ -430,7 +430,7 @@ public class DataUpdateServiceLoggingTests {
         AspectEngineDataFileDefault file = newDataFile(inMemory, false, false);
         DataFileConfiguration config = file.getConfiguration();
         config.setDataUpdateLicenseKeys(
-            Collections.singletonList(LICENSE_KEY));
+            Collections.singletonList(FULL_KEY));
         config.setUrlFormatter(dataFile -> KEYED_URL);
         return file;
     }
@@ -449,7 +449,7 @@ public class DataUpdateServiceLoggingTests {
             }
             assertFalse(
                 "The license key is in full in: " + text,
-                text.contains(LICENSE_KEY));
+                text.contains(FULL_KEY));
         }
     }
 
