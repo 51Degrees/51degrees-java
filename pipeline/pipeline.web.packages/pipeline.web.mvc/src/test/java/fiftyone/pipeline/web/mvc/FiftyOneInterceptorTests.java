@@ -22,11 +22,16 @@
 
 package fiftyone.pipeline.web.mvc;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -36,6 +41,11 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import fiftyone.pipeline.core.data.FlowData;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
+import fiftyone.pipeline.core.flowelements.FlowElement;
+import fiftyone.pipeline.engines.fiftyone.flowelements.SequenceElement;
+import fiftyone.pipeline.engines.fiftyone.flowelements.SetHeadersElement;
+import fiftyone.pipeline.javascriptbuilder.flowelements.JavaScriptBuilderElement;
 import fiftyone.pipeline.web.mvc.components.FiftyOneInterceptor;
 import fiftyone.pipeline.web.mvc.components.FlowDataProvider;
 import fiftyone.pipeline.web.mvc.configuration.FiftyOneInterceptorConfig;
@@ -137,5 +147,137 @@ public class FiftyOneInterceptorTests {
         assertFalse(interceptor.preHandle(request, response, handler));
         verify(flowData, times(1))
             .close();
+    }
+
+    private FiftyOneInterceptor newInterceptor(
+        FiftyOneInterceptorConfig config,
+        FiftyOneJSService jsService) throws IOException {
+        return new FiftyOneInterceptor(
+            config,
+            mock(PipelineResultService.class),
+            mock(FlowDataProvider.class),
+            mock(ClientsidePropertyService.class),
+            jsService,
+            mock(UACHService.class));
+    }
+
+    private FiftyOneInterceptorConfig newConfig(
+        boolean sequence,
+        boolean setHeaders,
+        String jsonPath,
+        String javaScriptPath) {
+        FiftyOneInterceptorConfig config = mock(FiftyOneInterceptorConfig.class);
+        when(config.getDataFilePath())
+            .thenReturn("src/test/resources/NoSequence.xml");
+        when(config.getClientsidePropertiesEnabled()).thenReturn(true);
+        when(config.getSequenceElementEnabled()).thenReturn(sequence);
+        when(config.getSetHeadersElementEnabled()).thenReturn(setHeaders);
+        when(config.getJsonPath()).thenReturn(jsonPath);
+        when(config.getJavaScriptPath()).thenReturn(javaScriptPath);
+        return config;
+    }
+
+    private static boolean hasElement(
+        FiftyOneInterceptor interceptor,
+        Class<?> type) {
+        for (FlowElement<?, ?> element : interceptor.pipeline.getFlowElements()) {
+            if (type.isInstance(element)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check that both elements are added when the configuration allows it.
+     */
+    @Test
+    public void FiftyOneInterceptor_ElementsEnabled_Added() throws Exception {
+        FiftyOneInterceptor created = newInterceptor(
+            newConfig(true, true, null, null), mock(FiftyOneJSService.class));
+
+        assertTrue(hasElement(created, SequenceElement.class));
+        assertTrue(hasElement(created, SetHeadersElement.class));
+    }
+
+    /**
+     * Check that the switches stop each element being added.
+     */
+    @Test
+    public void FiftyOneInterceptor_ElementsDisabled_NotAdded()
+        throws Exception {
+        FiftyOneInterceptorConfig config = newConfig(false, false, null, null);
+        when(config.getClientsidePropertiesEnabled()).thenReturn(false);
+        when(config.getDataFilePath())
+            .thenReturn("src/test/resources/NoJson.xml");
+        FiftyOneInterceptor created = newInterceptor(
+            config, mock(FiftyOneJSService.class));
+
+        assertFalse(hasElement(created, SequenceElement.class));
+        assertFalse(hasElement(created, SetHeadersElement.class));
+    }
+
+    /**
+     * Check that the build is refused when the JSON Builder Element would
+     * have no Sequence Element before it.
+     */
+    @Test
+    public void FiftyOneInterceptor_NoSequenceElementWithJson_Refused() {
+        RuntimeException e = assertThrows(RuntimeException.class,
+            () -> newInterceptor(
+                newConfig(false, true, null, null),
+                mock(FiftyOneJSService.class)));
+
+        assertTrue(e.getCause().getMessage().contains("Sequence Element"));
+    }
+
+    /**
+     * Check that the JSON path is the JavaScript Builder Element's callback
+     * endpoint and, with the JavaScript path, goes to the service that serves
+     * them.
+     */
+    @Test
+    public void FiftyOneInterceptor_Paths_UsedByBuilderAndService()
+        throws Exception {
+        FiftyOneJSService jsService = mock(FiftyOneJSService.class);
+        FiftyOneInterceptor created = newInterceptor(
+            newConfig(true, true, "/51dpipeline/json", "/scripts/51d.js"),
+            jsService);
+
+        verify(jsService).setPaths("/scripts/51d.js", "/51dpipeline/json");
+        for (FlowElement<?, ?> element : created.pipeline.getFlowElements()) {
+            if (element instanceof JavaScriptBuilderElement) {
+                Field field =
+                    JavaScriptBuilderElement.class.getDeclaredField("endpoint");
+                field.setAccessible(true);
+                assertEquals("/51dpipeline/json", field.get(element));
+            }
+        }
+    }
+
+    /**
+     * Check that no paths in the configuration mean the default paths.
+     */
+    @Test
+    public void FiftyOneInterceptor_NoPaths_DefaultPaths() throws Exception {
+        FiftyOneJSService jsService = mock(FiftyOneJSService.class);
+        newInterceptor(newConfig(true, true, null, null), jsService);
+
+        verify(jsService).setPaths(null, "/51dpipeline/json");
+    }
+
+    /**
+     * Check that the paths the application can call are mapped, the old JSON
+     * path included.
+     */
+    @Test
+    public void FiftyOneInterceptor_EnableClientsideProperties_MapsBothJsonPaths() {
+        ViewControllerRegistry registry = mock(ViewControllerRegistry.class);
+
+        FiftyOneInterceptor.enableClientsideProperties(registry);
+
+        verify(registry).addViewController("/51Degrees.core.js");
+        verify(registry).addViewController("/51dpipeline/json");
+        verify(registry).addViewController("/51Degrees.core.json");
     }
 }
