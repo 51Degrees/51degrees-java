@@ -35,6 +35,7 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.HashMap;
 
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
@@ -57,6 +58,19 @@ public class DataUploaderHttpTests {
      * The test fails if the upload has not ended by then.
      */
     private static final int LIMIT_MILLIS = 15000;
+
+    /**
+     * The JDK decides whether a request may carry a restricted header, Origin
+     * among them, from this property when it first loads its HTTP connection
+     * class, and the value it reads then stands for the rest of the run.
+     * HttpClientDefault.connect sets it and relies on being the first to open
+     * a connection. These tests open one as well, so they set the same value
+     * first and leave that class working whichever test runs earlier.
+     */
+    @BeforeClass
+    public static void AllowRestrictedHeaders() {
+        System.setProperty("sun.net.http.allowRestrictedHeaders", "true");
+    }
 
     @Test(timeout = LIMIT_MILLIS)
     public void DataUploaderHttp_NoAnswer_TimesOut() throws Exception {
