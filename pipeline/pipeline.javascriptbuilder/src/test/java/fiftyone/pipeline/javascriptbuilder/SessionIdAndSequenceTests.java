@@ -30,6 +30,8 @@ import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
 import fiftyone.pipeline.core.flowelements.Pipeline;
+import fiftyone.pipeline.engines.fiftyone.data.SequenceData;
+import fiftyone.pipeline.engines.fiftyone.flowelements.SequenceElement;
 import fiftyone.pipeline.engines.fiftyone.flowelements.SequenceElementBuilder;
 import fiftyone.pipeline.javascriptbuilder.flowelements.JavaScriptBuilderElement;
 import fiftyone.pipeline.javascriptbuilder.flowelements.JavaScriptBuilderElementBuilder;
@@ -66,6 +68,11 @@ import static org.junit.jupiter.api.Assertions.*;
  * the builder's own handling can be tested, the tests "without the Sequence
  * Element" use a stand in for the JSON builder that supplies the payload and
  * leaves the evidence as it was given.
+ * <p>
+ * The builder takes both values from the Sequence Element's data, so the
+ * tests of the rule above put the value straight into that data with a
+ * stand in for the Sequence Element, which lets a value the real element
+ * would never write be tried as well.
  */
 public class SessionIdAndSequenceTests {
 
@@ -122,9 +129,65 @@ public class SessionIdAndSequenceTests {
         }
     }
 
+    /**
+     * Writes the two values given straight into the Sequence Element's data,
+     * in place of that element, so that a value the real element would never
+     * write can be tried as well. A null value is not written.
+     */
+    private static class SequenceStandIn extends
+        FlowElementBase<SequenceData, ElementPropertyMetaData> {
+
+        private final Object sessionId;
+        private final Object sequence;
+
+        SequenceStandIn(Logger logger, Object sessionId, Object sequence) {
+            super(logger, null);
+            this.sessionId = sessionId;
+            this.sequence = sequence;
+        }
+
+        @Override
+        protected void processInternal(FlowData data) {
+            SequenceData sequenceData = new SequenceData(logger, data);
+            if (sessionId != null) {
+                sequenceData.put(
+                    SequenceData.SESSION_ID_PROPERTY_NAME, sessionId);
+            }
+            if (sequence != null) {
+                sequenceData.put(
+                    SequenceData.SEQUENCE_PROPERTY_NAME, sequence);
+            }
+            data.getOrAdd(getElementDataKey(), f -> sequenceData);
+        }
+
+        @Override
+        public String getElementDataKey() {
+            return SequenceElement.DEFAULT_ELEMENT_DATA_KEY;
+        }
+
+        @Override
+        public EvidenceKeyFilter getEvidenceKeyFilter() {
+            return new EvidenceKeyFilterWhitelist(
+                Collections.<String>emptyList());
+        }
+
+        @Override
+        public List<ElementPropertyMetaData> getProperties() {
+            return Collections.emptyList();
+        }
+
+        @Override
+        protected void managedResourcesCleanup() {
+        }
+
+        @Override
+        protected void unmanagedResourcesCleanup() {
+        }
+    }
+
     @Test
     public void SessionId_Valid_Rendered() throws Exception {
-        String script = render(false, "abc-123", null);
+        String script = renderWithSequenceData("abc-123", null);
         assertEquals("abc-123", sessionId(script));
         assertEquals("1", sequence(script));
     }
@@ -132,7 +195,7 @@ public class SessionIdAndSequenceTests {
     @Test
     public void SessionId_LongestValid_Rendered() throws Exception {
         String id = repeat('a', 64);
-        String script = render(false, id, null);
+        String script = renderWithSequenceData(id, null);
         assertEquals(id, sessionId(script));
     }
 
@@ -149,7 +212,7 @@ public class SessionIdAndSequenceTests {
     @ParameterizedTest
     @MethodSource("invalidSessionIds")
     public void SessionId_Invalid_RenderedEmpty(String id) throws Exception {
-        String script = render(false, id, null);
+        String script = renderWithSequenceData(id, null);
         assertEquals("", sessionId(script));
     }
 
@@ -190,14 +253,31 @@ public class SessionIdAndSequenceTests {
     }
 
     /**
-     * A sequence from a web request is text. With no Sequence Element it
-     * reaches the builder as it is.
+     * With no Sequence Element the defaults are rendered even when the
+     * request carried a session id and a sequence of its own, because step 5
+     * of the
+     * <a href="https://github.com/51Degrees/specifications/blob/67ead6986f3118c68f0714325800b92d48ddc71f/pipeline-specification/pipeline-elements/javascript-builder.md#process">specification</a>
+     * takes both from the Sequence Element's data and says "Where there is
+     * no Sequence Element, the sequence MUST be rendered as 1 and the
+     * session id as an empty string, so the script always parses."
+     */
+    @Test
+    public void NoSequenceElement_WithEvidence_DefaultsRendered()
+        throws Exception {
+        String script = render(false, "abc-123", 7);
+        assertEquals("", sessionId(script));
+        assertEquals("1", sequence(script));
+    }
+
+    /**
+     * A sequence another Sequence Element wrote as text is read as a number
+     * when it is one, because the Element Data holds values of any type.
      */
     @ParameterizedTest
     @ValueSource(strings = {"abc", "-1", "0", "99999999999", "", "2147483648"})
     public void Sequence_InvalidText_RenderedOne(String value)
         throws Exception {
-        String script = render(false, "abc-123", value);
+        String script = renderWithSequenceData("abc-123", value);
         assertEquals("1", sequence(script));
     }
 
@@ -209,7 +289,7 @@ public class SessionIdAndSequenceTests {
     @MethodSource("invalidSequenceNumbers")
     public void Sequence_InvalidNumber_RenderedOne(Object value)
         throws Exception {
-        String script = render(false, "abc-123", value);
+        String script = renderWithSequenceData("abc-123", value);
         assertEquals("1", sequence(script));
     }
 
@@ -225,7 +305,7 @@ public class SessionIdAndSequenceTests {
     @MethodSource("validSequences")
     public void Sequence_Valid_Rendered(Object value, String expected)
         throws Exception {
-        String script = render(false, "abc-123", value);
+        String script = renderWithSequenceData("abc-123", value);
         assertEquals(expected, sequence(script));
     }
 
@@ -243,6 +323,31 @@ public class SessionIdAndSequenceTests {
         String script = render(true, "abc-123", value);
         assertEquals("abc-123", sessionId(script));
         assertEquals("1", sequence(script));
+    }
+
+    /**
+     * Builds a pipeline whose Sequence Element data holds the two values
+     * given, processes it, checks the script parses and returns it. A null
+     * value is not written into that data.
+     */
+    private String renderWithSequenceData(Object sessionId, Object sequence)
+        throws Exception {
+        JavaScriptBuilderElement jsElement =
+            new JavaScriptBuilderElementBuilder(loggerFactory).build();
+        PipelineBuilder builder = new PipelineBuilder(loggerFactory);
+        builder.addFlowElement(new SequenceStandIn(
+            loggerFactory.getLogger("sequence"), sessionId, sequence));
+        builder.addFlowElement(
+            new JsonStandIn(loggerFactory.getLogger("json")));
+        builder.addFlowElement(jsElement);
+        String script;
+        try (Pipeline pipeline = builder.build();
+            FlowData flowData = pipeline.createFlowData()) {
+            flowData.process();
+            script = flowData.getFromElement(jsElement).getJavaScript();
+        }
+        assertParses(script);
+        return script;
     }
 
     /**
