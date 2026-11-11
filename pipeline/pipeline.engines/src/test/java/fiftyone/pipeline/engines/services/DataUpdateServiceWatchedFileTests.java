@@ -49,6 +49,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.LockSupport;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -66,7 +67,8 @@ import static org.mockito.Mockito.withSettings;
  * A new data file found by the file watcher is loaded, and then polling for
  * updates carries on, as the newFileAvailable steps of the data update
  * specification say ("resume polling, if any"). A new file that cannot be
- * opened is given up on after a time, as its Errors table says.
+ * opened is given up on after a time, as its Errors table says, or at
+ * once when the wait is interrupted.
  */
 public class DataUpdateServiceWatchedFileTests {
 
@@ -85,6 +87,14 @@ public class DataUpdateServiceWatchedFileTests {
      */
     private static final long MAX_TRIES = OPEN_TIMEOUT_MILLIS /
         DataUpdateServiceDefault.WATCHED_FILE_OPEN_PAUSE_MILLIS + 2;
+
+    /**
+     * A wait long enough that only an interrupt can end it within
+     * {@link #INTERRUPTED_WAIT_MILLIS}.
+     */
+    private static final long LONG_OPEN_TIMEOUT_MILLIS = 60000;
+
+    private static final long INTERRUPTED_WAIT_MILLIS = 5000;
 
     private static final String MAC_MESSAGE =
         "File watchers are not well implemented in OS X, " +
@@ -151,108 +161,166 @@ public class DataUpdateServiceWatchedFileTests {
     public void WatchedFileCannotBeOpened_GivesUpAfterTheWait()
         throws Exception {
         assumeFalse(MAC_MESSAGE, isMac());
+        try (LockedFile locked = new LockedFile(OPEN_TIMEOUT_MILLIS)) {
+            locked.start();
+            boolean gaveUp = locked.done.await(
+                WAIT_FOR_EVENT_MILLIS, TimeUnit.MILLISECONDS);
+
+            assertTrue("The watcher tries to open the new file",
+                locked.tries.get() > 0);
+            assertTrue("The update gives up on a file it cannot open",
+                gaveUp);
+            assertEquals(AutoUpdateStatus.AUTO_UPDATE_TIMEOUT,
+                locked.status.get());
+            assertTrue("The tries are paused, but " + locked.tries.get() +
+                " were made", locked.tries.get() <= MAX_TRIES);
+            locked.assertLeftAsItWas();
+        }
+    }
+
+    /**
+     * An interrupt, as unregistering the data file gives the watcher's task,
+     * ends the wait at once. The update is left unfinished, so it reports
+     * AUTO_UPDATE_IN_PROGRESS rather than a timeout, logs nothing, and leaves
+     * the engine and the polling timer as they were.
+     */
+    @Test
+    public void WatchedFileWaitInterrupted_LeavesTheUpdateUnfinished()
+        throws Exception {
+        assumeFalse(MAC_MESSAGE, isMac());
+        try (LockedFile locked = new LockedFile(LONG_OPEN_TIMEOUT_MILLIS)) {
+            locked.start();
+            long end = System.currentTimeMillis() + WAIT_FOR_EVENT_MILLIS;
+            while (locked.tries.get() == 0 &&
+                System.currentTimeMillis() < end) {
+                Thread.sleep(RETRY_MILLIS);
+            }
+            assertTrue("The watcher tries to open the new file",
+                locked.tries.get() > 0);
+
+            locked.runner.interrupt();
+            boolean ended = locked.done.await(
+                INTERRUPTED_WAIT_MILLIS, TimeUnit.MILLISECONDS);
+
+            assertTrue("The wait ends when it is interrupted", ended);
+            assertEquals(AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS,
+                locked.status.get());
+            locked.assertLeftAsItWas();
+        }
+    }
+
+    /**
+     * A watched data file that throws on every open, the service watching
+     * it, and the thread that runs the watcher's task.
+     */
+    private static class LockedFile implements AutoCloseable {
 
         final List<Long> timers = new ArrayList<>();
         final AtomicReference<Runnable> watcher = new AtomicReference<>();
         final AtomicBoolean locked = new AtomicBoolean(true);
         final AtomicInteger tries = new AtomicInteger();
         final AtomicInteger logged = new AtomicInteger();
-
-        // The service may call these many times while it waits, so they
-        // are stub only mocks, which keep no record of their calls.
-        final BinaryReader reader =
-            mock(BinaryReader.class, withSettings().stubOnly());
-        FileWrapper wrapper =
-            mock(FileWrapper.class, withSettings().stubOnly());
-        when(wrapper.getReader()).then(invocation -> {
-            tries.incrementAndGet();
-            if (locked.get()) {
-                // Stops a loop with no pause using a whole processor.
-                Thread.sleep(1);
-                throw new IOException("The file is locked");
-            }
-            return reader;
-        });
-        FileWrapperFactory fileWrapperFactory =
-            mock(FileWrapperFactory.class, withSettings().stubOnly());
-        when(fileWrapperFactory.build(anyString())).thenReturn(wrapper);
-        when(fileWrapperFactory.getLastModified(anyString())).then(
-            invocation -> lastModified(invocation.getArgument(0)));
-        Logger logger = mock(Logger.class, withSettings().stubOnly()
-            .defaultAnswer(invocation -> {
-                String name = invocation.getMethod().getName();
-                if (name.equals("warn") || name.equals("error")) {
-                    logged.incrementAndGet();
-                }
-                return Answers.RETURNS_DEFAULTS.answer(invocation);
-            }));
-        DataUpdateServiceDefault dataUpdate = new DataUpdateServiceDefault(
-            logger,
-            mock(HttpClient.class),
-            fileWrapperFactory,
-            futureFactory(timers, watcher));
-        dataUpdate.watchedFileOpenTimeoutMillis = OPEN_TIMEOUT_MILLIS;
-
         final AtomicReference<AutoUpdateStatus> status =
             new AtomicReference<>();
         final CountDownLatch done = new CountDownLatch(1);
-        dataUpdate.onUpdateComplete((sender, args) -> {
-            if (args.getStatus() != AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS &&
-                status.compareAndSet(null, args.getStatus())) {
-                done.countDown();
-            }
-        });
-
-        OnPremiseAspectEngine<? extends AspectData,
-            ? extends AspectPropertyMetaData> engine = engine();
-        Path directory = Files.createTempDirectory("watched");
-        Path dataFile = directory.resolve("data.dat");
-        Files.write(dataFile, "Old".getBytes());
-        AspectEngineDataFileDefault file = watchedFile(engine, dataFile);
-
-        // The watcher runs on its own thread, so the test can stop waiting
-        // for an update that never ends.
         final AtomicBoolean stop = new AtomicBoolean(false);
-        Thread runner = new Thread(() -> {
-            while (stop.get() == false && done.getCount() > 0) {
-                watcher.get().run();
-                try {
-                    Thread.sleep(RETRY_MILLIS);
-                } catch (InterruptedException e) {
-                    return;
-                }
-            }
-        });
-        runner.setDaemon(true);
+        final OnPremiseAspectEngine<? extends AspectData,
+            ? extends AspectPropertyMetaData> engine = engine();
+        final DataUpdateServiceDefault service;
+        final Path directory;
+        final Path dataFile;
+        final AspectEngineDataFileDefault file;
+        final Thread runner;
+        int loggedAtStart;
 
-        try {
-            dataUpdate.registerDataFile(file);
+        LockedFile(long timeoutMillis) throws Exception {
+            // The service may call these many times while it waits, so they
+            // are stub only mocks, which keep no record of their calls.
+            final BinaryReader reader =
+                mock(BinaryReader.class, withSettings().stubOnly());
+            FileWrapper wrapper =
+                mock(FileWrapper.class, withSettings().stubOnly());
+            when(wrapper.getReader()).then(invocation -> {
+                tries.incrementAndGet();
+                if (locked.get()) {
+                    // Stops a loop with no pause using a whole processor,
+                    // and leaves an interrupt for the service to see.
+                    LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(1));
+                    throw new IOException("The file is locked");
+                }
+                return reader;
+            });
+            FileWrapperFactory fileWrapperFactory =
+                mock(FileWrapperFactory.class, withSettings().stubOnly());
+            when(fileWrapperFactory.build(anyString())).thenReturn(wrapper);
+            when(fileWrapperFactory.getLastModified(anyString())).then(
+                invocation -> lastModified(invocation.getArgument(0)));
+            Logger logger = mock(Logger.class, withSettings().stubOnly()
+                .defaultAnswer(invocation -> {
+                    String name = invocation.getMethod().getName();
+                    if (name.equals("warn") || name.equals("error")) {
+                        logged.incrementAndGet();
+                    }
+                    return Answers.RETURNS_DEFAULTS.answer(invocation);
+                }));
+            service = new DataUpdateServiceDefault(
+                logger,
+                mock(HttpClient.class),
+                fileWrapperFactory,
+                futureFactory(timers, watcher));
+            service.watchedFileOpenTimeoutMillis = timeoutMillis;
+            // The first update after the change is the one that waits,
+            // because only the watcher sets the time it compares with.
+            service.onUpdateComplete((sender, args) -> {
+                if (status.compareAndSet(null, args.getStatus())) {
+                    done.countDown();
+                }
+            });
+
+            directory = Files.createTempDirectory("watched");
+            dataFile = directory.resolve("data.dat");
+            Files.write(dataFile, "Old".getBytes());
+            file = watchedFile(engine, dataFile);
+
+            // The watcher runs on its own thread, so the test can stop
+            // waiting for an update that does not end.
+            runner = new Thread(() -> {
+                while (stop.get() == false && done.getCount() > 0) {
+                    watcher.get().run();
+                    try {
+                        Thread.sleep(RETRY_MILLIS);
+                    } catch (InterruptedException e) {
+                        return;
+                    }
+                }
+            });
+            runner.setDaemon(true);
+        }
+
+        /**
+         * Registers the file, changes it, and starts the watcher's thread.
+         */
+        void start() throws Exception {
+            service.registerDataFile(file);
             assertNotNull("Registering sets up the file watcher",
                 watcher.get());
-            int loggedBefore = logged.get();
-
+            loggedAtStart = logged.get();
             Files.write(dataFile, "New".getBytes());
             runner.start();
-            boolean gaveUp = done.await(
-                WAIT_FOR_EVENT_MILLIS, TimeUnit.MILLISECONDS);
+        }
 
-            assertTrue("The watcher tries to open the new file",
-                tries.get() > 0);
-            assertTrue("The update gives up on a file it cannot open",
-                gaveUp);
-            assertEquals(AutoUpdateStatus.AUTO_UPDATE_TIMEOUT, status.get());
-            assertTrue("The tries are paused, but " + tries.get() +
-                " were made", tries.get() <= MAX_TRIES);
+        void assertLeftAsItWas() {
             assertEquals("The engine is not refreshed",
                 0, refreshCount(engine));
-            assertEquals("Nothing is logged", loggedBefore, logged.get());
+            assertEquals("Nothing is logged", loggedAtStart, logged.get());
             assertEquals("The polling timer is kept", 1, timers.size());
             assertNotNull("The data file holds the polling timer",
                 file.getFuture());
         }
-        finally {
-            // Lets an update that would never give up end, so the thread
-            // stops.
+
+        @Override
+        public void close() throws Exception {
+            // Lets an update that would not give up end, so the thread stops.
             stop.set(true);
             locked.set(false);
             if (runner.isAlive()) {
