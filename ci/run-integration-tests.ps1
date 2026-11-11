@@ -162,7 +162,7 @@ if (-not $TestResourceKey) {
             Module = 'web/getting-started.onprem'
             Port = 8098
             ExampleEnv = @{
-                '51DEGREES_DD_PATH' = (Resolve-Path "$RepoName/cxx/data/device-detection/TAC-HashV41.hash").Path
+                '_51DEGREES_DD_PATH' = (Resolve-Path "$RepoName/cxx/data/device-detection/TAC-HashV41.hash").Path
             }
         }
     )

@@ -48,7 +48,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * <p>
  * The configuration file for the pipeline is at src/main/webapp/WEB-INF/51Degrees-OnPrem.xml
  * <p>
- * The data file is taken from the 51DEGREES_DD_PATH environment variable, then
+ * The data file is taken from the _51DEGREES_DD_PATH environment variable, then
  * from TestDataFile (an environment variable or system property), and otherwise
  * the free Lite file in cxx/data/device-detection is used, which is downloaded
  * before the server starts if it is missing.

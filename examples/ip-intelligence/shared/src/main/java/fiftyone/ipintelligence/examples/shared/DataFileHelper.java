@@ -133,7 +133,7 @@ public class DataFileHelper {
      * hold an explicit path to the IP Intelligence data file. This name is
      * checked first, before any search of the project space.
      */
-    public static final String IPI_PATH_ENV_VAR = "51DEGREES_IPI_PATH";
+    public static final String IPI_PATH_ENV_VAR = "_51DEGREES_IPI_PATH";
 
 public static class DatafileInfo {
         FiftyOneDataFile fileInfo;

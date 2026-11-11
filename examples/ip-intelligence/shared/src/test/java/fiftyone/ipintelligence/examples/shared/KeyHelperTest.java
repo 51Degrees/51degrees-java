@@ -24,7 +24,7 @@ package fiftyone.ipintelligence.examples.shared;
 
 import org.junit.Test;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,8 +44,8 @@ public class KeyHelperTest {
     /**
      * The names getOrSetTestResourceKey reads, in its order.
      */
-    private static final List<String> EXAMPLE_NAMES = Arrays.asList(
-        KeyHelper.RESOURCE_KEY_ENV_VAR, KeyHelper.TEST_RESOURCE_KEY);
+    private static final List<String> EXAMPLE_NAMES =
+        Collections.singletonList(KeyHelper.TEST_RESOURCE_KEY);
 
     /**
      * With no key anywhere, the lookup logs that there is none and stores
@@ -88,8 +88,8 @@ public class KeyHelperTest {
         assertEquals("This test calls the live 51Degrees cloud service, so " +
                 "it needs a resource key and there is nothing to fall back " +
                 "on. None of _51DEGREES_RESOURCE_KEY, " +
-                "_51DEGREES_RESOURCE_KEY_BESPOKE, 51DEGREES_RESOURCE_KEY, " +
-                "TestResourceKey is set, as an environment variable or as a " +
+                "_51DEGREES_RESOURCE_KEY_BESPOKE, TestResourceKey is set, " +
+                "as an environment variable or as a " +
                 "system property, tried in that order. The key has to carry " +
                 "the ip and device products, because the test asks the " +
                 "service for the network and location of an IP address, and " +
@@ -118,11 +118,11 @@ public class KeyHelperTest {
     @Test
     public void requireResourceKey_ExampleNamesInTheirOrder() {
         Map<String, String> values = new HashMap<>();
-        values.put(KeyHelper.RESOURCE_KEY_ENV_VAR, KEY_A);
+        values.put("_51DEGREES_RESOURCE_KEY", KEY_A);
         values.put(KeyHelper.TEST_RESOURCE_KEY, KEY_B);
         assertEquals(KEY_A, KeyHelper.requireResourceKey(values::get,
             EXAMPLE_NAMES, "every IP Intelligence property", "ip"));
-        values.remove(KeyHelper.RESOURCE_KEY_ENV_VAR);
+        values.remove("_51DEGREES_RESOURCE_KEY");
         assertEquals(KEY_B, KeyHelper.requireResourceKey(values::get,
             EXAMPLE_NAMES, "every IP Intelligence property", "ip"));
     }

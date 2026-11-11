@@ -33,7 +33,7 @@ public class KeyUtils {
      * Name of the aligned environment variable or system property which
      * supplies the resource key. This name is checked before any legacy name.
      */
-    public static final String RESOURCE_KEY_ENV_VAR = "51DEGREES_RESOURCE_KEY";
+    public static final String RESOURCE_KEY_ENV_VAR = "_51DEGREES_RESOURCE_KEY";
 
     /**
      * Obtain a resource key from an environment variable or a system property.

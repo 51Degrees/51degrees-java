@@ -30,12 +30,6 @@ import java.util.*;
 import java.util.function.Function;
 
 public class KeyHelper {
-    /**
-     * Aligned name of the environment variable or system property which may
-     * hold the resource key. This name is checked first, before the legacy
-     * {@link #TEST_RESOURCE_KEY} name.
-     */
-    public static final String RESOURCE_KEY_ENV_VAR = "51DEGREES_RESOURCE_KEY";
     public static final String TEST_RESOURCE_KEY = "TestResourceKey";
     static Logger logger = LoggerFactory.getLogger(KeyHelper.class);
 
@@ -63,8 +57,8 @@ public class KeyHelper {
      */
     public static String requireTestResourceKey(String asksFor,
                                                 String... products) {
-        return requireResourceKey(KeyHelper::readKey, Arrays.asList(
-            RESOURCE_KEY_ENV_VAR, TEST_RESOURCE_KEY), asksFor, products);
+        return requireResourceKey(KeyHelper::readKey,
+            Collections.singletonList(TEST_RESOURCE_KEY), asksFor, products);
     }
 
     static String requireResourceKey(Function<String, String> read,
@@ -148,17 +142,18 @@ public class KeyHelper {
     }
     /**
      * Obtain a resource key from the passed argument,
-     * from environment variable or from a property. The aligned
-     * {@link #RESOURCE_KEY_ENV_VAR} name is checked first, then the
+     * from environment variable or from a property. The first of
+     * {@link #SHARED_RESOURCE_KEY_NAMES} is checked first, then the
      * passed variable name. Store as System Property under the
      * passed variable name.
      */
     public static String getOrSetResourceKey(String value, String variableName,
                                              String errorMessage,
                                              boolean shouldThrow) {
+        String alignedName = SHARED_RESOURCE_KEY_NAMES.get(0);
         if (Objects.isNull(value)) {
             // check the aligned name first, then the legacy name
-            value = KeyUtils.getNamedKey(RESOURCE_KEY_ENV_VAR);
+            value = KeyUtils.getNamedKey(alignedName);
             if (Objects.isNull(value)) {
                 value = KeyUtils.getNamedKey(variableName);
             }
@@ -170,7 +165,7 @@ public class KeyHelper {
                     "runnable example,\n - as an Environment Variable named \"\u001B[36m{}\u001B[0m\"," +
                     "\n - as a System Property named \"\u001B[36m{}\u001B[0m\" " +
                     "(the legacy name \"\u001B[36m{}\u001B[0m\" is also still accepted).",
-                    RESOURCE_KEY_ENV_VAR, RESOURCE_KEY_ENV_VAR, variableName);
+                    alignedName, alignedName, variableName);
             logger.error(errorMessage);
             if (shouldThrow) {
                 throw new IllegalStateException("\"" + value + "\" is not a valid resource key");
