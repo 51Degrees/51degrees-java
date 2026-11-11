@@ -84,7 +84,7 @@ jobs:
                   '-Dsurefire.failIfNoSpecifiedTests=false' $extra `
                   "-DcostDataFile=$path" "-DcostUaFile=$ua" `
                   "-DcostProfile=$profile" "-DcostLabel=$($case.Label)" "-DcostTree=$tree" |
-                  Select-String 'COST |\[ERROR\]'
+                  ForEach-Object { if ($_ -match 'COST |\[ERROR\]') { Write-Output "$_" } }
                 $code = $LASTEXITCODE
                 Pop-Location
                 if ($code -ne 0) { exit 1 }
