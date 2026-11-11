@@ -33,7 +33,9 @@ $script:DigitInitialPattern = [regex]::new(
 # An old name read or set as an environment variable, or held in a constant to
 # fall back to. A Java read takes the name as a string, so a quoted bare name
 # is matched, along with the PowerShell and config forms the CI scripts and the
-# web example use.
+# web example use, and a name at the start of a line past any spaces and a
+# list dash, which is how a workflow declares one as a key in an env: block
+# and how a readme lists one.
 #
 # These keep their case. The cloud request engine's tests name the query string
 # parameter resource_key, which differs from RESOURCE_KEY only by case, and a
@@ -41,7 +43,7 @@ $script:DigitInitialPattern = [regex]::new(
 # matching in any case would fail on a name that is not an environment
 # variable at all.
 $script:FallbackPattern = [regex]::new(
-    '(?:["'']|\$env:|\$\{|getenv\(\s*["''])' +
+    '(?:["'']|\$env:|\$\{|getenv\(\s*["'']|^[\t\- ]*)' +
     '(?:RESOURCE_KEY|LICENSE_KEY|FOD_CLOUD_API_URL)(?![A-Za-z0-9_])|' +
     '\bLEGACY_[A-Z_]*ENV_VARS?\b')
 

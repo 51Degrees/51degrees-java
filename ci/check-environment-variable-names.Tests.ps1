@@ -36,6 +36,9 @@ Describe 'Find-EnvironmentNameProblem' {
         @{ Line = '$env:LICENSE_KEY = $Keys.TestResourceKey' }
         @{ Line = '${FOD_CLOUD_API_URL}' }
         @{ Line = 'Constants.LEGACY_ENV_VARS' }
+        @{ Line = '          LICENSE_KEY: ${{ secrets.DEVICE_DETECTION_KEY }}' }
+        @{ Line = '- RESOURCE_KEY names the resource key' }
+        @{ Line = 'RESOURCE_KEY=my-key mvn test' }
     ) {
         Get-Kind $Line | Should -Contain 'fallback'
     }
@@ -45,6 +48,8 @@ Describe 'Find-EnvironmentNameProblem' {
     # old names keep their case.
     It 'leaves <Line> alone' -ForEach @(
         @{ Line = 'assertEquals("resource_key=" + key, query);' }
+        @{ Line = '          DeviceDetection: ${{ secrets.DEVICE_DETECTION_KEY }}' }
+        @{ Line = '  PAID_RESOURCE_KEY: ${{ secrets.X }}' }
         @{ Line = 'System.getenv("_51DEGREES_RESOURCE_KEY")' }
         @{ Line = 'System.getenv("_51DEGREES_CLOUD_ENDPOINT")' }
         @{ Line = '$env:_51DEGREES_DD_PATH = "file.hash"' }
