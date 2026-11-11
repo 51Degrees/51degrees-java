@@ -146,9 +146,15 @@ public class SequenceElement
             Integer.valueOf((int) value) : null;
     }
 
+    /**
+     * The key the Element Data is stored under in the Flow Data.
+     * @see <a href="https://github.com/51Degrees/specifications/blob/67ead6986f3118c68f0714325800b92d48ddc71f/pipeline-specification/pipeline-elements/sequence-element.md#element-data">Specification</a>
+     */
+    public static final String ELEMENT_DATA_KEY = "sequence";
+
     @Override
     public String getElementDataKey() {
-        return "sequence";
+        return ELEMENT_DATA_KEY;
     }
 
     @Override
