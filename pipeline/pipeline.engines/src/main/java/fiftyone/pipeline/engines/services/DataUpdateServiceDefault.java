@@ -391,21 +391,35 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                         // before notifying the engine, otherwise the copy
                         // may still be in progress.
                         boolean fileLockable = false;
-                        while (fileLockable == false) {
+                        long deadline = System.nanoTime() +
+                                TimeUnit.MILLISECONDS.toNanos(
+                                        watchedFileOpenTimeoutMillis);
+                        while (fileLockable == false &&
+                                System.nanoTime() - deadline < 0) {
                             try (BinaryReader reader = fileWrapperFactory.build(
                                     aspectDataFile.getDataFilePath()).getReader()) {
                                 fileLockable = true;
-                                // Complete the update
-                                status = updatedFileAvailable(dataFile);
                             } catch (IOException e) {
-                                logger.warn("Exception while reading the data file at '{}'",
-                                        aspectDataFile.getDataFilePath(), e);
+                                try {
+                                    Thread.sleep(WATCHED_FILE_OPEN_PAUSE_MILLIS);
+                                } catch (InterruptedException ex) {
+                                    // Interrupted, so stop trying.
+                                    Thread.currentThread().interrupt();
+                                    break;
+                                }
                             }
                         }
-                        // The refresh cancelled the polling timer, so
-                        // register the file again to set a new one.
-                        if (dataFile.getIsRegistered()) {
-                            registerDataFile(dataFile);
+                        if (fileLockable) {
+                            // Complete the update
+                            status = updatedFileAvailable(dataFile);
+                            // The refresh cancelled the polling timer, so
+                            // register the file again to set a new one.
+                            if (dataFile.getIsRegistered()) {
+                                registerDataFile(dataFile);
+                            }
+                        } else {
+                            // The polling timer is left as it was.
+                            status = AutoUpdateStatus.AUTO_UPDATE_TIMEOUT;
                         }
                     }
                 }
