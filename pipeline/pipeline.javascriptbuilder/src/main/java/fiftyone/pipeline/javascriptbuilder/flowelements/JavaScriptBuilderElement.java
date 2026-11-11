@@ -234,8 +234,9 @@ public class JavaScriptBuilderElement
 
         String url = getUrl(reqProtocol, reqHost);
 
-        String sessionId = getSessionId(data);
-        int sequence = getSequence(data);
+        ElementData sequenceData = getSequenceData(data);
+        String sessionId = getSessionId(sequenceData);
+        int sequence = getSequence(sequenceData);
         String serializedParameters = serializeParameters(parameters);
 
         // With the gathered resources, build a new JavaScriptResource.
@@ -467,12 +468,12 @@ public class JavaScriptBuilderElement
      * the Sequence Element wrote, when it matches SESSION_ID_PATTERN, and an
      * empty string otherwise, including when the pipeline has no Sequence
      * Element.
-     * @param data the flow data
+     * @param sequenceData the Sequence Element's data, or null
      * @return the session id, or an empty string
      */
-    private String getSessionId(FlowData data) {
+    private String getSessionId(ElementData sequenceData) {
         Object value = getSequenceValue(
-            data, SequenceData.SESSION_ID_PROPERTY_NAME);
+            sequenceData, SequenceData.SESSION_ID_PROPERTY_NAME);
         if (value instanceof String &&
             SESSION_ID_PATTERN.matcher((String) value).matches()) {
             return (String) value;
@@ -487,12 +488,12 @@ public class JavaScriptBuilderElement
      * Sequence Element. The value is written into the script as code, so
      * text that is not a number could break the script, and a number below 1
      * is not a sequence the Sequence Element would ever give.
-     * @param data the flow data
+     * @param sequenceData the Sequence Element's data, or null
      * @return the sequence, which is always at least 1
      */
-    private int getSequence(FlowData data) {
+    private int getSequence(ElementData sequenceData) {
         Object value = getSequenceValue(
-            data, SequenceData.SEQUENCE_PROPERTY_NAME);
+            sequenceData, SequenceData.SEQUENCE_PROPERTY_NAME);
         long sequence = 0;
         if (value instanceof Integer) {
             sequence = (Integer) value;
@@ -506,19 +507,32 @@ public class JavaScriptBuilderElement
     }
 
     /**
-     * One value from the Sequence Element's data, or null when the pipeline
-     * has no Sequence Element. Step 5 of the specification takes both values
-     * from that data and not from Evidence, so a pipeline with no Sequence
-     * Element renders the defaults even when the request carried a session id
-     * or a sequence of its own.
+     * The Sequence Element's data, or null when the pipeline has no Sequence
+     * Element. Step 5 of the specification takes the session id and the
+     * sequence from that data and not from Evidence, so a pipeline with no
+     * Sequence Element renders the defaults even when the request carried a
+     * session id or a sequence of its own.
      * @param data the flow data
-     * @param name the name of the value within the Sequence Element's data
-     * @return the value, or null
+     * @return the Sequence Element's data, or null
      * @see <a href="https://github.com/51Degrees/specifications/blob/67ead6986f3118c68f0714325800b92d48ddc71f/pipeline-specification/pipeline-elements/javascript-builder.md#process">Specification</a>
      */
-    private static Object getSequenceValue(FlowData data, String name) {
-        ElementData sequenceData =
-            data.get(SequenceElement.ELEMENT_DATA_KEY);
+    private static ElementData getSequenceData(FlowData data) {
+        // get(String) throws when the Flow Data holds nothing under the key,
+        // so the keys it does hold are checked first.
+        return data.getDataKeys().contains(SequenceElement.ELEMENT_DATA_KEY)
+            ? data.get(SequenceElement.ELEMENT_DATA_KEY)
+            : null;
+    }
+
+    /**
+     * One value from the Sequence Element's data.
+     * @param sequenceData the Sequence Element's data, or null
+     * @param name the name of the value within that data
+     * @return the value, or null
+     */
+    private static Object getSequenceValue(
+        ElementData sequenceData,
+        String name) {
         return sequenceData == null ? null : sequenceData.get(name);
     }
 
