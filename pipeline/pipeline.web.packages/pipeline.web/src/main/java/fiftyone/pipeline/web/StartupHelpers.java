@@ -100,6 +100,43 @@ public class StartupHelpers {
         boolean clientSideEvidenceEnabled,
         String contextRoot) throws Exception {
 
+        return StartupHelpers.buildFromConfiguration(builder, options,
+            clientSideEvidenceEnabled, contextRoot, Constants.DEFAULT_JSON_PATH,
+            Constants.DEFAULT_ELEMENT_ENABLED,
+            Constants.DEFAULT_ELEMENT_ENABLED);
+    }
+
+    /**
+     * Configure the extra web elements required and build the Pipeline using
+     * the {@link PipelineBuilder#buildFromConfiguration(PipelineOptions)}
+     * method.
+     * @param builder to build the Pipeline
+     * @param options to build the Pipeline with
+     * @param clientSideEvidenceEnabled true if client-side evidence is enabled
+     *                                  in the configuration. This will add JSON
+     *                                  and JavaScript elements to the Pipeline
+     * @param contextRoot The context-root setting from the web.xml. This is
+     *                    needed in order to create the correct callback URL
+     *                    for the JavascriptBuilder.
+     * @param jsonPath the path the JSON is served from, which the
+     *                 JavascriptBuilder calls back to
+     * @param sequenceElementEnabled true to add the Sequence Element when the
+     *                               configuration does not include one
+     * @param setHeadersElementEnabled true to add the Set Headers Element
+     *                                 when the configuration does not
+     *                                 include one
+     * @return new {@link Pipeline} instance
+     * @throws Exception if there was an error building the Pipeline
+     */
+    public static Pipeline buildFromConfiguration(
+        PipelineBuilder builder,
+        PipelineOptions options,
+        boolean clientSideEvidenceEnabled,
+        String contextRoot,
+        String jsonPath,
+        boolean sequenceElementEnabled,
+        boolean setHeadersElementEnabled) throws Exception {
+
         if (options == null ||
             options.elements == null ||
             options.elements.size() == 0) {
@@ -107,8 +144,16 @@ public class StartupHelpers {
                     "Could not find pipeline configuration information");
         }
 
+        // A caller that has no path set gives the default, so that the
+        // JavaScript still calls back to somewhere the JSON is served from.
+        String path = jsonPath == null || jsonPath.isEmpty() ?
+            Constants.DEFAULT_JSON_PATH : jsonPath;
+        String endpoint = "/" + (path.startsWith("/") ?
+            path.substring(1) : path);
+
         // Add the sequence element.
-        if (getElementIndex(
+        if (sequenceElementEnabled &&
+            getElementIndex(
             options,
             SequenceElement.class.getSimpleName()) == -1) {
             // The sequence element is not included so add it.
@@ -147,7 +192,7 @@ public class StartupHelpers {
                 // The js builder element is not included so add it.
                 ElementOptions javaScriptBuilderElement = new ElementOptions();
                 javaScriptBuilderElement.builderName = JavaScriptBuilderElement.class.getSimpleName();
-                javaScriptBuilderElement.buildParameters.put("Endpoint", "/" + Constants.CORE_JSON_NAME);
+                javaScriptBuilderElement.buildParameters.put("Endpoint", endpoint);
                 if(contextRoot != null) {
                     javaScriptBuilderElement.buildParameters.put("ContextRoot", contextRoot);
                 }
@@ -157,7 +202,7 @@ public class StartupHelpers {
                 // There is already a JavaScript builder config so check if
                 // the endpoint is specified. If not, add it.
                 if (options.elements.get(jsIndex).buildParameters.containsKey("Endpoint") == false) {
-                    options.elements.get(jsIndex).buildParameters.put("Endpoint", "/" + Constants.CORE_JSON_NAME);
+                    options.elements.get(jsIndex).buildParameters.put("Endpoint", endpoint);
                 }
                 // Same for context root.
                 if(options.elements.get(jsIndex).buildParameters.containsKey("ContextRoot") == false &&
@@ -168,8 +213,26 @@ public class StartupHelpers {
 
         }
 
-        // Add the set-headers element.
+        // The JSON Builder Element fails on every request without a
+        // sequence number, which only the Sequence Element supplies.
         if (getElementIndex(
+            options,
+            JsonBuilderElement.class.getSimpleName()) != -1 &&
+            getElementIndex(
+                options,
+                SequenceElement.class.getSimpleName()) == -1) {
+            throw new PipelineConfigurationException(
+                "The Pipeline has a JSON Builder Element but no Sequence " +
+                    "Element, and the JSON Builder Element needs the " +
+                    "sequence number the Sequence Element supplies. Turn " +
+                    "sequence-element-enabled back on, add a Sequence " +
+                    "Element to the configuration, or turn off " +
+                    "client-side properties.");
+        }
+
+        // Add the set-headers element.
+        if (setHeadersElementEnabled &&
+            getElementIndex(
             options,
             SetHeadersElement.class.getSimpleName()) == -1) {
             // The set-headers element is not included so add it.
