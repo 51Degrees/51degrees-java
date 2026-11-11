@@ -665,6 +665,61 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
     }
 
     /**
+     * Evidence whose key has no prefix is sent under its whole key, unless
+     * the key is a reserved name in any letter case. Keys only usually
+     * carry a prefix, as the Overview of the Evidence specification says.
+     */
+    @Test
+    public void process_SendsEvidenceWithNoPrefixUnderItsWholeKey()
+        throws Exception {
+        acceptEvidence(Arrays.asList("query.User-Agent"));
+        Map<String, Object> evidence = new HashMap<>();
+        evidence.put("query.User-Agent", "iPhone");
+        evidence.put("bare", "value");
+        evidence.put("Values", "ismobile");
+        evidence.put("license", "evidence-license");
+        evidence.put("RESOURCE", "evidence-resource");
+        evidence.put("licence", "evidence-licence");
+
+        List<String> items = postedItems(null, evidence);
+
+        assertEquals(
+            new HashSet<>(Arrays.asList(
+                "resource=resourcekey",
+                "User-Agent=iPhone",
+                "bare=value")),
+            new HashSet<>(items),
+            "The request did not carry the Evidence with no prefix, or " +
+                "carried a reserved name: " + items);
+    }
+
+    /**
+     * Prefixes are compared without regard to case, so query Evidence
+     * takes precedence over header Evidence of the same name, with no
+     * warning, whatever the case of its prefix. Keys are case-insensitive,
+     * as the Overview of the Evidence specification says.
+     */
+    @Test
+    public void process_ComparesPrefixesWithoutRegardToCase()
+        throws Exception {
+        loggerFactory.loggers.clear();
+        acceptEvidence(Arrays.asList("query.User-Agent"));
+        Map<String, Object> evidence = new HashMap<>();
+        evidence.put("Query.User-Agent", "query-value");
+        evidence.put("header.User-Agent", "header-value");
+
+        List<String> items = postedItems(null, evidence);
+
+        assertEquals(
+            new HashSet<>(Arrays.asList(
+                "resource=resourcekey",
+                "User-Agent=query-value")),
+            new HashSet<>(items),
+            "The query Evidence did not take precedence: " + items);
+        loggerFactory.assertMaxWarnings(0);
+    }
+
+    /**
      * Evidence whose key strips to resource, license or values is never
      * sent, whatever its case and even where the cloud service lists the
      * key, so the request carries the configured resource key, and the
