@@ -32,7 +32,9 @@ import fiftyone.pipeline.engines.configuration.DataFileConfigurationDefault;
 import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectEngineDataFileDefault;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
+import fiftyone.pipeline.core.exceptions.EngineRefreshException;
 import fiftyone.pipeline.engines.flowelements.OnPremiseAspectEngine;
+import fiftyone.pipeline.engines.services.DataUpdateService.AutoUpdateStatus;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -61,7 +63,7 @@ import static org.mockito.Mockito.when;
 /**
  * The messages and levels in the Logging section of the data update
  * specification, and the If-Modified-Since time the update URL is sent.
- * @see <a href="https://github.com/51Degrees/specifications/blob/rc/pipeline-specification/features/data-updates.md#logging">Specification</a>
+ * @see <a href="https://github.com/51Degrees/specifications/blob/d8b3a9c5/pipeline-specification/features/data-updates.md#logging">Specification</a>
  */
 @SuppressWarnings("unchecked")
 public class DataUpdateServiceLoggingTests {
@@ -195,10 +197,9 @@ public class DataUpdateServiceLoggingTests {
         dataUpdate.checkForUpdate(engine);
 
         assertLogged(Level.INFO, "Checking for update");
-        assertLogged(Level.INFO, "Checking for update from '" + UPDATE_URL +
-            "' for Engine '" + engineType + "'");
+        assertLogged(Level.INFO, "Checking for update from " + UPDATE_URL);
         assertLogged(Level.INFO, "No data newer than 2020-09-13T12:26:40Z " +
-            "found at '" + UPDATE_URL + "' for Engine '" + engineType + "'");
+            "found at '" + UPDATE_URL + "' for engine '" + engineType + "'");
     }
 
     @Test
@@ -212,32 +213,70 @@ public class DataUpdateServiceLoggingTests {
         dataUpdate.checkForUpdate(engine);
 
         assertLogged(Level.INFO, "Downloaded new data from '" + UPDATE_URL +
-            "' for Engine '" + engineType + "'");
-        assertLogged(Level.INFO, "Attempting to refresh Engine '" +
-            engineType + "' with new data");
+            "' for engine '" + engineType + "'");
+        assertLogged(Level.INFO, "Attempting to refresh engine with new data");
     }
 
+    /**
+     * .NET's UpdateFromMemory logs nothing of its own, so Java logs nothing.
+     */
     @Test
-    public void UpdateFromMemory_LogsRefresh() {
+    public void UpdateFromMemory_LogsNothing() {
         AspectEngineDataFileDefault file = newDataFile(true, false, false);
 
         dataUpdate.updateFromMemory(file, new byte[]{1, 2, 3});
 
-        assertLogged(Level.INFO, "Attempting to refresh Engine '" +
-            engineType + "' with new data");
+        assertTrue(logged(Level.INFO).isEmpty());
+        assertTrue(logged(Level.WARN).isEmpty());
+        assertTrue(logged(Level.ERROR).isEmpty());
     }
 
+    /**
+     * .NET throws the refresh failure out of UpdateFromMemory for the caller
+     * to handle, and logs nothing.
+     */
     @Test
-    public void UpdateFromMemory_RefreshFails_LogsErrorWithDetail()
+    public void UpdateFromMemory_RefreshFails_ThrowsAndLogsNothing()
         throws Exception {
         AspectEngineDataFileDefault file = newDataFile(true, false, false);
         doThrow(new RuntimeException("no room"))
             .when(engine).refreshData(anyString(), any(byte[].class));
 
-        dataUpdate.updateFromMemory(file, new byte[]{1, 2, 3});
+        EngineRefreshException thrown = null;
+        try {
+            dataUpdate.updateFromMemory(file, new byte[]{1, 2, 3});
+        } catch (EngineRefreshException ex) {
+            thrown = ex;
+        }
 
-        assertLogged(Level.ERROR, "An error occurred while applying a data " +
-            "file update to " + engineType + ". Error detail: no room");
+        assertNotNull("updateFromMemory did not throw", thrown);
+        assertEquals(
+            "An error occurred when applying a data update to engine '" +
+                engineType + "'.",
+            thrown.getMessage());
+        assertTrue(logged(Level.ERROR).isEmpty());
+    }
+
+    /**
+     * .NET warns, and still refreshes the engine, when the data passed in
+     * cannot be written to the data file.
+     */
+    @Test
+    public void UpdateFromMemory_WriteFails_WarnsAndStillRefreshes()
+        throws Exception {
+        AspectEngineDataFileDefault file = newDataFile(false, false, false);
+        String missing = new File(
+            new File(dataFile.getParentFile(), "no-such-directory"),
+            "data.bin").getAbsolutePath();
+        file.getConfiguration().setDataFilePath(missing);
+
+        AutoUpdateStatus status =
+            dataUpdate.updateFromMemory(file, new byte[]{1, 2, 3});
+
+        assertEquals(AutoUpdateStatus.AUTO_UPDATE_SUCCESS, status);
+        assertLogged(Level.WARN, "An error occurred when writing to '" +
+            missing + "'. The engine will be updated to use the new data " +
+            "but the file on disk will still contain old data.");
     }
 
     @Test
@@ -248,7 +287,7 @@ public class DataUpdateServiceLoggingTests {
 
         dataUpdate.registerDataFile(file);
 
-        assertLogged(Level.INFO, "Updating on start-up");
+        assertLogged(Level.INFO, "Updating on startup");
     }
 
     @Test
@@ -262,8 +301,9 @@ public class DataUpdateServiceLoggingTests {
 
         dataUpdate.registerDataFile(file);
 
-        assertLogged(Level.INFO, "Checking for update from '" + UPDATE_URL +
-            "' for Engine 'ExampleEngine'");
+        assertLogged(Level.INFO, "Checking for update from " + UPDATE_URL);
+        assertLogged(Level.INFO, "No data newer than 2020-09-13T12:26:40Z " +
+            "found at '" + UPDATE_URL + "' for engine 'ExampleEngine'");
     }
 
     @Test
@@ -288,21 +328,40 @@ public class DataUpdateServiceLoggingTests {
         assertNotNull(file.getConfiguration().getWatchKey());
     }
 
+    /**
+     * The entry a timer or watcher check writes for a failure, which reads
+     * "Error during check for data update" at Error with the cause attached.
+     * The cause carries the message of the row in the Errors table.
+     */
+    private void assertCheckFailed(String causeMessage) {
+        assertLogged(Level.ERROR, "Error during check for data update");
+        boolean found = false;
+        for (ILoggingEvent event : appender.list) {
+            if (event.getLevel() == Level.ERROR &&
+                event.getThrowableProxy() != null &&
+                causeMessage.equals(event.getThrowableProxy().getMessage())) {
+                found = true;
+            }
+        }
+        assertTrue(
+            "No error carrying " + causeMessage + " in " + appender.list,
+            found);
+    }
+
     @Test
-    public void ConnectFails_Manual_WarnsWithoutRetryText() throws Exception {
+    public void ConnectFails_Manual_ReportsTheAccessError() throws Exception {
         when(httpClient.connect(any(URL.class)))
             .thenThrow(new IOException("refused"));
         newDataFile(false, false, false);
 
         dataUpdate.checkForUpdate(engine);
 
-        assertLogged(Level.WARN, "An error occurred when connecting to " +
-            UPDATE_URL + " in order to check for data file updates for " +
-            engineType + ". Error detail: refused");
+        assertCheckFailed("Error accessing data update service at '" +
+            UPDATE_URL + "' for engine '" + engineType + "'");
     }
 
     @Test
-    public void ConnectFails_Automatic_WarnsThatUpdateWillBeTriedAgain()
+    public void ConnectFails_Automatic_ReportsTheAccessError()
         throws Exception {
         when(httpClient.connect(any(URL.class)))
             .thenThrow(new IOException("refused"));
@@ -310,52 +369,48 @@ public class DataUpdateServiceLoggingTests {
 
         dataUpdate.registerDataFile(file);
 
-        assertLogged(Level.WARN, "An error occurred when connecting to " +
-            UPDATE_URL + " in order to check for data file updates for " +
-            engineType + ". Update will be attempted again later. " +
-            "Error detail: refused");
+        assertCheckFailed("Error accessing data update service at '" +
+            UPDATE_URL + "' for engine '" + engineType + "'");
     }
 
     @Test
-    public void ConnectFails_AutoUpdateOff_DoesNotPromiseAnotherTry()
-        throws Exception {
-        when(httpClient.connect(any(URL.class)))
-            .thenThrow(new IOException("refused"));
-        AspectEngineDataFileDefault file = newDataFile(false, false, true);
+    public void NoResponse_ReportsTheNoResponseError() throws Exception {
+        when(httpClient.connect(any(URL.class))).thenReturn(null);
+        newDataFile(false, false, false);
 
-        dataUpdate.registerDataFile(file);
+        dataUpdate.checkForUpdate(engine);
 
-        assertLogged(Level.WARN, "An error occurred when connecting to " +
-            UPDATE_URL + " in order to check for data file updates for " +
-            engineType + ". Error detail: refused");
+        assertCheckFailed("No response from data update service at '" +
+            UPDATE_URL + "' for engine '" + engineType + "'");
     }
 
-    private void assertStatusWarned(int status, String detail)
+    private void assertStatusReported(int status, String causeMessage)
         throws Exception {
         when(connection.getResponseCode()).thenReturn(status);
         newDataFile(true, false, false);
 
         dataUpdate.checkForUpdate(engine);
 
-        assertLogged(Level.WARN, "An error occurred while downloading a data " +
-            "file update for " + engineType + " from " + UPDATE_URL + ". " +
-            "Error detail: " + detail);
-        assertTrue(logged(Level.ERROR).isEmpty());
+        assertCheckFailed(causeMessage);
+        assertTrue(logged(Level.WARN).isEmpty());
     }
 
     @Test
-    public void TooManyRequests_WarnsAboutTheDownload() throws Exception {
-        assertStatusWarned(429, "HTTP status code 429 (too many requests)");
+    public void TooManyRequests_ReportsTheError() throws Exception {
+        assertStatusReported(429, "Too many requests to '" + UPDATE_URL +
+            "' for engine '" + engineType + "'");
     }
 
     @Test
-    public void Forbidden_WarnsAboutTheDownload() throws Exception {
-        assertStatusWarned(403, "HTTP status code 403 (access denied)");
+    public void Forbidden_ReportsTheError() throws Exception {
+        assertStatusReported(403, "Access denied to data update service at '" +
+            UPDATE_URL + "' for engine '" + engineType + "'");
     }
 
     @Test
-    public void OtherStatus_WarnsAboutTheDownload() throws Exception {
-        assertStatusWarned(500, "HTTP status code 500");
+    public void OtherStatus_ReportsTheError() throws Exception {
+        assertStatusReported(500, "HTTP status code '500' from data update " +
+            "service at '" + UPDATE_URL + "' for engine '" + engineType + "'");
     }
 
     /**
@@ -363,7 +418,7 @@ public class DataUpdateServiceLoggingTests {
      * exist, so the write fails while the download itself succeeds.
      */
     @Test
-    public void TemporaryFileCannotBeWritten_LogsTheWriteError()
+    public void TemporaryFileCannotBeWritten_LogsTheUnhandledError()
         throws Exception {
         when(connection.getResponseCode())
             .thenReturn(HttpURLConnection.HTTP_OK);
@@ -381,13 +436,8 @@ public class DataUpdateServiceLoggingTests {
         dataUpdate.checkForUpdate(engine);
 
         verify(connection).getInputStream();
-        boolean found = false;
-        for (String message : logged(Level.ERROR)) {
-            found |= message.startsWith("An error occurred when writing to " +
-                missingDirectory) && message.contains(". Error detail: ");
-        }
-        assertTrue("No write error in " + logged(Level.ERROR) +
-            ", and the warnings are " + logged(Level.WARN), found);
+        assertLogged(Level.ERROR, "An unhandled error occurred while " +
+            "checking for automatic updates for engine '" + engineType + "'");
         assertTrue(logged(Level.WARN).isEmpty());
     }
 
@@ -403,10 +453,32 @@ public class DataUpdateServiceLoggingTests {
 
         dataUpdate.checkForUpdate(engine);
 
-        assertLogged(Level.WARN, "An error occurred during the integrity " +
-            "check of new data file for " + engineType + ". Error detail: " +
-            "the MD5 hash of the download does not match the Content-MD5 " +
-            "header");
+        assertCheckFailed("Integrity check failed. MD5 hash in HTTP " +
+            "response '0' for '" + engineType + "' data update does not " +
+            "match calculated hash for the downloaded file " +
+            "'5289df737df57326fcdd22597afb1fac'.");
+    }
+
+    /**
+     * .NET warns, and goes on with the check, when the response carries no
+     * Content-MD5 header to verify the download against.
+     */
+    @Test
+    public void NoMd5Header_WarnsAndGoesOn() throws Exception {
+        when(connection.getResponseCode())
+            .thenReturn(HttpURLConnection.HTTP_OK);
+        when(connection.getInputStream())
+            .thenReturn(new ByteArrayInputStream(new byte[]{1, 2, 3}));
+        when(connection.getHeaderField("Content-MD5")).thenReturn(null);
+        AspectEngineDataFileDefault file = newDataFile(true, false, false);
+        file.getConfiguration().setVerifyMd5(true);
+
+        dataUpdate.checkForUpdate(engine);
+
+        assertLogged(Level.WARN, "No MD5 hash included in data update " +
+            "response for '" + UPDATE_URL + "'. Unable to verify data " +
+            "integrity");
+        assertLogged(Level.INFO, "Attempting to refresh engine with new data");
     }
 
     @Test
@@ -417,7 +489,7 @@ public class DataUpdateServiceLoggingTests {
 
         dataUpdate.checkForUpdate(engine);
 
-        assertLogged(Level.ERROR, "The data file 'default' is checking for " +
+        assertCheckFailed("The data file 'default' is checking for " +
             "updates but does not have a temporary file path configured.");
     }
 
@@ -462,10 +534,9 @@ public class DataUpdateServiceLoggingTests {
 
         dataUpdate.checkForUpdate(engine);
 
-        assertLogged(Level.INFO, "Checking for update from '" + MASKED_URL +
-            "' for Engine '" + engineType + "'");
+        assertLogged(Level.INFO, "Checking for update from " + MASKED_URL);
         assertLogged(Level.INFO, "No data newer than 2020-09-13T12:26:40Z " +
-            "found at '" + MASKED_URL + "' for Engine '" + engineType + "'");
+            "found at '" + MASKED_URL + "' for engine '" + engineType + "'");
         assertKeyOnlyMasked();
     }
 
@@ -480,7 +551,7 @@ public class DataUpdateServiceLoggingTests {
         dataUpdate.checkForUpdate(engine);
 
         assertLogged(Level.INFO, "Downloaded new data from '" + MASKED_URL +
-            "' for Engine '" + engineType + "'");
+            "' for engine '" + engineType + "'");
         assertKeyOnlyMasked();
     }
 
@@ -497,9 +568,8 @@ public class DataUpdateServiceLoggingTests {
 
         dataUpdate.checkForUpdate(engine);
 
-        assertLogged(Level.WARN, "An error occurred when connecting to " +
-            MASKED_URL + " in order to check for data file updates for " +
-            engineType + ". Error detail: Connection refused: " + MASKED_URL);
+        assertCheckFailed("Error accessing data update service at '" +
+            MASKED_URL + "' for engine '" + engineType + "'");
         assertKeyOnlyMasked();
     }
 
@@ -514,9 +584,8 @@ public class DataUpdateServiceLoggingTests {
 
         dataUpdate.checkForUpdate(engine);
 
-        assertLogged(Level.WARN, "An error occurred while downloading a data " +
-            "file update for " + engineType + " from " + MASKED_URL + ". " +
-            "Error detail: Premature EOF from " + MASKED_URL);
+        assertCheckFailed("Error accessing data update service at '" +
+            MASKED_URL + "' for engine '" + engineType + "'");
         assertKeyOnlyMasked();
     }
 
@@ -528,9 +597,8 @@ public class DataUpdateServiceLoggingTests {
 
         dataUpdate.checkForUpdate(engine);
 
-        assertLogged(Level.WARN, "An error occurred while downloading a data " +
-            "file update for " + engineType + " from " + MASKED_URL + ". " +
-            "Error detail: HTTP status code 403 (access denied)");
+        assertCheckFailed("Access denied to data update service at '" +
+            MASKED_URL + "' for engine '" + engineType + "'");
         assertKeyOnlyMasked();
     }
 
@@ -541,10 +609,8 @@ public class DataUpdateServiceLoggingTests {
 
         dataUpdate.checkForUpdate(engine);
 
-        assertLogged(Level.WARN, "An error occurred when connecting to " +
-            MASKED_URL + " in order to check for data file updates for " +
-            engineType + ". Error detail: No response from the data update " +
-            "service");
+        assertCheckFailed("No response from data update service at '" +
+            MASKED_URL + "' for engine '" + engineType + "'");
         assertKeyOnlyMasked();
     }
 }
