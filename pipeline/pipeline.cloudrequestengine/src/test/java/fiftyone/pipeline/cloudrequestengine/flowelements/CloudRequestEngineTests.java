@@ -817,6 +817,48 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
     }
 
     /**
+     * A cache key is built from the Evidence the engine's own filter
+     * accepts, and that filter still holds the keys the cloud service
+     * lists, so a repeated request finds the entry the first one wrote and
+     * one request is posted. The request carries Evidence the service does
+     * not list all the same.
+     * See the Generation of keys section of the caching specification.
+     */
+    @Test
+    public void process_RepeatedRequestHitsTheCache() throws Exception {
+        acceptEvidence(Arrays.asList("query.User-Agent"));
+        configureMockedClient();
+        CloudRequestEngine engine =
+            new CloudRequestEngineBuilder(loggerFactory, httpClient)
+                .setResourceKey("resourcekey")
+                .setCacheSize(10)
+                .build();
+
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+                .addFlowElement(engine).build()) {
+            for (int i = 0; i < 2; i++) {
+                try (FlowData data = pipeline.createFlowData()) {
+                    data.addEvidence("query.User-Agent", "iPhone");
+                    data.addEvidence("header.sec-ch-ua-platform", "Windows");
+                    data.process();
+                }
+            }
+        }
+
+        assertFalse(
+            engine.getEvidenceKeyFilter().include("header.sec-ch-ua-platform"),
+            "The engine accepts a key the cloud service does not list, so " +
+                "the cache key takes every Evidence value.");
+        ArgumentCaptor<byte[]> body = ArgumentCaptor.forClass(byte[].class);
+        verify(httpClient, times(1)).postData(any(), any(), body.capture());
+        List<String> items = Arrays.asList(
+            new String(body.getValue(), StandardCharsets.UTF_8).split("&"));
+        assertTrue(items.contains("sec-ch-ua-platform=Windows"),
+            "The request did not carry the Evidence the cloud service does " +
+                "not list: " + items);
+    }
+
+    /**
      * Answer the evidencekeys request with the given keys.
      * @param keys the Evidence keys the cloud service accepts
      */
