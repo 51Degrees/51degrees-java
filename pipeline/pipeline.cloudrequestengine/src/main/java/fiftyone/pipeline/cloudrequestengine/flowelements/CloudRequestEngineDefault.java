@@ -132,6 +132,13 @@ public class CloudRequestEngineDefault
         new CloudEvidenceKeyFilter();
 
     /**
+     * The prefixes after query, header and cookie, highest precedence
+     * first, as evidence.md lists them.
+     */
+    private static final String[] OTHER_PREFIX_PRECEDENCE =
+        { "server", "fiftyone", "location" };
+
+    /**
      * Held while the discovery requests are made, so that concurrent first
      * uses make them once.
      */
@@ -469,9 +476,11 @@ public class CloudRequestEngineDefault
 
     /**
      * The Evidence to send, keyed by the name the cloud service expects.
-     * Only Evidence that {@link #isSent(String)} allows is included, and
-     * where two prefixes give the same name the precedence order decides,
-     * query first, then header, then cookie, then any other prefix.
+     * Only Evidence that {@link #isSent(String)} allows is included. Keys
+     * ignore letter case, so one name under two prefixes is one field,
+     * sent with the name and value of the key that wins by the precedence
+     * in evidence.md, being query, header, cookie, server, fiftyone and
+     * location, then any other prefix alphabetically.
      * Evidence with no prefix ranks with the other prefixes, unless the
      * whole key is query, header or cookie, as {@link #keyPrefix(String)}
      * gives the whole key as its prefix.
@@ -486,9 +495,12 @@ public class CloudRequestEngineDefault
                 evidence.put(entry.getKey(), entry.getValue());
             }
         }
-        Map<String, Object> formData = new HashMap<>();
+        Map<String, Object> formData =
+            new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
-        // Add evidence in reverse alphabetical order, excluding special keys.
+        // Add the other evidence lowest precedence first, being other
+        // prefixes in reverse alphabetical order, then location, fiftyone
+        // and server.
         addFormData(formData, evidence, getSelectedEvidence(evidence, "other"));
         // Add cookie evidence.
         addFormData(formData, evidence, getSelectedEvidence(evidence, "cookie"));
@@ -552,8 +564,12 @@ public class CloudRequestEngineDefault
         Map<String, Object> allEvidence,
         Map<String, Object> evidence) {
 
-        List<String> evidenceKeys = Arrays.asList(evidence.keySet().toArray(new String[0]));
-        Collections.sort(evidenceKeys, Collections.reverseOrder());
+        // Lowest precedence first, so a later key replaces an earlier one.
+        List<String> evidenceKeys = new ArrayList<>(evidence.keySet());
+        evidenceKeys.sort(Comparator
+            .comparingInt((String key) -> otherPrefixRank(keyPrefix(key)))
+            .thenComparing(String.CASE_INSENSITIVE_ORDER)
+            .reversed());
 
         for (String evidenceKey : evidenceKeys) {
             String prefix = keyPrefix(evidenceKey);
@@ -572,7 +588,9 @@ public class CloudRequestEngineDefault
                 if (prefix.equalsIgnoreCase("query") == false) {
                     Map<String, Object> conflicts = new HashMap<>();
                     for (String key : allEvidence.keySet()) {
-                        if (key.equals(evidenceKey) == false && key.contains(suffix)) {
+                        if (key.equals(evidenceKey) == false &&
+                            key.toLowerCase(Locale.ROOT).contains(
+                                suffix.toLowerCase(Locale.ROOT))) {
                             conflicts.put(key, allEvidence.get(key));
                         }
                     }
@@ -592,10 +610,28 @@ public class CloudRequestEngineDefault
                             conflictStr.toString());
                     logger.warn(warningMessage);
                 }
-                // Overwrite the existing queryParameter value.
+                // Replace the existing field, name and value, so the name
+                // sent is the winning key's.
+                formData.remove(suffix);
                 formData.put(suffix, evidence.get(evidenceKey));
             }
         }
+    }
+
+    /**
+     * The precedence of a prefix that is not query, header or cookie,
+     * lower first, being server, fiftyone and location as evidence.md
+     * lists them, then any other prefix.
+     * @param prefix the prefix
+     * @return the rank, where a lower rank wins
+     */
+    private static int otherPrefixRank(String prefix) {
+        for (int i = 0; i < OTHER_PREFIX_PRECEDENCE.length; i++) {
+            if (OTHER_PREFIX_PRECEDENCE[i].equalsIgnoreCase(prefix)) {
+                return i;
+            }
+        }
+        return OTHER_PREFIX_PRECEDENCE.length;
     }
 
     /**
