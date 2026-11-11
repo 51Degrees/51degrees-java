@@ -46,6 +46,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -78,8 +79,8 @@ public class CloudRequestEngineLicenseKeyTests {
 
     /** Records every request and answers from fixed responses. */
     private static class FakeCloud implements HttpClient {
-        // Discovery makes its two requests at once, so calls are
-        // recorded from two threads.
+        // Discovery makes its two requests at once, so connections and
+        // calls are recorded from two threads.
         final List<Call> calls =
             Collections.synchronizedList(new ArrayList<>());
         String dataResponse = "{\"device\":{\"ismobile\":true," +
@@ -90,7 +91,8 @@ public class CloudRequestEngineLicenseKeyTests {
             "[{\"Name\":\"IsMobile\",\"Type\":\"Boolean\"," +
             "\"Category\":\"Device\"}]}}}";
         String evidenceKeysResponse = "[\"query.User-Agent\"]";
-        private final Map<HttpURLConnection, URL> urls = new HashMap<>();
+        private final Map<HttpURLConnection, URL> urls =
+            new ConcurrentHashMap<>();
 
         @Override
         public HttpURLConnection connect(URL url) {
