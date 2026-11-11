@@ -47,7 +47,15 @@ public class Main {
     private static final String STAR_SIGN_RESOURCE_KEY = "cloudexample";
 
     /**
-     * The cloud endpoint, taken from _51DEGREES_CLOUD_ENDPOINT when that is set,
+     * The 51Degrees cloud service, used when a 51Degrees resource key is
+     * set and no other endpoint is given.
+     */
+    private static final String FIFTYONE_CLOUD_ENDPOINT =
+        "https://cloud.51degrees.com/api/v4/";
+
+    /**
+     * The cloud endpoint, taken from _51DEGREES_CLOUD_ENDPOINT when that
+     * is set,
      * which is the variable every 51Degrees cloud example honours and the
      * one the cloud request engine builder reads by itself when no
      * endpoint is given. A host other than cloud.51degrees.com would be
@@ -61,7 +69,14 @@ public class Main {
     static String endpoint() {
         String value = env("_51DEGREES_CLOUD_ENDPOINT");
         if (value == null) {
-            return STAR_SIGN_ENDPOINT;
+            // A resource key and an endpoint travel together, because a
+            // key is only known to the service that issued it. So the
+            // 51Degrees cloud is used whenever a 51Degrees resource key
+            // was found, and the star sign service, with the star sign
+            // key, only when there was none.
+            return configuredResourceKey() == null
+                ? STAR_SIGN_ENDPOINT
+                : FIFTYONE_CLOUD_ENDPOINT;
         }
         while (value.endsWith("/")) {
             value = value.substring(0, value.length() - 1);
@@ -70,27 +85,57 @@ public class Main {
     }
 
     /**
-     * The resource key from _51DEGREES_RESOURCE_KEY, so the example can be
-     * pointed at a host whose keys are its own. Otherwise the key of the
-     * star sign service.
+     * The names a 51Degrees resource key is read from, in the order they
+     * are tried. Each is read as an environment variable first and then
+     * as a system property, so a developer can export one and a build
+     * can pass one on the command line with -D.
+     */
+    static final String[] RESOURCE_KEY_NAMES = {
+        "_51DEGREES_RESOURCE_KEY",
+        "_51DEGREES_RESOURCE_KEY_BESPOKE",
+        "TestResourceKey",
+        "SUPER_RESOURCE_KEY",
+    };
+
+    /**
+     * The 51Degrees resource key that was found, or null when none of the
+     * names above is set anywhere.
+     */
+    static String configuredResourceKey() {
+        for (String name : RESOURCE_KEY_NAMES) {
+            String value = env(name);
+            if (value != null) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The resource key the example runs with, which is a 51Degrees key
+     * where one was found and the key of the star sign service where
+     * none was.
      */
     static String resourceKey() {
-        String value = env("_51DEGREES_RESOURCE_KEY");
+        String value = configuredResourceKey();
         return value == null ? STAR_SIGN_RESOURCE_KEY : value;
     }
 
     static String env(String name) {
         String value = System.getenv(name);
-        return value == null || value.trim().isEmpty() ? null : value;
+        if (value == null || value.trim().isEmpty()) {
+            value = System.getProperty(name);
+        }
+        return value == null || value.trim().isEmpty() ? null : value.trim();
     }
 
     public static class Example {
         public void run() throws Exception {
 //! [usage]
-            // The endpoint comes from _51DEGREES_CLOUD_ENDPOINT when it is set, so
-            // the example can be pointed at an on premise web server or a
-            // privately hosted version of the 51Degrees cloud, and
-            // otherwise at the star sign service it was written for.
+            // The endpoint comes from _51DEGREES_CLOUD_ENDPOINT when it is
+            // set, so the example can be pointed at an on premise web
+            // server or a privately hosted version of the 51Degrees cloud,
+            // and otherwise at the star sign service it was written for.
             CloudRequestEngine cloudRequestEngine =
                 new CloudRequestEngineBuilder(loggerFactory, httpClient)
                     .setEndpoint(endpoint())

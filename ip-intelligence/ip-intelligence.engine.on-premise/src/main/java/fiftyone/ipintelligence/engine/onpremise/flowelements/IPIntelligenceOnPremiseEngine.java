@@ -63,6 +63,17 @@ public class IPIntelligenceOnPremiseEngine
     private final Random rand = new Random();
 
     /**
+     * Case insensitive map from each property name the engine was built with
+     * to its required property index, which is the place of the name in that
+     * list, the first where a name is given more than once, as the native
+     * engine gives it. Made from the names given at build and never from the
+     * data set, so an index keeps naming the same property after a reload
+     * from a data file whose property order differs. Empty when the engine
+     * was built with no names, in which case reads go by name.
+     */
+    private final Map<String, Integer> propertyIndexes;
+
+    /**
      * Construct a new instance of the {@link IPIntelligenceOnPremiseEngine}.
      * @param logger logger instance to use for logging
      * @param dataFile data file to read the data set from
@@ -70,6 +81,8 @@ public class IPIntelligenceOnPremiseEngine
      * @param properties native required properties configuration which define
      *                   the properties which the engine should be initialised
      *                   with
+     * @param propertyNames the property names {@code properties} was made
+     *                      from, in the same order
      * @param ipiDataFactory the factory to use when creating a
      *                          {@link IPIntelligenceDataHash} instance
      * @param tempDataFileDir the file where a temporary data file copy
@@ -80,11 +93,13 @@ public class IPIntelligenceOnPremiseEngine
         AspectEngineDataFile dataFile,
         ConfigIpiSwig config,
         RequiredPropertiesConfigSwig properties,
+        List<String> propertyNames,
         ElementDataFactory<IPIntelligenceDataHash> ipiDataFactory,
         String tempDataFileDir) {
         super(logger, ipiDataFactory, tempDataFileDir);
         this.config = config;
         this.propertiesConfigSwig = properties;
+        this.propertyIndexes = indexesOf(propertyNames);
         addDataFile(dataFile);
     }
 
@@ -111,6 +126,37 @@ public class IPIntelligenceOnPremiseEngine
      */
     public MetaDataSwig getMetaData() {
         return engine.getMetaData();
+    }
+
+    /**
+     * Get the required property index for a property name, or null when the
+     * engine was not built with that name and the read has to go by name.
+     * @param propertyName name of the property
+     * @return required property index, or null
+     */
+    Integer getPropertyIndex(String propertyName) {
+        return propertyIndexes.get(propertyName);
+    }
+
+    /**
+     * Map each name to its place in the list, keeping the first place of a
+     * name given more than once in any letter case.
+     * @param names the property names in the order the engine is built with,
+     *              or null
+     * @return unmodifiable case insensitive map from name to index
+     */
+    private static Map<String, Integer> indexesOf(List<String> names) {
+        Map<String, Integer> indexes =
+            new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        if (names != null) {
+            for (int i = 0; i < names.size(); i++) {
+                String name = names.get(i);
+                if (name != null && name.isEmpty() == false) {
+                    indexes.putIfAbsent(name, i);
+                }
+            }
+        }
+        return Collections.unmodifiableMap(indexes);
     }
 
     @Override

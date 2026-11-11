@@ -34,6 +34,14 @@ public class FiftyOneInterceptorConfigDefault implements FiftyOneInterceptorConf
 
     private boolean clientsidePropertiesEnabled;
 
+    private String javaScriptPath;
+
+    private String jsonPath;
+
+    private boolean sequenceElementEnabled = true;
+
+    private boolean setHeadersElementEnabled = true;
+
     @Autowired
     public ServletContext servletContext;
     
@@ -43,6 +51,42 @@ public class FiftyOneInterceptorConfigDefault implements FiftyOneInterceptorConf
 
     public void setClientsidePropertiesEnabled(boolean clientsidePropertiesEnabled) {
         this.clientsidePropertiesEnabled = clientsidePropertiesEnabled;
+    }
+
+    public void setJavaScriptPath(String javaScriptPath) {
+        this.javaScriptPath = javaScriptPath;
+    }
+
+    public void setJsonPath(String jsonPath) {
+        this.jsonPath = jsonPath;
+    }
+
+    public void setSequenceElementEnabled(boolean sequenceElementEnabled) {
+        this.sequenceElementEnabled = sequenceElementEnabled;
+    }
+
+    public void setSetHeadersElementEnabled(boolean setHeadersElementEnabled) {
+        this.setHeadersElementEnabled = setHeadersElementEnabled;
+    }
+
+    @Override
+    public String getJavaScriptPath() {
+        return javaScriptPath;
+    }
+
+    @Override
+    public String getJsonPath() {
+        return jsonPath;
+    }
+
+    @Override
+    public boolean getSequenceElementEnabled() {
+        return sequenceElementEnabled;
+    }
+
+    @Override
+    public boolean getSetHeadersElementEnabled() {
+        return setHeadersElementEnabled;
     }
 
     @Override

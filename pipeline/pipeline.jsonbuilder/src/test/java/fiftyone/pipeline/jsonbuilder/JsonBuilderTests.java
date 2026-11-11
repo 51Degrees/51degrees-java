@@ -483,6 +483,39 @@ public class JsonBuilderTests {
     }
 
     /**
+     * The Sequence Element's Element Data is in the JSON like any other
+     * element's, because the JSON Builder Element does not exclude it.
+     * @throws Exception
+     */
+    @Test
+    public void JsonBuilder_SequenceElementData_InJson() throws Exception {
+        EmptyEngine engine = new EmptyEngineBuilder(loggerFactory)
+            .setLazyLoading(new LazyLoadingConfiguration(1000))
+            .setProcessCost(500)
+            .build();
+        JsonBuilderElement jsonBuilder = new JsonBuilderElementBuilder(loggerFactory)
+            .build();
+        SequenceElement sequenceElement = new SequenceElementBuilder(loggerFactory)
+            .build();
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+            .addFlowElement(sequenceElement)
+            .addFlowElement(engine)
+            .addFlowElement(jsonBuilder)
+            .setAutoCloseElements(true)
+            .build();
+             FlowData flowData = pipeline.createFlowData()) {
+
+            flowData.process();
+
+            JsonBuilderData jsonResult = flowData.get(JsonBuilderData.class);
+            JSONObject jsonData = new JSONObject(jsonResult.getJson());
+            JSONObject sequence = jsonData.getJSONObject("sequence");
+            assertEquals(1, sequence.getLong("sequence"));
+            assertFalse(sequence.getString("session-id").isEmpty());
+        }
+    }
+
+    /**
      * A weighted value is written as an object with the lower-case keys
      * rawweighting and value, and no others.
      * See the Serializing section of the weighted values page of the
