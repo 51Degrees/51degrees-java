@@ -65,6 +65,13 @@ public class JsonBuilderElement
     private static final String JAVASCRIPT_PROPERTIES_NAME = "javascriptProperties";
     private static final String RAW_WEIGHTING_KEY = "rawweighting";
     private static final String VALUE_KEY = "value";
+    /**
+     * The error when no Sequence Element has produced a sequence number,
+     * worded as the specification gives it for every language.
+     */
+    private static final String NO_SEQUENCE_MESSAGE =
+        "The JSON Builder needs a sequence number. Place a Sequence Element " +
+        "before the JSON Builder in the Pipeline.";
     private final EvidenceKeyFilter evidenceKeyFilter;
     private final List<ElementPropertyMetaData> properties;
     private final List<String> blacklist;
@@ -203,9 +210,7 @@ public class JsonBuilderElement
         try {
           sequenceNumber = getSequenceNumber(data);
         } catch (Exception e) {
-            throw new PipelineConfigurationException("Make sure there is a "
-                    + "SequenceElement placed before this JsonBuilderElement "
-                    + "in the pipeline", e);
+            throw new PipelineConfigurationException(NO_SEQUENCE_MESSAGE, e);
         }
         
         Map<String, Object> allProperties = getAllProperties(data, config);
@@ -225,8 +230,7 @@ public class JsonBuilderElement
             "query.sequence",
             Integer.class);
         if(sequence.hasValue() == false) {
-            throw new Exception("Sequence number not present in evidence. " +
-                "this is mandatory.");
+            throw new Exception(NO_SEQUENCE_MESSAGE);
         }
         return sequence.getValue();
     }
