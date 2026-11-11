@@ -34,6 +34,12 @@ Describe 'Find-EnvironmentNameProblem' {
         @{ Line = 'env("_51DEGREES_LICENSE_KEY", "LICENSE_KEY");' }
         @{ Line = 'public static final String FOD = "FOD_CLOUD_API_URL";' }
         @{ Line = '$env:LICENSE_KEY = $Keys.TestResourceKey' }
+        @{ Line = '${env:LICENSE_KEY} = $Keys.TestResourceKey' }
+        @{ Line = '${Env:RESOURCE_KEY}' }
+        @{ Line = '$ENV:RESOURCE_KEY = "key"' }
+        @{ Line = 'Remove-Item Env:\LICENSE_KEY' }
+        @{ Line = '<Endpoint>${env:FOD_CLOUD_API_URL}</Endpoint>' }
+        @{ Line = '          url: ${{ env.FOD_CLOUD_API_URL }}' }
         @{ Line = '${FOD_CLOUD_API_URL}' }
         @{ Line = 'Constants.LEGACY_ENV_VARS' }
         @{ Line = '          LICENSE_KEY: ${{ secrets.DEVICE_DETECTION_KEY }}' }
@@ -54,6 +60,9 @@ Describe 'Find-EnvironmentNameProblem' {
         @{ Line = 'System.getenv("_51DEGREES_CLOUD_ENDPOINT")' }
         @{ Line = '$env:_51DEGREES_DD_PATH = "file.hash"' }
         @{ Line = '$env:_51degrees_dd_path = "file.hash"' }
+        @{ Line = '${env:_51DEGREES_LICENSE_KEY} = $Keys.TestResourceKey' }
+        @{ Line = 'assertEquals("${env:user.home}", substitutor.replace(line));' }
+        @{ Line = '  PAID_RESOURCE_KEY: ${{ env.PAID_RESOURCE_KEY }}' }
         @{ Line = 'System.getenv("SUPER_RESOURCE_KEY")' }
         @{ Line = 'Set the key with !!YOUR_RESOURCE_KEY!! in the readme.' }
     ) {
