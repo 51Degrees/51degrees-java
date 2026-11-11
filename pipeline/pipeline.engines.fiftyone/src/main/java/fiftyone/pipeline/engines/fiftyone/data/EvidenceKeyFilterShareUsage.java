@@ -184,6 +184,11 @@ public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
 
     @Override
     public boolean include(String key) {
+        // The Usage Sharing Element reads the whole web request itself, and
+        // the request is never a value to share.
+        if (ShareUsageEvidence.HTTP_REQUEST_KEY.equalsIgnoreCase(key)) {
+            return false;
+        }
         String lowerKey = key.toLowerCase();
         for (String neverShared : NEVER_SHARED_EVIDENCE_KEYS) {
             if (lowerKey.equals(neverShared) ||

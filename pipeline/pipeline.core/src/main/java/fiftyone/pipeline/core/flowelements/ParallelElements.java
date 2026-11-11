@@ -117,6 +117,19 @@ class ParallelElements
         return true;
     }
 
+    /**
+     * @return true if every child element has loaded its properties
+     */
+    @Override
+    public boolean hasLoadedProperties() {
+        for (FlowElement element : flowElements) {
+            if (element.hasLoadedProperties() == false) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     @Override
     protected void managedResourcesCleanup() {
         for (FlowElement element : flowElements) {
