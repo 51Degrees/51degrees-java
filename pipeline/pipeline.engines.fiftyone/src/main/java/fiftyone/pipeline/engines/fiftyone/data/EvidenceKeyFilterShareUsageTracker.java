@@ -57,6 +57,38 @@ public class EvidenceKeyFilterShareUsageTracker extends EvidenceKeyFilterShareUs
             sessionCookieName);
     }
 
+    /**
+     * Constructor.
+     * @param blockedHttpHeaders a list of the names of the HTTP headers that
+     *                           share usage should not send to 51Degrees
+     * @param includedQueryStringParams a list of the names of query string
+     *                                  parameters that share usage should send
+     *                                  to 51Degrees
+     * @param includeSession if true then the session cookie will be included in
+     *                       the filter
+     * @param sessionCookieName the name of the cookie that contains the session
+     *                          id
+     * @param shareAllEvidence if true then all Evidence is included, apart from
+     *                         the keys that are never shared
+     * @param shareAllQueryStringParameters if true then all query string
+     *                                      parameters are included
+     */
+    public EvidenceKeyFilterShareUsageTracker(
+        List<String> blockedHttpHeaders,
+        List<String> includedQueryStringParams,
+        boolean includeSession,
+        String sessionCookieName,
+        boolean shareAllEvidence,
+        boolean shareAllQueryStringParameters) {
+        super(
+            blockedHttpHeaders,
+            includedQueryStringParams,
+            includeSession,
+            sessionCookieName,
+            shareAllEvidence,
+            shareAllQueryStringParameters);
+    }
+
     @Override
     public boolean include(String key) {
         if(key.equalsIgnoreCase(EVIDENCE_SESSIONID) ||
