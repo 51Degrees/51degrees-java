@@ -22,7 +22,11 @@
 
 package fiftyone.pipeline.engines.flowelements;
 
+import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.engines.Constants;
+import fiftyone.pipeline.engines.configuration.DataFileConfiguration;
+import fiftyone.pipeline.engines.configuration.DataFileConfigurationDefault;
+import fiftyone.pipeline.engines.services.DataUpdateService;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -35,11 +39,17 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 @SuppressWarnings("rawtypes")
 public class OnPremiseAspectEngineBuilderBaseTest {
@@ -130,5 +140,53 @@ public class OnPremiseAspectEngineBuilderBaseTest {
         assertTrue(tempDir.canRead());
         assertTrue(tempDir.canWrite());
         assertTrue(tempDir.canExecute());
+    }
+
+    /**
+     * Every data file's license key is checked before any data file is
+     * registered, so a build refused for a later data file leaves nothing
+     * registered with the data update service.
+     */
+    @Test
+    public void LaterDataFileHasNoLicenseKey_NothingRegistered() {
+        DataUpdateService updateService = mock(DataUpdateService.class);
+        OnPremiseAspectEngineBuilderBase builder =
+            new OnPremiseAspectEngineBuilderBase(null, updateService) {
+                @Override
+                public OnPremiseAspectEngineBuilderBase setPerformanceProfile(
+                    Constants.PerformanceProfiles profile) {
+                    return this;
+                }
+
+                @Override
+                protected AspectEngine newEngine(List properties) {
+                    return null;
+                }
+
+                @Override
+                protected boolean isLicenseKeyRequired(
+                    DataFileConfiguration dataFileConfig) {
+                    return true;
+                }
+            };
+        builder.addDataFile(autoUpdateConfiguration("First", "SOMELICENSEKEY"));
+        builder.addDataFile(autoUpdateConfiguration("Second", null));
+
+        assertThrows(PipelineConfigurationException.class, builder::buildEngine);
+
+        verify(updateService, never()).registerDataFile(any());
+    }
+
+    private static DataFileConfiguration autoUpdateConfiguration(
+        String identifier,
+        String licenseKey) {
+        DataFileConfigurationDefault config = new DataFileConfigurationDefault();
+        config.setIdentifier(identifier);
+        config.setAutomaticUpdatesEnabled(true);
+        if (licenseKey != null) {
+            config.setDataUpdateLicenseKeys(
+                Collections.singletonList(licenseKey));
+        }
+        return config;
     }
 }

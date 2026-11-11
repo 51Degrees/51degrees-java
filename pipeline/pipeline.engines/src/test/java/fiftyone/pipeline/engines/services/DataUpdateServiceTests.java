@@ -374,7 +374,12 @@ public class DataUpdateServiceTests {
             dataUpdate.registerDataFile(file);
 
             // Assert
-            assertNotNull(config.getWatchKey());
+            // The automatic update switch governs the file system watcher.
+            if (autoUpdateEnabled) {
+                assertNotNull(config.getWatchKey());
+            } else {
+                assertNull(config.getWatchKey());
+            }
         } finally {
             // Make sure we tidy up the temp file.
             File tempFile = new File(tempData);
@@ -890,10 +895,12 @@ public class DataUpdateServiceTests {
             // reconfigured to try again later.
             verify(futureFactory, atLeast(1))
                 .schedule(any(Runnable.class), anyLong());
-            // We expect one error to be logged so make sure it's
+            // We expect one warning to be logged so make sure it's
             // ignored in cleanup and verify its presence.
-            ignoreErrors = 1;
-            assertEquals(1, logger.errorsLogged.size());
+            ignoreWranings = 1;
+            assertEquals(1, logger.warningsLogged.size());
+            assertTrue(logger.warningsLogged.get(0).contains(errorText));
+            assertEquals(0, logger.errorsLogged.size());
             assertEquals(AUTO_UPDATE_HTTPS_ERR, completeEventArgs[0].getStatus());
         }
         finally {
@@ -1017,6 +1024,32 @@ public class DataUpdateServiceTests {
         verify(futureFactory, never()).schedule(
             any(Runnable.class),
             anyLong());
+    }
+
+    /**
+     * A programmatic update compares the data file on disk whether or not
+     * Automatic Update from File is enabled, and with automatic update off
+     * no file system watcher exists whatever the watcher flag says.
+     */
+    @Test
+    public void DataUpdateService_CheckForUpdate_FileUpdated_AutoUpdateOffWatcherFlagDefault() {
+        // Arrange
+        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        DataFileConfigurationDefault config = new DataFileConfigurationDefault();
+        config.setAutomaticUpdatesEnabled(false);
+
+        AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
+        file.setEngine(engine);
+        file.setConfiguration(config);
+        when(engine.getDataFileMetaData()).thenReturn(file);
+
+        configureFileUpdate(engine);
+
+        // Act
+        dataUpdate.checkForUpdate(engine);
+
+        // Assert
+        verify(engine, times(1)).refreshData((String)any());
     }
 
     @Test
@@ -1345,8 +1378,8 @@ public class DataUpdateServiceTests {
      */
     @Test
     public void DataUpdateService_CheckForUpdate_FileRefreshFails_TimerSetAgain() {
-        // updatedFileAvailable warns on each of its 10 tries.
-        ignoreWranings = 10;
+        // updatedFileAvailable logs one error once its tries are used up.
+        ignoreErrors = 1;
 
         // Arrange
         OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
@@ -1375,6 +1408,12 @@ public class DataUpdateServiceTests {
         assertEquals(
             DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED,
             status);
+        String expected = "An error occurred when applying a data update " +
+            "to engine '" + engine.getClass().getSimpleName() +
+            "' after 10 tries.";
+        assertTrue(
+            "Expected '" + expected + "' but got " + logger.errorsLogged,
+            logger.errorsLogged.contains(expected));
         verify(futureFactory, times(2 * timers)).schedule(
             any(Runnable.class),
             anyLong());
@@ -1688,8 +1727,8 @@ public class DataUpdateServiceTests {
         assertTrue("The 'checkForUpdateComplete' " +
             "event was never fired",
             completed);
-        // Ignore the error that is logged due to the 429
-        ignoreErrors = 1;
+        // Ignore the warning that is logged due to the 429
+        ignoreWranings = 1;
         // Check that the timer has been set to go off again.
         assertNotNull(file.getFuture());
         // Check that the timer has been set to expire in 10 seconds.
