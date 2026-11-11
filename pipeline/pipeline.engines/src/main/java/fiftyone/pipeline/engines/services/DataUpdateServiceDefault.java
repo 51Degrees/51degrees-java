@@ -391,6 +391,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                         // before notifying the engine, otherwise the copy
                         // may still be in progress.
                         boolean fileLockable = false;
+                        boolean interrupted = false;
                         long deadline = System.nanoTime() +
                                 TimeUnit.MILLISECONDS.toNanos(
                                         watchedFileOpenTimeoutMillis);
@@ -399,12 +400,14 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                             try (BinaryReader reader = fileWrapperFactory.build(
                                     aspectDataFile.getDataFilePath()).getReader()) {
                                 fileLockable = true;
-                            } catch (IOException e) {
+                            } catch (IOException ignored) {
                                 try {
                                     Thread.sleep(WATCHED_FILE_OPEN_PAUSE_MILLIS);
                                 } catch (InterruptedException ex) {
-                                    // Interrupted, so stop trying.
+                                    // Interrupted, as unregistering the data
+                                    // file does, so stop trying.
                                     Thread.currentThread().interrupt();
+                                    interrupted = true;
                                     break;
                                 }
                             }
@@ -417,10 +420,12 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                             if (dataFile.getIsRegistered()) {
                                 registerDataFile(dataFile);
                             }
-                        } else {
+                        } else if (interrupted == false) {
                             // The polling timer is left as it was.
                             status = AutoUpdateStatus.AUTO_UPDATE_TIMEOUT;
                         }
+                        // An interrupted wait leaves the update unfinished,
+                        // so the status stays AUTO_UPDATE_IN_PROGRESS.
                     }
                 }
             }
