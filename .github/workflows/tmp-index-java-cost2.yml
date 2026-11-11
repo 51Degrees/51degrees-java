@@ -1,0 +1,93 @@
+name: Temporary property index cost, same runner
+
+on:
+  push:
+    branches:
+      - 'tmp/index-java-cost2-**'
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    name: Property index cost, before and after on one runner
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout common-ci at the root, as the shared workflows do
+        uses: actions/checkout@v4
+        with:
+          repository: 51Degrees/common-ci
+      - name: Checkout this branch, the after tree
+        uses: actions/checkout@v4
+        with:
+          path: 51degrees-java
+          submodules: recursive
+      - name: Checkout rc c77fb051, the before tree
+        uses: actions/checkout@v4
+        with:
+          ref: c77fb051acb84caf730f3b0f0c854d5349b27ff2
+          path: 51degrees-java-before
+          submodules: recursive
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Fetch the data files
+        shell: pwsh
+        run: |
+          ./51degrees-java/ci/fetch-assets.ps1 `
+            -DeviceDetection '${{ secrets.DEVICE_DETECTION_KEY }}' `
+            -DeviceDetectionUrl '${{ secrets.DEVICE_DETECTION_URL }}' `
+            -IpIntelligence '${{ secrets.IP_INTELLIGENCE_KEY }}' `
+            -IpIntelligenceUrl '${{ secrets.IPI_DATA_FILE_URL }}'
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: Copy the harness into the before tree
+        shell: pwsh
+        run: |
+          $rel = 'device-detection/device-detection.hash.engine.on-premise/src/test/java/fiftyone/devicedetection/hash/engine/onpremise/IndexCostTiming.java'
+          Copy-Item "51degrees-java/$rel" "51degrees-java-before/$rel"
+          git -C 51degrees-java log --oneline -1
+          git -C 51degrees-java-before log --oneline -1
+      - name: Build the after tree without tests
+        shell: pwsh
+        run: |
+          Push-Location 51degrees-java
+          mvn -B install -DskipTests -Pdev
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: Build the before tree without tests, in its own local repository
+        shell: pwsh
+        run: |
+          Push-Location 51degrees-java-before
+          mvn -B install -DskipTests -Pdev "-Dmaven.repo.local=$HOME/m2-before"
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: Measure, alternating the trees
+        shell: pwsh
+        run: |
+          $data = (Resolve-Path '51degrees-java/cxx/data/device-detection').Path
+          $ua = Join-Path $data '20000 User Agents.csv'
+          $n = 0
+          foreach ($case in @(
+            @{ File = 'TAC-HashV41.hash'; Label = 'TAC' },
+            @{ File = '51Degrees-LiteV4.1.hash'; Label = 'Lite' })) {
+            $path = (Resolve-Path (Join-Path $data $case.File)).Path
+            foreach ($profile in 'MaxPerformance', 'LowMemory') {
+              $trees = if ($n % 2 -eq 0) { @('before', 'after') } else { @('after', 'before') }
+              $n++
+              foreach ($tree in $trees) {
+                $dir = if ($tree -eq 'before') { '51degrees-java-before' } else { '51degrees-java' }
+                $extra = if ($tree -eq 'before') { "-Dmaven.repo.local=$HOME/m2-before" } else { '-Dnothing=1' }
+                Push-Location $dir
+                mvn -B -f device-detection/pom.xml -pl device-detection.hash.engine.on-premise test `
+                  '-Dtest=IndexCostTiming' '-DfailIfNoTests=false' `
+                  '-Dsurefire.failIfNoSpecifiedTests=false' $extra `
+                  "-DcostDataFile=$path" "-DcostUaFile=$ua" `
+                  "-DcostProfile=$profile" "-DcostLabel=$($case.Label)" "-DcostTree=$tree" |
+                  Select-String 'COST |\[ERROR\]'
+                $code = $LASTEXITCODE
+                Pop-Location
+                if ($code -ne 0) { exit 1 }
+              }
+            }
+          }
