@@ -60,7 +60,6 @@ public class CloudRequestEngineLicenseKeyTests {
     private static final String BASE = "https://cloud.example/api/v4/";
     private static final String LICENSE_KEY = "abcdefghijkl1234";
     private static final String RESOURCE_KEY = "resourcekey";
-    private static final String PROPERTIES = "device.ismobile,device.iscrawler";
     private static final List<String> PROPERTY_LIST =
         Arrays.asList("device.ismobile", "device.iscrawler");
 
@@ -326,7 +325,7 @@ public class CloudRequestEngineLicenseKeyTests {
 
         Map<String, String> fields = dataRequest("/api/v4/json");
         assertEquals(LICENSE_KEY, fields.get("license"));
-        assertEquals(PROPERTIES, fields.get("values"));
+        assertEquals("Device.IsMobile,device.iscrawler", fields.get("values"));
         assertFalse(fields.containsKey("resource"));
         assertFalse(fields.containsKey("licence"));
         assertEquals("iPhone", fields.get("User-Agent"));
@@ -374,7 +373,7 @@ public class CloudRequestEngineLicenseKeyTests {
 
         Map<String, String> fields = dataRequest(RESOURCE_KEY + ".json");
         assertEquals(RESOURCE_KEY, fields.get("resource"));
-        assertEquals("device.hardwarevendor", fields.get("values"));
+        assertEquals("Device.HardwareVendor", fields.get("values"));
         assertFalse(fields.containsKey("license"));
         verify(logger, never()).warn(anyString());
     }
@@ -394,7 +393,7 @@ public class CloudRequestEngineLicenseKeyTests {
         Map<String, String> fields = dataRequest(RESOURCE_KEY + ".json");
         assertEquals(RESOURCE_KEY, fields.get("resource"));
         assertEquals(LICENSE_KEY, fields.get("license"));
-        assertEquals("ip.registeredname", fields.get("values"));
+        assertEquals("IP.RegisteredName", fields.get("values"));
         for (Call call : cloud.calls) {
             assertFalse(call.url.toString().contains(LICENSE_KEY));
         }
@@ -409,7 +408,7 @@ public class CloudRequestEngineLicenseKeyTests {
         assertEquals("", process(engine));
 
         Map<String, String> fields = dataRequest("/api/v4/json");
-        assertEquals(PROPERTIES, fields.get("values"));
+        assertEquals("Device.IsMobile,device.iscrawler", fields.get("values"));
     }
 
     /**
@@ -541,10 +540,72 @@ public class CloudRequestEngineLicenseKeyTests {
         assertEquals("", process(engine));
 
         verify(logger, times(1)).warn(argThat(
-            (String m) -> m.contains("device.iscrawler") &&
-                m.contains("not covered") &&
-                !m.contains("device.ismobile")));
+            (String m) -> m.contains("Device.IsCrawler") &&
+                m.contains("not covered by the keys") &&
+                !m.contains("Device.IsMobile")));
         verify(logger, times(1)).warn(anyString());
+    }
+
+    /**
+     * With a resource key, requested properties and no license key, a
+     * property no licence grants is answered as null, so a name the
+     * answer leaves out is not a property. The report says so, and names
+     * no license key, because none was given.
+     */
+    @Test
+    public void Process_ResourceKeyNameNotAnswered_ReportedAsNotAProperty()
+        throws Exception {
+        cloud.dataResponse = "{\"device\":{\"ismobile\":true}}";
+        CloudRequestEngine engine = build(builder()
+            .setResourceKey(RESOURCE_KEY)
+            .setRequestedProperties(
+                Arrays.asList("Device.IsMobile", "device.notaproperty")));
+
+        assertEquals("", process(engine));
+        assertEquals("", process(engine));
+
+        verify(logger, times(1)).warn(argThat(
+            (String m) -> m.contains("device.notaproperty") &&
+                m.contains("not properties") &&
+                !m.contains("license") &&
+                !m.contains("not covered")));
+        verify(logger, times(1)).warn(anyString());
+    }
+
+    /**
+     * A name given twice in different letter cases is sent once, as it
+     * was first given, because the cloud service reads property names
+     * without regard to case.
+     */
+    @Test
+    public void Process_NameGivenTwice_SentOnceAsFirstGiven()
+        throws Exception {
+        CloudRequestEngine engine = build(builder()
+            .setLicenseKey(LICENSE_KEY)
+            .setRequestedProperties(Arrays.asList(
+                "Device.IsMobile", "device.ismobile", "device.iscrawler")));
+
+        assertEquals("", process(engine));
+
+        assertEquals("Device.IsMobile,device.iscrawler",
+            dataRequest("/api/v4/json").get("values"));
+    }
+
+    /**
+     * A null list of requested properties is refused with the name of
+     * the parameter, as .NET refuses it, rather than failing inside the
+     * list.
+     */
+    @Test
+    public void SetRequestedProperties_Null_Refused() {
+        IllegalArgumentException list = assertThrows(
+            IllegalArgumentException.class,
+            () -> builder().setRequestedProperties((List<String>) null));
+        assertTrue(list.getMessage().contains("properties"));
+        IllegalArgumentException text = assertThrows(
+            IllegalArgumentException.class,
+            () -> builder().setRequestedProperties((String) null));
+        assertTrue(text.getMessage().contains("properties"));
     }
 
     @Test
