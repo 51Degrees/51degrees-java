@@ -817,11 +817,11 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
     }
 
     /**
-     * A cache key is built from the Evidence the engine's own filter
-     * accepts, and that filter still holds the keys the cloud service
-     * lists, so a repeated request finds the entry the first one wrote and
-     * one request is posted. The request carries Evidence the service does
-     * not list all the same.
+     * A cache key is built from the Evidence the engine advertises, which is
+     * still the keys the cloud service lists, so a second request that
+     * differs only in Evidence the service does not list finds the entry
+     * the first one wrote, and one request is posted. That request carries
+     * the Evidence the service does not list all the same.
      * See the Generation of keys section of the caching specification.
      */
     @Test
@@ -836,10 +836,10 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
 
         try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
                 .addFlowElement(engine).build()) {
-            for (int i = 0; i < 2; i++) {
+            for (String platform : Arrays.asList("Windows", "macOS")) {
                 try (FlowData data = pipeline.createFlowData()) {
                     data.addEvidence("query.User-Agent", "iPhone");
-                    data.addEvidence("header.sec-ch-ua-platform", "Windows");
+                    data.addEvidence("header.sec-ch-ua-platform", platform);
                     data.process();
                 }
             }
@@ -847,8 +847,7 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
 
         assertFalse(
             engine.getEvidenceKeyFilter().include("header.sec-ch-ua-platform"),
-            "The engine accepts a key the cloud service does not list, so " +
-                "the cache key takes every Evidence value.");
+            "The engine advertises a key the cloud service does not list.");
         ArgumentCaptor<byte[]> body = ArgumentCaptor.forClass(byte[].class);
         verify(httpClient, times(1)).postData(any(), any(), body.capture());
         List<String> items = Arrays.asList(
