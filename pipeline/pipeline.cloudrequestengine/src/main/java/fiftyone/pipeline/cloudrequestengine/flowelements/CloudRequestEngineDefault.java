@@ -470,7 +470,11 @@ public class CloudRequestEngineDefault
     /**
      * The Evidence to send, keyed by the name the cloud service expects.
      * Only Evidence that {@link #isSent(String)} allows is included, and
-     * where two prefixes give the same name the precedence order decides.
+     * where two prefixes give the same name the precedence order decides,
+     * query first, then header, then cookie, then any other prefix.
+     * Evidence with no prefix ranks with the other prefixes, unless the
+     * whole key is query, header or cookie, as {@link #keyPrefix(String)}
+     * gives the whole key as its prefix.
      * @param flowData the FlowData
      * @return the form fields to send
      */
@@ -623,8 +627,9 @@ public class CloudRequestEngineDefault
     }
 
     /**
-     * Check that the key of a KeyValuePair has the given prefix, compared
-     * without regard to case.
+     * Check that an Evidence key has the given prefix, being the part
+     * before its first separator, or the whole key where it has none,
+     * compared without regard to case.
      * @param itemKey key to check
      * @param prefix the prefix to check for
      * @return true if the key has the prefix
