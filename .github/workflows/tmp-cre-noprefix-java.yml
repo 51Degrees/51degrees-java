@@ -1,0 +1,33 @@
+name: Temporary cloud Evidence key tests
+
+on:
+  push:
+    branches:
+      - 'tmp/cre-noprefix-java-**'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Cloud request engine tests, Java ${{ matrix.java }}
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['8', '21']
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '${{ matrix.java }}'
+          cache: maven
+      - name: Run the cloud request engine tests
+        shell: pwsh
+        run: |
+          git log --oneline -1
+          mvn -B -f pipeline/pom.xml -pl pipeline.cloudrequestengine -am test `
+            '-Dtest=CloudRequestEngine*' `
+            '-DfailIfNoTests=false' '-Dsurefire.failIfNoSpecifiedTests=false'
+          if ($LASTEXITCODE -ne 0) { exit 1 }
