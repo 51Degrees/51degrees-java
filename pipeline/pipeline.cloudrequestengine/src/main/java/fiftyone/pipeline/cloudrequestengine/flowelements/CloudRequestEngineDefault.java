@@ -498,20 +498,42 @@ public class CloudRequestEngineDefault
 
     /**
      * Whether Evidence is sent to the cloud service. Every key is sent,
-     * including keys the service does not list as accepted, apart from one
-     * that strips to a name in {@link #ENGINE_FIELDS}, compared without
-     * regard to case, and the web request.
+     * including keys the service does not list as accepted and keys with no
+     * prefix, apart from the web request and a key whose
+     * {@link #keySuffix(String)} is in {@link #ENGINE_FIELDS}, compared
+     * without regard to case.
      * @param key the Evidence key
      * @return true if the Evidence is sent
      */
     private boolean isSent(String key) {
-        if (HTTP_REQUEST_KEY.equalsIgnoreCase(key)) {
-            return false;
-        }
-        String[] parts = key.split(
-            Pattern.quote(Constants.EVIDENCE_SEPERATOR), 2);
-        return parts.length == 2 &&
-            ENGINE_FIELDS.contains(parts[1].toLowerCase(Locale.ROOT)) == false;
+        return HTTP_REQUEST_KEY.equalsIgnoreCase(key) == false &&
+            ENGINE_FIELDS.contains(
+                keySuffix(key).toLowerCase(Locale.ROOT)) == false;
+    }
+
+    /**
+     * The prefix of an Evidence key, being the part before its first
+     * separator, or the whole key where it has none.
+     * @param key the Evidence key
+     * @return the prefix
+     */
+    private static String keyPrefix(String key) {
+        int separator = key.indexOf(Constants.EVIDENCE_SEPERATOR);
+        return separator >= 0 ? key.substring(0, separator) : key;
+    }
+
+    /**
+     * The name an Evidence key is sent under, being the part after its
+     * first separator, or the whole key where it has none. The name can
+     * hold a dot itself, as id.usage does in query.id.usage.
+     * @param key the Evidence key
+     * @return the name to send
+     */
+    private static String keySuffix(String key) {
+        int separator = key.indexOf(Constants.EVIDENCE_SEPERATOR);
+        return separator >= 0 ?
+            key.substring(separator + Constants.EVIDENCE_SEPERATOR.length()) :
+            key;
     }
 
     /**
@@ -530,13 +552,8 @@ public class CloudRequestEngineDefault
         Collections.sort(evidenceKeys, Collections.reverseOrder());
 
         for (String evidenceKey : evidenceKeys) {
-            // Split at the first separator only. Everything after the prefix
-            // is the name the cloud service expects, and that name can hold
-            // a dot itself, as id.usage does in query.id.usage.
-            String[] evidenceKeyParts = evidenceKey.split(
-                Pattern.quote(Constants.EVIDENCE_SEPERATOR), 2);
-            String prefix = evidenceKeyParts[0];
-            String suffix = evidenceKeyParts[1];
+            String prefix = keyPrefix(evidenceKey);
+            String suffix = keySuffix(evidenceKey);
 
             // Check and add the evidence to the query parameters.
             if (formData.containsKey(suffix) == false) {
@@ -548,7 +565,7 @@ public class CloudRequestEngineDefault
                 // warning, if the evidence prefix is not query. Otherwise a
                 // warning is not needed as query evidence is expected
                 // to overwrite any existing evidence with the same suffix.
-                if (prefix.equals("query") == false) {
+                if (prefix.equalsIgnoreCase("query") == false) {
                     Map<String, Object> conflicts = new HashMap<>();
                     for (String key : allEvidence.keySet()) {
                         if (key.equals(evidenceKey) == false && key.contains(suffix)) {
@@ -606,13 +623,14 @@ public class CloudRequestEngineDefault
     }
 
     /**
-     * Check that the key of a KeyValuePair has the given prefix.
+     * Check that the key of a KeyValuePair has the given prefix, compared
+     * without regard to case.
      * @param itemKey key to check
      * @param prefix the prefix to check for
      * @return true if the key has the prefix
      */
     private boolean hasKeyPrefix(String itemKey, String prefix) {
-        return itemKey.startsWith(prefix + ".");
+        return keyPrefix(itemKey).equalsIgnoreCase(prefix);
     }
 
     @Override
