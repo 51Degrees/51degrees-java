@@ -85,7 +85,7 @@ import java.util.Set;
 import java.util.zip.GZIPOutputStream;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
-import static fiftyone.ipintelligence.examples.shared.DataFileHelper.ENTERPRISE_DATA_FILE_REL_PATH;
+import static fiftyone.ipintelligence.examples.shared.DataFileHelper.LITE_DATA_FILE_REL_PATH;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
 /**
@@ -110,7 +110,7 @@ public class GettingStartedApi extends HttpServlet {
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
-        String dataFile = args.length > 0 ? args[0] : ENTERPRISE_DATA_FILE_REL_PATH;
+        String dataFile = args.length > 0 ? args[0] : LITE_DATA_FILE_REL_PATH;
         String dataFileLocation = DataFileHelper.getDataFileLocation(dataFile);
         logger.info("Running GettingStartedApi server using data file '{}'", dataFileLocation);
 

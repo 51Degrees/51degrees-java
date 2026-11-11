@@ -34,18 +34,22 @@ import java.util.Set;
 import static fiftyone.pipeline.core.Constants.*;
 
 /**
- * This filter is used by the {@link ShareUsageElement}.
+ * This filter is used by the {@link ShareUsageElement} to decide which of the
+ * values {@link ShareUsageEvidence#find} finds are shared. It is not the
+ * element's accepted Evidence, which is empty.
  * It will include anything that is:
- * 1) An HTTP header that is not blocked by the constructor parameter.
+ * 1) An HTTP header that is not blocked by the constructor parameter, other
+ *     than Cookie.
  * 2) A cookie that starts with {@link Constants#FIFTYONE_COOKIE_PREFIX} or is
  *     the session cookie (if configured in the constructor).
- * 3) An query string parameters that have been configured to be shared
- *     using the constructor parameter.
- * 4) Not a header, cookie or query string parameter.
- *
- * As this filter is generally inclusive, it will often cause far more
- * evidence to be passed into a pipeline than the engine-specific
- * filters, which tend to be based on a white list
+ * 3) A session value that starts with {@link Constants#FIFTYONE_COOKIE_PREFIX}.
+ * 4) A query string parameter that starts with
+ *     {@link Constants#FIFTYONE_COOKIE_PREFIX} or has been configured to be
+ *     shared using the constructor parameter.
+ * 5) Not a header, cookie, session value or query string parameter.
+ * The prefix of a key is everything before its first '.', and the field
+ * everything after it. An email address, the salt for hashed email
+ * identifiers, the query string and the path are never included.
  */
 public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
 
@@ -76,6 +80,23 @@ public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
     private final Set<String> includedQueryStringParams = new HashSet<>();
 
     /**
+     * Evidence keys that are never shared, matched without regard to case as
+     * the whole key or after a '.'. 'id.email' and 'id.salt' are a raw email
+     * address and the salt used to make hashed email identifiers.
+     * 'header.cookie' is the Cookie header, which carries every cookie.
+     * 'request-query' is the whole query string, which would undo the rules
+     * for its parameters. 'request-path' would make each page a visitor opens
+     * look like a new session to the tracker.
+     */
+    private static final String[] NEVER_SHARED_EVIDENCE_KEYS = {
+        "id.email",
+        "id.salt",
+        "header.cookie",
+        "request-query",
+        "request-path"
+    };
+
+    /**
      * Constructor.
      * @param blockedHttpHeaders a list of the names of the HTTP headers that
      *                           share usage should not send to 51Degrees
@@ -92,9 +113,13 @@ public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
         List<String> includedQueryStringParams,
         boolean includeSession,
         String sessionCookieName) {
+        // The Cookie header carries every cookie, including the ones the
+        // cookie rule leaves out.
         this.blockedHttpHeaders.add("cookies");
+        this.blockedHttpHeaders.add("cookie");
         this.includeSession = includeSession;
-        this.sessionCookieName = sessionCookieName;
+        this.sessionCookieName = sessionCookieName == null ?
+            null : sessionCookieName.toLowerCase();
         for (String header : blockedHttpHeaders) {
             String lowerHeader = header.toLowerCase();
             if (!this.blockedHttpHeaders.contains(lowerHeader)) {
@@ -111,30 +136,47 @@ public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
 
     @Override
     public boolean include(String key) {
+        // The Usage Sharing Element reads the whole web request itself, and
+        // the request is never a value to share.
+        if (ShareUsageEvidence.HTTP_REQUEST_KEY.equalsIgnoreCase(key)) {
+            return false;
+        }
+        String lowerKey = key.toLowerCase();
+        for (String neverShared : NEVER_SHARED_EVIDENCE_KEYS) {
+            if (lowerKey.equals(neverShared) ||
+                lowerKey.endsWith(EVIDENCE_SEPERATOR + neverShared)) {
+                return false;
+            }
+        }
+
         boolean result;
-        String[] parts = key.toLowerCase().split("\\.");
-        if (parts.length == 2) {
-            switch (parts[0]) {
+        int separator = lowerKey.indexOf(EVIDENCE_SEPERATOR);
+        if (separator > 0) {
+            String prefix = lowerKey.substring(0, separator);
+            String field = lowerKey.substring(separator + 1);
+            switch (prefix) {
                 case EVIDENCE_HTTPHEADER_PREFIX:
                     // Add the header to the list if the header name does not
                     // appear in the list of blocked headers.
-                    result = blockedHttpHeaders.contains(parts[1]) == false;
+                    result = blockedHttpHeaders.contains(field) == false;
                     break;
                 case EVIDENCE_COOKIE_PREFIX:
                     // Only add cookies that start with the 51Degrees cookie
                     // prefix.
-                    result = parts[1].startsWith(Constants.FIFTYONE_COOKIE_PREFIX) ||
-                        (includeSession && parts[1].equals(sessionCookieName));
+                    result = field.startsWith(Constants.FIFTYONE_COOKIE_PREFIX) ||
+                        (includeSession && field.equals(sessionCookieName));
                     break;
                 case EVIDENCE_SESSION_PREFIX:
                     // Only add session values that start with the 51Degrees cookie
                     // prefix.
-                    result = parts[1].startsWith(Constants.FIFTYONE_COOKIE_PREFIX);
+                    result = field.startsWith(Constants.FIFTYONE_COOKIE_PREFIX);
                     break;
                 case EVIDENCE_QUERY_PREFIX:
-                    // Only include query string parameters that have been
-                    // specified in the constructor.
-                    result = includedQueryStringParams.contains(parts[1]);
+                    // Only include query string parameters that start with the
+                    // 51Degrees prefix or have been specified in the
+                    // constructor.
+                    result = field.startsWith(Constants.FIFTYONE_COOKIE_PREFIX) ||
+                        includedQueryStringParams.contains(field);
                     break;
                 default:
                     // Add anything that is not a cookie or a header.

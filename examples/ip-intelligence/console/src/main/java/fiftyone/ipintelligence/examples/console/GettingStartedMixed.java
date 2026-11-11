@@ -35,9 +35,10 @@
  *
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/console/src/main/java/fiftyone/ipintelligence/examples/console/GettingStartedMixed.java).
  *
- * This example requires:
- * - A Device Detection data file (.hash format)
- * - An IP Intelligence data file (.ipi format)
+ * By default the example uses the free Lite Device Detection and IP Intelligence data files,
+ * which it downloads when they are missing, and shows each property only the Enterprise data
+ * files have as needing them. To obtain the Enterprise data files, please
+ * [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedmixed.java&utm_term=header).
  *
  * Required Maven Dependencies:
  * - [com.51degrees:ip-intelligence](https://central.sonatype.com/artifact/com.51degrees/ip-intelligence)
@@ -55,6 +56,8 @@ import fiftyone.pipeline.core.configuration.PipelineOptions;
 import fiftyone.pipeline.core.configuration.PipelineOptionsFactory;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
+import fiftyone.pipeline.engines.data.AspectPropertyValue;
+import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
 import fiftyone.pipeline.engines.fiftyone.flowelements.FiftyOnePipelineBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,6 +70,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.function.Supplier;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
 import static fiftyone.ipintelligence.examples.shared.PropertyHelper.*;
@@ -84,7 +88,13 @@ public class GettingStartedMixed {
     private static final Logger logger = LoggerFactory.getLogger(GettingStartedMixed.class);
 
     public static final String DD_DATA_FILE_DEFAULT = "device-detection/51Degrees-LiteV4.1.hash";
-    public static final String IPI_DATA_FILE_DEFAULT = DataFileHelper.ENTERPRISE_DATA_FILE_REL_PATH;
+    public static final String IPI_DATA_FILE_DEFAULT = DataFileHelper.LITE_DATA_FILE_REL_PATH;
+
+    /**
+     * Where to ask for a copy of the Enterprise data files, tagged with this
+     * example.
+     */
+    private static final String CONTACT_US = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedmixed.java&utm_term=enterprise-data-file";
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
@@ -139,20 +149,27 @@ public class GettingStartedMixed {
         try (Pipeline pipeline = new FiftyOnePipelineBuilder()
                 .buildFromConfiguration(pipelineOptions)) {
 
+            // The engines say which properties their data files have.
+            DeviceDetectionHashEngine ddEngine = pipeline.getElement(DeviceDetectionHashEngine.class);
+            IPIntelligenceOnPremiseEngine ipiEngine = pipeline.getElement(IPIntelligenceOnPremiseEngine.class);
+
             // Process each set of evidence
+            boolean needsEnterprise = false;
             for (Map<String, String> evidence : evidenceList) {
-                analyzeEvidence(evidence, pipeline, outputStream);
+                needsEnterprise |= analyzeEvidence(
+                        evidence, pipeline, ddEngine, ipiEngine, outputStream);
+            }
+            if (needsEnterprise) {
+                DataFileHelper.writeEnterpriseNote(new PrintWriter(outputStream), CONTACT_US);
             }
 
             // Log data file info for both engines
-            DeviceDetectionHashEngine ddEngine = pipeline.getElement(DeviceDetectionHashEngine.class);
             if (ddEngine != null) {
                 logger.info("Device Detection data file: '{}', tier: '{}'",
                         ddEngine.getDataFileMetaData().getDataFilePath(),
                         ddEngine.getDataSourceTier());
             }
 
-            IPIntelligenceOnPremiseEngine ipiEngine = pipeline.getElement(IPIntelligenceOnPremiseEngine.class);
             if (ipiEngine != null) {
                 DataFileHelper.logDataFileInfo(ipiEngine);
             }
@@ -195,9 +212,18 @@ public class GettingStartedMixed {
         return evidence;
     }
 
-    private static void analyzeEvidence(Map<String, String> evidence,
-                                        Pipeline pipeline,
-                                        OutputStream out) throws Exception {
+    /**
+     * Processes the evidence and writes both engines' results, showing each
+     * property the data files in use do not have as needing the Enterprise
+     * data file.
+     * @return true if a property needed the Enterprise data file
+     */
+    private static boolean analyzeEvidence(Map<String, String> evidence,
+                                           Pipeline pipeline,
+                                           DeviceDetectionHashEngine ddEngine,
+                                           IPIntelligenceOnPremiseEngine ipiEngine,
+                                           OutputStream out) throws Exception {
+        boolean needsEnterprise = false;
         PrintWriter writer = new PrintWriter(out);
 
         try (FlowData data = pipeline.createFlowData()) {
@@ -219,40 +245,99 @@ public class GettingStartedMixed {
             writer.println("\nDevice Detection Results:");
             writer.println("-------------------------");
             DeviceData device = data.get(DeviceData.class);
-            writer.println("\tMobile Device: " + asString(tryGet(device::getIsMobile)));
-            writer.println("\tPlatform Name: " + asString(tryGet(device::getPlatformName)));
-            writer.println("\tPlatform Version: " + asString(tryGet(device::getPlatformVersion)));
-            writer.println("\tBrowser Name: " + asString(tryGet(device::getBrowserName)));
-            writer.println("\tBrowser Version: " + asString(tryGet(device::getBrowserVersion)));
-            writer.println("\tHardware Vendor: " + asString(tryGet(device::getHardwareVendor)));
-            writer.println("\tHardware Name: " + asString(tryGet(device::getHardwareName)));
-            writer.println("\tDevice Type: " + asString(tryGet(device::getDeviceType)));
-            writer.println("\tScreen Width: " + asString(tryGet(device::getScreenPixelsWidth)));
-            writer.println("\tScreen Height: " + asString(tryGet(device::getScreenPixelsHeight)));
+            needsEnterprise |= writeValue(writer, "Mobile Device",
+                    hasProperty(ddEngine, "IsMobile"), device::getIsMobile);
+            needsEnterprise |= writeValue(writer, "Platform Name",
+                    hasProperty(ddEngine, "PlatformName"), device::getPlatformName);
+            needsEnterprise |= writeValue(writer, "Platform Version",
+                    hasProperty(ddEngine, "PlatformVersion"), device::getPlatformVersion);
+            needsEnterprise |= writeValue(writer, "Browser Name",
+                    hasProperty(ddEngine, "BrowserName"), device::getBrowserName);
+            needsEnterprise |= writeValue(writer, "Browser Version",
+                    hasProperty(ddEngine, "BrowserVersion"), device::getBrowserVersion);
+            needsEnterprise |= writeValue(writer, "Hardware Vendor",
+                    hasProperty(ddEngine, "HardwareVendor"), device::getHardwareVendor);
+            needsEnterprise |= writeValue(writer, "Hardware Name",
+                    hasProperty(ddEngine, "HardwareName"), device::getHardwareName);
+            needsEnterprise |= writeValue(writer, "Device Type",
+                    hasProperty(ddEngine, "DeviceType"), device::getDeviceType);
+            needsEnterprise |= writeValue(writer, "Screen Width",
+                    hasProperty(ddEngine, "ScreenPixelsWidth"), device::getScreenPixelsWidth);
+            needsEnterprise |= writeValue(writer, "Screen Height",
+                    hasProperty(ddEngine, "ScreenPixelsHeight"), device::getScreenPixelsHeight);
 
             // Get IP Intelligence results
             writer.println("\nIP Intelligence Results:");
             writer.println("------------------------");
             IPIntelligenceData ipData = data.get(IPIntelligenceData.class);
-            writer.println("\tRegisteredName: " + asStringProperty(tryGet(ipData::getRegisteredName)));
-            writer.println("\tRegisteredOwner: " + asStringProperty(tryGet(ipData::getRegisteredOwner)));
-            writer.println("\tRegisteredCountry: " + asStringProperty(tryGet(ipData::getRegisteredCountry)));
-            writer.println("\tIpRangeStart: " + asIPAddressProperty(tryGet(ipData::getIpRangeStart)));
-            writer.println("\tIpRangeEnd: " + asIPAddressProperty(tryGet(ipData::getIpRangeEnd)));
-            writer.println("\tCountry: " + asStringProperty(tryGet(ipData::getCountry)));
-            writer.println("\tCountryCode: " + asStringProperty(tryGet(ipData::getCountryCode)));
-            writer.println("\tCountryCode3: " + asStringProperty(tryGet(ipData::getCountryCode3)));
-            writer.println("\tRegion: " + asStringProperty(tryGet(ipData::getRegion)));
-            writer.println("\tState: " + asStringProperty(tryGet(ipData::getState)));
-            writer.println("\tTown: " + asStringProperty(tryGet(ipData::getTown)));
-            writer.println("\tLatitude: " + asFloatProperty(tryGet(ipData::getLatitude)));
-            writer.println("\tLongitude: " + asFloatProperty(tryGet(ipData::getLongitude)));
-            writer.println("\tAreas: " + asWktStringProperty(tryGet(ipData::getAreas)));
-            writer.println("\tAccuracyRadiusMin: " + asIntegerProperty(tryGet(ipData::getAccuracyRadiusMin)));
-            writer.println("\tTimeZoneOffset: " + asIntegerProperty(tryGet(ipData::getTimeZoneOffset)));
+            needsEnterprise |= writeValue(writer, "RegisteredName",
+                    DataFileHelper.hasProperty(ipiEngine, "RegisteredName"), ipData::getRegisteredName);
+            needsEnterprise |= writeValue(writer, "RegisteredOwner",
+                    DataFileHelper.hasProperty(ipiEngine, "RegisteredOwner"), ipData::getRegisteredOwner);
+            needsEnterprise |= writeValue(writer, "RegisteredCountry",
+                    DataFileHelper.hasProperty(ipiEngine, "RegisteredCountry"), ipData::getRegisteredCountry);
+            needsEnterprise |= writeValue(writer, "IpRangeStart",
+                    DataFileHelper.hasProperty(ipiEngine, "IpRangeStart"), ipData::getIpRangeStart);
+            needsEnterprise |= writeValue(writer, "IpRangeEnd",
+                    DataFileHelper.hasProperty(ipiEngine, "IpRangeEnd"), ipData::getIpRangeEnd);
+            needsEnterprise |= writeValue(writer, "Country",
+                    DataFileHelper.hasProperty(ipiEngine, "Country"), ipData::getCountry);
+            needsEnterprise |= writeValue(writer, "CountryCode",
+                    DataFileHelper.hasProperty(ipiEngine, "CountryCode"), ipData::getCountryCode);
+            needsEnterprise |= writeValue(writer, "CountryCode3",
+                    DataFileHelper.hasProperty(ipiEngine, "CountryCode3"), ipData::getCountryCode3);
+            needsEnterprise |= writeValue(writer, "Region",
+                    DataFileHelper.hasProperty(ipiEngine, "Region"), ipData::getRegion);
+            needsEnterprise |= writeValue(writer, "State",
+                    DataFileHelper.hasProperty(ipiEngine, "State"), ipData::getState);
+            needsEnterprise |= writeValue(writer, "Town",
+                    DataFileHelper.hasProperty(ipiEngine, "Town"), ipData::getTown);
+            needsEnterprise |= writeValue(writer, "Latitude",
+                    DataFileHelper.hasProperty(ipiEngine, "Latitude"), ipData::getLatitude);
+            needsEnterprise |= writeValue(writer, "Longitude",
+                    DataFileHelper.hasProperty(ipiEngine, "Longitude"), ipData::getLongitude);
+            needsEnterprise |= writeValue(writer, "Areas",
+                    DataFileHelper.hasProperty(ipiEngine, "Areas"), ipData::getAreas);
+            needsEnterprise |= writeValue(writer, "AccuracyRadiusMin",
+                    DataFileHelper.hasProperty(ipiEngine, "AccuracyRadiusMin"), ipData::getAccuracyRadiusMin);
+            needsEnterprise |= writeValue(writer, "TimeZoneOffset",
+                    DataFileHelper.hasProperty(ipiEngine, "TimeZoneOffset"), ipData::getTimeZoneOffset);
         }
         writer.println();
         writer.flush();
+        return needsEnterprise;
+    }
+
+    /**
+     * Writes a property, or that it needs the Enterprise data file when the
+     * data file in use does not have it. The value is only read when the
+     * data file has the property.
+     * @return true if the property needs the Enterprise data file
+     */
+    private static boolean writeValue(PrintWriter writer,
+                                      String name,
+                                      boolean hasProperty,
+                                      Supplier<AspectPropertyValue<?>> value) {
+        if (hasProperty) {
+            writer.println("\t" + name + ": " + asString(value.get()));
+            return false;
+        }
+        writer.println("\t" + name + ": " + DataFileHelper.NEEDS_ENTERPRISE);
+        return true;
+    }
+
+    /**
+     * True when the Device Detection engine's data file has the property.
+     * The Lite data file leaves out the properties only the Enterprise data
+     * file has, such as HardwareVendor, HardwareName and DeviceType.
+     */
+    private static boolean hasProperty(DeviceDetectionHashEngine engine, String name) {
+        for (FiftyOneAspectPropertyMetaData property : engine.getProperties()) {
+            if (property.getName().equalsIgnoreCase(name)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

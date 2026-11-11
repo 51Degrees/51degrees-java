@@ -27,7 +27,14 @@ The on-premise examples use the free Lite data file and the evidence files in
 `cxx/data/device-detection`, a folder of the
 [data](https://github.com/51Degrees/data) repository. An example that cannot
 find one of these files runs the data repository's download script for it,
-and logs the command it runs.
+and logs the command it runs. The examples find `cxx/data` whether they are
+run from the root of this repository or from this folder.
+
+Each example shows the properties that only the Enterprise data file has,
+such as HardwareVendor, HardwareName and DeviceType, as needing it, and gives
+a link to ask for a copy. [Contact us](https://51degrees.com/contact-us?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=enterprise-data-file)
+for a copy of the Enterprise data file, and pass its path as the first
+argument to use it.
 
 ## Cloud resource keys
 

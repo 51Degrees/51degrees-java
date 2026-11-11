@@ -36,6 +36,7 @@ import fiftyone.pipeline.engines.flowelements.OnPremiseAspectEngine;
 import fiftyone.pipeline.engines.services.update.FutureFactory;
 import fiftyone.pipeline.engines.services.update.FutureFactoryDefault;
 import fiftyone.pipeline.util.Check;
+import fiftyone.pipeline.util.LicenseKeyMask;
 import jakarta.xml.bind.DatatypeConverter;
 import org.apache.commons.lang3.ObjectUtils;
 import org.slf4j.Logger;
@@ -44,6 +45,7 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URLDecoder;
 import java.nio.file.*;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
@@ -64,11 +66,43 @@ import static org.apache.commons.lang3.BooleanUtils.isFalse;
  */
 public class DataUpdateServiceDefault implements DataUpdateService {
 
+    /**
+     * The query parameter of a data update URL that holds the license keys,
+     * as the 51Degrees URL formatter writes it.
+     */
+    private static final String LICENSE_KEYS_PARAMETER = "LicenseKeys";
+
+    /**
+     * How long a watched data file is tried before the update gives up with
+     * {@link AutoUpdateStatus#AUTO_UPDATE_TIMEOUT}, as a copy over it may
+     * still be in progress.
+     */
+    static final long WATCHED_FILE_OPEN_TIMEOUT_MILLIS =
+            TimeUnit.MINUTES.toMillis(10);
+
+    /**
+     * The pause between tries to open a watched data file.
+     */
+    static final long WATCHED_FILE_OPEN_PAUSE_MILLIS = 500;
+
+    /**
+     * The wait for a watched data file, which tests shorten.
+     */
+    long watchedFileOpenTimeoutMillis = WATCHED_FILE_OPEN_TIMEOUT_MILLIS;
+
     final List<AspectEngineDataFile> configurations = new ArrayList<>();
     private final Logger logger;
     private final boolean closeFutureFactory;
     private final List<OnUpdateComplete> onUpdateCompleteList = new ArrayList<>();
     private final Object configLock = new Object();
+    /**
+     * Held for every read and write this service makes of a data file's
+     * future, so a check cannot read or clear its future before
+     * {@link #registerDataFile} has stored it. Only the future is scheduled,
+     * cancelled and stored while holding it, so it is never held while
+     * waiting for the configuration lock or a data file's update lock.
+     */
+    private final Object futureLock = new Object();
     /**
      * HTTP client used to download new data files.
      */
@@ -218,6 +252,15 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 // yet been refreshed.
                 logger.debug("Calling updatedFileAvailable");
                 result = updatedFileAvailable(dataFile);
+            } else if (result == AUTO_UPDATE_SUCCESS) {
+                // The update was applied in memory. Clear the timer, as
+                // updatedFileAvailable does, so a new one is registered.
+                synchronized (futureLock) {
+                    if (dataFile.getFuture() != null) {
+                        dataFile.getFuture().cancel(true);
+                        dataFile.setFuture(null);
+                    }
+                }
             } else {
                 // No update available.
                 // If this was a manual call to update then do nothing.
@@ -226,22 +269,30 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 // This will repeat until the update is acquired.
                 if (manualUpdate == false) {
                     logger.debug("Cancelling and resetting update timer");
-                    if (dataFile.getFuture() != null) {
-                        dataFile.getFuture().cancel(true);
-                        dataFile.setFuture(futureFactory.schedule(
-                                new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        checkForUpdate(dataFile, false);
-                                    }
-                                },
-                                getInterval(dataFile.getConfiguration())));
+                    synchronized (futureLock) {
+                        if (dataFile.getFuture() != null) {
+                            dataFile.getFuture().cancel(true);
+                            dataFile.setFuture(futureFactory.schedule(
+                                    new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            checkForUpdate(dataFile, false);
+                                        }
+                                    },
+                                    getIntervalMillis(dataFile.getConfiguration())));
+                        }
                     }
                 }
             }
-            if (manualUpdate == false) {
+            if (manualUpdate == false ||
+                    ((result == AUTO_UPDATE_SUCCESS ||
+                            result == AUTO_UPDATE_REFRESH_FAILED) &&
+                            dataFile.getIsRegistered())) {
                 // Re-register the engine with the data update service
                 // so it knows when next set of data should be available.
+                // A manual update of a registered data file does this too,
+                // whether or not the refresh worked, as a refresh from the
+                // data file clears the timer, so polling resumes after it.
                 registerDataFile(dataFile);
             }
 
@@ -257,9 +308,10 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     /**
      * Called when a data update is available and the file at
      * engine.DataFilePath contains this new data.
-     * 1. Refresh the engine.
-     * 2. Dispose of the existing update timer if there is one.
-     * 3. Re-register the engine with the update service.
+     * 1. Dispose of the existing update timer if there is one.
+     * 2. Refresh the engine.
+     * Where the data file is registered, the caller then registers it again,
+     * which sets a new update timer.
      *
      * @param dataFile the data file to update
      * @return {@link AutoUpdateStatus#AUTO_UPDATE_SUCCESS} if the data file was
@@ -268,10 +320,12 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     private AutoUpdateStatus updatedFileAvailable(AspectEngineDataFile dataFile) {
         AspectEngineDataFileDefault aspectDataFile = (AspectEngineDataFileDefault) dataFile;
 
-        if (aspectDataFile.getFuture() != null) {
-            // Dispose of the old timer object
-            aspectDataFile.getFuture().cancel(true);
-            aspectDataFile.setFuture(null);
+        synchronized (futureLock) {
+            if (aspectDataFile.getFuture() != null) {
+                // Dispose of the old timer object
+                aspectDataFile.getFuture().cancel(true);
+                aspectDataFile.setFuture(null);
+            }
         }
 
         if (dataFile.getEngine() == null) {
@@ -337,17 +391,41 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                         // before notifying the engine, otherwise the copy
                         // may still be in progress.
                         boolean fileLockable = false;
-                        while (fileLockable == false) {
+                        boolean interrupted = false;
+                        long deadline = System.nanoTime() +
+                                TimeUnit.MILLISECONDS.toNanos(
+                                        watchedFileOpenTimeoutMillis);
+                        while (fileLockable == false &&
+                                System.nanoTime() - deadline < 0) {
                             try (BinaryReader reader = fileWrapperFactory.build(
                                     aspectDataFile.getDataFilePath()).getReader()) {
                                 fileLockable = true;
-                                // Complete the update
-                                status = updatedFileAvailable(dataFile);
-                            } catch (IOException e) {
-                                logger.warn("Exception while reading the data file at '{}'",
-                                        aspectDataFile.getDataFilePath(), e);
+                            } catch (IOException ignored) {
+                                try {
+                                    Thread.sleep(WATCHED_FILE_OPEN_PAUSE_MILLIS);
+                                } catch (InterruptedException ex) {
+                                    // Interrupted, as unregistering the data
+                                    // file does, so stop trying.
+                                    Thread.currentThread().interrupt();
+                                    interrupted = true;
+                                    break;
+                                }
                             }
                         }
+                        if (fileLockable) {
+                            // Complete the update
+                            status = updatedFileAvailable(dataFile);
+                            // The refresh cancelled the polling timer, so
+                            // register the file again to set a new one.
+                            if (dataFile.getIsRegistered()) {
+                                registerDataFile(dataFile);
+                            }
+                        } else if (interrupted == false) {
+                            // The polling timer is left as it was.
+                            status = AutoUpdateStatus.AUTO_UPDATE_TIMEOUT;
+                        }
+                        // An interrupted wait leaves the update unfinished,
+                        // so the status stays AUTO_UPDATE_IN_PROGRESS.
                     }
                 }
             }
@@ -417,39 +495,45 @@ public class DataUpdateServiceDefault implements DataUpdateService {
 
             // Only create an automatic update timer if auto updates are
             // enabled for this engine and there is not already an associated
-            // timer.
-            if (aspectDataFile.getAutomaticUpdatesEnabled() &&
-                    aspectDataFile.getFuture() == null) {
-                long delay = getInterval(aspectDataFile.getConfiguration());
-                if (aspectDataFile.getUpdateAvailableTime() != null) {
-                    if (aspectDataFile.getUpdateAvailableTime().getTime()
-                            > System.currentTimeMillis()) {
-                        delay = applyIntervalRandomisation(
-                                aspectDataFile.getUpdateAvailableTime().getTime()
-                                        - System.currentTimeMillis(),
-                                aspectDataFile.getConfiguration());
+            // timer. The lock is held from scheduling to storing, because
+            // the check can start as soon as it is scheduled and must find
+            // its own future.
+            synchronized (futureLock) {
+                if (aspectDataFile.getAutomaticUpdatesEnabled() &&
+                        aspectDataFile.getFuture() == null) {
+                    long delayMillis =
+                            getIntervalMillis(aspectDataFile.getConfiguration());
+                    if (aspectDataFile.getUpdateAvailableTime() != null) {
+                        if (aspectDataFile.getUpdateAvailableTime().getTime()
+                                > System.currentTimeMillis()) {
+                            delayMillis = applyIntervalRandomisationMillis(
+                                    aspectDataFile.getUpdateAvailableTime().getTime()
+                                            - System.currentTimeMillis(),
+                                    aspectDataFile.getConfiguration());
+                        }
                     }
-                }
-                // Create a timer that will go off when the engine expects
-                // updated data to be available.
-                logger.debug("Scheduling update check with delay {}", delay);
-                try {
-                    ScheduledFuture<?> future = futureFactory.schedule(
-                            new Runnable() {
-                                @Override
-                                public void run() {
-                                    logger.debug("running checkForUpdate {}",
-                                            aspectDataFile.getDataFilePath());
-                                    checkForUpdate(aspectDataFile, false);
-                                    logger.debug("Returning from checkForUpdate");
-                                }
-                            },
-                            delay);
-                    logger.debug("Update check scheduled for {} millis",
-                            future.getDelay(TimeUnit.MILLISECONDS));
-                    aspectDataFile.setFuture(future);
-                } catch (Throwable t) {
-                    logger.error("Exception when scheduling update check", t);
+                    // Create a timer that will go off when the engine expects
+                    // updated data to be available.
+                    logger.debug("Scheduling update check with delay {} millis",
+                            delayMillis);
+                    try {
+                        ScheduledFuture<?> future = futureFactory.schedule(
+                                new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        logger.debug("running checkForUpdate {}",
+                                                aspectDataFile.getDataFilePath());
+                                        checkForUpdate(aspectDataFile, false);
+                                        logger.debug("Returning from checkForUpdate");
+                                    }
+                                },
+                                delayMillis);
+                        logger.debug("Update check scheduled for {} millis",
+                                future.getDelay(TimeUnit.MILLISECONDS));
+                        aspectDataFile.setFuture(future);
+                    } catch (Throwable t) {
+                        logger.error("Exception when scheduling update check", t);
+                    }
                 }
             }
 
@@ -539,44 +623,90 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                     aspectDataFile.getConfiguration().getWatchKey().cancel();
                     aspectDataFile.getConfiguration().setWatchKey(null);
                 }
-                if (aspectDataFile.getFuture() != null) {
-                    aspectDataFile.getFuture().cancel(true);
-                    aspectDataFile.setFuture(null);
+                synchronized (futureLock) {
+                    if (aspectDataFile.getFuture() != null) {
+                        aspectDataFile.getFuture().cancel(true);
+                        aspectDataFile.setFuture(null);
+                    }
                 }
             }
         }
+        if (dataFile != null) {
+            dataFile.setDataUpdateService(null);
+        }
     }
 
     /**
-     * Get the random delay in milliseconds to add on to the scheduled time
-     * for a specific Engine, no greater than the Engine's max randomisation.
+     * Get the polling interval for a data file plus a random number of
+     * seconds, no greater than the configured maximum randomisation.
      *
-     * @param config to get the delay for
-     * @return a random delay in milliseconds.
+     * @param config to get the interval for
+     * @return the interval in milliseconds.
      */
-    private long getInterval(DataFileConfiguration config) {
-        int seconds = 0;
+    private long getIntervalMillis(DataFileConfiguration config) {
+        long intervalMillis = 0;
         if (config.getPollingIntervalSeconds() > 0) {
-            seconds = config.getPollingIntervalSeconds();
+            intervalMillis = config.getPollingIntervalSeconds() * 1000L;
         }
-        return applyIntervalRandomisation(seconds, config) * 1000;
-
+        return applyIntervalRandomisationMillis(intervalMillis, config);
     }
 
     /**
-     * Add a random amount of time to the specified interval
+     * Add a random number of whole seconds, up to the maximum in the
+     * configuration, to the specified interval.
      *
-     * @param interval the interval to add a random amount of time to
-     * @param config   the {@link DataFileConfiguration} object that specifies the
-     *                 maximum number of seconds to add
-     * @return the new interval
+     * @param intervalMillis the interval in milliseconds to add to
+     * @param config         the {@link DataFileConfiguration} object that
+     *                       specifies the maximum number of seconds to add
+     * @return the new interval in milliseconds
      */
-    private long applyIntervalRandomisation(long interval, DataFileConfiguration config) {
-        long seconds = 0;
+    private long applyIntervalRandomisationMillis(
+            long intervalMillis,
+            DataFileConfiguration config) {
+        long randomSeconds = 0;
         if (config.getMaxRandomisationSeconds() > 0) {
-            seconds = random.nextInt(config.getMaxRandomisationSeconds());
+            randomSeconds = random.nextInt(config.getMaxRandomisationSeconds());
         }
-        return interval + seconds;
+        return intervalMillis + randomSeconds * 1000;
+    }
+
+    /**
+     * The license keys to mask in messages that name the data update URL,
+     * being the data update license keys and any key in the URL's
+     * LicenseKeys parameter, such as one typed straight into the data
+     * update URL.
+     * @param dataFile the data file being updated
+     * @param url the formatted data update URL
+     * @return the keys to mask
+     */
+    private static List<String> licenseKeysToMask(
+            AspectEngineDataFile dataFile,
+            String url) {
+        List<String> keys = new ArrayList<>();
+        List<String> configured =
+                dataFile.getConfiguration().getDataUpdateLicenseKeys();
+        if (configured != null) {
+            keys.addAll(configured);
+        }
+        int query = url == null ? -1 : url.indexOf('?');
+        if (query < 0) {
+            return keys;
+        }
+        for (String parameter : url.substring(query + 1).split("&")) {
+            int equals = parameter.indexOf('=');
+            if (equals > 0 && parameter.substring(0, equals)
+                    .equalsIgnoreCase(LICENSE_KEYS_PARAMETER)) {
+                String value = parameter.substring(equals + 1);
+                try {
+                    value = URLDecoder.decode(value, "UTF-8");
+                } catch (UnsupportedEncodingException |
+                         IllegalArgumentException e) {
+                    // Masked as it is written.
+                }
+                keys.addAll(Arrays.asList(value.split("\\|")));
+            }
+        }
+        return keys;
     }
 
     /**
@@ -593,13 +723,17 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             FileWrapper tempFile) {
 
         String url = dataFile.getFormattedUrl();
-        logger.debug("downloadFile from {}", url);
+        // The URL carries the license keys, so every message names it with
+        // each key masked.
+        List<String> licenseKeys = licenseKeysToMask(dataFile, url);
+        String loggedUrl = LicenseKeyMask.maskIn(url, licenseKeys);
+        logger.debug("downloadFile from {}", loggedUrl);
 
         try {
             HttpURLConnection connection = httpClient.connect(new URI(url.trim()).toURL());
             if (connection == null) {
                 logger.error("No response from data update service at '{}' for engine '{}'",
-                        dataFile.getFormattedUrl(), Objects.nonNull(dataFile.getEngine()) ?
+                        loggedUrl, Objects.nonNull(dataFile.getEngine()) ?
                                 dataFile.getEngine().getClass().getSimpleName() : "No Engine");
                 return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
             }
@@ -623,19 +757,19 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                     // in some versions of the HttpStatusCode enum.
                     case (429):
                         logger.error("Too many requests to '{}' for {}",
-                                dataFile.getFormattedUrl(), getIdForLogging(dataFile));
+                                loggedUrl, getIdForLogging(dataFile));
                         return AutoUpdateStatus.AUTO_UPDATE_ERR_429_TOO_MANY_ATTEMPTS;
                     case HttpURLConnection.HTTP_NOT_MODIFIED:
                         logger.debug("No data update available from '{}' for {}",
-                                dataFile.getFormattedUrl(), getIdForLogging(dataFile));
+                                loggedUrl, getIdForLogging(dataFile));
                         return AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED;
                     case HttpURLConnection.HTTP_FORBIDDEN:
                         logger.error("Access denied to data update service at '{}' for {}",
-                                dataFile.getFormattedUrl(), getIdForLogging(dataFile));
+                                loggedUrl, getIdForLogging(dataFile));
                         return AutoUpdateStatus.AUTO_UPDATE_ERR_403_FORBIDDEN;
                     default:
                         logger.error("HTTP status code '{}' from data update service at '{}' for {}",
-                                connection.getResponseCode(), dataFile.getFormattedUrl(),
+                                connection.getResponseCode(), loggedUrl,
                                 getIdForLogging(dataFile));
                         return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
                 }
@@ -643,7 +777,9 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 connection.disconnect();
             }
         } catch (Exception e) {
-            logger.error("Error while processing data file download", e);
+            // An HTTP library's exception often names the URL it requested.
+            logger.error("Error while processing data file download",
+                    LicenseKeyMask.maskIn(e, licenseKeys));
             return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
         }
     }
@@ -783,7 +919,8 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                         dataFile.getConfiguration().setData(reader.toByteArray());
                     }
                 }
-                return memoryDownloadResult;
+                // The engine, or the configuration, now holds the new data.
+                return AUTO_UPDATE_SUCCESS;
             } catch (Exception ex) {
                 logger.error("An error occurred when applying a data update to engine '{}'" ,
                                 Objects.nonNull(dataFile.getEngine())?

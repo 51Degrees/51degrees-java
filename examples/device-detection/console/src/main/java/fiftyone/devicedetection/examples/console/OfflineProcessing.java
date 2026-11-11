@@ -40,6 +40,7 @@ import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
@@ -71,10 +72,16 @@ public class OfflineProcessing {
     // cxx/data, and is downloaded if it is missing
     //
     // Note that the Lite data file is only used for illustration, and has
-    // limited accuracy and capabilities. Find out about the Enterprise data
-    // file here: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-offlineprocessing.java&utm_term=lite_v_4_1_hash
+    // a small number of Properties. Contact us for a copy of the
+    // Enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-offlineprocessing.java&utm_term=lite_v_4_1_hash
     public static final String LITE_V_4_1_HASH =
             "device-detection/51Degrees-LiteV4.1.hash";
+
+    /**
+     * Where to ask for a copy of the Enterprise data file, tagged with this
+     * example.
+     */
+    private static final String CONTACT_US = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-offlineprocessing.java&utm_term=enterprise-data-file";
     // This 51degrees file of 20,000 examples is used from the same folder,
     // and is downloaded if it is missing
     public static final String HEADER_EVIDENCE_YML =
@@ -168,6 +175,7 @@ public class OfflineProcessing {
             try (Writer writer = new OutputStreamWriter(os)) {
                 // read a batch of device data from the stream
                 int count = 0;
+                boolean needsEnterprise = false;
                 while (evidenceIterator.hasNext() && count < 20) {
                     // Flow data is the container for inputs and outputs that
                     // flow through the pipeline a flowdata instance is
@@ -199,6 +207,17 @@ public class OfflineProcessing {
                         resultMap.put("device.ismobile", asString(device.getIsMobile()));
                         resultMap.put("device.platformname", asString(device.getPlatformName()));
                         resultMap.put("device.platformversion", asString(device.getPlatformVersion()));
+                        // Only the Enterprise data file has these properties.
+                        // The free Lite data file has the ones above.
+                        needsEnterprise |= putEnterpriseValue(resultMap,
+                                "device.hardwarevendor", engine, "HardwareVendor",
+                                device::getHardwareVendor);
+                        needsEnterprise |= putEnterpriseValue(resultMap,
+                                "device.hardwarename", engine, "HardwareName",
+                                device::getHardwareName);
+                        needsEnterprise |= putEnterpriseValue(resultMap,
+                                "device.devicetype", engine, "DeviceType",
+                                device::getDeviceType);
 
                         // to look at all device detection properties use the following:
                         // resultMap.putAll(getPopulatedProperties(device, "device."));
@@ -211,20 +230,37 @@ public class OfflineProcessing {
                     }
                     count++;
                 }
+                if (needsEnterprise) {
+                    // A comment keeps the output a valid YAML stream.
+                    writer.write("# Some of these properties need the " +
+                            "Enterprise data file. Contact us for a copy at " +
+                            CONTACT_US + "\n");
+                }
                 // finish the last YAML document
                 writer.write("...\n");
                 writer.flush();
                 logger.info("Finished processing {} records", count);
-
-                if (engine.getDataSourceTier().equals("Lite")) {
-                    logger.warn("You have used a Lite data file which has " +
-                            "limited properties and is of limited accuracy");
-                    logger.info("The example requires an Enterprise data file " +
-                            "to work fully. Find out about the Enterprise " +
-                            "data file here: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-offlineprocessing.java&utm_term=lite-data-file");
-                }
             }
         }
+    }
+
+    /**
+     * Records a property that only the Enterprise data file has, or that it
+     * needs the Enterprise data file when the data file in use does not
+     * have it. The value is only read when the data file has the property.
+     * @return true if the property needs the Enterprise data file
+     */
+    private static boolean putEnterpriseValue(Map<String, ? super Object> resultMap,
+                                              String key,
+                                              DeviceDetectionHashEngine engine,
+                                              String property,
+                                              Supplier<AspectPropertyValue<?>> value) {
+        if (DataFileHelper.hasProperty(engine, property)) {
+            resultMap.put(key, asString(value.get()));
+            return false;
+        }
+        resultMap.put(key, DataFileHelper.NEEDS_ENTERPRISE);
+        return true;
     }
 	
     /**

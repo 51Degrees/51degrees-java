@@ -40,6 +40,7 @@ import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -487,6 +488,91 @@ public class ShareUsageElementTests {
         }
     }
 
+    /**
+     * The element accepts no Evidence, so a header no other element accepts
+     * reaches it only through the web request the web integration adds as
+     * server.http-request. It shares that header under the key it would have
+     * as Evidence, keeps the Evidence value for a key in both places, and
+     * still leaves out the cookie header, a blocked header and the web
+     * request itself.
+     */
+    @Test
+    public void ShareUsageElement_WebRequest_SharesWhatNoOtherElementAccepts()
+        throws Exception {
+        createShareUsage(
+            1,
+            1,
+            1,
+            new ArrayList<>(Collections.singletonList("x-blocked")),
+            new ArrayList<>(),
+            new ArrayList<>());
+
+        Map<String, Object> request = new HashMap<>();
+        request.put("header.User-Agent", "request-ua");
+        request.put("header.X-Test", "shared");
+        request.put("header.Cookie", "a=1; 51D_Profile=123456");
+        request.put("header.X-Blocked", "blocked");
+        request.put("cookie.51D_Profile", "123456");
+        request.put("cookie.other", "not-shared");
+        request.put("query.secret", "not-shared");
+        request.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
+        request.put("server.request-method", "GET");
+        request.put("server.request-path", "/a%2Fb/c");
+
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(
+                EVIDENCE_HTTPHEADER_PREFIX + EVIDENCE_SEPERATOR + "user-agent",
+                "evidence-ua");
+            data.addEvidence("server.http-request",
+                Collections.unmodifiableMap(request));
+            shareUsageElement.process(data);
+            assertNotNull(shareUsageElement.getSendDataFuture());
+            shareUsageElement.getSendDataFuture().get();
+
+            Document doc = docBuilderFactory.newDocumentBuilder().parse(
+                new ByteArrayInputStream(connector.getBaos().toByteArray()));
+
+            assertEquals("shared", xpath.evaluate(
+                "//header[@Name='X-Test']", doc),
+                "A header only the web request holds was not shared.");
+            NodeList userAgents = (NodeList) xpath.evaluate(
+                "//header[translate(@Name,'USERAGNT','useragnt')='user-agent']",
+                doc, XPathConstants.NODESET);
+            assertEquals(1, userAgents.getLength(),
+                "The User-Agent in both places was not shared once.");
+            assertEquals("evidence-ua", userAgents.item(0).getTextContent(),
+                "The User-Agent in both places did not keep the Evidence value.");
+            assertEquals(0, ((NodeList) xpath.evaluate(
+                "//header[@Name='Cookie' or @Name='cookie']", doc,
+                XPathConstants.NODESET)).getLength(),
+                "The cookie header was shared.");
+            assertEquals(0, ((NodeList) xpath.evaluate(
+                "//header[@Name='X-Blocked']", doc,
+                XPathConstants.NODESET)).getLength(),
+                "A blocked header was shared.");
+            assertEquals("123456", xpath.evaluate(
+                "//cookie[@Name='51D_Profile']", doc),
+                "A 51D_ cookie from the web request was not shared.");
+            assertEquals(0, ((NodeList) xpath.evaluate(
+                "//cookie[@Name='other'] | //query[@Name='secret']", doc,
+                XPathConstants.NODESET)).getLength(),
+                "A cookie or query string parameter the rules leave out was shared.");
+            assertEquals("1.2.3.4", xpath.evaluate("//ClientIP", doc),
+                "The client IP from the web request was not shared.");
+            assertEquals("GET", xpath.evaluate(
+                "//server[@Name='request-method']", doc),
+                "The method of the request line was not shared.");
+            assertEquals(0, ((NodeList) xpath.evaluate(
+                "//*[@Name='request-path']", doc,
+                XPathConstants.NODESET)).getLength(),
+                "The path of the request line was shared.");
+            assertEquals(0, ((NodeList) xpath.evaluate(
+                "//*[@Name='http-request']", doc,
+                XPathConstants.NODESET)).getLength(),
+                "The web request itself was shared.");
+        }
+    }
+
     @Test
     public void ShareUsageElement_LowPercentage() throws Exception {
         // Arrange
@@ -712,13 +798,109 @@ public class ShareUsageElementTests {
             // Check that the expected values are populated.
             NodeList f = (NodeList) xpath.compile("//header[@Name='user-agent']").evaluate(doc, XPathConstants.NODESET);
             assertEquals(1, f.getLength(), "1 user-agent header expected");
-            assertEquals("<iPhone\uFFFD>", f.item(0).getTextContent());
-            assertEquals("true", f.item(0).getAttributes().getNamedItem("replaced").getTextContent());
+            assertEquals("<iPhone\\x0018>", f.item(0).getTextContent());
+            assertEquals("true", f.item(0).getAttributes().getNamedItem("escaped").getTextContent());
             NodeList b = (NodeList) xpath.compile("//BadSchema").evaluate(doc, XPathConstants.NODESET);
             assertEquals(0, b.getLength());
         }
     }
     
+    /**
+     * Check that the invalid characters in a value are marked with the
+     * attribute the specification names, and that a value that is not too
+     * long is not marked as truncated.
+     */
+    @Test
+    public void ShareUsageElement_InvalidCharacter_EscapedAttributeOnly()
+        throws Exception {
+        Document doc = shareUserAgent("<iPhone" + (char) 0x18 + ">");
+
+        Node userAgent = doc.getElementsByTagName("header").item(0);
+        assertEquals("true",
+            userAgent.getAttributes().getNamedItem("escaped").getTextContent());
+        assertNull(userAgent.getAttributes().getNamedItem("replaced"));
+        assertNull(userAgent.getAttributes().getNamedItem("truncated"));
+        assertEquals("<iPhone\\x0018>", userAgent.getTextContent());
+    }
+
+    /**
+     * Check that a value that is too long is cut and marked as truncated,
+     * without the escaped attribute.
+     */
+    @Test
+    public void ShareUsageElement_LongValue_TruncatedAttributeOnly()
+        throws Exception {
+        StringBuilder longValue = new StringBuilder();
+        for (int i = 0; i < 10001; i++) {
+            longValue.append('a');
+        }
+        Document doc = shareUserAgent(longValue.toString());
+
+        Node userAgent = doc.getElementsByTagName("header").item(0);
+        assertEquals("true",
+            userAgent.getAttributes().getNamedItem("truncated").getTextContent());
+        assertNull(userAgent.getAttributes().getNamedItem("escaped"));
+        assertEquals(10000, userAgent.getTextContent().length());
+    }
+
+    /**
+     * Check that the values are written in the order the specification's
+     * example gives, and that no CDATA section or BadSchema element is used.
+     */
+    @Test
+    public void ShareUsageElement_RecordFollowsTheSpecificationExample()
+        throws Exception {
+        Document doc = shareUserAgent("<iPhone>");
+
+        Node device = doc.getElementsByTagName("Device").item(0);
+        List<String> names = new ArrayList<>();
+        for (int i = 0; i < device.getChildNodes().getLength(); i++) {
+            Node child = device.getChildNodes().item(i);
+            assertNotEquals(Node.CDATA_SECTION_NODE, child.getNodeType());
+            if (child.getNodeType() == Node.ELEMENT_NODE) {
+                names.add(child.getNodeName());
+            }
+        }
+        String[] expected = {"SessionId", "Sequence", "DateSent", "Version",
+            "Product", "FlowElement", "Language", "LanguageVersion",
+            "ClientIP", "ServerIP", "Platform"};
+        List<String> required = Arrays.asList("SessionId", "Sequence",
+            "DateSent", "Product", "Language", "LanguageVersion");
+        int last = -1;
+        for (String name : expected) {
+            int index = names.indexOf(name);
+            if (!required.contains(name)) {
+                // Only present when the Pipeline, the request and the
+                // platform give one.
+                if (index < 0) {
+                    continue;
+                }
+            }
+            assertTrue(index >= 0, name + " missing from " + names);
+            assertTrue(index > last, name + " out of order in " + names);
+            last = index;
+        }
+        assertEquals(0, doc.getElementsByTagName("BadSchema").getLength());
+        assertEquals(1, doc.getElementsByTagName("header").getLength());
+    }
+
+    private Document shareUserAgent(String userAgent) throws Exception {
+        createShareUsage(1, 1, 1, new ArrayList<>(),
+                new ArrayList<>(), new ArrayList<>());
+        Map<String, Object> evidenceData = new HashMap<>();
+        evidenceData.put(EVIDENCE_HEADER_USERAGENT_KEY, userAgent);
+        evidenceData.put("query.session-id", "session");
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidenceData);
+            shareUsageElement.process(data);
+            assertNotNull(shareUsageElement.getSendDataFuture());
+            shareUsageElement.getSendDataFuture().get();
+            byte[] output = connector.getBaos().toByteArray();
+            return docBuilderFactory.newDocumentBuilder()
+                .parse(new ByteArrayInputStream(output));
+        }
+    }
+
 /**
      * Test that the ShareUsageElement generates a session id if one is not
      * contained in the evidence and adds it to the results.
@@ -1075,5 +1257,145 @@ public class ShareUsageElementTests {
             assertEquals(2 * count + 1 - shareUsageElement.lostData, f.getLength(), "Expecting devices");
 
         }
+    }
+
+    /**
+     * Default settings share headers other than Cookie, the 51Degrees cookies
+     * and query string parameters, and other evidence, and leave out ordinary
+     * cookies, other parameters, session values and the evidence that is
+     * never shared.
+     */
+    @Test
+    public void ShareUsageElement_DefaultSharesOnlyAcceptedEvidence() throws Exception {
+        // Arrange
+        createShareUsage(
+            1,
+            1,
+            1,
+            new ArrayList<>(),
+            new ArrayList<>(),
+            new ArrayList<>());
+
+        Map<String, Object> evidenceData = new HashMap<>();
+        evidenceData.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
+        evidenceData.put("header.user-agent", "some user agent");
+        evidenceData.put("cookie.51d_screenpixelswidth", "screen width");
+        evidenceData.put("query.51D_Test", "fiftyone parameter");
+        evidenceData.put("cookie.sessionid", "sessionid cookie");
+        evidenceData.put("header.cookie", "cookie header");
+        evidenceData.put("query.password", "password parameter");
+        evidenceData.put("query.id.email", "email parameter");
+        evidenceData.put("header.id.email", "email header");
+        evidenceData.put("id.salt", "salt value");
+        evidenceData.put("server.request-query", "whole query string");
+        evidenceData.put("server.request-path", "request path");
+        evidenceData.put("session.org.example.attribute", "session attribute");
+
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidenceData);
+
+            // Act
+            shareUsageElement.process(data);
+            assertNotNull(shareUsageElement.getSendDataFuture());
+            shareUsageElement.getSendDataFuture().get();
+        }
+
+        // Assert
+        String output = new String(
+            connector.getBaos().toByteArray(), StandardCharsets.UTF_8);
+        for (String shared : Arrays.asList(
+            "some user agent", "screen width", "fiftyone parameter")) {
+            assertTrue(output.contains(shared), shared);
+        }
+        for (String withheld : Arrays.asList(
+            "sessionid cookie", "cookie header", "password parameter",
+            "email parameter", "email header", "salt value",
+            "whole query string", "request path", "session attribute")) {
+            assertFalse(output.contains(withheld), withheld);
+        }
+    }
+
+    /**
+     * The default tracker does not share again a request that differs from
+     * one already shared only in its session id and sequence number.
+     */
+    @Test
+    public void ShareUsageElement_RepeatWithNewSequence_NotShared() throws Exception {
+        // Arrange
+        tracker = null;
+        createShareUsage(
+            1,
+            3,
+            1,
+            new ArrayList<>(),
+            new ArrayList<>(),
+            new ArrayList<>());
+
+        // Act
+        for (int sequence = 1; sequence <= 2; sequence++) {
+            Map<String, Object> evidenceData = new HashMap<>();
+            evidenceData.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
+            evidenceData.put("header.user-agent", "repeated user agent");
+            evidenceData.put(Constants.EVIDENCE_SESSIONID, "session " + sequence);
+            evidenceData.put(Constants.EVIDENCE_SEQUENCE, sequence);
+            try (FlowData data = pipeline.createFlowData()) {
+                data.addEvidence(evidenceData);
+                shareUsageElement.process(data);
+            }
+        }
+        shareUsageElement.close();
+
+        // Assert
+        Document doc = docBuilderFactory.newDocumentBuilder().parse(
+            new ByteArrayInputStream(connector.getBaos().toByteArray()));
+        NodeList devices = (NodeList) xpath.compile("//Device")
+            .evaluate(doc, XPathConstants.NODESET);
+        assertEquals(1, devices.getLength(), "1 device expected");
+    }
+
+    /**
+     * The session cookie the element names is read by the tracker, whatever
+     * the case of its name, and never sent. With sessions tracked, the same
+     * evidence from a new session is shared again. The element accepts no
+     * Evidence, so the cookie reaches the tracker from what it finds rather
+     * than through its accepted Evidence.
+     */
+    @Test
+    public void ShareUsageElement_TrackSession_SessionCookie() throws Exception {
+        // Arrange
+        tracker = null;
+        createShareUsage(
+            1,
+            3,
+            1,
+            new ArrayList<>(),
+            new ArrayList<>(),
+            new ArrayList<>());
+        String sessionCookie = EVIDENCE_COOKIE_PREFIX + EVIDENCE_SEPERATOR +
+            DEFAULT_SESSION_COOKIE_NAME;
+
+        // Act
+        for (int session = 1; session <= 2; session++) {
+            Map<String, Object> evidenceData = new HashMap<>();
+            evidenceData.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
+            evidenceData.put("header.user-agent", "repeated user agent");
+            evidenceData.put(sessionCookie, "session cookie " + session);
+            try (FlowData data = pipeline.createFlowData()) {
+                data.addEvidence(evidenceData);
+                shareUsageElement.process(data);
+            }
+        }
+        shareUsageElement.close();
+
+        // Assert
+        assertFalse(shareUsageElement.getEvidenceKeyFilter().include(sessionCookie));
+        byte[] output = connector.getBaos().toByteArray();
+        assertFalse(new String(output, StandardCharsets.UTF_8).contains(
+            "session cookie"), "the session cookie is never sent");
+        Document doc = docBuilderFactory.newDocumentBuilder().parse(
+            new ByteArrayInputStream(output));
+        NodeList devices = (NodeList) xpath.compile("//Device")
+            .evaluate(doc, XPathConstants.NODESET);
+        assertEquals(2, devices.getLength(), "1 device expected for each session");
     }
 }

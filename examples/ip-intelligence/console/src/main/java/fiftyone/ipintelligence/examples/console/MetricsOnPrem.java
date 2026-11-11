@@ -32,7 +32,9 @@
  * to complete.
  *
  * The sample of IP addresses used in the metrics can be adjusted as a
- * parameter.
+ * parameter. The performance profile can be given as the fourth argument,
+ * for example MaxPerformance, which is much faster where there is memory to
+ * hold the whole data file.
  *
  * This example is primarily designed for those who are interested in
  * verifying the published metrics associated with 51Degrees'
@@ -40,8 +42,9 @@
  *
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/console/src/main/java/fiftyone/ipintelligence/examples/console/MetricsOnPrem.java).
  *
- * This example requires an enterprise IP Intelligence data file (.ipi).
- * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metricsonprem.java&utm_term=contact-us).
+ * This example needs the location properties only the Enterprise IP Intelligence data file has.
+ * With the free Lite data file, which it uses by default, it says which and stops. To obtain an
+ * Enterprise data file, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metricsonprem.java&utm_term=contact-us).
  *
  * Required Maven Dependencies:
  * - [com.51degrees:ip-intelligence](https://central.sonatype.com/artifact/com.51degrees/ip-intelligence)
@@ -72,6 +75,7 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,7 +91,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Predicate;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
-import static fiftyone.ipintelligence.examples.shared.DataFileHelper.ENTERPRISE_DATA_FILE_REL_PATH;
+import static fiftyone.ipintelligence.examples.shared.DataFileHelper.LITE_DATA_FILE_REL_PATH;
 import static fiftyone.ipintelligence.examples.shared.PropertyHelper.firstValue;
 import static fiftyone.ipintelligence.examples.shared.PropertyHelper.tryGet;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
@@ -114,6 +118,24 @@ public class MetricsOnPrem {
      * Default name of the output file written to the working directory.
      */
     public static final String DEFAULT_OUTPUT_FILE = "metrics-output.csv";
+
+    /**
+     * The performance profile used unless one is given as the fourth
+     * argument. This example needs the Enterprise data file, which is over
+     * 6 GB, and LowMemory reads it from disk as it is needed, so the example
+     * runs without memory to hold the whole file. MaxPerformance loads the
+     * whole file into memory and is much faster here, because the example
+     * reads the values of every profile in the file.
+     */
+    public static final Constants.PerformanceProfiles
+            DEFAULT_PERFORMANCE_PROFILE =
+            Constants.PerformanceProfiles.LowMemory;
+
+    /**
+     * Where to ask for a copy of the Enterprise data file, tagged with this
+     * example.
+     */
+    private static final String CONTACT_US = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metricsonprem.java&utm_term=enterprise-data-file";
 
     /**
      * Properties needed by the metrics. The first eight form the metric key.
@@ -289,19 +311,38 @@ public class MetricsOnPrem {
         configureLogback(getFilePath("logback.xml"));
 
         // Use the supplied path for the data file
-        String dataFile = args.length > 0 ? args[0] : ENTERPRISE_DATA_FILE_REL_PATH;
+        String dataFile = DataFileHelper.getDataFileLocation(
+                args.length > 0 ? args[0] : LITE_DATA_FILE_REL_PATH);
         // Get the location for the output file
         String outputFile = args.length > 1 ? args[1] : DEFAULT_OUTPUT_FILE;
         // Get the sample percentage or use the default
         double samplePercentage = args.length > 2 ?
                 Double.parseDouble(args[2]) : DEFAULT_SAMPLE_PERCENTAGE;
+        // Get the performance profile named, ignoring case, such as
+        // MaxPerformance, or use the default
+        Constants.PerformanceProfiles profile = args.length > 3 ?
+                DataFileHelper.findPerformanceProfile(
+                        args[3], new PrintWriter(System.out)) :
+                DEFAULT_PERFORMANCE_PROFILE;
+        if (profile == null) {
+            return;
+        }
+
+        // The free data files have none of the location properties.
+        if (DataFileHelper.lacksEnterpriseProperties(dataFile,
+                "Measuring the location areas",
+                Arrays.asList(PROPERTIES),
+                new PrintWriter(System.out),
+                CONTACT_US)) {
+            return;
+        }
 
         try (PrintWriter writer = new PrintWriter(new FileWriter(outputFile))) {
             // Only include IP addresses with periods in them, i.e. IPv4.
             // There are too many IPv6 addresses for the metrics example to
             // complete in a short time frame. Set to null to include all.
             Predicate<String[]> condition = range -> range[0].contains(".");
-            run(dataFile, samplePercentage, 0, condition, writer);
+            run(dataFile, samplePercentage, 0, condition, profile, writer);
         }
         logger.info("Output written to '{}'", outputFile);
     }
@@ -321,6 +362,27 @@ public class MetricsOnPrem {
                            int maxRanges,
                            Predicate<String[]> condition,
                            PrintWriter output) throws Exception {
+        run(dataFile, samplePercentage, maxRanges, condition,
+                DEFAULT_PERFORMANCE_PROFILE, output);
+    }
+
+    /**
+     * Run the example
+     * @param dataFile an IP Intelligence data file
+     * @param samplePercentage percentage of possible IP addresses to include
+     *                         in the metrics where 1 is 100%
+     * @param maxRanges maximum number of IP ranges to process, or 0 for all
+     * @param condition optional function used to determine if an IP address
+     *                  range should be included, or null for all ranges
+     * @param profile the performance profile to build the engine with
+     * @param output somewhere for the metrics CSV
+     */
+    public static void run(String dataFile,
+                           double samplePercentage,
+                           int maxRanges,
+                           Predicate<String[]> condition,
+                           Constants.PerformanceProfiles profile,
+                           PrintWriter output) throws Exception {
         logger.info("Running MetricsOnPrem example");
 
         String dataFileLocation;
@@ -335,16 +397,16 @@ public class MetricsOnPrem {
         int processors = Runtime.getRuntime().availableProcessors();
 
         // Build the pipeline with an on-premise IP Intelligence engine using
-        // the max performance profile.
+        // the performance profile given.
         IPIntelligencePipelineBuilder builder = new IPIntelligencePipelineBuilder();
         fiftyone.ipintelligence.IPIntelligenceOnPremisePipelineBuilder onPremiseBuilder =
                 builder.useOnPremise(dataFileLocation, false)
-                        // We use the max performance profile for optimal
-                        // detection speed in this example. See the
+                        // The profile trades memory for speed, as
+                        // DEFAULT_PERFORMANCE_PROFILE explains. See the
                         // documentation for more detail on this and other
                         // configuration options.
                         // https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metricsonprem.java&utm_term=automatic-datafile-updates
-                        .setPerformanceProfile(Constants.PerformanceProfiles.MaxPerformance)
+                        .setPerformanceProfile(profile)
                         // inhibit sharing usage for this example
                         .setShareUsage(false)
                         // inhibit auto-update of the data file for this example

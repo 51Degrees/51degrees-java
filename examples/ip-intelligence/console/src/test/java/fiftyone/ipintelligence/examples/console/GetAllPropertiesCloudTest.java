@@ -26,15 +26,12 @@ import fiftyone.ipintelligence.examples.shared.KeyHelper;
 import fiftyone.ipintelligence.shared.testhelpers.KeyUtils;
 import org.junit.Test;
 
-import static org.junit.Assume.assumeFalse;
-
 public class GetAllPropertiesCloudTest {
 
     @Test
     public void getAllPropertiesCloudTest() throws Exception {
-        String resourceKey = KeyUtils.getNamedKey(KeyHelper.TEST_RESOURCE_KEY);
-        assumeFalse("Skipping test, no resource key found",
-                KeyUtils.isInvalidKey(resourceKey));
+        String resourceKey = KeyHelper.requireTestResourceKey(
+            "every IP Intelligence property the key carries", "ip");
         GetAllPropertiesCloud.run(resourceKey,
                 KeyUtils.getNamedKey(GettingStartedCloud.CLOUD_END_POINT_NAME),
                 System.out);

@@ -42,7 +42,7 @@ import java.util.stream.StreamSupport;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
-import static fiftyone.ipintelligence.examples.shared.DataFileHelper.ENTERPRISE_DATA_FILE_REL_PATH;
+import static fiftyone.ipintelligence.examples.shared.DataFileHelper.LITE_DATA_FILE_REL_PATH;
 
 /**
  * This example shows how to access metadata about the IP Intelligence properties that are available 
@@ -56,20 +56,28 @@ import static fiftyone.ipintelligence.examples.shared.DataFileHelper.ENTERPRISE_
  * Required Maven Dependencies:
  * - [com.51degrees:ip-intelligence](https://central.sonatype.com/artifact/com.51degrees/ip-intelligence)
  *
- * This example requires an enterprise IP Intelligence data file (.ipi).
- * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metadataonprem.java&utm_term=header).
+ * By default the example uses the free Lite IP Intelligence data file, which it downloads when
+ * it is missing. To obtain an Enterprise data file, which has many more properties, please
+ * [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metadataonprem.java&utm_term=header).
  */
 public class MetadataOnPrem {
     private static final Logger logger = LoggerFactory.getLogger(GettingStartedOnPrem.class);
 
-    /* In this example, by default, the 51degrees IP Intelligence data file needs to be somewhere in the project
-    space, or you may specify another file as a command line parameter.
+    /* In this example, by default, the free 51degrees Lite IP Intelligence data file is used from
+    the data repository in cxx/data, and is downloaded if it is missing, or you may specify another
+    file as a command line parameter.
 
-    For testing, contact us to obtain an enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metadataonprem.java&utm_term=main */
+    Contact us for a copy of the Enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metadataonprem.java&utm_term=main */
+
+    /**
+     * Where to ask for a copy of the Enterprise data file, tagged with this
+     * example.
+     */
+    private static final String CONTACT_US = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metadataonprem.java&utm_term=enterprise-data-file";
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
-        String dataFile = args.length > 0 ? args[0] : ENTERPRISE_DATA_FILE_REL_PATH;
+        String dataFile = args.length > 0 ? args[0] : LITE_DATA_FILE_REL_PATH;
         run(dataFile, System.out);
     }
 
@@ -86,11 +94,10 @@ public class MetadataOnPrem {
                     dataFile, DataFileHelper.IPI_PATH_ENV_VAR);
             throw e;
         }
-        // Build a new on-premise IP Intelligence engine with the max performance profile.
-        // Note that there is no need to construct a complete pipeline in order to access
-        // the meta-data.
-        // If you already have a pipeline and just want to get a reference to the engine 
-        // then you can use `var engine = pipeline.GetElement<IPIntelligenceOnPremiseEngine>();`
+        // Build an on-premise IP Intelligence engine with the low memory
+        // profile. There is no need to build a complete pipeline to read the
+        // metadata. Code that already has a pipeline can get its engine with
+        // pipeline.getElement(IPIntelligenceOnPremiseEngine.class).
         try (IPIntelligenceOnPremiseEngine engine =
                      new IPIntelligenceOnPremiseEngineBuilder(LoggerFactory.getILoggerFactory())
                 // We use the low memory profile to minimize memory usage for this
@@ -119,6 +126,9 @@ public class MetadataOnPrem {
             writer.flush();
 
             DataFileHelper.logDataFileInfo(engine);
+            if (DataFileHelper.isFreeDataFile(engine)) {
+                DataFileHelper.writeEnterpriseOffer(writer, CONTACT_US);
+            }
         }
     }
 

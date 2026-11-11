@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.function.Function;
 
 public class KeyHelper {
     /**
@@ -37,6 +38,90 @@ public class KeyHelper {
     public static final String RESOURCE_KEY_ENV_VAR = "51DEGREES_RESOURCE_KEY";
     public static final String TEST_RESOURCE_KEY = "TestResourceKey";
     static Logger logger = LoggerFactory.getLogger(KeyHelper.class);
+
+    /**
+     * The names every cloud test reads a resource key from first, before
+     * the names its own example reads.
+     */
+    public static final List<String> SHARED_RESOURCE_KEY_NAMES =
+        Collections.unmodifiableList(Arrays.asList(
+            "_51DEGREES_RESOURCE_KEY",
+            "_51DEGREES_RESOURCE_KEY_BESPOKE"));
+
+    static final String CREATE_KEY_URL =
+        "https://configure.51degrees.com/?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-keyhelper.java&utm_term=no-resource-key";
+
+    /**
+     * The resource key for a test that calls the live cloud service, from
+     * {@link #SHARED_RESOURCE_KEY_NAMES} and then the names
+     * {@link #getOrSetTestResourceKey()} reads. Fails the test when there
+     * is none, because a cloud test that passes without a key has called
+     * nothing.
+     * @param asksFor what the test asks the service for
+     * @param products the products the key has to carry
+     * @return the resource key
+     */
+    public static String requireTestResourceKey(String asksFor,
+                                                String... products) {
+        return requireResourceKey(KeyHelper::readKey, Arrays.asList(
+            RESOURCE_KEY_ENV_VAR, TEST_RESOURCE_KEY), asksFor, products);
+    }
+
+    static String requireResourceKey(Function<String, String> read,
+                                     List<String> exampleNames,
+                                     String asksFor,
+                                     String... products) {
+        List<String> names = new ArrayList<>(SHARED_RESOURCE_KEY_NAMES);
+        names.addAll(exampleNames);
+        for (String name : names) {
+            String value = read.apply(name);
+            if (KeyUtils.isInvalidKey(value) == false) {
+                return value.trim();
+            }
+        }
+        throw new AssertionError(noResourceKey(names, asksFor, products));
+    }
+
+    static String noResourceKey(List<String> names, String asksFor,
+                                String... products) {
+        return "This test calls the live 51Degrees cloud service, so it " +
+            "needs a resource key and there is nothing to fall back on. " +
+            "None of " + String.join(", ", names) + " is set, as an " +
+            "environment variable or as a system property, tried in that " +
+            "order. The key has to carry the " + productList(products) +
+            ", because the test asks the service for " + asksFor + ". To " +
+            "see the products a key carries, open " +
+            "https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>. " +
+            "Create a key at " + CREATE_KEY_URL + ".";
+    }
+
+    private static String productList(String... products) {
+        StringBuilder list = new StringBuilder();
+        for (int i = 0; i < products.length; i++) {
+            if (i > 0) {
+                list.append(i == products.length - 1 ? " and " : ", ");
+            }
+            list.append(products[i]);
+        }
+        return list + (products.length == 1 ? " product" : " products");
+    }
+
+    /**
+     * A key read as an environment variable, as its upper case name, and
+     * then as a system property, skipping any that is not a key, such as
+     * the empty string the example poms pass for a key that is not set.
+     */
+    private static String readKey(String name) {
+        for (String value : new String[]{
+            System.getenv(name),
+            System.getenv(name.toUpperCase()),
+            System.getProperty(name)}) {
+            if (KeyUtils.isInvalidKey(value) == false) {
+                return value;
+            }
+        }
+        return null;
+    }
 
     /**
      * Obtain a resource key either from environment variable or from a property.
@@ -92,8 +177,11 @@ public class KeyHelper {
             }
         }
 
-        // capture the passed parameter for next time called
-        System.setProperty(variableName, value);
+        // Keep a valid key for next time. System.setProperty throws on null,
+        // and an invalid key is not worth keeping.
+        if (KeyUtils.isInvalidKey(value) == false) {
+            System.setProperty(variableName, value);
+        }
         return value;
     }
     public static String getOrSetSuperResourceKey(String value, String variablename) {
