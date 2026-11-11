@@ -720,6 +720,34 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
     }
 
     /**
+     * Evidence with no prefix ranks with Evidence of any prefix other than
+     * query, header and cookie, so it has the lowest precedence, unless the
+     * whole key is one of those prefixes, which puts it with that prefix's
+     * Evidence. The precedence order of the Evidence specification orders
+     * prefixes only, so this follows .NET.
+     */
+    @Test
+    public void process_RanksEvidenceWithNoPrefix() throws Exception {
+        acceptEvidence(Arrays.asList("query.User-Agent"));
+        Map<String, Object> evidence = new HashMap<>();
+        evidence.put("X-Thing", "bare");
+        evidence.put("header.X-Thing", "header");
+        evidence.put("query", "bare-query");
+        evidence.put("header.query", "header-query");
+
+        List<String> items = postedItems(null, evidence);
+
+        assertEquals(
+            new HashSet<>(Arrays.asList(
+                "resource=resourcekey",
+                "X-Thing=header",
+                "query=bare-query")),
+            new HashSet<>(items),
+            "Evidence with no prefix was not ranked as .NET ranks it: " +
+                items);
+    }
+
+    /**
      * Evidence whose key strips to resource, license or values is never
      * sent, whatever its case and even where the cloud service lists the
      * key, so the request carries the configured resource key, and the
