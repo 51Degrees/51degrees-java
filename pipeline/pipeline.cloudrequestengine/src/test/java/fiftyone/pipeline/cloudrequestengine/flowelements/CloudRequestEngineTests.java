@@ -51,6 +51,7 @@ import java.net.MalformedURLException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -536,6 +537,62 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
 
             Map<String, Object> result = engine.getFormData(data);
             assertEquals(expectedValue, result.get("User-Agent"));
+        }
+    }
+
+    private static Stream<Arguments> oneNameInTwoCasesArgs() {
+        return Stream.of(
+            Arguments.of("header.User-Agent", "query.user-agent", "user-agent", "B"),
+            Arguments.of("query.User-Agent", "header.user-agent", "User-Agent", "A"),
+            Arguments.of("cookie.X-Thing", "header.x-thing", "x-thing", "B"),
+            Arguments.of("location.Value", "server.value", "value", "B"),
+            Arguments.of("location.Value", "fiftyone.value", "value", "B"),
+            Arguments.of("fiftyone.Value", "server.value", "value", "B"),
+            Arguments.of("server.Value", "a.value", "Value", "A"),
+            Arguments.of("b.Value", "a.value", "value", "B"),
+            Arguments.of("ab-c.Value", "ab.value", "value", "B"),
+            Arguments.of("a.Value", "_x.value", "value", "B"));
+    }
+
+    /**
+     * Evidence keys ignore letter case, so one name under two prefixes in
+     * two letter cases is one field. It is sent once, with the name and
+     * value of the key that wins by the precedence in evidence.md, being
+     * query, header, cookie, server, fiftyone and location, then any other
+     * prefix alphabetically. Two other prefixes are compared as prefixes,
+     * in lower case, so ab ranks before ab-c and _x before a.
+     */
+    @ParameterizedTest(name = "{0} and {1}")
+    @MethodSource("oneNameInTwoCasesArgs")
+    public void getFormData_OneNameInTwoCases_SentOnceByPrecedence(
+        String first,
+        String second,
+        String expectedName,
+        String expectedValue) throws Exception {
+        acceptEvidence(Arrays.asList(first, second));
+        configureMockedClient();
+        CloudRequestEngineDefault engine = (CloudRequestEngineDefault)
+            new CloudRequestEngineBuilder(loggerFactory, httpClient)
+                .setResourceKey("resourcekey")
+                .build();
+
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+                .addFlowElement(engine)
+                .build();
+             FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(first, "A");
+            data.addEvidence(second, "B");
+
+            Map<String, Object> result = engine.getFormData(data);
+            List<String> names = new ArrayList<>();
+            for (String key : result.keySet()) {
+                if (key.equalsIgnoreCase(expectedName)) {
+                    names.add(key);
+                }
+            }
+            assertEquals(Collections.singletonList(expectedName), names,
+                "The name must be sent once: " + result);
+            assertEquals(expectedValue, result.get(expectedName));
         }
     }
 
