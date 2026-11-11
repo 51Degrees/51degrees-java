@@ -22,6 +22,7 @@
 
 package fiftyone.devicedetection.hash.engine.onpremise.flowelements;
 
+import fiftyone.devicedetection.hash.engine.onpremise.interop.Swig;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.BoolValueSwig;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.ConfigHashSwig;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.EngineHashSwig;
@@ -358,8 +359,13 @@ public class PropertyIndexTests {
         }
     }
 
+    /**
+     * Reads IsMobile by name through the overload that takes the name's
+     * bytes, which is how a read goes when the engine has no index for it.
+     */
     private static boolean readByName(ResultsHashSwig results) {
-        try (BoolValueSwig value = results.getValueAsBool("IsMobile")) {
+        try (BoolValueSwig value =
+                 results.getValueAsBool(Swig.asBytes("IsMobile"))) {
             return value.getValue();
         }
     }
