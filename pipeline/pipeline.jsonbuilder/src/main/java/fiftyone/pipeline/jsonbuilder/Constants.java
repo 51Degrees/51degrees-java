@@ -29,7 +29,7 @@ public class Constants {
     /**
      * What the element says when no Sequence Element has produced a sequence
      * number. The
-     * <a href="https://github.com/51Degrees/specifications/blob/dcacc016/pipeline-specification/pipeline-elements/json-builder.md#sequence-number">JSON
+     * <a href="https://github.com/51Degrees/specifications/blob/d72eb074/pipeline-specification/pipeline-elements/json-builder.md#sequence-number">JSON
      * Builder specification</a> gives this text and every language gives the
      * same, so that the message reads the same whichever one a deployment
      * uses.

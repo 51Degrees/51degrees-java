@@ -54,7 +54,7 @@ import static org.mockito.Mockito.when;
  * The JsonBuilderElement needs a sequence number, and fails without one.
  * <p>
  * The
- * <a href="https://github.com/51Degrees/specifications/blob/67ead698/pipeline-specification/pipeline-elements/json-builder.md#sequence-number">JSON
+ * <a href="https://github.com/51Degrees/specifications/blob/d72eb074/pipeline-specification/pipeline-elements/json-builder.md#sequence-number">JSON
  * Builder specification</a> says the element MUST fail with an error and MUST
  * NOT set its JSON value when no Sequence Element has produced a sequence
  * number, that a query.sequence value taken from a query string is text and so
