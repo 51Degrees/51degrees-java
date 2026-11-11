@@ -75,7 +75,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * https://distributor.51degrees.com/api/v2/download?LicenseKeys=<your_license_key>&Type=27&Download=True&Product=22
  * ```
  * ## Lite Data File
- * Lite data files (free-to-use, limited capabilities, no license key required) are created roughly
+ * Lite data files (free-to-use, a small number of Properties, no license key required) are created roughly
  * once a month and cannot be updated using auto-update, they may be downloaded with the
  * scripts in the [data repository](https://github.com/51Degrees/data) on GitHub, which is
  * the cxx/data folder of the source.

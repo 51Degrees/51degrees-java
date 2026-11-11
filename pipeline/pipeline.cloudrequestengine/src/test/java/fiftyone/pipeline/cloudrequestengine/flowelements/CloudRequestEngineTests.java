@@ -631,20 +631,23 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
     }
 
     /**
-     * Only the Evidence whose keys the cloud service accepts is sent, with
-     * the keys compared without regard to case.
+     * Every Evidence value is sent, including Evidence the cloud service
+     * does not list as accepted, apart from the reserved names under any
+     * prefix.
      * See the Processing section of the cloud request engine specification.
      */
     @Test
-    public void process_SendsOnlyAcceptedEvidence() throws Exception {
-        acceptEvidence(Arrays.asList(
-            "query.User-Agent", "header.Accept-Language"));
+    public void process_SendsEveryEvidenceValueButTheReservedNames()
+        throws Exception {
+        acceptEvidence(Arrays.asList("query.User-Agent"));
         Map<String, Object> evidence = new HashMap<>();
         evidence.put("query.User-Agent", "iPhone");
         evidence.put("header.accept-language", "en-GB");
         evidence.put("header.X-Other", "other");
         evidence.put("cookie.session", "abc");
         evidence.put("server.client-ip", "1.2.3.4");
+        evidence.put("other.VALUES", "ismobile");
+        evidence.put("server.licence", "evidence-licence");
 
         List<String> items = postedItems(null, evidence);
 
@@ -652,10 +655,96 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
             new HashSet<>(Arrays.asList(
                 "resource=resourcekey",
                 "User-Agent=iPhone",
-                "accept-language=en-GB")),
+                "accept-language=en-GB",
+                "X-Other=other",
+                "session=abc",
+                "client-ip=1.2.3.4")),
             new HashSet<>(items),
-            "The request carried Evidence the cloud service does not " +
-                "accept: " + items);
+            "The request did not carry every Evidence value apart from " +
+                "the reserved names: " + items);
+    }
+
+    /**
+     * Evidence whose key has no prefix is sent under its whole key, unless
+     * the key is a reserved name in any letter case. Keys only usually
+     * carry a prefix, as the Overview of the Evidence specification says.
+     */
+    @Test
+    public void process_SendsEvidenceWithNoPrefixUnderItsWholeKey()
+        throws Exception {
+        acceptEvidence(Arrays.asList("query.User-Agent"));
+        Map<String, Object> evidence = new HashMap<>();
+        evidence.put("query.User-Agent", "iPhone");
+        evidence.put("bare", "value");
+        evidence.put("Values", "ismobile");
+        evidence.put("license", "evidence-license");
+        evidence.put("RESOURCE", "evidence-resource");
+        evidence.put("licence", "evidence-licence");
+
+        List<String> items = postedItems(null, evidence);
+
+        assertEquals(
+            new HashSet<>(Arrays.asList(
+                "resource=resourcekey",
+                "User-Agent=iPhone",
+                "bare=value")),
+            new HashSet<>(items),
+            "The request did not carry the Evidence with no prefix, or " +
+                "carried a reserved name: " + items);
+    }
+
+    /**
+     * Prefixes are compared without regard to case, so query Evidence
+     * takes precedence over header Evidence of the same name, with no
+     * warning, whatever the case of its prefix. Keys are case-insensitive,
+     * as the Overview of the Evidence specification says.
+     */
+    @Test
+    public void process_ComparesPrefixesWithoutRegardToCase()
+        throws Exception {
+        loggerFactory.loggers.clear();
+        acceptEvidence(Arrays.asList("query.User-Agent"));
+        Map<String, Object> evidence = new HashMap<>();
+        evidence.put("Query.User-Agent", "query-value");
+        evidence.put("header.User-Agent", "header-value");
+
+        List<String> items = postedItems(null, evidence);
+
+        assertEquals(
+            new HashSet<>(Arrays.asList(
+                "resource=resourcekey",
+                "User-Agent=query-value")),
+            new HashSet<>(items),
+            "The query Evidence did not take precedence: " + items);
+        loggerFactory.assertMaxWarnings(0);
+    }
+
+    /**
+     * Evidence with no prefix ranks with Evidence of any prefix other than
+     * query, header and cookie, so it has the lowest precedence, unless the
+     * whole key is one of those prefixes, which puts it with that prefix's
+     * Evidence. The precedence order of the Evidence specification orders
+     * prefixes only, so this follows .NET.
+     */
+    @Test
+    public void process_RanksEvidenceWithNoPrefix() throws Exception {
+        acceptEvidence(Arrays.asList("query.User-Agent"));
+        Map<String, Object> evidence = new HashMap<>();
+        evidence.put("X-Thing", "bare");
+        evidence.put("header.X-Thing", "header");
+        evidence.put("query", "bare-query");
+        evidence.put("header.query", "header-query");
+
+        List<String> items = postedItems(null, evidence);
+
+        assertEquals(
+            new HashSet<>(Arrays.asList(
+                "resource=resourcekey",
+                "X-Thing=header",
+                "query=bare-query")),
+            new HashSet<>(items),
+            "Evidence with no prefix was not ranked as .NET ranks it: " +
+                items);
     }
 
     /**
@@ -725,6 +814,47 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
         }
         expected.add("User-Agent=iPhone");
         assertEquals(expected, items);
+    }
+
+    /**
+     * A cache key is built from the Evidence the engine advertises, which is
+     * still the keys the cloud service lists, so a second request that
+     * differs only in Evidence the service does not list finds the entry
+     * the first one wrote, and one request is posted. That request carries
+     * the Evidence the service does not list all the same.
+     * See the Generation of keys section of the caching specification.
+     */
+    @Test
+    public void process_RepeatedRequestHitsTheCache() throws Exception {
+        acceptEvidence(Arrays.asList("query.User-Agent"));
+        configureMockedClient();
+        CloudRequestEngine engine =
+            new CloudRequestEngineBuilder(loggerFactory, httpClient)
+                .setResourceKey("resourcekey")
+                .setCacheSize(10)
+                .build();
+
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+                .addFlowElement(engine).build()) {
+            for (String platform : Arrays.asList("Windows", "macOS")) {
+                try (FlowData data = pipeline.createFlowData()) {
+                    data.addEvidence("query.User-Agent", "iPhone");
+                    data.addEvidence("header.sec-ch-ua-platform", platform);
+                    data.process();
+                }
+            }
+        }
+
+        assertFalse(
+            engine.getEvidenceKeyFilter().include("header.sec-ch-ua-platform"),
+            "The engine advertises a key the cloud service does not list.");
+        ArgumentCaptor<byte[]> body = ArgumentCaptor.forClass(byte[].class);
+        verify(httpClient, times(1)).postData(any(), any(), body.capture());
+        List<String> items = Arrays.asList(
+            new String(body.getValue(), StandardCharsets.UTF_8).split("&"));
+        assertTrue(items.contains("sec-ch-ua-platform=Windows"),
+            "The request did not carry the Evidence the cloud service does " +
+                "not list: " + items);
     }
 
     /**
