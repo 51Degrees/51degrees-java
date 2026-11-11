@@ -549,7 +549,9 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
             Arguments.of("location.Value", "fiftyone.value", "value", "B"),
             Arguments.of("fiftyone.Value", "server.value", "value", "B"),
             Arguments.of("server.Value", "a.value", "Value", "A"),
-            Arguments.of("b.Value", "a.value", "value", "B"));
+            Arguments.of("b.Value", "a.value", "value", "B"),
+            Arguments.of("ab-c.Value", "ab.value", "value", "B"),
+            Arguments.of("a.Value", "_x.value", "value", "B"));
     }
 
     /**
@@ -557,7 +559,8 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
      * two letter cases is one field. It is sent once, with the name and
      * value of the key that wins by the precedence in evidence.md, being
      * query, header, cookie, server, fiftyone and location, then any other
-     * prefix alphabetically.
+     * prefix alphabetically. Two other prefixes are compared as prefixes,
+     * in lower case, so ab ranks before ab-c and _x before a.
      */
     @ParameterizedTest(name = "{0} and {1}")
     @MethodSource("oneNameInTwoCasesArgs")
