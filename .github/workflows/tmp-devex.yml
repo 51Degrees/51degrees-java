@@ -1,0 +1,31 @@
+name: Temporary pipeline developer example tests
+
+# Temporary. Runs the integration step's "mvn test -Dtest=ExampleTests" over
+# the pipeline reactor, with the test resource key.
+
+on:
+  push:
+    branches: ['tmp/devex-green']
+
+jobs:
+  examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the submodules the modules build from
+        run: git submodule update --init pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates pipeline/owid-java
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Build the pipeline reactor
+        run: mvn -B -f pipeline/pom.xml install -DskipTests
+      - name: Run the developer example tests
+        shell: pwsh
+        env:
+          KEY: ${{ secrets._51DEGREES_RESOURCE_KEY_BESPOKE }}
+        run: |
+          Push-Location pipeline
+          mvn -B test -DfailIfNoTests=false "-Dsurefire.failIfNoSpecifiedTests=false" -Dtest=ExampleTests "-DTestResourceKey=$env:KEY"
+          exit $LASTEXITCODE
