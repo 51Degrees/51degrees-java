@@ -49,7 +49,6 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -103,17 +102,23 @@ public class GeoLocationCloudEngineTests {
      * With the Location product included, a response that holds no
      * part for it leaves the element data without values and throws
      * nothing, as the Processing section of the cloud aspect engine
-     * specification says.
+     * specification says. Reading a property then throws, as for any
+     * property the response leaves out.
      */
     @Test
-    public void ProductPresent_ResponseWithoutPart_NoValues()
+    public void ProductPresent_ResponseWithoutPart_PropertyIsMissing()
         throws Exception {
         try (GeoLocationCloudEngine engine = buildEngine("location", "town")) {
             CloudGeoData data = process(
                 engine,
                 "{ 'ip': { 'registeredname': 'Example' }, " +
                     "'javascriptProperties': [] }");
-            assertFalse(data.getTown().hasValue());
+            try {
+                data.getTown();
+                fail("A PropertyMissingException should have been thrown");
+            } catch (PropertyMissingException e) {
+                // The response held nothing for the Location product.
+            }
         }
     }
 
