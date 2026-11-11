@@ -54,9 +54,9 @@ public class Main {
         "https://cloud.51degrees.com/api/v4/";
 
     /**
-     * The cloud endpoint, taken from FOD_CLOUD_API_URL when that is set,
-     * which is the variable every 51Degrees cloud example honours and the
-     * one the cloud request engine builder reads by itself when no
+     * The cloud endpoint, taken from _51DEGREES_CLOUD_ENDPOINT when that is
+     * set, which is the variable every 51Degrees cloud example honours and
+     * the one the cloud request engine builder reads by itself when no
      * endpoint is given. A host other than cloud.51degrees.com would be
      * used to (a) use an on premise web server, or (b) use a privately
      * hosted version of the 51Degrees cloud for performance reasons,
@@ -66,7 +66,7 @@ public class Main {
      * directly.
      */
     static String endpoint() {
-        String value = env("FOD_CLOUD_API_URL");
+        String value = env("_51DEGREES_CLOUD_ENDPOINT");
         if (value == null) {
             // A resource key and an endpoint travel together, because a
             // key is only known to the service that issued it. So the
@@ -91,7 +91,6 @@ public class Main {
      */
     static final String[] RESOURCE_KEY_NAMES = {
         "_51DEGREES_RESOURCE_KEY",
-        "RESOURCE_KEY",
         "_51DEGREES_RESOURCE_KEY_BESPOKE",
         "TestResourceKey",
         "SUPER_RESOURCE_KEY",
@@ -132,10 +131,10 @@ public class Main {
     public static class Example {
         public void run() throws Exception {
 //! [usage]
-            // The endpoint comes from FOD_CLOUD_API_URL when it is set, so
-            // the example can be pointed at an on premise web server or a
-            // privately hosted version of the 51Degrees cloud, and
-            // otherwise at the star sign service it was written for.
+            // The endpoint comes from _51DEGREES_CLOUD_ENDPOINT when it is
+            // set, so the example can be pointed at an on premise web
+            // server or a privately hosted version of the 51Degrees cloud,
+            // and otherwise at the star sign service it was written for.
             CloudRequestEngine cloudRequestEngine =
                 new CloudRequestEngineBuilder(loggerFactory, httpClient)
                     .setEndpoint(endpoint())

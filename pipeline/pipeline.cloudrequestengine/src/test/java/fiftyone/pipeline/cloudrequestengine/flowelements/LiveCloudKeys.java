@@ -40,7 +40,6 @@ final class LiveCloudKeys {
      */
     static final String[] RESOURCE_KEY_NAMES = {
         "_51DEGREES_RESOURCE_KEY",
-        "RESOURCE_KEY",
         "_51DEGREES_RESOURCE_KEY_BESPOKE",
         "TestResourceKey",
         "SUPER_RESOURCE_KEY",
@@ -53,7 +52,6 @@ final class LiveCloudKeys {
      */
     static final String[] LICENCE_KEY_NAMES = {
         "_51DEGREES_LICENSE_KEY",
-        "LICENSE_KEY",
         "_51DEGREES_LICENSE_KEY_BESPOKE",
         "_51DEGREES_LICENSE_KEY_CLOUDV5BESPOKE",
         "TestLicenseKey",

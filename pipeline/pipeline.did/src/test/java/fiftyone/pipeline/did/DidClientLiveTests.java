@@ -48,8 +48,8 @@ import static org.junit.Assert.fail;
  * Tests against the live cloud service. They need a resource key, read
  * from the names {@link LiveCloudKeys} lists, and they fail rather than
  * skip when there is none, because a run that called nothing must not
- * report success. {@code FOD_CLOUD_API_URL} points them at another host,
- * and a licence key is taken from the names {@link LiveCloudKeys} lists
+ * report success. {@code _51DEGREES_CLOUD_ENDPOINT} points them at another
+ * host, and a licence key is taken from the names {@link LiveCloudKeys} lists
  * where the account holds one. Each test creates a 51Did through the
  * cloud {@code json} endpoint, which is one use against the resource key,
  * plus one for each cloud call it then makes.
@@ -103,9 +103,9 @@ public class DidClientLiveTests {
                     "The cloud service at " + client.getEndpoint()
                     + " answered that it does not offer the creator "
                     + "context, so the redeem endpoint could not be "
-                    + "called. Point FOD_CLOUD_API_URL at a service that "
-                    + "offers it, or leave it unset for the 51Degrees "
-                    + "cloud.", reported.getCause());
+                    + "called. Point _51DEGREES_CLOUD_ENDPOINT at a "
+                    + "service that offers it, or leave it unset for the "
+                    + "51Degrees cloud.", reported.getCause());
             }
             throw reported;
         }

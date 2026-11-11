@@ -52,8 +52,8 @@ import static org.junit.jupiter.api.Assertions.fail;
  * is built, and the JSON request when it processes, so a change in the
  * service is seen here.
  * <p>
- * {@code FOD_CLOUD_API_URL} points the engine at another host, which the
- * builder reads for itself.
+ * {@code _51DEGREES_CLOUD_ENDPOINT} points the engine at another host,
+ * which the builder reads for itself.
  */
 public class CloudRequestEngineLiveTests {
 

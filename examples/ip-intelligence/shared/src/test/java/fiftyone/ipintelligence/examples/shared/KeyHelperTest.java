@@ -88,7 +88,7 @@ public class KeyHelperTest {
         assertEquals("This test calls the live 51Degrees cloud service, so " +
                 "it needs a resource key and there is nothing to fall back " +
                 "on. None of _51DEGREES_RESOURCE_KEY, " +
-                "_51DEGREES_RESOURCE_KEY_BESPOKE, 51DEGREES_RESOURCE_KEY, " +
+                "_51DEGREES_RESOURCE_KEY_BESPOKE, _51DEGREES_RESOURCE_KEY, " +
                 "TestResourceKey is set, as an environment variable or as a " +
                 "system property, tried in that order. The key has to carry " +
                 "the ip and device products, because the test asks the " +

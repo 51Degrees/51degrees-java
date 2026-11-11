@@ -35,12 +35,12 @@ import static org.junit.Assume.assumeTrue;
 
 /**
  * Checks the order in which the on-premise web example picks its data file,
- * being 51DEGREES_DD_PATH first, then TestDataFile, then the Lite file.
+ * being _51DEGREES_DD_PATH first, then TestDataFile, then the Lite file.
  * System properties stand in for the environment variables, because the
  * lookup reads either and a test cannot set an environment variable.
  */
 public class OnPremDataFileOptionTest {
-    private static final String DD_PATH = "51DEGREES_DD_PATH";
+    private static final String DD_PATH = "_51DEGREES_DD_PATH";
     private static final String TEST_DATA_FILE = "TestDataFile";
     private static final String LITE =
             "cxx/data/device-detection/51Degrees-LiteV4.1.hash";
