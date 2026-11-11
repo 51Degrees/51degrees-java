@@ -106,8 +106,8 @@ public class JsonBuilderSequenceTests {
 
     /**
      * Process one request with the pipeline's exceptions suppressed, and
-     * assert that the element failed, said a sequence element is needed and
-     * set no JSON.
+     * assert that the element recorded one error carrying the specification's
+     * message and set no JSON.
      * @param sequence the query.sequence Evidence to add, or null for none
      * @throws Exception if the pipeline cannot be built
      */
