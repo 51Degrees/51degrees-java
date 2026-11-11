@@ -1,0 +1,63 @@
+name: Temporary property index tests
+
+on:
+  push:
+    branches:
+      - 'tmp/index-java-**'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Property index tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout common-ci at the root, as the shared workflows do
+        uses: actions/checkout@v4
+        with:
+          repository: 51Degrees/common-ci
+      - name: Checkout this repository beside it
+        uses: actions/checkout@v4
+        with:
+          path: 51degrees-java
+          submodules: recursive
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Fetch the data files
+        shell: pwsh
+        run: |
+          ./51degrees-java/ci/fetch-assets.ps1 `
+            -DeviceDetection '${{ secrets.DEVICE_DETECTION_KEY }}' `
+            -DeviceDetectionUrl '${{ secrets.DEVICE_DETECTION_URL }}' `
+            -IpIntelligence '${{ secrets.IP_INTELLIGENCE_KEY }}' `
+            -IpIntelligenceUrl '${{ secrets.IPI_DATA_FILE_URL }}'
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: Build the reactor without tests
+        shell: pwsh
+        run: |
+          Push-Location 51degrees-java
+          git log --oneline -1
+          mvn -B install -DskipTests -Pdev
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: Device Detection property index tests
+        shell: pwsh
+        run: |
+          Push-Location 51degrees-java
+          mvn -B -f device-detection/pom.xml -pl device-detection.hash.engine.on-premise test `
+            '-Dtest=PropertyIndexTests' '-DfailIfNoTests=false' `
+            '-Dsurefire.failIfNoSpecifiedTests=false'
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: IP Intelligence property index tests
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: |
+          Push-Location 51degrees-java
+          mvn -B -f ip-intelligence/pom.xml -pl ip-intelligence.engine.on-premise test `
+            '-Dtest=PropertyIndexTests' '-DfailIfNoTests=false' `
+            '-Dsurefire.failIfNoSpecifiedTests=false'
+          if ($LASTEXITCODE -ne 0) { exit 1 }
