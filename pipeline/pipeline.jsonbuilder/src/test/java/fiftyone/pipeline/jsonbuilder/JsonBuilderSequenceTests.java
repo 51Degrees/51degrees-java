@@ -187,6 +187,35 @@ public class JsonBuilderSequenceTests {
     }
 
     /**
+     * The error the element records carries the one getSequenceNumber threw
+     * as its cause, and the cause has to say what to do as well, because it
+     * is the line a caller meets at the top of the stack trace.
+     */
+    @Test
+    public void JsonBuilder_NoSequenceElement_TheCauseSaysWhatIsNeeded()
+        throws Exception {
+        try (Pipeline pipeline = buildPipeline(false, true);
+             FlowData flowData = pipeline.createFlowData()) {
+            flowData.process();
+
+            Collection<FlowError> errors = flowData.getErrors();
+            assertEquals(1, errors.size(),
+                "Expected the JsonBuilderElement to record one error.");
+            Throwable cause =
+                errors.iterator().next().getThrowable().getCause();
+            assertNotNull(cause, "Expected the error to carry a cause.");
+            String message = cause.getMessage();
+            assertNotNull(message, "Expected the cause to carry a message.");
+            assertTrue(
+                message.contains("a Sequence Element needs to be placed " +
+                    "before it in the Pipeline"),
+                "Expected the cause to say that a Sequence Element needs to " +
+                    "be placed before the JSON Builder Element in the " +
+                    "Pipeline. Complete message: " + message);
+        }
+    }
+
+    /**
      * An integer a caller added to query.sequence is a sequence number, even
      * with no sequence element, because the element reads the integer in
      * Evidence whoever added it.
