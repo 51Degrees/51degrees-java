@@ -25,5 +25,17 @@ package fiftyone.pipeline.jsonbuilder;
 public class Constants {
 
     public static final Integer MAX_JAVASCRIPT_ITERATIONS = 10;
-    
+
+    /**
+     * What the element says when no Sequence Element has produced a sequence
+     * number. The
+     * <a href="https://github.com/51Degrees/specifications/blob/dcacc016/pipeline-specification/pipeline-elements/json-builder.md#sequence-number">JSON
+     * Builder specification</a> gives this text and every language gives the
+     * same, so that the message reads the same whichever one a deployment
+     * uses.
+     */
+    public static final String NO_SEQUENCE_NUMBER_MESSAGE =
+        "The JSON Builder needs a sequence number. Place a Sequence Element " +
+            "before the JSON Builder in the Pipeline.";
+
 }

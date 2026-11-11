@@ -46,7 +46,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -62,6 +61,10 @@ import static org.mockito.Mockito.when;
  * does not count, and that an integer a caller added to query.sequence does
  * count in Java because the element reads the integer in Evidence whoever
  * added it.
+ * <p>
+ * The error MUST carry the message the page gives, which is
+ * {@link Constants#NO_SEQUENCE_NUMBER_MESSAGE}, and where the error is wrapped
+ * in another the one the caller reads carries it.
  */
 public class JsonBuilderSequenceTests {
 
@@ -121,10 +124,9 @@ public class JsonBuilderSequenceTests {
             assertEquals(1, errors.size(),
                 "Expected the JsonBuilderElement to record one error.");
             String message = errors.iterator().next().getThrowable().getMessage();
-            assertNotNull(message, "Expected the error to carry a message.");
-            assertTrue(message.contains("SequenceElement"),
-                "Expected the error to say a SequenceElement is needed. " +
-                    "Complete message: " + message);
+            assertEquals(Constants.NO_SEQUENCE_NUMBER_MESSAGE, message,
+                "Expected the error the caller reads to carry the message " +
+                    "the specification gives, word for word.");
 
             JsonBuilderData result = flowData.get(JsonBuilderData.class);
             assertNull(result == null ? null : result.getJson(),
@@ -176,9 +178,9 @@ public class JsonBuilderSequenceTests {
             assertEquals(1, thrown.getSuppressed().length,
                 "Expected one suppressed exception in the aggregate.");
             String message = thrown.getSuppressed()[0].getMessage();
-            assertTrue(message.contains("SequenceElement"),
-                "Expected the error to say a SequenceElement is needed. " +
-                    "Complete message: " + message);
+            assertEquals(Constants.NO_SEQUENCE_NUMBER_MESSAGE, message,
+                "Expected the error the caller reads to carry the message " +
+                    "the specification gives, word for word.");
 
             JsonBuilderData result = flowData.get(JsonBuilderData.class);
             assertNull(result == null ? null : result.getJson(),
@@ -188,8 +190,8 @@ public class JsonBuilderSequenceTests {
 
     /**
      * The error the element records carries the one getSequenceNumber threw
-     * as its cause, and the cause has to say what to do as well, because it
-     * is the line a caller meets at the top of the stack trace.
+     * as its cause, and the cause says the same thing, because it is the line
+     * a caller meets at the top of the stack trace.
      */
     @Test
     public void JsonBuilder_NoSequenceElement_TheCauseSaysWhatIsNeeded()
@@ -204,14 +206,10 @@ public class JsonBuilderSequenceTests {
             Throwable cause =
                 errors.iterator().next().getThrowable().getCause();
             assertNotNull(cause, "Expected the error to carry a cause.");
-            String message = cause.getMessage();
-            assertNotNull(message, "Expected the cause to carry a message.");
-            assertTrue(
-                message.contains("a Sequence Element needs to be placed " +
-                    "before it in the Pipeline"),
-                "Expected the cause to say that a Sequence Element needs to " +
-                    "be placed before the JSON Builder Element in the " +
-                    "Pipeline. Complete message: " + message);
+            assertEquals(Constants.NO_SEQUENCE_NUMBER_MESSAGE,
+                cause.getMessage(),
+                "Expected the cause to carry the same message as the error " +
+                    "the caller reads.");
         }
     }
 
