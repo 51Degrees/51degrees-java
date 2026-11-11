@@ -33,7 +33,10 @@ $failed = @()
 Write-Host "::group::Pipeline developer examples"
 Push-Location "$RepoName/pipeline"
 try {
-    mvn test @MavenOptions -DfailIfNoTests=false "-Dsurefire.failIfNoSpecifiedTests=false" -Dtest=ExampleTests
+    # The cloud engine example calls the live cloud service, so it is given
+    # the test resource key, as the unit test run gives it.
+    mvn test @MavenOptions -DfailIfNoTests=false "-Dsurefire.failIfNoSpecifiedTests=false" -Dtest=ExampleTests `
+        "-DTestResourceKey=$TestResourceKey"
     if ($LASTEXITCODE -ne 0) { $failed += 'pipeline developer examples' }
 } finally {
     Pop-Location
