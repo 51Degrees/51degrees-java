@@ -32,8 +32,6 @@ import fiftyone.pipeline.core.exceptions.PipelineDataException;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.engines.exceptions.PropertyMissingException;
-import fiftyone.pipeline.engines.fiftyone.data.SequenceData;
-import fiftyone.pipeline.engines.fiftyone.flowelements.SequenceElement;
 import fiftyone.pipeline.javascriptbuilder.Constants;
 import fiftyone.pipeline.javascriptbuilder.data.JavaScriptBuilderData;
 import fiftyone.pipeline.javascriptbuilder.templates.JavaScriptResource;
@@ -464,62 +462,50 @@ public class JavaScriptBuilderElement
 
     /**
      * Gets the session id to write into the script. This is the session id
-     * the Sequence Element wrote, when it matches SESSION_ID_PATTERN, and an
-     * empty string otherwise, including when the pipeline has no Sequence
-     * Element.
+     * evidence, set by the Sequence Element or by the request, when it
+     * matches SESSION_ID_PATTERN, and an empty string otherwise.
      * @param data the flow data
      * @return the session id, or an empty string
      */
     private String getSessionId(FlowData data) {
-        Object value = getSequenceValue(
-            data, SequenceData.SESSION_ID_PROPERTY_NAME);
-        if (value instanceof String &&
-            SESSION_ID_PATTERN.matcher((String) value).matches()) {
-            return (String) value;
+        TryGetResult<Object> trySessionId =
+            data.tryGetEvidence(EVIDENCE_SESSIONID, Object.class);
+        if (trySessionId.hasValue() &&
+            trySessionId.getValue() instanceof String) {
+            String sessionId = (String) trySessionId.getValue();
+            if (SESSION_ID_PATTERN.matcher(sessionId).matches()) {
+                return sessionId;
+            }
         }
         return "";
     }
 
     /**
-     * Gets the sequence to write into the script. This is the sequence the
-     * Sequence Element wrote, as a number or as text, when it is a positive
-     * 32 bit integer, and 1 otherwise, including when the pipeline has no
-     * Sequence Element. The value is written into the script as code, so
-     * text that is not a number could break the script, and a number below 1
-     * is not a sequence the Sequence Element would ever give.
+     * Gets the sequence to write into the script. This is the sequence
+     * evidence, as a number or as text, when it is a positive 32 bit
+     * integer, and 1 otherwise, including when there is no Sequence Element.
+     * The value is written into the script as code, so text that is not a
+     * number could break the script, and a number below 1 is not a sequence
+     * the Sequence Element would ever give.
      * @param data the flow data
      * @return the sequence, which is always at least 1
      */
     private int getSequence(FlowData data) {
-        Object value = getSequenceValue(
-            data, SequenceData.SEQUENCE_PROPERTY_NAME);
+        TryGetResult<Object> trySequence =
+            data.tryGetEvidence(EVIDENCE_SEQUENCE, Object.class);
         long sequence = 0;
-        if (value instanceof Integer) {
-            sequence = (Integer) value;
-        } else if (value instanceof String &&
-            SEQUENCE_PATTERN.matcher((String) value).matches()) {
-            sequence = Long.parseLong((String) value);
+        if (trySequence.hasValue()) {
+            Object value = trySequence.getValue();
+            if (value instanceof Integer) {
+                sequence = (Integer) value;
+            } else if (value instanceof String &&
+                SEQUENCE_PATTERN.matcher((String) value).matches()) {
+                sequence = Long.parseLong((String) value);
+            }
         }
         return sequence >= 1 && sequence <= Integer.MAX_VALUE
             ? (int) sequence
             : 1;
-    }
-
-    /**
-     * One value from the Sequence Element's data, or null when the pipeline
-     * has no Sequence Element. Step 5 of the specification takes both values
-     * from that data and not from Evidence, so a pipeline with no Sequence
-     * Element renders the defaults even when the request carried a session id
-     * or a sequence of its own.
-     * @param data the flow data
-     * @param name the name of the value within the Sequence Element's data
-     * @return the value, or null
-     * @see <a href="https://github.com/51Degrees/specifications/blob/67ead6986f3118c68f0714325800b92d48ddc71f/pipeline-specification/pipeline-elements/javascript-builder.md#process">Specification</a>
-     */
-    private static Object getSequenceValue(FlowData data, String name) {
-        ElementData sequenceData =
-            data.get(SequenceElement.ELEMENT_DATA_KEY);
-        return sequenceData == null ? null : sequenceData.get(name);
     }
 
     private void buildJavaScript(
