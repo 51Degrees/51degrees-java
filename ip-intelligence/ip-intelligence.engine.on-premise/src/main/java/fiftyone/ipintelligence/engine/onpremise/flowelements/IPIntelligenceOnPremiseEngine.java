@@ -64,13 +64,14 @@ public class IPIntelligenceOnPremiseEngine
 
     /**
      * Case insensitive map from each property name the engine was built with
-     * to its required property index. Built once, from the names given at
-     * build, so an index keeps naming the same property after a reload from a
-     * data file whose property order differs. Empty when the engine was built
-     * with no names, in which case reads go by name.
+     * to its required property index, which is the place of the name in that
+     * list, the first where a name is given more than once, as the native
+     * engine gives it. Made from the names given at build and never from the
+     * data set, so an index keeps naming the same property after a reload
+     * from a data file whose property order differs. Empty when the engine
+     * was built with no names, in which case reads go by name.
      */
-    private volatile Map<String, Integer> propertyIndexes =
-        Collections.emptyMap();
+    private final Map<String, Integer> propertyIndexes;
 
     /**
      * Construct a new instance of the {@link IPIntelligenceOnPremiseEngine}.
@@ -80,6 +81,8 @@ public class IPIntelligenceOnPremiseEngine
      * @param properties native required properties configuration which define
      *                   the properties which the engine should be initialised
      *                   with
+     * @param propertyNames the property names {@code properties} was made
+     *                      from, in the same order
      * @param ipiDataFactory the factory to use when creating a
      *                          {@link IPIntelligenceDataHash} instance
      * @param tempDataFileDir the file where a temporary data file copy
@@ -90,11 +93,13 @@ public class IPIntelligenceOnPremiseEngine
         AspectEngineDataFile dataFile,
         ConfigIpiSwig config,
         RequiredPropertiesConfigSwig properties,
+        List<String> propertyNames,
         ElementDataFactory<IPIntelligenceDataHash> ipiDataFactory,
         String tempDataFileDir) {
         super(logger, ipiDataFactory, tempDataFileDir);
         this.config = config;
         this.propertiesConfigSwig = properties;
+        this.propertyIndexes = indexesOf(propertyNames);
         addDataFile(dataFile);
     }
 
@@ -134,38 +139,24 @@ public class IPIntelligenceOnPremiseEngine
     }
 
     /**
-     * Build the map from the names the engine was built with to their
-     * required property indexes, using the name the native engine reports at
-     * each index. Called once, after the native engine is first made, and
-     * never again, because the whole point of the index is that it keeps
-     * naming the same property across a reload.
+     * Map each name to its place in the list, keeping the first place of a
+     * name given more than once in any letter case.
+     * @param names the property names in the order the engine is built with,
+     *              or null
+     * @return unmodifiable case insensitive map from name to index
      */
-    private void setPropertyIndexes() {
+    private static Map<String, Integer> indexesOf(List<String> names) {
         Map<String, Integer> indexes =
             new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-        try {
-            VectorStringSwig names = propertiesConfigSwig.getProperties();
-            int count = names.size();
-            names.delete();
-            if (count > 0) {
-                try (EvidenceIpiSwig evidence = new EvidenceIpiSwig();
-                     ResultsIpiSwig results = engine.process(evidence)) {
-                    for (int i = 0; i < count; i++) {
-                        String name = results.getPropertyName(i);
-                        if (name != null && name.isEmpty() == false) {
-                            indexes.put(name, i);
-                        }
-                    }
+        if (names != null) {
+            for (int i = 0; i < names.size(); i++) {
+                String name = names.get(i);
+                if (name != null && name.isEmpty() == false) {
+                    indexes.putIfAbsent(name, i);
                 }
             }
-        } catch (Exception e) {
-            logger.error(
-                "Exception occurred while mapping property names to indexes. " +
-                    "Values will be read by name.",
-                e);
-            indexes.clear();
         }
-        propertyIndexes = Collections.unmodifiableMap(indexes);
+        return Collections.unmodifiableMap(indexes);
     }
 
     @Override
@@ -331,7 +322,6 @@ public class IPIntelligenceOnPremiseEngine
                 throw new IllegalStateException("Failed to create SwigEngine after " + tries +
                         " retries, last exception was " + lastMessage);
             }
-            setPropertyIndexes();
         } else {
             engine.refreshData();
         }
@@ -342,7 +332,6 @@ public class IPIntelligenceOnPremiseEngine
     public void refreshData(String dataFileIdentifier, byte[] data) {
         if (engine == null) {
             engine = new EngineIpiSwig(data, config, propertiesConfigSwig);
-            setPropertyIndexes();
         } else {
             engine.refreshData(data);
         }
