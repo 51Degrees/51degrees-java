@@ -363,7 +363,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             }
             tries++;
         }
-        logRefreshFailure(dataFile, lastFailure);
+        logRefreshFailure(dataFile, lastFailure, tries);
         return AUTO_UPDATE_REFRESH_FAILED;
     }
 
@@ -471,7 +471,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             dataFile.getEngine().refreshData(dataFile.getIdentifier(), data);
             result = AUTO_UPDATE_SUCCESS;
         } catch (Exception ex) {
-            logRefreshFailure(dataFile, ex);
+            logRefreshFailure(dataFile, ex, null);
             result = AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED;
         }
 
@@ -870,10 +870,19 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 " Error detail: " + detail;
     }
 
-    private void logRefreshFailure(AspectEngineDataFile dataFile, Exception ex) {
-        logger.error("An error occurred while applying a data file update to " +
-                getEngineType(dataFile) + ". Error detail: " +
-                (ex == null ? "none" : ex.getMessage()), ex);
+    /**
+     * Log the Errors table's message for a refresh that failed, with the
+     * number of tries for a refresh from the file and without it for one
+     * from data held in memory. The exception is passed to the logger, so
+     * its detail is kept beside the message.
+     */
+    private void logRefreshFailure(
+        AspectEngineDataFile dataFile,
+        Exception ex,
+        Integer tries) {
+        logger.error("An error occurred when applying a data update to " +
+                "engine '" + getEngineType(dataFile) + "'" +
+                (tries == null ? "." : " after " + tries + " tries."), ex);
     }
 
     private String getEngineType(AspectEngineDataFile dataFile) {
@@ -1078,7 +1087,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 // The engine, or the configuration, now holds the new data.
                 return AUTO_UPDATE_SUCCESS;
             } catch (Exception ex) {
-                logRefreshFailure(dataFile, ex);
+                logRefreshFailure(dataFile, ex, null);
                 return AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED;
             }
         }
