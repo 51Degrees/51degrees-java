@@ -136,7 +136,11 @@ class ShareUsageBackOff {
                 maxDelaySeconds);
         } else {
             failures.addLast(now);
-            while (failures.peekFirst() < now - failuresWindowMillis) {
+            // The emptiness check comes first so that nothing is unboxed
+            // from an empty deque. The constructor refuses a window below
+            // one second, so the deque always keeps the failure just added.
+            while (failures.isEmpty() == false &&
+                failures.peekFirst() < now - failuresWindowMillis) {
                 failures.removeFirst();
             }
             if (failures.size() < failuresToEnterRecovery) {
