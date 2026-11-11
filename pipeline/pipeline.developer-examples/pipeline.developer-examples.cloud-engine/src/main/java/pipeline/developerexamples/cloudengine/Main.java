@@ -47,7 +47,7 @@ public class Main {
     private static final String STAR_SIGN_RESOURCE_KEY = "cloudexample";
 
     /**
-     * The cloud endpoint, taken from FOD_CLOUD_API_URL when that is set,
+     * The cloud endpoint, taken from _51DEGREES_CLOUD_ENDPOINT when that is set,
      * which is the variable every 51Degrees cloud example honours and the
      * one the cloud request engine builder reads by itself when no
      * endpoint is given. A host other than cloud.51degrees.com would be
@@ -59,7 +59,7 @@ public class Main {
      * directly.
      */
     static String endpoint() {
-        String value = env("FOD_CLOUD_API_URL");
+        String value = env("_51DEGREES_CLOUD_ENDPOINT");
         if (value == null) {
             return STAR_SIGN_ENDPOINT;
         }
@@ -70,15 +70,12 @@ public class Main {
     }
 
     /**
-     * The resource key from _51DEGREES_RESOURCE_KEY, or the older
-     * RESOURCE_KEY, so the example can be pointed at a host whose keys
-     * are its own. Otherwise the key of the star sign service.
+     * The resource key from _51DEGREES_RESOURCE_KEY, so the example can be
+     * pointed at a host whose keys are its own. Otherwise the key of the
+     * star sign service.
      */
     static String resourceKey() {
         String value = env("_51DEGREES_RESOURCE_KEY");
-        if (value == null) {
-            value = env("RESOURCE_KEY");
-        }
         return value == null ? STAR_SIGN_RESOURCE_KEY : value;
     }
 
@@ -90,7 +87,7 @@ public class Main {
     public static class Example {
         public void run() throws Exception {
 //! [usage]
-            // The endpoint comes from FOD_CLOUD_API_URL when it is set, so
+            // The endpoint comes from _51DEGREES_CLOUD_ENDPOINT when it is set, so
             // the example can be pointed at an on premise web server or a
             // privately hosted version of the 51Degrees cloud, and
             // otherwise at the star sign service it was written for.

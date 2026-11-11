@@ -114,7 +114,7 @@ public final class DidClient {
      * The environment variable read for the API base when the constructor
      * is given none, the same one the cloud request engine honours.
      */
-    public static final String ENDPOINT_VARIABLE = "FOD_CLOUD_API_URL";
+    public static final String ENDPOINT_VARIABLE = "_51DEGREES_CLOUD_ENDPOINT";
 
     /**
      * How old the whole held key list may be before a request for a key

@@ -43,7 +43,7 @@ public class FileUtils {
      * supply an explicit path to the IPI data file. When set and the file
      * exists it is used in preference to searching the project space.
      */
-    public static final String IPI_PATH_ENV_VAR = "51DEGREES_IPI_PATH";
+    public static final String IPI_PATH_ENV_VAR = "_51DEGREES_IPI_PATH";
 
     public static final String ENTERPRISE_IPI_DATA_FILE_NAME = "Enterprise-IpIntelligenceV41.ipi";
 

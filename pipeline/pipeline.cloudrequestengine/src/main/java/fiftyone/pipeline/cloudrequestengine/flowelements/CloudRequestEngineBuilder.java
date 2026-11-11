@@ -87,12 +87,12 @@ public class CloudRequestEngineBuilder extends
 
         /*
          *  Check if endPoint has been explicitly set via setEndpoint.
-         *  If not check for environment variable FOD_CLOUD_API_URL.
+         *  If not check for environment variable _51DEGREES_CLOUD_ENDPOINT.
          *  If nothing else is set, use default value.
          */
         if (endPoint == null || endPoint.isEmpty()) {
         	String envVarEndPoint = getEnvVar.apply(
-        		Constants.FOD_CLOUD_API_URL);
+        		Constants.CLOUD_ENDPOINT_VARIABLE);
         	if (envVarEndPoint == null || envVarEndPoint.isEmpty()) {
         		setEndpoint(Constants.END_POINT_DEFAULT);
         	}

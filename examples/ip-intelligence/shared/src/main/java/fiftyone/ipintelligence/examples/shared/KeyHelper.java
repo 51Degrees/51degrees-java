@@ -35,7 +35,7 @@ public class KeyHelper {
      * hold the resource key. This name is checked first, before the legacy
      * {@link #TEST_RESOURCE_KEY} name.
      */
-    public static final String RESOURCE_KEY_ENV_VAR = "51DEGREES_RESOURCE_KEY";
+    public static final String RESOURCE_KEY_ENV_VAR = "_51DEGREES_RESOURCE_KEY";
     public static final String TEST_RESOURCE_KEY = "TestResourceKey";
     static Logger logger = LoggerFactory.getLogger(KeyHelper.class);
 

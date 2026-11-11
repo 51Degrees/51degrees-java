@@ -44,10 +44,9 @@ import static org.junit.Assert.assertTrue;
 
 /**
  * Tests against the live cloud, skipped unless {@code _51DEGREES_RESOURCE_KEY}
- * (or the older {@code RESOURCE_KEY}) is set. {@code FOD_CLOUD_API_URL}
- * points them at another host, and {@code _51DEGREES_LICENSE_KEY} (or
- * {@code LICENSE_KEY}) supplies the licence key where the account holds
- * one. Each test creates a 51Did through the cloud {@code json} endpoint,
+ * is set. {@code _51DEGREES_CLOUD_ENDPOINT} points them at another host, and
+ * {@code _51DEGREES_LICENSE_KEY} supplies the licence key where the account
+ * holds one. Each test creates a 51Did through the cloud {@code json} endpoint,
  * which is one use against the resource key, plus one for each cloud call
  * it then makes.
  */
@@ -59,11 +58,11 @@ public class DidClientLiveTests {
 
     @Before
     public void init() {
-        resourceKey = env("_51DEGREES_RESOURCE_KEY", "RESOURCE_KEY");
+        resourceKey = env("_51DEGREES_RESOURCE_KEY");
         Assume.assumeTrue(
             "Set _51DEGREES_RESOURCE_KEY to run the live 51Did cloud tests.",
             resourceKey != null);
-        licenceKey = env("_51DEGREES_LICENSE_KEY", "LICENSE_KEY");
+        licenceKey = env("_51DEGREES_LICENSE_KEY");
         client = new DidClient(resourceKey, licenceKey);
     }
 

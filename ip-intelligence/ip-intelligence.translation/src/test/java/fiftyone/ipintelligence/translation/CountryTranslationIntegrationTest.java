@@ -50,7 +50,7 @@ import static org.junit.Assume.assumeTrue;
  * complete, localized, ordered country dropdown is produced.
  * <p>
  * The data file is resolved from the {@code TestDataFile} system property, the
- * {@code 51DEGREES_IPI_PATH} environment variable, or a few well known
+ * {@code _51DEGREES_IPI_PATH} environment variable, or a few well known
  * locations, and the test is skipped if none is found.
  * <p>
  * The IP Intelligence element data key has differed between engine versions
@@ -66,7 +66,7 @@ public class CountryTranslationIntegrationTest {
     private static String resolveDataFile() {
         String[] candidates = {
             System.getProperty("TestDataFile"),
-            System.getenv("51DEGREES_IPI_PATH"),
+            System.getenv("_51DEGREES_IPI_PATH"),
             "51Degrees-IPIV4EnterpriseIpiV41.ipi",
             "../51Degrees-IPIV4EnterpriseIpiV41.ipi",
             "../../51Degrees-IPIV4EnterpriseIpiV41.ipi",

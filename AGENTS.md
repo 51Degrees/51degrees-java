@@ -125,7 +125,7 @@ java -cp examples/ip-intelligence/console/target/ip-intelligence-java-examples.c
 ```
 
 The example downloads the Lite file first when it is not there. In place of
-the argument, the `51DEGREES_IPI_PATH` environment variable or system property
+the argument, the `_51DEGREES_IPI_PATH` environment variable or system property
 can give the absolute path of a data file that is already there.
 
 On Java 24 or later, add `--enable-native-access=ALL-UNNAMED` before the class
@@ -183,7 +183,7 @@ java -cp examples/device-detection/console/target/device-detection-java-examples
 
 It prints the same `Input values:` and `Results:` blocks as the on-premise
 example. The IP Intelligence cloud examples read their key from
-`51DEGREES_RESOURCE_KEY` first and `TestResourceKey` second, and
+`_51DEGREES_RESOURCE_KEY` first and `TestResourceKey` second, and
 `examples/ip-intelligence/README.md` gives the keys to create for them.
 
 ### Pitfalls

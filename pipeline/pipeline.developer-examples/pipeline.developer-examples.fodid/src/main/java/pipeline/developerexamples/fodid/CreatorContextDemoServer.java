@@ -101,11 +101,11 @@ import java.util.concurrent.CompletionException;
  * {@code fodid/creator-context/} in this module's resources. Environment
  * variables:
  * <ul>
- * <li>{@code _51DEGREES_RESOURCE_KEY}, or the older {@code RESOURCE_KEY},
- * required. The resource key of the page, public by nature.</li>
- * <li>{@code _51DEGREES_LICENSE_KEY}, or the older {@code LICENSE_KEY},
- * optional. A licence key of the same account, server side only.</li>
- * <li>{@code FOD_CLOUD_API_URL}, optional. The cloud API base including
+ * <li>{@code _51DEGREES_RESOURCE_KEY}, required. The resource key of the
+ * page, public by nature.</li>
+ * <li>{@code _51DEGREES_LICENSE_KEY}, optional. A licence key of the same
+ * account, server side only.</li>
+ * <li>{@code _51DEGREES_CLOUD_ENDPOINT}, optional. The cloud API base including
  * the {@code /api/v4/} segment, defaulting to
  * {@code https://cloud.51degrees.com/api/v4/}. This is the same variable
  * the cloud request engine of this package honours.</li>
@@ -119,9 +119,9 @@ public class CreatorContextDemoServer {
     static final String RESOURCES = "/fodid/creator-context/";
 
     static final String RESOURCE =
-        env("_51DEGREES_RESOURCE_KEY", "RESOURCE_KEY");
+        env("_51DEGREES_RESOURCE_KEY");
     static final String LICENCE =
-        env("_51DEGREES_LICENSE_KEY", "LICENSE_KEY");
+        env("_51DEGREES_LICENSE_KEY");
 
     /**
      * The one client, built at start-up and shared by every request,
@@ -131,8 +131,8 @@ public class CreatorContextDemoServer {
 
     public static void main(String[] args) throws Exception {
         if (RESOURCE == null) {
-            System.err.println("Set _51DEGREES_RESOURCE_KEY (or the older "
-                + "RESOURCE_KEY) to the resource key of the page.");
+            System.err.println(
+                "Set _51DEGREES_RESOURCE_KEY to the resource key of the page.");
             System.exit(1);
         }
         if (LICENCE == null) {
@@ -149,7 +149,7 @@ public class CreatorContextDemoServer {
                 + "will report the context unreadable where it holds "
                 + "some.");
         }
-        // The client reads FOD_CLOUD_API_URL itself when no endpoint is
+        // The client reads _51DEGREES_CLOUD_ENDPOINT itself when no endpoint is
         // given, and falls back to the public cloud. A host other than
         // cloud.51degrees.com would be used to (a) use an on premise web
         // server, or (b) use a privately hosted version of the 51Degrees
