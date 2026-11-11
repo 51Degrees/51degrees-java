@@ -228,7 +228,7 @@ public class DataUpdateServiceLoggingTests {
     }
 
     @Test
-    public void UpdateFromMemory_RefreshFails_LogsErrorWithDetail()
+    public void UpdateFromMemory_RefreshFails_LogsTheTableMessage()
         throws Exception {
         AspectEngineDataFileDefault file = newDataFile(true, false, false);
         doThrow(new RuntimeException("no room"))
@@ -236,8 +236,8 @@ public class DataUpdateServiceLoggingTests {
 
         dataUpdate.updateFromMemory(file, new byte[]{1, 2, 3});
 
-        assertLogged(Level.ERROR, "An error occurred while applying a data " +
-            "file update to " + engineType + ". Error detail: no room");
+        assertLogged(Level.ERROR, "An error occurred when applying a data " +
+            "update to engine '" + engineType + "'.");
     }
 
     @Test

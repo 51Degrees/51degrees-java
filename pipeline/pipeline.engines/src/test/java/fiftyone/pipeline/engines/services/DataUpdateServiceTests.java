@@ -1408,6 +1408,12 @@ public class DataUpdateServiceTests {
         assertEquals(
             DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED,
             status);
+        String expected = "An error occurred when applying a data update " +
+            "to engine '" + engine.getClass().getSimpleName() +
+            "' after 10 tries.";
+        assertTrue(
+            "Expected '" + expected + "' but got " + logger.errorsLogged,
+            logger.errorsLogged.contains(expected));
         verify(futureFactory, times(2 * timers)).schedule(
             any(Runnable.class),
             anyLong());
