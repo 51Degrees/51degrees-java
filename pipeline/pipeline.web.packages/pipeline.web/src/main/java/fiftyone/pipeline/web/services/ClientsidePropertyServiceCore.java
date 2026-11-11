@@ -109,6 +109,17 @@ public interface ClientsidePropertyServiceCore {
         protected Pipeline pipeline;
 
         /**
+         * True once the Vary headers were worked out while every element
+         * had loaded its properties, so they can be kept.
+         */
+        private volatile boolean headersComplete = false;
+
+        /**
+         * Held while the Vary headers are worked out again.
+         */
+        private final Object headersLock = new Object();
+
+        /**
          * A list of all the HTTP headers that are requested evidence for
          * elements that populate JavaScript properties.
          */
@@ -142,31 +153,52 @@ public interface ClientsidePropertyServiceCore {
          */
         @SuppressWarnings("rawtypes")
         protected final void init() {
-            headersAffectingJavaScript = new ArrayList<>();
+            List<String> headers = new ArrayList<>();
+            boolean complete = true;
             // Get evidence filters for all elements.
             List<EvidenceKeyFilter> filters = new ArrayList<>();
             for (FlowElement element : pipeline.getFlowElements()) {
+                complete = complete && element.hasLoadedProperties();
                 filters.add(element.getEvidenceKeyFilter());
             }
 
             for (EvidenceKeyFilter filter : filters) {
-                // If the filter is a white list or derived type then
-                // get all HTTP header evidence keys from white list
-                // and add them to the headers that could affect the
-                // generated JavaScript.
-                if (filter.getClass().equals(EvidenceKeyFilterWhitelist.class)) {
+                // If the filter is a white list or derived type, such as
+                // the filter of a parallel group, then get all HTTP header
+                // evidence keys from white list and add them to the
+                // headers that could affect the generated JavaScript.
+                if (filter instanceof EvidenceKeyFilterWhitelist) {
                     EvidenceKeyFilterWhitelist whitelist = (EvidenceKeyFilterWhitelist) filter;
                     for (String key : whitelist.getWhitelist().keySet()) {
                         if (key.startsWith(EVIDENCE_HTTPHEADER_PREFIX + EVIDENCE_SEPERATOR) &&
                             hasControlChar(key) == false) {
                             String header = key.substring(key.indexOf(EVIDENCE_SEPERATOR) + 1);
-                            if(headersAffectingJavaScript.contains(header) == false){
-                                headersAffectingJavaScript.add(header);
+                            if(headers.contains(header) == false){
+                                headers.add(header);
                             }
                         }
                     }
                 }
             }
+            headersAffectingJavaScript = headers;
+            headersComplete = complete;
+        }
+
+        /**
+         * The headers for the Vary header. Until every element has loaded its
+         * properties, as after a cloud element could not reach its service
+         * when it was built, they are worked out again on each call, so they
+         * gain the cloud's headers once those are known.
+         */
+        private List<String> getHeadersAffectingJavaScript() {
+            if (headersComplete == false && pipeline != null) {
+                synchronized (headersLock) {
+                    if (headersComplete == false) {
+                        init();
+                    }
+                }
+            }
+            return headersAffectingJavaScript;
         }
 
         private boolean hasControlChar(String str) {
@@ -269,7 +301,7 @@ public interface ClientsidePropertyServiceCore {
             response.setContentLength(contentLength);
             response.setStatus(200);
             response.setHeader("Cache-Control", stringJoin(cacheControl, ","));
-            response.setHeader("Vary", stringJoin(headersAffectingJavaScript, ","));
+            response.setHeader("Vary", stringJoin(getHeadersAffectingJavaScript(), ","));
             response.setHeader("ETag", Integer.toString(hash));
             response.setHeader("Access-Control-Allow-Origin", "*");
         }

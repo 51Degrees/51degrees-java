@@ -154,15 +154,22 @@ public class SessionIdAndSequenceTests {
     }
 
     /**
-     * The Sequence Element keeps a session id that is already in the
-     * evidence, so an invalid one reaches the builder that way too.
+     * The Sequence Element keeps a session id that is a non-empty string in
+     * the evidence, so an invalid one reaches the builder that way too.
      */
     @ParameterizedTest
     @MethodSource("invalidSessionIds")
     public void SessionId_InvalidWithSequenceElement_RenderedEmpty(String id)
         throws Exception {
         String script = render(true, id, 1);
-        assertEquals("", sessionId(script));
+        if (id.isEmpty()) {
+            // The Sequence Element counts an empty session id as absent
+            // and creates a new one.
+            assertTrue(sessionId(script).matches("[A-Za-z0-9-]{1,64}"),
+                sessionId(script));
+        } else {
+            assertEquals("", sessionId(script));
+        }
         assertEquals("2", sequence(script));
     }
 
