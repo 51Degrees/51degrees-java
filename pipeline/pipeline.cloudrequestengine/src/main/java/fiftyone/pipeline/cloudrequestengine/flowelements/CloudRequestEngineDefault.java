@@ -212,7 +212,7 @@ public class CloudRequestEngineDefault
 
     /**
      * Constructor.
-     * @param requestedProperties the lower-case fully qualified names of the
+     * @param requestedProperties the fully qualified names of the
      *                            properties to ask for, sent as {@code values}
      *                            when the list is not empty
      */
@@ -478,7 +478,10 @@ public class CloudRequestEngineDefault
      * property it does not answer without naming it, and lower-cases the
      * names it answers with. A property that is present but null counts as
      * answered, as it carries a null reason beside it. The request is never
-     * failed, because the properties that did come back are usable.
+     * failed, because the properties that did come back are usable. With no
+     * license key, a property the resource key does not carry is answered
+     * as null, so a name left out is not a property, and the message says
+     * so.
      */
     private void reportPropertiesNotCovered(String response) {
         if (requestedProperties.isEmpty() ||
@@ -503,7 +506,8 @@ public class CloudRequestEngineDefault
         }
         if (notCovered.isEmpty() == false) {
             logger.warn(String.format(
-                PropertiesNotCovered,
+                hasLicenseKey() ? PropertiesNotCovered :
+                    RequestedNamesNotProperties,
                 stringJoin(notCovered, ", ")));
         }
     }

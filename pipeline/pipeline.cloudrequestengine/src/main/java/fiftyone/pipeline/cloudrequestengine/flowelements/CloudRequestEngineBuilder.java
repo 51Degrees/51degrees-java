@@ -41,7 +41,8 @@ import org.slf4j.ILoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Function;
 
 /**
@@ -160,15 +161,17 @@ public class CloudRequestEngineBuilder extends
     }
 
     /**
-     * The property names to send as values, trimmed and lower-cased, as the
-     * cloud service answers in lower case, with blank names and repeats
-     * left out.
+     * The property names to send as values, trimmed and sent as given,
+     * with blank names and repeats left out. A repeat differs only in
+     * letter case, as the cloud service reads names without regard to
+     * case, and the first spelling given is kept.
      */
     private static List<String> normalized(List<String> names) {
         List<String> result = new ArrayList<>();
+        Set<String> seen = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         for (String name : names) {
-            String normal = trimmed(name).toLowerCase(Locale.ROOT);
-            if (normal.isEmpty() == false && result.contains(normal) == false) {
+            String normal = trimmed(name);
+            if (normal.isEmpty() == false && seen.add(normal)) {
                 result.add(normal);
             }
         }
@@ -305,7 +308,8 @@ public class CloudRequestEngineBuilder extends
      * qualified names such as {@code device.ismobile}, sent as values.
      * Required with a license key alone. Beside a resource key the cloud
      * service adds them to the properties the resource key carries. Names
-     * are trimmed, lower-cased and de-duplicated. The properties set with
+     * are trimmed and sent as given, and a name given again in another
+     * letter case is sent once. The properties set with
      * {@link #setProperty(String)} and {@link #setProperties(List)} are not
      * sent.
      * <p>
@@ -316,6 +320,10 @@ public class CloudRequestEngineBuilder extends
     @DefaultValue("None - required with a license key alone")
     public CloudRequestEngineBuilder setRequestedProperties(
         List<String> properties) {
+        if (properties == null) {
+            throw new IllegalArgumentException(
+                "properties must not be null");
+        }
         requestedProperties.addAll(properties);
         return this;
     }
@@ -329,6 +337,10 @@ public class CloudRequestEngineBuilder extends
     @DefaultValue("None - required with a license key alone")
     public CloudRequestEngineBuilder setRequestedProperties(
         String properties) {
+        if (properties == null) {
+            throw new IllegalArgumentException(
+                "properties must not be null");
+        }
         return setRequestedProperties(Arrays.asList(properties.split(",")));
     }
 

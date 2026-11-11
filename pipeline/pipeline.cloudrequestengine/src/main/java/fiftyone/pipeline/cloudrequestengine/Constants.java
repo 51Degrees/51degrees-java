@@ -49,6 +49,14 @@ public class Constants {
             + "they will be missing from every result. The other requested "
             + "properties came back and are usable.";
 
+        public static final String RequestedNamesNotProperties =
+            "The cloud service did not return the requested properties %s "
+            + "in its answer. With a resource key and no license key every "
+            + "property is answered, with a reason when it has no value, so "
+            + "these names are not properties. Check the spelling of each "
+            + "one. The other requested properties came back and are "
+            + "usable.";
+
         public static final String EvidenceConflict =
             "'%s:%s' evidence conflicts with %s";
         public static final String MessageNoDataInResponse =
