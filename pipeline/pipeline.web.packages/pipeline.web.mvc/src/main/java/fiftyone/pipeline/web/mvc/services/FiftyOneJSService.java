@@ -34,6 +34,16 @@ public interface FiftyOneJSService extends FiftyOneJSServiceCore {
 
     void enable(boolean enabled);
 
+    /**
+     * Set the paths the JavaScript and the JSON are served from.
+     * @param javaScriptPath the end of the request path that the JavaScript
+     *                       is served for, or null or empty for the default
+     * @param jsonPath the end of the request path that the JSON is served
+     *                 for, or null or empty for the default
+     */
+    default void setPaths(String javaScriptPath, String jsonPath) {
+    }
+
     @Service
     class Default extends FiftyOneJSServiceCore.Default implements FiftyOneJSService {
 
