@@ -72,6 +72,24 @@ public class DataUpdateServiceDefault implements DataUpdateService {
      */
     private static final String LICENSE_KEYS_PARAMETER = "LicenseKeys";
 
+    /**
+     * How long a watched data file is tried before the update gives up with
+     * {@link AutoUpdateStatus#AUTO_UPDATE_TIMEOUT}, as a copy over it may
+     * still be in progress.
+     */
+    static final long WATCHED_FILE_OPEN_TIMEOUT_MILLIS =
+            TimeUnit.MINUTES.toMillis(10);
+
+    /**
+     * The pause between tries to open a watched data file.
+     */
+    static final long WATCHED_FILE_OPEN_PAUSE_MILLIS = 500;
+
+    /**
+     * The wait for a watched data file, which tests shorten.
+     */
+    long watchedFileOpenTimeoutMillis = WATCHED_FILE_OPEN_TIMEOUT_MILLIS;
+
     final List<AspectEngineDataFile> configurations = new ArrayList<>();
     private final Logger logger;
     private final boolean closeFutureFactory;

@@ -22,6 +22,8 @@
 
 package fiftyone.pipeline.engines.services;
 
+import fiftyone.common.wrappers.data.BinaryReader;
+import fiftyone.common.wrappers.io.FileWrapper;
 import fiftyone.common.wrappers.io.FileWrapperDefault;
 import fiftyone.common.wrappers.io.FileWrapperFactory;
 import fiftyone.pipeline.engines.configuration.DataFileConfigurationDefault;
@@ -29,21 +31,28 @@ import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectEngineDataFileDefault;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import fiftyone.pipeline.engines.flowelements.OnPremiseAspectEngine;
+import fiftyone.pipeline.engines.services.DataUpdateService.AutoUpdateStatus;
 import fiftyone.pipeline.engines.services.update.FutureFactory;
 import org.junit.Test;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
+import org.mockito.Answers;
+import org.slf4j.Logger;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -51,11 +60,13 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
 /**
  * A new data file found by the file watcher is loaded, and then polling for
  * updates carries on, as the newFileAvailable steps of the data update
- * specification say ("resume polling, if any").
+ * specification say ("resume polling, if any"). A new file that cannot be
+ * opened is given up on after a time, as its Errors table says.
  */
 public class DataUpdateServiceWatchedFileTests {
 
@@ -63,71 +74,45 @@ public class DataUpdateServiceWatchedFileTests {
 
     private static final long RETRY_MILLIS = 100;
 
+    /**
+     * The wait for a file that cannot be opened, shortened from ten minutes.
+     */
+    private static final long OPEN_TIMEOUT_MILLIS = 1000;
+
+    /**
+     * The most tries that wait allows, being one at the start, one after
+     * each pause and one more for a slow runner.
+     */
+    private static final long MAX_TRIES = OPEN_TIMEOUT_MILLIS /
+        DataUpdateServiceDefault.WATCHED_FILE_OPEN_PAUSE_MILLIS + 2;
+
+    private static final String MAC_MESSAGE =
+        "File watchers are not well implemented in OS X, " +
+        "so don't run this unit test as it is unlikely to pass.";
+
     @Test
     public void WatchedFileRefresh_PollingCarriesOn() throws Exception {
-        assumeFalse("File watchers are not well implemented in OS X, " +
-                "so don't run this unit test as it is unlikely to pass.",
-            System.getProperty("os.name").contains("Mac OS X"));
+        assumeFalse(MAC_MESSAGE, isMac());
 
-        // The polling timers scheduled, and the watcher's task, which the
-        // test runs itself.
         final List<Long> timers = new ArrayList<>();
         final AtomicReference<Runnable> watcher = new AtomicReference<>();
-        FutureFactory futureFactory = mock(FutureFactory.class);
-        when(futureFactory.schedule(any(Runnable.class), anyLong()))
-            .then(new Answer<Object>() {
-                @Override
-                public Object answer(InvocationOnMock invocation) {
-                    timers.add((Long) invocation.getArgument(1));
-                    return mock(ScheduledFuture.class);
-                }
-            });
-        when(futureFactory.scheduleRepeating(any(Runnable.class), anyLong()))
-            .then(new Answer<Object>() {
-                @Override
-                public Object answer(InvocationOnMock invocation) {
-                    watcher.set((Runnable) invocation.getArgument(0));
-                    return mock(ScheduledFuture.class);
-                }
-            });
         FileWrapperFactory fileWrapperFactory = mock(FileWrapperFactory.class);
-        when(fileWrapperFactory.build(anyString())).then(new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
-                return new FileWrapperDefault(
-                    (String) invocation.getArgument(0));
-            }
-        });
-        when(fileWrapperFactory.getLastModified(anyString()))
-            .then(new Answer<Object>() {
-                @Override
-                public Object answer(InvocationOnMock invocation) {
-                    return new File((String) invocation.getArgument(0))
-                        .lastModified();
-                }
-            });
+        when(fileWrapperFactory.build(anyString())).then(invocation ->
+            new FileWrapperDefault((String) invocation.getArgument(0)));
+        when(fileWrapperFactory.getLastModified(anyString())).then(
+            invocation -> lastModified(invocation.getArgument(0)));
         DataUpdateService dataUpdate = new DataUpdateServiceDefault(
             null,
             mock(HttpClient.class),
             fileWrapperFactory,
-            futureFactory);
+            futureFactory(timers, watcher));
 
-        @SuppressWarnings("unchecked")
         OnPremiseAspectEngine<? extends AspectData,
-            ? extends AspectPropertyMetaData> engine =
-            mock(OnPremiseAspectEngine.class);
+            ? extends AspectPropertyMetaData> engine = engine();
         Path directory = Files.createTempDirectory("watched");
         Path dataFile = directory.resolve("data.dat");
         Files.write(dataFile, "Old".getBytes());
-
-        DataFileConfigurationDefault config = new DataFileConfigurationDefault();
-        config.setAutomaticUpdatesEnabled(true);
-        config.setFileSystemWatcherEnabled(true);
-        config.setPollingIntervalSeconds(1);
-        config.setDataFilePath(dataFile.toString());
-        AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
-        file.setEngine(engine);
-        file.setConfiguration(config);
+        AspectEngineDataFileDefault file = watchedFile(engine, dataFile);
 
         try {
             dataUpdate.registerDataFile(file);
@@ -152,19 +137,197 @@ public class DataUpdateServiceWatchedFileTests {
                 file.getFuture());
         }
         finally {
-            if (config.getWatchKey() != null) {
-                config.getWatchKey().cancel();
-            }
-            // Windows keeps the file until the reader's mapped buffer is
-            // collected, so whatever cannot be deleted now is deleted when
-            // the test run ends. Those are deleted in the reverse order they
-            // are registered, so the folder is registered first.
-            directory.toFile().deleteOnExit();
-            if (dataFile.toFile().delete() == false) {
-                dataFile.toFile().deleteOnExit();
-            }
-            directory.toFile().delete();
+            cleanUp(file, directory, dataFile);
         }
+    }
+
+    /**
+     * A watched file that cannot be opened is tried, with a pause between
+     * tries, until the wait ends. The update then reports
+     * AUTO_UPDATE_TIMEOUT, logs nothing, and leaves the engine and the
+     * polling timer as they were.
+     */
+    @Test
+    public void WatchedFileCannotBeOpened_GivesUpAfterTheWait()
+        throws Exception {
+        assumeFalse(MAC_MESSAGE, isMac());
+
+        final List<Long> timers = new ArrayList<>();
+        final AtomicReference<Runnable> watcher = new AtomicReference<>();
+        final AtomicBoolean locked = new AtomicBoolean(true);
+        final AtomicInteger tries = new AtomicInteger();
+        final AtomicInteger logged = new AtomicInteger();
+
+        // The service may call these many times while it waits, so they
+        // are stub only mocks, which keep no record of their calls.
+        final BinaryReader reader =
+            mock(BinaryReader.class, withSettings().stubOnly());
+        FileWrapper wrapper =
+            mock(FileWrapper.class, withSettings().stubOnly());
+        when(wrapper.getReader()).then(invocation -> {
+            tries.incrementAndGet();
+            if (locked.get()) {
+                // Stops a loop with no pause using a whole processor.
+                Thread.sleep(1);
+                throw new IOException("The file is locked");
+            }
+            return reader;
+        });
+        FileWrapperFactory fileWrapperFactory =
+            mock(FileWrapperFactory.class, withSettings().stubOnly());
+        when(fileWrapperFactory.build(anyString())).thenReturn(wrapper);
+        when(fileWrapperFactory.getLastModified(anyString())).then(
+            invocation -> lastModified(invocation.getArgument(0)));
+        Logger logger = mock(Logger.class, withSettings().stubOnly()
+            .defaultAnswer(invocation -> {
+                String name = invocation.getMethod().getName();
+                if (name.equals("warn") || name.equals("error")) {
+                    logged.incrementAndGet();
+                }
+                return Answers.RETURNS_DEFAULTS.answer(invocation);
+            }));
+        DataUpdateServiceDefault dataUpdate = new DataUpdateServiceDefault(
+            logger,
+            mock(HttpClient.class),
+            fileWrapperFactory,
+            futureFactory(timers, watcher));
+        dataUpdate.watchedFileOpenTimeoutMillis = OPEN_TIMEOUT_MILLIS;
+
+        final AtomicReference<AutoUpdateStatus> status =
+            new AtomicReference<>();
+        final CountDownLatch done = new CountDownLatch(1);
+        dataUpdate.onUpdateComplete((sender, args) -> {
+            if (args.getStatus() != AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS &&
+                status.compareAndSet(null, args.getStatus())) {
+                done.countDown();
+            }
+        });
+
+        OnPremiseAspectEngine<? extends AspectData,
+            ? extends AspectPropertyMetaData> engine = engine();
+        Path directory = Files.createTempDirectory("watched");
+        Path dataFile = directory.resolve("data.dat");
+        Files.write(dataFile, "Old".getBytes());
+        AspectEngineDataFileDefault file = watchedFile(engine, dataFile);
+
+        // The watcher runs on its own thread, so the test can stop waiting
+        // for an update that never ends.
+        final AtomicBoolean stop = new AtomicBoolean(false);
+        Thread runner = new Thread(() -> {
+            while (stop.get() == false && done.getCount() > 0) {
+                watcher.get().run();
+                try {
+                    Thread.sleep(RETRY_MILLIS);
+                } catch (InterruptedException e) {
+                    return;
+                }
+            }
+        });
+        runner.setDaemon(true);
+
+        try {
+            dataUpdate.registerDataFile(file);
+            assertNotNull("Registering sets up the file watcher",
+                watcher.get());
+            int loggedBefore = logged.get();
+
+            Files.write(dataFile, "New".getBytes());
+            runner.start();
+            boolean gaveUp = done.await(
+                WAIT_FOR_EVENT_MILLIS, TimeUnit.MILLISECONDS);
+
+            assertTrue("The watcher tries to open the new file",
+                tries.get() > 0);
+            assertTrue("The update gives up on a file it cannot open",
+                gaveUp);
+            assertEquals(AutoUpdateStatus.AUTO_UPDATE_TIMEOUT, status.get());
+            assertTrue("The tries are paused, but " + tries.get() +
+                " were made", tries.get() <= MAX_TRIES);
+            assertEquals("The engine is not refreshed",
+                0, refreshCount(engine));
+            assertEquals("Nothing is logged", loggedBefore, logged.get());
+            assertEquals("The polling timer is kept", 1, timers.size());
+            assertNotNull("The data file holds the polling timer",
+                file.getFuture());
+        }
+        finally {
+            // Lets an update that would never give up end, so the thread
+            // stops.
+            stop.set(true);
+            locked.set(false);
+            if (runner.isAlive()) {
+                runner.join(WAIT_FOR_EVENT_MILLIS);
+            }
+            cleanUp(file, directory, dataFile);
+        }
+    }
+
+    /**
+     * Records the polling timers scheduled, and keeps the watcher's task for
+     * the test to run itself.
+     */
+    private static FutureFactory futureFactory(
+        final List<Long> timers,
+        final AtomicReference<Runnable> watcher) {
+        FutureFactory futureFactory = mock(FutureFactory.class);
+        when(futureFactory.schedule(any(Runnable.class), anyLong()))
+            .then(invocation -> {
+                timers.add((Long) invocation.getArgument(1));
+                return mock(ScheduledFuture.class);
+            });
+        when(futureFactory.scheduleRepeating(any(Runnable.class), anyLong()))
+            .then(invocation -> {
+                watcher.set((Runnable) invocation.getArgument(0));
+                return mock(ScheduledFuture.class);
+            });
+        return futureFactory;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static OnPremiseAspectEngine<? extends AspectData,
+        ? extends AspectPropertyMetaData> engine() {
+        return mock(OnPremiseAspectEngine.class);
+    }
+
+    private static AspectEngineDataFileDefault watchedFile(
+        OnPremiseAspectEngine<? extends AspectData,
+            ? extends AspectPropertyMetaData> engine,
+        Path dataFile) {
+        DataFileConfigurationDefault config = new DataFileConfigurationDefault();
+        config.setAutomaticUpdatesEnabled(true);
+        config.setFileSystemWatcherEnabled(true);
+        config.setPollingIntervalSeconds(1);
+        config.setDataFilePath(dataFile.toString());
+        AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
+        file.setEngine(engine);
+        file.setConfiguration(config);
+        return file;
+    }
+
+    private static void cleanUp(
+        AspectEngineDataFileDefault file,
+        Path directory,
+        Path dataFile) {
+        if (file.getConfiguration().getWatchKey() != null) {
+            file.getConfiguration().getWatchKey().cancel();
+        }
+        // Windows keeps the file until the reader's mapped buffer is
+        // collected, so whatever cannot be deleted now is deleted when the
+        // test run ends. Those are deleted in the reverse order they are
+        // registered, so the folder is registered first.
+        directory.toFile().deleteOnExit();
+        if (dataFile.toFile().delete() == false) {
+            dataFile.toFile().deleteOnExit();
+        }
+        directory.toFile().delete();
+    }
+
+    private static boolean isMac() {
+        return System.getProperty("os.name").contains("Mac OS X");
+    }
+
+    private static long lastModified(Object path) {
+        return new File((String) path).lastModified();
     }
 
     private static long refreshCount(Object engine) {
