@@ -1,8 +1,8 @@
 # 51Degrees IP Intelligence Engines
 
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-ip-intelligence-engines "Data rewards the curious") **Java IP Intelligence**
+![51Degrees](https://raw.githubusercontent.com/51Degrees/51degrees-java/main/.github/images/logo-160.png "Data rewards the curious") **Java IP Intelligence**
 
-[Developer Documentation](https://51degrees.com/ip-intelligence-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-ip-intelligence-engines "developer documentation")
+[Developer Documentation](https://51degrees.com/documentation/_ip_intelligence__quickstart.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-ip-intelligence-engines "developer documentation")
 
 ## Introduction
 
@@ -10,7 +10,6 @@ This repository contains Java implementation of the IP Intelligence [specificati
 
 ## Dependencies
 
-For runtime dependencies, see our [dependencies](https://51degrees.com/documentation/_info__dependencies.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=dependencies) page.
 The [tested versions](https://51degrees.com/documentation/_product_summaries__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=dependencies) page shows 
 the JDK versions that we currently test against. The software may run fine against other versions, 
 but additional caution should be applied.
