@@ -1,8 +1,8 @@
 # 51Degrees Device Detection Engines
 
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=top "Data rewards the curious") **Java Device Detection**
+![51Degrees](https://raw.githubusercontent.com/51Degrees/51degrees-java/main/.github/images/logo-160.png "Data rewards the curious") **Java Device Detection**
 
-[Developer Documentation](https://51degrees.com/device-detection-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=top "developer documentation")
+[Developer Documentation](https://51degrees.com/documentation/_device_detection__quickstart.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=top "developer documentation")
 
 ## Introduction
 
@@ -10,7 +10,6 @@ This repository contains Java implementation of the device detection [specificat
 
 ## Dependencies
 
-For runtime dependencies, see our [dependencies](https://51degrees.com/documentation/_info__dependencies.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=dependencies) page.
 The [tested versions](https://51degrees.com/documentation/_product_summaries__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=dependencies) page shows 
 the JDK versions that we currently test against. The software may run fine against other versions, 
 but additional caution should be applied.
