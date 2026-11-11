@@ -23,6 +23,7 @@
 package fiftyone.devicedetection.hash.engine.onpremise.flowelements;
 
 import fiftyone.devicedetection.hash.engine.onpremise.data.DeviceDataHash;
+import fiftyone.devicedetection.hash.engine.onpremise.data.PropertyMetaDataHash;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.Swig;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.BoolValueSwig;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.ConfigHashSwig;
@@ -46,7 +47,11 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static fiftyone.devicedetection.shared.testhelpers.FileUtils.LITE_HASH_DATA_FILE_PATH;
 import static fiftyone.devicedetection.shared.testhelpers.FileUtils.TAC_HASH_DATA_FILE_NAME;
@@ -179,14 +184,108 @@ public class PropertyIndexTests {
     }
 
     /**
-     * An engine built with no names has no indexes, so every read goes by
-     * name.
+     * An engine built with no names has an index for every property of the
+     * first data file it loads, no two properties share an index, and the
+     * native results name that property at that index.
      */
     @Test
-    public void PropertyIndex_NoNamesReadsByName() throws Exception {
+    public void PropertyIndex_NoNamesFromFirstFile() throws Exception {
         File file = dataFile(LITE_HASH_DATA_FILE_PATH);
-        try (DeviceDetectionHashEngine engine = build(file, null)) {
-            assertNull(engine.getPropertyIndex("IsMobile"));
+        List<String> names = dataSetNames(file);
+        try (DeviceDetectionHashEngine engine = build(file, null);
+             NativeEngine nativeEngine = new NativeEngine(file, null);
+             ResultsHashSwig results = nativeEngine.engine.process(MOBILE)) {
+            Set<Integer> seen = new HashSet<>();
+            for (String name : names) {
+                Integer index = engine.getPropertyIndex(name);
+                assertNotNull("Expected an index for '" + name + "'.", index);
+                assertTrue(
+                    "Index " + index + " given to more than one name.",
+                    seen.add(index));
+                assertEquals(
+                    "Expected the native results to name '" + name +
+                        "' at index " + index + ".",
+                    name,
+                    results.getPropertyName(index));
+            }
+        }
+    }
+
+    /**
+     * An engine built with no names keeps its first data file's indexes
+     * through a reload from a data file whose properties are a superset in a
+     * different order. Each property both files have then reads what an
+     * engine built on the new file reads, and a property only the new file
+     * has gets no index.
+     */
+    @Test
+    public void PropertyIndex_NoNamesSurvivesReload() throws Exception {
+        File lite = dataFile(LITE_HASH_DATA_FILE_PATH);
+        File bigger = dataFile(TAC_HASH_DATA_FILE_NAME);
+        List<String> names = dataSetNames(lite);
+        names.retainAll(dataSetNames(bigger));
+        String added = nameOnlyIn(bigger, lite);
+
+        DeviceDetectionHashEngine engine = build(lite, null);
+        DeviceDetectionHashEngine fresh = build(bigger, null);
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+                 .addFlowElement(engine)
+                 .build();
+             Pipeline freshPipeline = new PipelineBuilder(loggerFactory)
+                 .addFlowElement(fresh)
+                 .build()) {
+
+            Map<String, Integer> before = new HashMap<>();
+            for (String name : names) {
+                Integer index = engine.getPropertyIndex(name);
+                assertNotNull("Expected an index for '" + name + "'.", index);
+                before.put(name, index);
+            }
+
+            engine.refreshData(
+                engine.getDataFiles().get(0).getIdentifier(),
+                Files.readAllBytes(bigger.toPath()));
+
+            for (String name : names) {
+                assertEquals(
+                    "Index of '" + name + "' moved on reload.",
+                    before.get(name),
+                    engine.getPropertyIndex(name));
+            }
+            if (added != null) {
+                assertNull(
+                    "Expected no index for '" + added + "', which only " +
+                        "the new file has.",
+                    engine.getPropertyIndex(added));
+            }
+
+            try (FlowData data = pipeline.createFlowData();
+                 FlowData expected = freshPipeline.createFlowData()) {
+                data.addEvidence("header.user-agent", MOBILE);
+                data.process();
+                expected.addEvidence("header.user-agent", MOBILE);
+                expected.process();
+                DeviceData device = data.get(DeviceData.class);
+                DeviceData want = expected.get(DeviceData.class);
+                for (String name : names) {
+                    AspectPropertyValue<?> got =
+                        (AspectPropertyValue<?>) device.get(name);
+                    AspectPropertyValue<?> wanted =
+                        (AspectPropertyValue<?>) want.get(name);
+                    assertEquals(
+                        "Expected '" + name + "' to have a value as a " +
+                            "fresh engine gives it.",
+                        wanted.hasValue(),
+                        got.hasValue());
+                    if (wanted.hasValue()) {
+                        assertEquals(
+                            "Expected '" + name + "' to read as a fresh " +
+                                "engine reads it.",
+                            wanted.getValue(),
+                            got.getValue());
+                    }
+                }
+            }
         }
     }
 
@@ -344,6 +443,25 @@ public class PropertyIndexTests {
         return null;
     }
 
+    /**
+     * The names of the properties the data file holds, sorted, leaving out
+     * the match metrics the engine adds, which are not in the data file and
+     * so have no index.
+     */
+    private static List<String> dataSetNames(File file) throws Exception {
+        List<String> names = new ArrayList<>();
+        try (DeviceDetectionHashEngine engine = build(file, null)) {
+            for (FiftyOneAspectPropertyMetaData property :
+                engine.getProperties()) {
+                if (property instanceof PropertyMetaDataHash) {
+                    names.add(property.getName());
+                }
+            }
+        }
+        Collections.sort(names);
+        return names;
+    }
+
     private static List<String> propertyNames(File file) throws Exception {
         List<String> names = new ArrayList<>();
         try (DeviceDetectionHashEngine engine = build(file, null)) {
@@ -361,19 +479,38 @@ public class PropertyIndexTests {
      * index from the same native results, and {@link #READS} times through
      * the typed accessor, which is the whole path a caller takes, and prints
      * the median nanoseconds of one read over {@link #ROUNDS} rounds after a
-     * warm-up. Every read must give the same value. The times are printed
-     * rather than asserted, because runners vary.
+     * warm-up, for an engine built with {@link #NAMES}. Every read must give
+     * the same value. The times are printed rather than asserted, because
+     * runners vary.
      */
     @Test
     public void PropertyIndex_ReadByIndexAgainstByName() throws Exception {
+        measureReads(NAMES);
+    }
+
+    /**
+     * The same measurement for an engine built with no names, which reads by
+     * the index of the property in its first data file.
+     */
+    @Test
+    public void PropertyIndex_NoNamesReadByIndexAgainstByName()
+        throws Exception {
+        measureReads(null);
+    }
+
+    private static void measureReads(List<String> built) throws Exception {
         File file = dataFile(LITE_HASH_DATA_FILE_PATH);
-        DeviceDetectionHashEngine engine = build(file, NAMES);
-        int index = engine.getPropertyIndex("IsMobile");
+        DeviceDetectionHashEngine engine = build(file, built);
+        Integer found = engine.getPropertyIndex("IsMobile");
+        assertNotNull("Expected an index for 'IsMobile'.", found);
+        int index = found;
         ConfigHashSwig config = new ConfigHashSwig();
         config.setHighPerformance();
         RequiredPropertiesConfigSwig required;
         try (VectorStringSwig names = new VectorStringSwig()) {
-            names.addAll(NAMES);
+            if (built != null) {
+                names.addAll(built);
+            }
             required = new RequiredPropertiesConfigSwig(names);
         }
         EngineHashSwig nativeEngine =
@@ -425,14 +562,46 @@ public class PropertyIndexTests {
             }
             assertEquals("Every read gives the same value", 0, different);
             System.out.println(String.format(
-                "READ COST IsMobile reads=%d rounds=%d byNameNs=%s " +
-                    "byIndexNs=%s typedNs=%s java=%s os=%s",
+                "READ COST IsMobile names=%s reads=%d rounds=%d " +
+                    "byNameNs=%s byIndexNs=%s typedNs=%s java=%s os=%s",
+                built == null ? "none" : "given",
                 READS, ROUNDS, spread(byName), spread(byIndex),
                 spread(typed), System.getProperty("java.version"),
                 System.getProperty("os.name")));
         }
         finally {
             nativeEngine.delete();
+            required.delete();
+            config.delete();
+        }
+    }
+
+    /**
+     * A native engine on its own, so a test can read the native results
+     * directly. Built with no names when the list is null.
+     */
+    private static class NativeEngine implements AutoCloseable {
+        private final ConfigHashSwig config = new ConfigHashSwig();
+        private final RequiredPropertiesConfigSwig required;
+        private final EngineHashSwig engine;
+
+        NativeEngine(File file, List<String> names) {
+            config.setHighPerformance();
+            RequiredPropertiesConfigSwig made;
+            try (VectorStringSwig vector = new VectorStringSwig()) {
+                if (names != null) {
+                    vector.addAll(names);
+                }
+                made = new RequiredPropertiesConfigSwig(vector);
+            }
+            required = made;
+            engine = new EngineHashSwig(
+                file.getAbsolutePath(), config, required);
+        }
+
+        @Override
+        public void close() {
+            engine.delete();
             required.delete();
             config.delete();
         }
