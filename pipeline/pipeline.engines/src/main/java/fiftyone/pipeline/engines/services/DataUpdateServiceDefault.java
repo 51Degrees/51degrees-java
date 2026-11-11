@@ -73,6 +73,24 @@ public class DataUpdateServiceDefault implements DataUpdateService {
      */
     private static final String LICENSE_KEYS_PARAMETER = "LicenseKeys";
 
+    /**
+     * How long a watched data file is tried before the update gives up with
+     * {@link AutoUpdateStatus#AUTO_UPDATE_TIMEOUT}, as a copy over it may
+     * still be in progress.
+     */
+    static final long WATCHED_FILE_OPEN_TIMEOUT_MILLIS =
+            TimeUnit.MINUTES.toMillis(10);
+
+    /**
+     * The pause between tries to open a watched data file.
+     */
+    static final long WATCHED_FILE_OPEN_PAUSE_MILLIS = 500;
+
+    /**
+     * The wait for a watched data file, which tests shorten.
+     */
+    long watchedFileOpenTimeoutMillis = WATCHED_FILE_OPEN_TIMEOUT_MILLIS;
+
     final List<AspectEngineDataFile> configurations = new ArrayList<>();
     private final Logger logger;
     private final boolean closeFutureFactory;
@@ -299,9 +317,10 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     /**
      * Called when a data update is available and the file at
      * engine.DataFilePath contains this new data.
-     * 1. Refresh the engine.
-     * 2. Dispose of the existing update timer if there is one.
-     * 3. Re-register the engine with the update service.
+     * 1. Dispose of the existing update timer if there is one.
+     * 2. Refresh the engine.
+     * Where the data file is registered, the caller then registers it again,
+     * which sets a new update timer.
      *
      * @param dataFile the data file to update
      * @return {@link AutoUpdateStatus#AUTO_UPDATE_SUCCESS} if the data file was
@@ -385,17 +404,41 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                         // before notifying the engine, otherwise the copy
                         // may still be in progress.
                         boolean fileLockable = false;
-                        while (fileLockable == false) {
+                        boolean interrupted = false;
+                        long deadline = System.nanoTime() +
+                                TimeUnit.MILLISECONDS.toNanos(
+                                        watchedFileOpenTimeoutMillis);
+                        while (fileLockable == false &&
+                                System.nanoTime() - deadline < 0) {
                             try (BinaryReader reader = fileWrapperFactory.build(
                                     aspectDataFile.getDataFilePath()).getReader()) {
                                 fileLockable = true;
-                                // Complete the update
-                                status = updatedFileAvailable(dataFile);
-                            } catch (IOException e) {
-                                logger.warn("Exception while reading the data file at '{}'",
-                                        aspectDataFile.getDataFilePath(), e);
+                            } catch (IOException ignored) {
+                                try {
+                                    Thread.sleep(WATCHED_FILE_OPEN_PAUSE_MILLIS);
+                                } catch (InterruptedException ex) {
+                                    // Interrupted, as unregistering the data
+                                    // file does, so stop trying.
+                                    Thread.currentThread().interrupt();
+                                    interrupted = true;
+                                    break;
+                                }
                             }
                         }
+                        if (fileLockable) {
+                            // Complete the update
+                            status = updatedFileAvailable(dataFile);
+                            // The refresh cancelled the polling timer, so
+                            // register the file again to set a new one.
+                            if (dataFile.getIsRegistered()) {
+                                registerDataFile(dataFile);
+                            }
+                        } else if (interrupted == false) {
+                            // The polling timer is left as it was.
+                            status = AutoUpdateStatus.AUTO_UPDATE_TIMEOUT;
+                        }
+                        // An interrupted wait leaves the update unfinished,
+                        // so the status stays AUTO_UPDATE_IN_PROGRESS.
                     }
                 }
             }
