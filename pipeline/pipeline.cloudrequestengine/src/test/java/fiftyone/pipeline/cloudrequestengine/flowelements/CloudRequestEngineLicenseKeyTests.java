@@ -78,7 +78,10 @@ public class CloudRequestEngineLicenseKeyTests {
 
     /** Records every request and answers from fixed responses. */
     private static class FakeCloud implements HttpClient {
-        final List<Call> calls = new ArrayList<>();
+        // Discovery makes its two requests at once, so calls are
+        // recorded from two threads.
+        final List<Call> calls =
+            Collections.synchronizedList(new ArrayList<>());
         String dataResponse = "{\"device\":{\"ismobile\":true," +
             "\"iscrawler\":false}}";
         int dataStatus = 200;
