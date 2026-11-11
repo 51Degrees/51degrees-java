@@ -22,7 +22,6 @@
 
 package fiftyone.pipeline.engines.fiftyone.trackers;
 
-import fiftyone.caching.PutCache;
 import fiftyone.pipeline.core.data.DataKey;
 import fiftyone.pipeline.core.data.DataKeyBuilder;
 import fiftyone.pipeline.core.data.DataKeyBuilderDefault;
@@ -32,13 +31,14 @@ import fiftyone.pipeline.engines.configuration.CacheConfiguration;
 import fiftyone.pipeline.engines.fiftyone.data.ShareUsageEvidence;
 import fiftyone.pipeline.engines.trackers.TrackerBase;
 
-import java.io.IOException;
 import java.util.Date;
 import java.util.Map;
 
 /**
  * A tracker used by share usage to attempt to avoid repeatedly sending data
- * relating to the same user session.
+ * relating to the same user session. Evidence that matches an entry is shared
+ * again once the interval has passed since it was last shared, so a repeat is
+ * shared at most once in each interval.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/pipeline-elements/usage-sharing-element.md#session-tracking">Specification</a>
  */
 public class ShareUsageTracker extends TrackerBase<Date> {
@@ -54,17 +54,11 @@ public class ShareUsageTracker extends TrackerBase<Date> {
     private final long interval;
 
     /**
-     * The times keyed by the values usage sharing would share. The cache of
-     * the base class is keyed by the Evidence alone, which no longer holds
-     * the web request's values.
-     */
-    private final PutCache<DataKey, Date> sharedValuesCache;
-
-    /**
      * Construct a new instance.
      * @param configuration the cache configuration to use when building the
      *                      internal cache used by this tracker
-     * @param intervalMillis interval between matched in millis
+     * @param intervalMillis how long after evidence is shared a repeat of it is
+     *                       not shared, in milliseconds
      * @param filter the {@link EvidenceKeyFilter} that defines the evidence
      *               values to use when creating a key from an {@link FlowData}
      */
@@ -75,22 +69,26 @@ public class ShareUsageTracker extends TrackerBase<Date> {
         super(configuration);
         this.interval = intervalMillis;
         this.filter = filter;
-        // The base class has checked that the builder makes a PutCache.
-        this.sharedValuesCache = (PutCache<DataKey, Date>)
-            configuration.getCacheBuilder().<DataKey, Date>build(
-                null, configuration.getSize());
     }
 
     @Override
     protected Date newValue(FlowData data) {
-        // Stored meta-data values for this tracker are always true.
+        // The time the new evidence is shared.
         return new Date();
     }
 
     @Override
     protected boolean match(FlowData data, Date value) {
-        Date now = new Date();
-        return value.getTime() <= (now.getTime() - interval);
+        // Sharing a repeat stores the time in the cached value, so the next
+        // interval starts from this share.
+        long now = System.currentTimeMillis();
+        synchronized (value) {
+            if (value.getTime() <= now - interval) {
+                value.setTime(now);
+                return true;
+            }
+            return false;
+        }
     }
 
     @Override
@@ -98,31 +96,14 @@ public class ShareUsageTracker extends TrackerBase<Date> {
         return filter;
     }
 
-    @Override
-    public Date get(FlowData data) {
-        return sharedValuesCache.get(getSharedValuesKey(data));
-    }
-
-    @Override
-    public void put(FlowData data, Date value) {
-        sharedValuesCache.put(getSharedValuesKey(data), value);
-    }
-
-    @Override
-    public void close() throws IOException {
-        try {
-            sharedValuesCache.close();
-        } finally {
-            super.close();
-        }
-    }
-
     /**
-     * The key of the values {@link ShareUsageEvidence#find} finds that the
-     * filter includes, which take in the web request's values, as the
-     * session tracking hash is of the values that would be shared.
+     * The key is made from the values {@link ShareUsageEvidence#find} finds
+     * that the filter includes, which take in the web request's values,
+     * as the session tracking hash is of the values that would be shared.
+     * The Evidence alone does not hold them.
      */
-    private DataKey getSharedValuesKey(FlowData data) {
+    @Override
+    protected DataKey generateKey(FlowData data) {
         DataKeyBuilder builder = new DataKeyBuilderDefault();
         for (Map.Entry<String, Object> entry :
             ShareUsageEvidence.find(data.getEvidence()).entrySet()) {

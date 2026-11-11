@@ -93,6 +93,13 @@ public class Constants {
      * Default lost data count for share usage before it wraps
      */
     static final int LOST_DATA_RESET_DEFAULT = 5000000;
+
+    /**
+     * While the queue is full, a message is logged for the first entry
+     * discarded and then once for every this many more, never one for each
+     * entry.
+     */
+    static final int QUEUE_FULL_LOG_EVERY = 1000;
     /**
      * The default URL to send usage data to.
      */
@@ -104,4 +111,43 @@ public class Constants {
      */
     static final String EVIDENCE_HTTPHEADER_COOKIE_SUFFIX = "cookie";
 
+    /**
+     * The default number of failed sends within the failures window that
+     * pauses sending.
+     */
+    public static final int SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_DEFAULT = 10;
+
+    /**
+     * The fewest failed sends that can be set to pause sending.
+     */
+    public static final int SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_MIN = 1;
+
+    /**
+     * The most failed sends that can be set to pause sending.
+     */
+    public static final int SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_MAX = 100;
+
+    /**
+     * The default time in seconds over which failed sends are counted.
+     */
+    public static final int SHARE_USAGE_FAILURES_WINDOW_SECONDS_DEFAULT = 100;
+
+    /**
+     * The default length in seconds of the first pause after failed sends.
+     */
+    public static final double
+        SHARE_USAGE_EXPONENTIAL_BACKOFF_INITIAL_DELAY_SECONDS_DEFAULT = 2.0;
+
+    /**
+     * The default longest pause in seconds.
+     */
+    public static final double
+        SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT = 300.0;
+
+    /**
+     * The default multiplier applied to the pause each time the send tried
+     * when a pause ends fails.
+     */
+    public static final double
+        SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT = 2.0;
 }

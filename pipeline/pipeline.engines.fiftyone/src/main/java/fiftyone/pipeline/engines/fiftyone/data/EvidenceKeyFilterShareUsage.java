@@ -47,9 +47,12 @@ import static fiftyone.pipeline.core.Constants.*;
  *     {@link Constants#FIFTYONE_COOKIE_PREFIX} or has been configured to be
  *     shared using the constructor parameter.
  * 5) Not a header, cookie, session value or query string parameter.
+ * When all Evidence is shared, everything is included. When all query string
+ * parameters are shared, every query string parameter is included.
  * The prefix of a key is everything before its first '.', and the field
  * everything after it. An email address, the salt for hashed email
- * identifiers, the query string and the path are never included.
+ * identifiers, the query string, the path and the Cookie header are never
+ * included, whatever the configuration.
  */
 public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
 
@@ -64,6 +67,17 @@ public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
      * The cookie name being used to store the Java session id.
      */
     private final String sessionCookieName;
+
+    /**
+     * If true then every key is included, apart from those that are never
+     * shared.
+     */
+    private final boolean shareAllEvidence;
+
+    /**
+     * If true then every query string parameter is included.
+     */
+    private final boolean shareAllQueryStringParameters;
 
     /**
      * The content of HTTP headers in this array will not be included in the
@@ -113,6 +127,40 @@ public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
         List<String> includedQueryStringParams,
         boolean includeSession,
         String sessionCookieName) {
+        this(
+            blockedHttpHeaders,
+            includedQueryStringParams,
+            includeSession,
+            sessionCookieName,
+            false,
+            false);
+    }
+
+    /**
+     * Constructor.
+     * @param blockedHttpHeaders a list of the names of the HTTP headers that
+     *                           share usage should not send to 51Degrees
+     * @param includedQueryStringParams a list of the names of query string
+     *                                  parameters that share usage should send
+     *                                  to 51Degrees
+     * @param includeSession if true then the session cookie will be included in
+     *                       the filter
+     * @param sessionCookieName the name of the cookie that contains the session
+     *                          id
+     * @param shareAllEvidence if true then all Evidence is included, apart from
+     *                         the keys that are never shared
+     * @param shareAllQueryStringParameters if true then all query string
+     *                                      parameters are included
+     */
+    public EvidenceKeyFilterShareUsage(
+        List<String> blockedHttpHeaders,
+        List<String> includedQueryStringParams,
+        boolean includeSession,
+        String sessionCookieName,
+        boolean shareAllEvidence,
+        boolean shareAllQueryStringParameters) {
+        this.shareAllEvidence = shareAllEvidence;
+        this.shareAllQueryStringParameters = shareAllQueryStringParameters;
         // The Cookie header carries every cookie, including the ones the
         // cookie rule leaves out.
         this.blockedHttpHeaders.add("cookies");
@@ -149,6 +197,10 @@ public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
             }
         }
 
+        if (shareAllEvidence) {
+            return true;
+        }
+
         boolean result;
         int separator = lowerKey.indexOf(EVIDENCE_SEPERATOR);
         if (separator > 0) {
@@ -174,8 +226,9 @@ public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
                 case EVIDENCE_QUERY_PREFIX:
                     // Only include query string parameters that start with the
                     // 51Degrees prefix or have been specified in the
-                    // constructor.
-                    result = field.startsWith(Constants.FIFTYONE_COOKIE_PREFIX) ||
+                    // constructor, unless all of them are shared.
+                    result = shareAllQueryStringParameters ||
+                        field.startsWith(Constants.FIFTYONE_COOKIE_PREFIX) ||
                         includedQueryStringParams.contains(field);
                     break;
                 default:
