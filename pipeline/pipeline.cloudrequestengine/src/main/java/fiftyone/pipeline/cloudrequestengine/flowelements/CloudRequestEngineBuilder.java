@@ -25,6 +25,7 @@ package fiftyone.pipeline.cloudrequestengine.flowelements;
 
 import fiftyone.pipeline.annotations.DefaultValue;
 import fiftyone.pipeline.annotations.ElementBuilder;
+import fiftyone.pipeline.cloudrequestengine.Constants.Messages;
 import fiftyone.pipeline.cloudrequestengine.CloudDiscoveryState;
 import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
 import fiftyone.pipeline.core.data.FlowData;
@@ -37,7 +38,11 @@ import fiftyone.pipeline.engines.services.HttpClient;
 import fiftyone.pipeline.engines.services.HttpClientDefault;
 import org.slf4j.ILoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Function;
 
 /**
@@ -55,6 +60,7 @@ public class CloudRequestEngineBuilder extends
     private String evidenceKeysEndpoint = null;
     private String resourceKey = null;
     private String licenseKey = null;
+    private final List<String> requestedProperties = new ArrayList<>();
     private String cloudRequestOrigin = null;
     private int timeoutMillis = Constants.DEFAULT_TIMEOUT_MILLIS;
     private CloudDiscoveryState discoveryState = null;
@@ -78,12 +84,10 @@ public class CloudRequestEngineBuilder extends
 
     @Override
     protected CloudRequestEngine newEngine(List<String> properties) throws Exception {
-        if(resourceKey == null || resourceKey.isEmpty()){
-            throw new PipelineConfigurationException("A resource key is " +
-                    "required to access the cloud server. Please use the " +
-                    "'setResourceKey(String) method to supply your resource " +
-                    "key obtained from https://configure.51degrees.com?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=pipeline.cloudrequestengine-src-main-java-fiftyone-pipeline-cloudrequestengine-flowelements-cloudrequestenginebuilder.java&utm_term=resource-key-required");
-        }
+        String trimmedResourceKey = trimmed(resourceKey);
+        String trimmedLicenseKey = trimmed(licenseKey);
+        List<String> requested = normalized(requestedProperties);
+        checkCredentials(trimmedResourceKey, trimmedLicenseKey, requested);
 
         /*
          *  Check if endPoint has been explicitly set via setEndpoint.
@@ -106,12 +110,13 @@ public class CloudRequestEngineBuilder extends
             new CloudRequestDataFactory(loggerFactory),
             httpClient,
             dataEndpoint,
-            resourceKey,
-            licenseKey,
+            trimmedResourceKey,
+            trimmedLicenseKey,
             propertiesEndpoint,
             evidenceKeysEndpoint,
-                timeoutMillis,
-            cloudRequestOrigin);
+            timeoutMillis,
+            cloudRequestOrigin,
+            requested);
         if (discoveryState != null) {
             engine.useDiscoveryState(discoveryState);
         }
@@ -150,6 +155,51 @@ public class CloudRequestEngineBuilder extends
         CloudRequestEngineDefault engine = built;
         return engine == null ? null : engine.getDiscoveryState();
     }
+
+    private static String trimmed(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    /**
+     * The property names to send as values, trimmed and sent as given,
+     * with blank names and repeats left out. A repeat differs only in
+     * letter case, as the cloud service reads names without regard to
+     * case, and the first spelling given is kept.
+     */
+    private static List<String> normalized(List<String> names) {
+        List<String> result = new ArrayList<>();
+        Set<String> seen = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        for (String name : names) {
+            String normal = trimmed(name);
+            if (normal.isEmpty() == false && seen.add(normal)) {
+                result.add(normal);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Refuse the two combinations of keys and requested properties that the
+     * cloud service refuses on every request, so that a deployment sees one
+     * configuration error when the engine is built. A blank value counts as
+     * absent.
+     */
+    private static void checkCredentials(
+        String resourceKey,
+        String licenseKey,
+        List<String> requestedProperties) {
+        boolean hasResourceKey = resourceKey.isEmpty() == false;
+        boolean hasLicenseKey = licenseKey.isEmpty() == false;
+
+        if (hasResourceKey == false && hasLicenseKey == false) {
+            throw new PipelineConfigurationException(
+                Messages.NoCredential);
+        }
+        if (hasResourceKey == false && requestedProperties.isEmpty()) {
+            throw new PipelineConfigurationException(
+                Messages.LicenseKeyNeedsProperties);
+        }
+    }
     
     private String getEnvironmentVariable(String name) {
     	return System.getenv(name);
@@ -173,7 +223,8 @@ public class CloudRequestEngineBuilder extends
             uri += '/';
         }
         endPoint = uri;
-        return setDataEndpoint(uri + (resourceKey != null ? resourceKey + "." : "") + "json")
+        String key = trimmed(resourceKey);
+        return setDataEndpoint(uri + (key.isEmpty() ? "" : key + ".") + "json")
             .setPropertiesEndpoint(uri + "accessibleproperties")
             .setEvidenceKeysEndpoint(uri + "evidencekeys");
 
@@ -182,7 +233,8 @@ public class CloudRequestEngineBuilder extends
     /**
      * The endpoint the CloudRequestEngine will query to get a processing result.
      * <p>
-     * By default, this is the endpoint value suffixed with the resourcekey and ".json"
+     * By default, this is the endpoint value suffixed with the resourcekey and
+     * ".json", or with "json" alone when no resource key is set
      * @param uri data endpoint
      * @return this builder
      */
@@ -223,11 +275,11 @@ public class CloudRequestEngineBuilder extends
     /**
      * The resource key to query the endpoint with.
      * <p>
-     * No default, a value must be supplied
+     * No default. Either a resource key or a license key must be supplied.
      * @param resourceKey resource key
      * @return this builder
      */
-    @DefaultValue("No default - a resource key must be supplied")
+    @DefaultValue("No default - a resource key or a license key must be supplied")
     public CloudRequestEngineBuilder setResourceKey(String resourceKey) {
         this.resourceKey = resourceKey;
         return this;
@@ -235,6 +287,11 @@ public class CloudRequestEngineBuilder extends
 
     /**
      * The license key to query the endpoint with.
+     * <p>
+     * A license key used without a resource key needs the properties
+     * wanted, named with {@link #setRequestedProperties(List)}. Beside a
+     * resource key it adds the requested properties the license grants to
+     * what the resource key carries.
      * <p>
      * There is no default
      * @param licenseKey license key
@@ -244,6 +301,47 @@ public class CloudRequestEngineBuilder extends
     public CloudRequestEngineBuilder setLicenseKey(String licenseKey) {
         this.licenseKey = licenseKey;
         return this;
+    }
+
+    /**
+     * The properties each request asks the cloud service for, as fully
+     * qualified names such as {@code device.ismobile}, sent as values.
+     * Required with a license key alone. Beside a resource key the cloud
+     * service adds them to the properties the resource key carries. Names
+     * are trimmed and sent as given, and a name given again in another
+     * letter case is sent once. The properties set with
+     * {@link #setProperty(String)} and {@link #setProperties(List)} are not
+     * sent.
+     * <p>
+     * By default no properties are requested
+     * @param properties the fully qualified property names
+     * @return this builder
+     */
+    @DefaultValue("None - required with a license key alone")
+    public CloudRequestEngineBuilder setRequestedProperties(
+        List<String> properties) {
+        if (properties == null) {
+            throw new IllegalArgumentException(
+                "properties must not be null");
+        }
+        requestedProperties.addAll(properties);
+        return this;
+    }
+
+    /**
+     * As {@link #setRequestedProperties(List)}, taking the names as one
+     * comma separated string, as a configuration file gives them.
+     * @param properties comma separated fully qualified property names
+     * @return this builder
+     */
+    @DefaultValue("None - required with a license key alone")
+    public CloudRequestEngineBuilder setRequestedProperties(
+        String properties) {
+        if (properties == null) {
+            throw new IllegalArgumentException(
+                "properties must not be null");
+        }
+        return setRequestedProperties(Arrays.asList(properties.split(",")));
     }
 
     /**

@@ -27,6 +27,35 @@ public class Constants {
     public static final String OriginHeaderName = "Origin";
 
     public class Messages {
+        public static final String NoCredential =
+            "The Cloud Request Engine needs a resource key or a license key "
+            + "to authenticate with, as the cloud service answers 401 to a "
+            + "request that carries neither. Use setResourceKey(String) with "
+            + "a resource key created for free at "
+            + "https://configure.51degrees.com?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=pipeline.cloudrequestengine-src-main-java-fiftyone-pipeline-cloudrequestengine-constants.java&utm_term=no-credential";
+
+        public static final String LicenseKeyNeedsProperties =
+            "The Cloud Request Engine has a license key and no requested "
+            + "properties. A license key names no properties of its own, so "
+            + "the cloud service answers 400 to every request made with one "
+            + "that does not list the properties it wants. Use "
+            + "setRequestedProperties to name the fully qualified "
+            + "properties wanted, for example \"device.ismobile\" and "
+            + "\"device.iscrawler\".";
+
+        public static final String PropertiesNotCovered =
+            "The cloud service did not return the requested properties %s "
+            + "in its answer. They are not covered by the keys in use, so "
+            + "they will be missing from every result. The other requested "
+            + "properties came back and are usable.";
+
+        public static final String RequestedNamesNotProperties =
+            "The cloud service did not return the requested properties %s "
+            + "in its answer. Every property is answered, with a reason "
+            + "when it has no value, so these names are not properties. "
+            + "Check the spelling of each one. The other requested "
+            + "properties came back and are usable.";
+
         public static final String EvidenceConflict =
             "'%s:%s' evidence conflicts with %s";
         public static final String MessageNoDataInResponse =

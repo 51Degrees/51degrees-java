@@ -122,7 +122,21 @@ public class CloudRequestEngineTestsBase {
             .when(httpClient)
             .getResponseString(any(HttpURLConnection.class), anyMap());
 
-        doReturn(jsonResponse)
+        // A license key makes the discovery requests POSTs, so a POST is
+        // answered by its URL in the same way.
+        doAnswer(new Answer<Object>() {
+            @Override
+            public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+                URL url = ((HttpURLConnection)invocationOnMock.getArgument(0)).getURL();
+                if (url.getPath().endsWith("properties")) {
+                    return accessiblePropertiesResponse;
+                }
+                if (url.getPath().endsWith("evidencekeys")) {
+                    return evidenceKeysResponse;
+                }
+                return jsonResponse;
+            }
+        })
                 .when(httpClient)
                 .postData(
                         any(HttpURLConnection.class),

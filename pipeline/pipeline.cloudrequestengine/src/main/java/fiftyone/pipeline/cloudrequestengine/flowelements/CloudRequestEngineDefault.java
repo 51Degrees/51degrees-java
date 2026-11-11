@@ -53,6 +53,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.regex.Pattern;
@@ -97,6 +98,9 @@ public class CloudRequestEngineDefault
     private String evidenceKeysEndpoint;
     private String cloudRequestOrigin;
     private Integer timeoutMillis;
+    private final List<String> requestedProperties;
+    private final AtomicBoolean requestedPropertiesChecked =
+        new AtomicBoolean(false);
 
     /**
      * The lowest HTTP status of a client error. A discovery request answered
@@ -188,7 +192,6 @@ public class CloudRequestEngineDefault
             cloudRequestOrigin);
     }
 
-    @SuppressWarnings("this-escape")
     public CloudRequestEngineDefault(
         Logger logger,
         ElementDataFactory<CloudRequestData> aspectDataFactory,
@@ -200,7 +203,42 @@ public class CloudRequestEngineDefault
         String evidenceKeysEndpoint,
         int timeoutMillis,
         String cloudRequestOrigin) {
+        this(
+            logger,
+            aspectDataFactory,
+            httpClient,
+            endPoint,
+            resourceKey,
+            licenseKey,
+            propertiesEndpoint,
+            evidenceKeysEndpoint,
+            timeoutMillis,
+            cloudRequestOrigin,
+            Collections.<String>emptyList());
+    }
+
+    /**
+     * Constructor.
+     * @param requestedProperties the fully qualified names of the
+     *                            properties to ask for, sent as {@code values}
+     *                            when the list is not empty
+     */
+    @SuppressWarnings("this-escape")
+    public CloudRequestEngineDefault(
+        Logger logger,
+        ElementDataFactory<CloudRequestData> aspectDataFactory,
+        HttpClient httpClient,
+        String endPoint,
+        String resourceKey,
+        String licenseKey,
+        String propertiesEndpoint,
+        String evidenceKeysEndpoint,
+        int timeoutMillis,
+        String cloudRequestOrigin,
+        List<String> requestedProperties) {
         super(logger, aspectDataFactory);
+        this.requestedProperties = Collections.unmodifiableList(
+            new ArrayList<>(requestedProperties));
 
         this.endPoint = endPoint;
         this.resourceKey = resourceKey;
@@ -438,6 +476,61 @@ public class CloudRequestEngineDefault
         ((CloudRequestDataInternal)aspectData).setJsonResponse(response);
 
         validateResponse(response, connection);
+        reportPropertiesNotCovered(response);
+    }
+
+    /**
+     * Compare the properties asked for with the ones the answer carries, and
+     * warn once about any left out. The service leaves out a requested
+     * property it does not answer without naming it, and lower-cases the
+     * names it answers with. A property that is present but null counts as
+     * answered, as it carries a null reason beside it. The request is never
+     * failed, because the properties that did come back are usable. With no
+     * license key, a property the resource key does not carry is answered
+     * as null, so a name left out is not a property, and the message says
+     * so.
+     */
+    private void reportPropertiesNotCovered(String response) {
+        if (requestedProperties.isEmpty() ||
+            requestedPropertiesChecked.compareAndSet(false, true) == false) {
+            return;
+        }
+        JSONObject answer;
+        try {
+            answer = new JSONObject(response);
+        } catch (JSONException e) {
+            return;
+        }
+        List<String> notCovered = new ArrayList<>();
+        for (String name : requestedProperties) {
+            String[] parts = name.split(
+                Pattern.quote(Constants.EVIDENCE_SEPERATOR), 2);
+            if (parts.length < 2 || hasKeyIgnoringCase(
+                    answer.optJSONObject(keyIgnoringCase(answer, parts[0])),
+                    parts[1]) == false) {
+                notCovered.add(name);
+            }
+        }
+        if (notCovered.isEmpty() == false) {
+            logger.warn(String.format(
+                hasLicenseKey() ? PropertiesNotCovered :
+                    RequestedNamesNotProperties,
+                stringJoin(notCovered, ", ")));
+        }
+    }
+
+    private static String keyIgnoringCase(JSONObject object, String name) {
+        for (String key : object.keySet()) {
+            if (key.equalsIgnoreCase(name)) {
+                return key;
+            }
+        }
+        return name;
+    }
+
+    private static boolean hasKeyIgnoringCase(JSONObject object, String name) {
+        return object != null &&
+            object.has(keyIgnoringCase(object, name));
     }
 
     /**
@@ -457,9 +550,10 @@ public class CloudRequestEngineDefault
         Map<String, Object> formData = getFormData(data);
         List<String> formItems = new ArrayList<>();
 
-        formItems.add("resource=" + resourceKey);
-        if(licenseKey != null && licenseKey.isEmpty() == false){
-            formItems.add("license=" + licenseKey);
+        formItems.addAll(credentialItems());
+        if (requestedProperties.isEmpty() == false) {
+            formItems.add("values=" + URLEncoder.encode(
+                stringJoin(requestedProperties, ","), "UTF-8"));
         }
 
         List<String> formKeys = Arrays.asList(formData.keySet().toArray(new String[0]));
@@ -472,6 +566,26 @@ public class CloudRequestEngineDefault
         String string = stringJoin(formItems, "&");
 
         return string.getBytes(StandardCharsets.UTF_8);
+    }
+
+    private boolean hasResourceKey() {
+        return resourceKey != null && resourceKey.isEmpty() == false;
+    }
+
+    private boolean hasLicenseKey() {
+        return licenseKey != null && licenseKey.isEmpty() == false;
+    }
+
+    /** The resource and license keys that are set, as form items. */
+    private List<String> credentialItems() throws UnsupportedEncodingException {
+        List<String> items = new ArrayList<>();
+        if (hasResourceKey()) {
+            items.add("resource=" + URLEncoder.encode(resourceKey, "UTF-8"));
+        }
+        if (hasLicenseKey()) {
+            items.add("license=" + URLEncoder.encode(licenseKey, "UTF-8"));
+        }
+        return items;
     }
 
     /**
@@ -740,10 +854,26 @@ public class CloudRequestEngineDefault
             Map<String, String> headers = new HashMap<>();
             setCommonHeaders(headers);
 
-            HttpURLConnection connection = httpClient.connect(toUrl(propertiesEndpoint.trim() + (resourceKey != null ? "?Resource=" + resourceKey : "")));
-            setTimeouts(connection);
-            jsonResult = httpClient.getResponseString(connection, headers);
-            validateResponse(jsonResult, connection);
+            if (hasLicenseKey()) {
+                // The credentials go in the body, not the URL, so a license
+                // key stays out of request logs.
+                byte[] content = stringJoin(credentialItems(), "&")
+                    .getBytes(StandardCharsets.UTF_8);
+                headers.put(
+                    "Content-Type", "application/x-www-form-urlencoded");
+                headers.put("Content-Length", Integer.toString(content.length));
+                HttpURLConnection connection =
+                    httpClient.connect(toUrl(propertiesEndpoint.trim()));
+                setTimeouts(connection);
+                jsonResult = httpClient.postData(connection, headers, content);
+                validateResponse(jsonResult, connection);
+            } else {
+                HttpURLConnection connection = httpClient.connect(toUrl(
+                    propertiesEndpoint.trim() + "?Resource=" + resourceKey));
+                setTimeouts(connection);
+                jsonResult = httpClient.getResponseString(connection, headers);
+                validateResponse(jsonResult, connection);
+            }
 
             if (jsonResult.isEmpty() == false) {
                 setPublicProperties(jsonResult);

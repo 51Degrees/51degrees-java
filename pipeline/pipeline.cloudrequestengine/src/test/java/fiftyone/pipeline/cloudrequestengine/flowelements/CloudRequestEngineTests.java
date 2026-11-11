@@ -680,7 +680,10 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
         }
 
         ArgumentCaptor<byte[]> body = ArgumentCaptor.forClass(byte[].class);
-        verify(httpClient, times(1)).postData(any(), any(), body.capture());
+        verify(httpClient, times(1)).postData(
+            argThat(c -> c.getURL().getPath().endsWith("properties") == false),
+            any(),
+            body.capture());
         List<String> items = Arrays.asList(
             new String(body.getValue(), StandardCharsets.UTF_8).split("&"));
         assertTrue(items.contains("id.usage=non-marketing"),
@@ -906,7 +909,10 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
             engine.getEvidenceKeyFilter().include("header.sec-ch-ua-platform"),
             "The engine advertises a key the cloud service does not list.");
         ArgumentCaptor<byte[]> body = ArgumentCaptor.forClass(byte[].class);
-        verify(httpClient, times(1)).postData(any(), any(), body.capture());
+        verify(httpClient, times(1)).postData(
+            argThat(c -> c.getURL().getPath().endsWith("properties") == false),
+            any(),
+            body.capture());
         List<String> items = Arrays.asList(
             new String(body.getValue(), StandardCharsets.UTF_8).split("&"));
         assertTrue(items.contains("sec-ch-ua-platform=Windows"),
@@ -948,7 +954,10 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
         }
 
         ArgumentCaptor<byte[]> body = ArgumentCaptor.forClass(byte[].class);
-        verify(httpClient, times(1)).postData(any(), any(), body.capture());
+        verify(httpClient, times(1)).postData(
+            argThat(c -> c.getURL().getPath().endsWith("properties") == false),
+            any(),
+            body.capture());
         return Arrays.asList(
             new String(body.getValue(), StandardCharsets.UTF_8).split("&"));
     }
