@@ -203,9 +203,10 @@ public class JsonBuilderElement
         try {
           sequenceNumber = getSequenceNumber(data);
         } catch (Exception e) {
-            throw new PipelineConfigurationException("Make sure there is a "
-                    + "SequenceElement placed before this JsonBuilderElement "
-                    + "in the pipeline", e);
+            // The caller reads this one, so it carries the message the
+            // specification gives, and the cause carries the same.
+            throw new PipelineConfigurationException(
+                Constants.NO_SEQUENCE_NUMBER_MESSAGE, e);
         }
         
         Map<String, Object> allProperties = getAllProperties(data, config);
@@ -225,9 +226,7 @@ public class JsonBuilderElement
             "query.sequence",
             Integer.class);
         if(sequence.hasValue() == false) {
-            throw new Exception("The JSON Builder Element found no sequence " +
-                "number, so a Sequence Element needs to be placed before it " +
-                "in the Pipeline.");
+            throw new Exception(Constants.NO_SEQUENCE_NUMBER_MESSAGE);
         }
         return sequence.getValue();
     }

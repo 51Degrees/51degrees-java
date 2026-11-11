@@ -135,6 +135,19 @@ public class JsonBuilderSequenceTests {
     }
 
     /**
+     * The message is written out here as well as in the element, so that
+     * changing the element's constant fails this test rather than moving the
+     * other assertions along with it.
+     */
+    @Test
+    public void JsonBuilder_TheMessage_IsTheOneTheSpecificationGives() {
+        assertEquals(
+            "The JSON Builder needs a sequence number. Place a Sequence " +
+                "Element before the JSON Builder in the Pipeline.",
+            Constants.NO_SEQUENCE_NUMBER_MESSAGE);
+    }
+
+    /**
      * With no sequence element and no Evidence there is no sequence number,
      * so the element fails and sets no JSON.
      */
