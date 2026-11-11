@@ -1,0 +1,22 @@
+name: Temporary Cloud Request Engine test run
+
+on:
+  push:
+    branches:
+      - 'tmp/java-ev-*'
+
+jobs:
+  Test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+      - name: Cloud Request Engine tests
+        run: >
+          mvn -B -pl pipeline/pipeline.cloudrequestengine -am test
+          -Dtest=CloudRequestEngineTests -DfailIfNoTests=false
+          -Dsurefire.failIfNoSpecifiedTests=false
