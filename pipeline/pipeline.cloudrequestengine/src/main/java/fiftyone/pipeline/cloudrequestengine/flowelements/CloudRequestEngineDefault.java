@@ -565,10 +565,14 @@ public class CloudRequestEngineDefault
         Map<String, Object> evidence) {
 
         // Lowest precedence first, so a later key replaces an earlier one.
+        // Other prefixes are compared as prefixes, in lower case, then the
+        // whole key, so that the order is the same whatever the map gives.
         List<String> evidenceKeys = new ArrayList<>(evidence.keySet());
         evidenceKeys.sort(Comparator
             .comparingInt((String key) -> otherPrefixRank(keyPrefix(key)))
-            .thenComparing(String.CASE_INSENSITIVE_ORDER)
+            .thenComparing((String key) ->
+                keyPrefix(key).toLowerCase(Locale.ROOT))
+            .thenComparing((String key) -> key.toLowerCase(Locale.ROOT))
             .reversed());
 
         for (String evidenceKey : evidenceKeys) {
