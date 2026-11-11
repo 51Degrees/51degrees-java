@@ -519,8 +519,8 @@ public class JavaScriptBuilderElement
     private static ElementData getSequenceData(FlowData data) {
         // get(String) throws when the Flow Data holds nothing under the key,
         // so the keys it does hold are checked first.
-        return data.getDataKeys().contains(SequenceElement.ELEMENT_DATA_KEY)
-            ? data.get(SequenceElement.ELEMENT_DATA_KEY)
+        return data.getDataKeys().contains(SequenceElement.DEFAULT_ELEMENT_DATA_KEY)
+            ? data.get(SequenceElement.DEFAULT_ELEMENT_DATA_KEY)
             : null;
     }
 

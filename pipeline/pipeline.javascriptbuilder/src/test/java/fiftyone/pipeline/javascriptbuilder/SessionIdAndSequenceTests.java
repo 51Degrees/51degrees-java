@@ -162,7 +162,7 @@ public class SessionIdAndSequenceTests {
 
         @Override
         public String getElementDataKey() {
-            return SequenceElement.ELEMENT_DATA_KEY;
+            return SequenceElement.DEFAULT_ELEMENT_DATA_KEY;
         }
 
         @Override
