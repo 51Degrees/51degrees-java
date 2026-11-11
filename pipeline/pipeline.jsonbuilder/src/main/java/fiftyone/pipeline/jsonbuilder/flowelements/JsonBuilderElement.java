@@ -225,7 +225,8 @@ public class JsonBuilderElement
             "query.sequence",
             Integer.class);
         if(sequence.hasValue() == false) {
-            return 1;
+            throw new Exception("Sequence number not present in evidence. " +
+                "this is mandatory.");
         }
         return sequence.getValue();
     }
