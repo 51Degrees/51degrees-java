@@ -22,6 +22,7 @@
 
 package fiftyone.devicedetection.hash.engine.onpremise.flowelements;
 
+import fiftyone.devicedetection.hash.engine.onpremise.data.DeviceDataHash;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.Swig;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.BoolValueSwig;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.ConfigHashSwig;
@@ -35,6 +36,7 @@ import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
 import fiftyone.pipeline.engines.Constants;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
+import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
 import org.junit.Test;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
@@ -50,8 +52,10 @@ import static fiftyone.devicedetection.shared.testhelpers.FileUtils.LITE_HASH_DA
 import static fiftyone.devicedetection.shared.testhelpers.FileUtils.TAC_HASH_DATA_FILE_NAME;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 /**
@@ -275,6 +279,81 @@ public class PropertyIndexTests {
                 }
             }
         }
+    }
+
+    /**
+     * A name the engine was built with keeps its index after a reload from a
+     * data file that lacks the property. A read by index then gives no value,
+     * as a read by name does, rather than an error, and the other names still
+     * read their own properties.
+     */
+    @Test
+    public void PropertyIndex_NameTheReloadedFileLacks() throws Exception {
+        File lite = dataFile(LITE_HASH_DATA_FILE_PATH);
+        File bigger = dataFile(TAC_HASH_DATA_FILE_NAME);
+        String missing = nameOnlyIn(bigger, lite);
+        assumeTrue("The TAC file has no property the Lite file lacks.",
+            missing != null);
+        List<String> names = Arrays.asList(missing, "IsMobile");
+
+        DeviceDetectionHashEngine engine = build(bigger, names);
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+                 .addFlowElement(engine)
+                 .build()) {
+            engine.refreshData(
+                engine.getDataFiles().get(0).getIdentifier(),
+                Files.readAllBytes(lite.toPath()));
+
+            assertEquals(
+                "Index of '" + missing + "' moved on reload.",
+                Integer.valueOf(0),
+                engine.getPropertyIndex(missing));
+            assertEquals(
+                Integer.valueOf(1),
+                engine.getPropertyIndex("IsMobile"));
+
+            try (FlowData data = pipeline.createFlowData()) {
+                data.addEvidence("header.user-agent", MOBILE);
+                data.process();
+                DeviceDataHash device =
+                    (DeviceDataHash) data.get(DeviceData.class);
+                AspectPropertyValue<List<String>> values =
+                    device.getValues(missing);
+                assertFalse(
+                    "'" + missing + "' has a value from a file without it.",
+                    values.hasValue());
+                assertNotNull(values.getNoValueMessage());
+                assertTrue("IsMobile has no value after the reload.",
+                    device.getIsMobile().hasValue());
+                assertEquals(Boolean.TRUE, device.getIsMobile().getValue());
+            }
+        }
+    }
+
+    /**
+     * The first property name, in name order, that one data file has and the
+     * other lacks, or null if there is none.
+     */
+    private static String nameOnlyIn(File has, File lacks) throws Exception {
+        List<String> lacking = propertyNames(lacks);
+        for (String name : propertyNames(has)) {
+            if (lacking.contains(name) == false) {
+                return name;
+            }
+        }
+        return null;
+    }
+
+    private static List<String> propertyNames(File file) throws Exception {
+        List<String> names = new ArrayList<>();
+        try (DeviceDetectionHashEngine engine = build(file, null)) {
+            for (FiftyOneAspectPropertyMetaData property :
+                engine.getProperties()) {
+                names.add(property.getName());
+            }
+        }
+        Collections.sort(names);
+        return names;
     }
 
     /**
