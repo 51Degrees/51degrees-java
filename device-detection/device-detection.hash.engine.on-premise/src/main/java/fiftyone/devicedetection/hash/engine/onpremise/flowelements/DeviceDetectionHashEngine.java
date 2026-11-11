@@ -63,6 +63,16 @@ public class DeviceDetectionHashEngine
     private final Random rand = new Random();
 
     /**
+     * Case insensitive map from each property name the engine was built with
+     * to its required property index. Built once, from the names given at
+     * build, so an index keeps naming the same property after a reload from a
+     * data file whose property order differs. Empty when the engine was built
+     * with no names, in which case reads go by name.
+     */
+    private volatile Map<String, Integer> propertyIndexes =
+        Collections.emptyMap();
+
+    /**
      * Construct a new instance of the {@link DeviceDetectionHashEngine}.
      * @param logger logger instance to use for logging
      * @param dataFile data file to read the data set from
@@ -111,6 +121,52 @@ public class DeviceDetectionHashEngine
      */
     public MetaDataSwig getMetaData() {
         return engine.getMetaData();
+    }
+
+    /**
+     * Get the required property index for a property name, or null when the
+     * engine was not built with that name and the read has to go by name.
+     * @param propertyName name of the property
+     * @return required property index, or null
+     */
+    Integer getPropertyIndex(String propertyName) {
+        return propertyIndexes.get(propertyName);
+    }
+
+    /**
+     * Build the map from the names the engine was built with to their
+     * required property indexes, using the name the native engine reports at
+     * each index. Called once, after the native engine is first made, and
+     * never again, because the whole point of the index is that it keeps
+     * naming the same property across a reload.
+     */
+    private void setPropertyIndexes() {
+        Map<String, Integer> indexes =
+            new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        try {
+            VectorStringSwig names = propertiesConfigSwig.getProperties();
+            int count = names.size();
+            names.delete();
+            if (count > 0) {
+                try (EvidenceDeviceDetectionSwig evidence =
+                         new EvidenceDeviceDetectionSwig();
+                     ResultsHashSwig results = engine.process(evidence)) {
+                    for (int i = 0; i < count; i++) {
+                        String name = results.getPropertyName(i);
+                        if (name != null && name.isEmpty() == false) {
+                            indexes.put(name, i);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.error(
+                "Exception occurred while mapping property names to indexes. " +
+                    "Values will be read by name.",
+                e);
+            indexes.clear();
+        }
+        propertyIndexes = Collections.unmodifiableMap(indexes);
     }
 
     @Override
@@ -286,6 +342,7 @@ public class DeviceDetectionHashEngine
                 throw new IllegalStateException("Failed to create SwigEngine after " + tries +
                         " retries, last exception was " + lastMessage);
             }
+            setPropertyIndexes();
         } else {
             engine.refreshData();
         }
@@ -296,6 +353,7 @@ public class DeviceDetectionHashEngine
     public void refreshData(String dataFileIdentifier, byte[] data) {
         if (engine == null) {
             engine = new EngineHashSwig(data, config, propertiesConfigSwig);
+            setPropertyIndexes();
         } else {
             engine.refreshData(data);
         }
