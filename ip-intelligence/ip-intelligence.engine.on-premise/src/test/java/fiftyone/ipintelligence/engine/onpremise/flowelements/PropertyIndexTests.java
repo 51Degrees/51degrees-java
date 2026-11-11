@@ -22,20 +22,32 @@
 
 package fiftyone.ipintelligence.engine.onpremise.flowelements;
 
+import fiftyone.ipintelligence.engine.onpremise.interop.swig.ConfigIpiSwig;
+import fiftyone.ipintelligence.engine.onpremise.interop.swig.EngineIpiSwig;
+import fiftyone.ipintelligence.engine.onpremise.interop.swig.RequiredPropertiesConfigSwig;
+import fiftyone.ipintelligence.engine.onpremise.interop.swig.ResultsIpiSwig;
+import fiftyone.ipintelligence.engine.onpremise.interop.swig.VectorStringSwig;
 import fiftyone.pipeline.engines.Constants;
+import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
 import org.junit.Test;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static fiftyone.ipintelligence.shared.testhelpers.FileUtils.LITE_IPI_DATA_FILE_NAME;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 /**
@@ -58,6 +70,8 @@ public class PropertyIndexTests {
         "AccuracyRadiusMin",
         "RegisteredName",
         "Latitude");
+
+    private static final String ADDRESS = "185.28.167.77";
 
     private static File dataFile(String name) {
         try {
@@ -150,14 +164,95 @@ public class PropertyIndexTests {
     }
 
     /**
-     * An engine built with no names has no indexes, so every read goes by
-     * name.
+     * An engine built with no names has an index for every property of the
+     * first data file it loads, no two properties share an index, and the
+     * native results name that property at that index.
      */
     @Test
-    public void PropertyIndex_NoNamesReadsByName() throws Exception {
+    public void PropertyIndex_NoNamesFromFirstFile() throws Exception {
+        File file = dataFile(LITE_IPI_DATA_FILE_NAME);
+        try (IPIntelligenceOnPremiseEngine engine = build(file, null);
+             NativeEngine nativeEngine = new NativeEngine(file);
+             ResultsIpiSwig results = nativeEngine.engine.process(ADDRESS)) {
+            List<String> names = propertyNames(engine);
+            assertTrue("Expected the data file to have properties.",
+                names.isEmpty() == false);
+            Set<Integer> seen = new HashSet<>();
+            for (String name : names) {
+                Integer index = engine.getPropertyIndex(name);
+                assertNotNull("Expected an index for '" + name + "'.", index);
+                assertTrue(
+                    "Index " + index + " given to more than one name.",
+                    seen.add(index));
+                assertEquals(
+                    "Expected the native results to name '" + name +
+                        "' at index " + index + ".",
+                    name,
+                    results.getPropertyName(index));
+            }
+        }
+    }
+
+    /**
+     * An engine built with no names keeps the indexes it took from its first
+     * data file through a reload, because they are made once and not from
+     * the reloaded data set.
+     */
+    @Test
+    public void PropertyIndex_NoNamesSurvivesReload() throws Exception {
         File file = dataFile(LITE_IPI_DATA_FILE_NAME);
         try (IPIntelligenceOnPremiseEngine engine = build(file, null)) {
-            assertNull(engine.getPropertyIndex("RegisteredName"));
+            Map<String, Integer> before = new HashMap<>();
+            for (String name : propertyNames(engine)) {
+                Integer index = engine.getPropertyIndex(name);
+                assertNotNull("Expected an index for '" + name + "'.", index);
+                before.put(name, index);
+            }
+            engine.refreshData(engine.getDataFiles().get(0).getIdentifier());
+            for (Map.Entry<String, Integer> entry : before.entrySet()) {
+                assertEquals(
+                    "Index of '" + entry.getKey() + "' moved on reload.",
+                    entry.getValue(),
+                    engine.getPropertyIndex(entry.getKey()));
+            }
+        }
+    }
+
+    private static List<String> propertyNames(
+        IPIntelligenceOnPremiseEngine engine) {
+        List<String> names = new ArrayList<>();
+        for (FiftyOneAspectPropertyMetaData property :
+            engine.getProperties()) {
+            names.add(property.getName());
+        }
+        return names;
+    }
+
+    /**
+     * A native engine on its own with no names, so a test can read the
+     * native results directly.
+     */
+    private static class NativeEngine implements AutoCloseable {
+        private final ConfigIpiSwig config = new ConfigIpiSwig();
+        private final RequiredPropertiesConfigSwig required;
+        private final EngineIpiSwig engine;
+
+        NativeEngine(File file) {
+            config.setMaxPerformance();
+            RequiredPropertiesConfigSwig made;
+            try (VectorStringSwig vector = new VectorStringSwig()) {
+                made = new RequiredPropertiesConfigSwig(vector);
+            }
+            required = made;
+            engine = new EngineIpiSwig(
+                file.getAbsolutePath(), config, required);
+        }
+
+        @Override
+        public void close() {
+            engine.delete();
+            required.delete();
+            config.delete();
         }
     }
 }

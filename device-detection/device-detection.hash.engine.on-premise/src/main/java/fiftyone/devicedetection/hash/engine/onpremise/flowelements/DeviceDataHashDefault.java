@@ -94,7 +94,7 @@ public class DeviceDataHashDefault
 
     /**
      * Get the required property index for a property name, or null when the
-     * engine was not built with that name, so the read falls back to the name.
+     * engine has no index for that name, so the read falls back to the name.
      * @param propertyName name of the property
      * @return required property index, or null
      */

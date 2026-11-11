@@ -68,10 +68,20 @@ public class IPIntelligenceOnPremiseEngine
      * list, the first where a name is given more than once, as the native
      * engine gives it. Made from the names given at build and never from the
      * data set, so an index keeps naming the same property after a reload
-     * from a data file whose property order differs. Empty when the engine
-     * was built with no names, in which case reads go by name.
+     * from a data file whose property order differs. When the engine was
+     * built with no names it is made instead from the names the native engine
+     * reports after the first data file loads, which are the properties of
+     * that file sorted by name and which a reload does not change.
      */
-    private final Map<String, Integer> propertyIndexes;
+    private volatile Map<String, Integer> propertyIndexes;
+
+    /**
+     * True once {@link #propertyIndexes} holds the names the indexes are
+     * fixed on, which is at construction when the engine was built with
+     * names and after the first data file loads when it was not. A reload
+     * never makes the map again.
+     */
+    private volatile boolean propertyIndexesFixed;
 
     /**
      * Construct a new instance of the {@link IPIntelligenceOnPremiseEngine}.
@@ -100,6 +110,7 @@ public class IPIntelligenceOnPremiseEngine
         this.config = config;
         this.propertiesConfigSwig = properties;
         this.propertyIndexes = indexesOf(propertyNames);
+        this.propertyIndexesFixed = this.propertyIndexes.isEmpty() == false;
         addDataFile(dataFile);
     }
 
@@ -130,12 +141,30 @@ public class IPIntelligenceOnPremiseEngine
 
     /**
      * Get the required property index for a property name, or null when the
-     * engine was not built with that name and the read has to go by name.
+     * index list has no such name and the read has to go by name. That covers
+     * a name the engine was not built with, and a property only a data file
+     * loaded after the first has.
      * @param propertyName name of the property
      * @return required property index, or null
      */
     Integer getPropertyIndex(String propertyName) {
         return propertyIndexes.get(propertyName);
+    }
+
+    /**
+     * Fix the indexes on the names the native engine reports, which it does
+     * only for an engine built with no names, and only after its first data
+     * file has loaded. Those names are the properties of that file sorted by
+     * name, and the native engine keeps them and their order through every
+     * later reload, so the map is made once and a reload never changes it.
+     */
+    private void fixPropertyIndexes() {
+        if (propertyIndexesFixed == false) {
+            try (VectorStringSwig names = engine.getRequiredProperties()) {
+                propertyIndexes = indexesOf(new ArrayList<>(names));
+            }
+            propertyIndexesFixed = true;
+        }
     }
 
     /**
@@ -385,6 +414,7 @@ public class IPIntelligenceOnPremiseEngine
     }
 
     private void setEngineMetaData() {
+        fixPropertyIndexes();
         evidenceKeys = getKeysFromEngine(engine);
         evidenceKeyFilter = new EvidenceKeyFilterWhitelist(
             evidenceKeys,
