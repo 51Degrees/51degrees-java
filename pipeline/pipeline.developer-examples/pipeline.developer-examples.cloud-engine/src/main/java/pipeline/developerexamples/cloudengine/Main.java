@@ -54,10 +54,9 @@ public class Main {
         "https://cloud.51degrees.com/api/v4/";
 
     /**
-     * The cloud endpoint, taken from _51DEGREES_CLOUD_ENDPOINT when that
-     * is set,
-     * which is the variable every 51Degrees cloud example honours and the
-     * one the cloud request engine builder reads by itself when no
+     * The cloud endpoint, taken from _51DEGREES_CLOUD_ENDPOINT when that is
+     * set, which is the variable every 51Degrees cloud example honours and
+     * the one the cloud request engine builder reads by itself when no
      * endpoint is given. A host other than cloud.51degrees.com would be
      * used to (a) use an on premise web server, or (b) use a privately
      * hosted version of the 51Degrees cloud for performance reasons,
