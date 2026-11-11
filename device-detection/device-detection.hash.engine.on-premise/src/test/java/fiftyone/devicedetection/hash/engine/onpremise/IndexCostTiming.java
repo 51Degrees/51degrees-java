@@ -90,15 +90,24 @@ public class IndexCostTiming {
         }
     }
 
+    private static final int WARM_UP_ROUNDS = 2;
+
+    /**
+     * Each round times every mode in turn, so a slow start or a change in
+     * the runner falls on all the modes alike, and the first rounds warm up.
+     */
     private String processNanos(
         Pipeline pipeline,
         List<String> userAgents,
         List<String> names,
         int[] modes) {
-        StringBuilder result = new StringBuilder();
-        for (int mode : modes) {
-            List<Long> rounds = new ArrayList<>();
-            for (int round = 0; round <= ROUNDS; round++) {
+        List<List<Long>> rounds = new ArrayList<>();
+        for (int m = 0; m < modes.length; m++) {
+            rounds.add(new ArrayList<>());
+        }
+        for (int round = 0; round < WARM_UP_ROUNDS + ROUNDS; round++) {
+            for (int m = 0; m < modes.length; m++) {
+                int mode = modes[m];
                 long start = System.nanoTime();
                 for (String userAgent : userAgents) {
                     try (FlowData data = pipeline.createFlowData()) {
@@ -124,12 +133,15 @@ public class IndexCostTiming {
                     }
                 }
                 long elapsed = System.nanoTime() - start;
-                if (round > 0) {
-                    rounds.add(elapsed / userAgents.size());
+                if (round >= WARM_UP_ROUNDS) {
+                    rounds.get(m).add(elapsed / userAgents.size());
                 }
             }
-            result.append(' ').append(MODES[mode]).append("Ns=")
-                .append(spread(rounds));
+        }
+        StringBuilder result = new StringBuilder();
+        for (int m = 0; m < modes.length; m++) {
+            result.append(' ').append(MODES[modes[m]]).append("Ns=")
+                .append(spread(rounds.get(m)));
         }
         return result.toString();
     }
