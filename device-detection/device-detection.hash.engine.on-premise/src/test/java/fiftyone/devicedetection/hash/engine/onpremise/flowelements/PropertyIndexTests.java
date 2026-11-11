@@ -22,6 +22,12 @@
 
 package fiftyone.devicedetection.hash.engine.onpremise.flowelements;
 
+import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.BoolValueSwig;
+import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.ConfigHashSwig;
+import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.EngineHashSwig;
+import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.RequiredPropertiesConfigSwig;
+import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.ResultsHashSwig;
+import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.VectorStringSwig;
 import fiftyone.devicedetection.shared.DeviceData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
@@ -34,7 +40,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static fiftyone.devicedetection.shared.testhelpers.FileUtils.LITE_HASH_DATA_FILE_PATH;
@@ -64,6 +72,15 @@ public class PropertyIndexTests {
         "IsMobile",
         "PlatformName",
         "BrowserName");
+
+    private static final String MOBILE =
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) " +
+            "AppleWebKit/605.1.15 (KHTML, like Gecko) " +
+            "Version/15.0 Mobile/15E148 Safari/604.1";
+
+    private static final int READS = 20000;
+
+    private static final int ROUNDS = 5;
 
     private static File dataFile(String name) {
         try {
@@ -257,5 +274,109 @@ public class PropertyIndexTests {
                 }
             }
         }
+    }
+
+    /**
+     * Reads IsMobile {@link #READS} times by name and {@link #READS} times by
+     * index from the same native results, and {@link #READS} times through
+     * the typed accessor, which is the whole path a caller takes, and prints
+     * the median nanoseconds of one read over {@link #ROUNDS} rounds after a
+     * warm-up. Every read must give the same value. The times are printed
+     * rather than asserted, because runners vary.
+     */
+    @Test
+    public void PropertyIndex_ReadByIndexAgainstByName() throws Exception {
+        File file = dataFile(LITE_HASH_DATA_FILE_PATH);
+        DeviceDetectionHashEngine engine = build(file, NAMES);
+        int index = engine.getPropertyIndex("IsMobile");
+        ConfigHashSwig config = new ConfigHashSwig();
+        config.setHighPerformance();
+        RequiredPropertiesConfigSwig required;
+        try (VectorStringSwig names = new VectorStringSwig()) {
+            names.addAll(NAMES);
+            required = new RequiredPropertiesConfigSwig(names);
+        }
+        EngineHashSwig nativeEngine =
+            new EngineHashSwig(file.getAbsolutePath(), config, required);
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+                 .addFlowElement(engine)
+                 .build();
+             FlowData data = pipeline.createFlowData();
+             ResultsHashSwig results = nativeEngine.process(MOBILE)) {
+            data.addEvidence("header.user-agent", MOBILE);
+            data.process();
+            DeviceData device = data.get(DeviceData.class);
+
+            boolean expected = readByName(results);
+            assertEquals(expected, readByIndex(results, index));
+            assertEquals(expected, (boolean) device.getIsMobile().getValue());
+
+            List<Long> byName = new ArrayList<>();
+            List<Long> byIndex = new ArrayList<>();
+            List<Long> typed = new ArrayList<>();
+            int different = 0;
+            for (int round = 0; round <= ROUNDS; round++) {
+                long start = System.nanoTime();
+                for (int i = 0; i < READS; i++) {
+                    if (readByName(results) != expected) {
+                        different++;
+                    }
+                }
+                long nameNanos = System.nanoTime() - start;
+                start = System.nanoTime();
+                for (int i = 0; i < READS; i++) {
+                    if (readByIndex(results, index) != expected) {
+                        different++;
+                    }
+                }
+                long indexNanos = System.nanoTime() - start;
+                start = System.nanoTime();
+                for (int i = 0; i < READS; i++) {
+                    if (device.getIsMobile().getValue() != expected) {
+                        different++;
+                    }
+                }
+                long typedNanos = System.nanoTime() - start;
+                if (round > 0) {
+                    byName.add(nameNanos / READS);
+                    byIndex.add(indexNanos / READS);
+                    typed.add(typedNanos / READS);
+                }
+            }
+            assertEquals("Every read gives the same value", 0, different);
+            System.out.println(String.format(
+                "READ COST IsMobile reads=%d rounds=%d byNameNs=%s " +
+                    "byIndexNs=%s typedNs=%s java=%s os=%s",
+                READS, ROUNDS, spread(byName), spread(byIndex),
+                spread(typed), System.getProperty("java.version"),
+                System.getProperty("os.name")));
+        }
+        finally {
+            nativeEngine.delete();
+            required.delete();
+            config.delete();
+        }
+    }
+
+    private static boolean readByName(ResultsHashSwig results) {
+        try (BoolValueSwig value = results.getValueAsBool("IsMobile")) {
+            return value.getValue();
+        }
+    }
+
+    private static boolean readByIndex(ResultsHashSwig results, int index) {
+        try (BoolValueSwig value = results.getValueAsBool(index)) {
+            return value.getValue();
+        }
+    }
+
+    /**
+     * The lowest, median and highest, in that order.
+     */
+    private static String spread(List<Long> values) {
+        List<Long> sorted = new ArrayList<>(values);
+        Collections.sort(sorted);
+        return sorted.get(0) + "/" + sorted.get(sorted.size() / 2) + "/" +
+            sorted.get(sorted.size() - 1);
     }
 }
