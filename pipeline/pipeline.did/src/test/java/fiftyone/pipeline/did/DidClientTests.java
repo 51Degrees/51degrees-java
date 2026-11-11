@@ -67,6 +67,9 @@ import static org.junit.Assert.assertTrue;
 public class DidClientTests {
 
     private static final String ENDPOINT = "https://example.test/api/v4/";
+    private static final String TEST_LICENCE = "TESTKEYNOTREALABCDEFGHIJ1234";
+    private static final String TEST_LICENCE_MASKED =
+        "************************1234";
     private static final Instant WEEK1 = Instant.parse("2026-08-03T00:00:00Z");
     private static final Instant WEEK2 = WEEK1.plus(Duration.ofDays(7));
     private static final Instant WEEK3 = WEEK2.plus(Duration.ofDays(7));
@@ -1271,6 +1274,71 @@ public class DidClientTests {
     public void redeem_TransportFailureFailsWithIoException() {
         failure(IOException.class,
             client.redeem(validDid, "sealed", "abc"));
+    }
+
+    /**
+     * The service answers a refused licence key with a body that names it.
+     * The error message shows the key only by its last 4 characters, with
+     * every character before them replaced, as every 51Degrees package
+     * writes a licence key in a message.
+     */
+    @Test
+    public void redeem_RefusedLicenceIsMaskedInTheMessage() {
+        transport.queue(401,
+            "Invalid license key(s) supplied: " + TEST_LICENCE);
+
+        DidHttpException error = failure(DidHttpException.class,
+            licensedClient().redeem(validDid, "sealed", "abc"));
+
+        assertEquals(401, error.getStatusCode());
+        assertFalse(error.getMessage(),
+            error.getMessage().contains(TEST_LICENCE));
+        assertTrue(error.getMessage(),
+            error.getMessage().contains(TEST_LICENCE_MASKED));
+    }
+
+    @Test
+    public void redeem_LicenceInErrorsIsMaskedInTheMessage() {
+        transport.queue(400, "{\"errors\":[\"The license key "
+            + TEST_LICENCE + " does not include this product.\"]}");
+
+        IllegalArgumentException error = failure(
+            IllegalArgumentException.class,
+            licensedClient().redeem(validDid, "sealed", "abc"));
+
+        assertFalse(error.getMessage(),
+            error.getMessage().contains(TEST_LICENCE));
+        assertTrue(error.getMessage(),
+            error.getMessage().contains(TEST_LICENCE_MASKED));
+    }
+
+    /**
+     * A key of 4 characters or fewer is replaced in full, because its last
+     * 4 characters would be all of it.
+     */
+    @Test
+    public void redeem_ShortLicenceIsMaskedInFull() {
+        DidClient shortLicence = DidClient.builder("resource")
+            .licenceKey("1234")
+            .endpoint(ENDPOINT)
+            .transport(transport)
+            .build();
+        transport.queue(401, "Invalid license key(s) supplied: 1234");
+
+        DidHttpException error = failure(DidHttpException.class,
+            shortLicence.redeem(validDid, "sealed", "abc"));
+
+        assertFalse(error.getMessage(), error.getMessage().contains("1234"));
+        assertTrue(error.getMessage(), error.getMessage().endsWith("****"));
+    }
+
+    private DidClient licensedClient() {
+        return DidClient.builder("resource")
+            .licenceKey(TEST_LICENCE)
+            .endpoint(ENDPOINT)
+            .transport(transport)
+            .clock(clock)
+            .build();
     }
 
     @Test

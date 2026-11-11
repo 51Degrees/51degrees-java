@@ -64,8 +64,8 @@ public class GettingStartedOnPrem {
     cxx/data, and is downloaded if it is missing, or you may specify another file as a command line
     parameter.
 
-    Note that the Lite data file is only used for illustration, and has limited accuracy and
-    capabilities. The example shows the properties only the Enterprise data file has as needing
+    Note that the Lite data file is only used for illustration, and has a small number of
+    Properties. The example shows the properties only the Enterprise data file has as needing
     it. Contact us for a copy of the Enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-gettingstartedonprem.java&utm_term=lite_v_4_1_hash */
     public static String LITE_V_4_1_HASH = "device-detection/51Degrees-LiteV4.1.hash";
     public static String ENTERPRISE_HASH = "TAC-HashV41.hash";

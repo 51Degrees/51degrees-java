@@ -26,6 +26,9 @@ import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import org.junit.Test;
 import org.slf4j.ILoggerFactory;
@@ -33,6 +36,7 @@ import org.slf4j.LoggerFactory;
 
 import fiftyone.devicedetection.shared.testhelpers.FileUtils;
 import fiftyone.pipeline.engines.Constants;
+import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
 import static fiftyone.devicedetection.shared.testhelpers.FileUtils.LITE_HASH_DATA_FILE_PATH;
 import static fiftyone.devicedetection.shared.testhelpers.FileUtils.TAC_HASH_DATA_FILE_NAME;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
@@ -93,6 +97,47 @@ public class EngineTests {
 	@Test
 	public void Engine_Hash_GetDataSourceTier_Enterprise() throws Exception {
 		testDataSourceTier(TAC_HASH_DATA_FILE_NAME);
+	}
+
+	/**
+	 * The match metric Properties follow the data file's Properties, in the
+	 * order of the match metrics table in the specification.
+	 * @throws Exception
+	 */
+	@Test
+	public void Engine_Hash_MatchMetricOrder() throws Exception {
+		File dataFile = null;
+		try {
+			dataFile = getFilePath(LITE_HASH_DATA_FILE_PATH);
+		}
+		catch (IllegalArgumentException e) {
+			assumeTrue(e.getMessage(), false);
+		}
+		List<String> expected = Arrays.asList(
+			"MatchedNodes",
+			"Difference",
+			"Drift",
+			"DeviceId",
+			"UserAgents",
+			"Iterations",
+			"Method");
+
+		List<String> names = new ArrayList<>();
+		try (DeviceDetectionHashEngine engine = createEngine(dataFile)) {
+			List<FiftyOneAspectPropertyMetaData> properties =
+				engine.getProperties();
+			assertTrue(
+				"Expected at least " + expected.size() + " Properties, " +
+					"but there were " + properties.size(),
+				properties.size() >= expected.size());
+			for (FiftyOneAspectPropertyMetaData property : properties.subList(
+				properties.size() - expected.size(),
+				properties.size())) {
+				names.add(property.getName());
+			}
+		}
+
+		assertEquals(expected, names);
 	}
 
 }

@@ -104,6 +104,19 @@ public interface FlowElement<
     boolean isConcurrent();
 
     /**
+     * Whether the element knows all the property metadata and accepted
+     * Evidence it will expose. An element that gets them from a remote
+     * service returns false until it has them, and anything that keeps what
+     * it reads from the element, such as the Pipeline's map of available
+     * properties, reads it again until then.
+     * @return true if the property metadata and accepted Evidence are
+     * complete
+     */
+    default boolean hasLoadedProperties() {
+        return true;
+    }
+
+    /**
      * Indicates whether the element has been closed using the {@link #close()}
      * method, either explicitly or as a result of a 'try with resource'.
      * @return true if the element has been closed
