@@ -53,6 +53,7 @@ jobs:
             '-Dsurefire.failIfNoSpecifiedTests=false'
           if ($LASTEXITCODE -ne 0) { exit 1 }
       - name: IP Intelligence property index tests
+        if: always()
         shell: pwsh
         run: |
           Push-Location 51degrees-java
