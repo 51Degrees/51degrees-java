@@ -92,8 +92,7 @@ public class PropertyIndexTests {
     /**
      * Every name the engine was built with has an index, and the index is the
      * place of the name in the build time list, not its place in the data
-     * file. This is the test that goes red without the change, because
-     * reading by name alone gives the right answer today.
+     * file.
      */
     @Test
     public void PropertyIndex_FromBuildTimeNames() throws Exception {
@@ -127,8 +126,26 @@ public class PropertyIndexTests {
     }
 
     /**
-     * A name the engine was not built with has no index, so the read falls
-     * back to the name and gives the answer it gives today.
+     * A name given twice, in any letter case, has the index of its first
+     * place, as the native engine gives it.
+     */
+    @Test
+    public void PropertyIndex_NameGivenTwiceHasFirstIndex() throws Exception {
+        File file = dataFile(LITE_HASH_DATA_FILE_PATH);
+        try (DeviceDetectionHashEngine engine = build(file,
+            Arrays.asList("IsMobile", "BrowserName", "ismobile"))) {
+            assertEquals(
+                Integer.valueOf(0),
+                engine.getPropertyIndex("IsMobile"));
+            assertEquals(
+                Integer.valueOf(1),
+                engine.getPropertyIndex("BrowserName"));
+        }
+    }
+
+    /**
+     * A name the engine was not built with has no index, so the read goes by
+     * name.
      */
     @Test
     public void PropertyIndex_UnknownNameHasNoIndex() throws Exception {
@@ -140,9 +157,8 @@ public class PropertyIndexTests {
     }
 
     /**
-     * An engine built with no names reads by name, which is the path left
-     * unchanged until the native layer keeps the first load's names across a
-     * reload.
+     * An engine built with no names has no indexes, so every read goes by
+     * name.
      */
     @Test
     public void PropertyIndex_NoNamesReadsByName() throws Exception {
