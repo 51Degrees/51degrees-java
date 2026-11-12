@@ -152,6 +152,79 @@ public class DataUpdateServiceWatchedFileTests {
     }
 
     /**
+     * The file system watcher runs on its own setting. Watching a file
+     * downloads nothing, so the watcher does not wait for automatic updates
+     * to be on, and with its own setting off a replaced file is not loaded.
+     * Polling runs only with automatic updates on.
+     */
+    @Test
+    public void WatcherRunsOnItsOwnSetting() throws Exception {
+        String[] names = {
+            "watcher on, automatic updates on",
+            "watcher on, automatic updates off",
+            "watcher off, automatic updates on"};
+        boolean[] automatic = {true, false, true};
+        boolean[] watching = {true, true, false};
+        for (int i = 0; i < names.length; i++) {
+            checkWatcherSetting(names[i], automatic[i], watching[i]);
+        }
+    }
+
+    private static void checkWatcherSetting(
+        String name,
+        boolean automatic,
+        boolean watching) throws Exception {
+        final List<Long> timers = new ArrayList<>();
+        final AtomicReference<Runnable> watcher = new AtomicReference<>();
+        FileWrapperFactory fileWrapperFactory = mock(FileWrapperFactory.class);
+        when(fileWrapperFactory.build(anyString())).then(invocation ->
+            new FileWrapperDefault((String) invocation.getArgument(0)));
+        when(fileWrapperFactory.getLastModified(anyString())).then(
+            invocation -> lastModified(invocation.getArgument(0)));
+        DataUpdateService dataUpdate = new DataUpdateServiceDefault(
+            null,
+            mock(HttpClient.class),
+            fileWrapperFactory,
+            futureFactory(timers, watcher));
+
+        OnPremiseAspectEngine<? extends AspectData,
+            ? extends AspectPropertyMetaData> engine = engine();
+        Path directory = Files.createTempDirectory("watched");
+        Path dataFile = directory.resolve("data.dat");
+        Files.write(dataFile, "Old".getBytes());
+        AspectEngineDataFileDefault file =
+            watchedFile(engine, dataFile, automatic, watching);
+
+        try {
+            dataUpdate.registerDataFile(file);
+            assertEquals(name + ", a file system watcher was created",
+                watching, file.getConfiguration().getWatchKey() != null);
+            assertEquals(name + ", the watcher's task was scheduled",
+                watching, watcher.get() != null);
+            assertEquals(name + ", polling timers set",
+                automatic ? 1 : 0, timers.size());
+
+            // macOS watchers are too slow to wait for. The test holds the
+            // polling timers, so only a watcher can load the replaced file.
+            if (isMac() == false) {
+                Files.write(dataFile, "New".getBytes());
+                Runnable task = watcher.get();
+                long end = System.currentTimeMillis() + WAIT_FOR_EVENT_MILLIS;
+                while (task != null && refreshCount(engine) == 0 &&
+                    System.currentTimeMillis() < end) {
+                    task.run();
+                    Thread.sleep(RETRY_MILLIS);
+                }
+                assertEquals(name + ", the replaced file was loaded",
+                    watching ? 1 : 0, refreshCount(engine));
+            }
+        }
+        finally {
+            cleanUp(file, directory, dataFile);
+        }
+    }
+
+    /**
      * A watched file that cannot be opened is tried, with a pause between
      * tries, until the wait ends. The update then reports
      * AUTO_UPDATE_TIMEOUT, logs nothing, and leaves the engine and the
@@ -361,9 +434,18 @@ public class DataUpdateServiceWatchedFileTests {
         OnPremiseAspectEngine<? extends AspectData,
             ? extends AspectPropertyMetaData> engine,
         Path dataFile) {
+        return watchedFile(engine, dataFile, true, true);
+    }
+
+    private static AspectEngineDataFileDefault watchedFile(
+        OnPremiseAspectEngine<? extends AspectData,
+            ? extends AspectPropertyMetaData> engine,
+        Path dataFile,
+        boolean automatic,
+        boolean watching) {
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
-        config.setAutomaticUpdatesEnabled(true);
-        config.setFileSystemWatcherEnabled(true);
+        config.setAutomaticUpdatesEnabled(automatic);
+        config.setFileSystemWatcherEnabled(watching);
         config.setPollingIntervalSeconds(1);
         config.setDataFilePath(dataFile.toString());
         AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
