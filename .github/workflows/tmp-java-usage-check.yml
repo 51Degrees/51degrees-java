@@ -1,0 +1,394 @@
+name: Temporary test and measurement of the usage sharing Evidence change
+
+on:
+  push:
+    branches:
+      - 'tmp/java-usage-check'
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  Test:
+    name: Test ${{ matrix.side }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - side: red, the test before the change
+            sha: 2b4fe019d74a340e1816937d219ca70da9f3f6a1
+          - side: green, the test with the change
+            sha: 97e007dafa5ac3f2cc5e279cc58a3747547b6e2e
+    steps:
+      - name: Checkout Common
+        uses: actions/checkout@v6
+        with:
+          repository: 51Degrees/common-ci
+
+      - name: Run the usage sharing tests
+        env:
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          SHA: ${{ matrix.sha }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          $Repo = '51degrees-java'
+          ./steps/configure-git.ps1 -GitHubToken $env:ACCESS_TOKEN -GitHubUser Automation51D -GitHubEmail 51DCI@51Degrees.com
+          ./steps/clone-repo.ps1 -RepoName $Repo -OrgName 51Degrees -Branch rc
+          git -C $Repo fetch --depth 1 origin $env:SHA
+          git -C $Repo checkout --detach $env:SHA
+          $subs = @(git -C $Repo config -f .gitmodules --get-regexp '\.path$' | ForEach-Object { ($_ -split ' ', 2)[1] } | Where-Object { $_ -match '^pipeline/' -and $_ -notmatch 'owid' })
+          git -C $Repo submodule update --init --depth 1 -- @subs
+          Write-Host "Testing $(git -C $Repo rev-parse HEAD)"
+          & "./$Repo/ci/setup-environment.ps1" -RepoName $Repo -JavaSDKEnvVar JAVA_HOME_17_X64
+          . "./$Repo/ci/packages.ps1"
+          Push-Location "$Repo/pipeline"
+          try {
+              mvn install @MavenOptions -DskipTests
+          } finally {
+              Pop-Location
+          }
+          Push-Location "$Repo/pipeline/pipeline.engines.fiftyone"
+          try {
+              $PSNativeCommandUseErrorActionPreference = $false
+              mvn test @MavenOptions "-Dtest=ShareUsageEvidenceTests,ShareUsageElementTests,ShareUsageTrackerTests,ShareUsageAcceptedEvidenceTests"
+              $code = $LASTEXITCODE
+          } finally {
+              Pop-Location
+          }
+          if ($code -ne 0) { throw "The usage sharing tests failed, mvn exited $code" }
+
+  Measure:
+    name: Measure usage sharing overhead on main, rc and one-change trees
+    runs-on: ubuntu-22.04-arm
+    timeout-minutes: 150
+    steps:
+      - name: Checkout Common
+        uses: actions/checkout@v6
+        with:
+          repository: 51Degrees/common-ci
+
+      - name: Measure
+        env:
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          MAIN_SHA: f69da52e52104687206d1ca1c3595d2935790f34
+          RC_SHA: 36c153d5cc824b83f461a556735ecde8793ceaf4
+          PR51_SHA: 1aaaf7093bd0546bfacab5302ac44fc6a2216adf
+          PR68_SHA: 7299688fcec249f763af4dc5d86731cac86ca761
+          FIX_SHA: 97e007dafa5ac3f2cc5e279cc58a3747547b6e2e
+          ROUNDS_UNTIL: '2026-11-12T22:50:00Z'
+          MAX_ROUNDS: '32'
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $false
+
+          # Every tree runs the usage sharing overhead test the way
+          # ci/run-performance-tests.ps1 runs it, on this one runner. Each
+          # round runs every tree once and the order turns by one place each
+          # round, so runner drift falls on every tree alike.
+          $Org = '51Degrees'
+          $Repo = '51degrees-java'
+          $JavaVar = 'JAVA_HOME_17_X64'
+          $Root = (Get-Location).Path
+          $Until = [datetime]::Parse($env:ROUNDS_UNTIL).ToUniversalTime()
+          $MaxRounds = [int]$env:MAX_ROUNDS
+          $Maven = '--batch-mode', '--no-transfer-progress'
+
+          $Fo = 'pipeline/pipeline.engines.fiftyone/src/main/java/fiftyone/pipeline/engines/fiftyone'
+          $FoTest = 'pipeline/pipeline.engines.fiftyone/src/test/java/fiftyone/pipeline/engines/fiftyone'
+          $Base = "$Fo/flowelements/ShareUsageBase.java"
+          $Tracker = "$Fo/trackers/ShareUsageTracker.java"
+          $Filter = "$Fo/data/EvidenceKeyFilterShareUsage.java"
+          $Found = "$Fo/data/ShareUsageEvidence.java"
+          # Every file java#51 changed. main holds each of them exactly as
+          # java#51 found them, so taking java#51's versions applies java#51
+          # and nothing else.
+          $Pr51Files = @(
+              "$Fo/data/EvidenceKeyFilterShareUsage.java"
+              "$Fo/flowelements/ShareUsageBase.java"
+              "$Fo/flowelements/ShareUsageBuilderBase.java"
+              "$FoTest/data/EvidenceKeyFilterShareUsageTests.java"
+              "$FoTest/flowelements/ShareUsageElementTests.java"
+          )
+
+          # Each tree is main or rc with at most one change moved across.
+          #  no-68   rc's usage sharing element and tracker read the Evidence
+          #          as it is, rather than through ShareUsageEvidence.find,
+          #          which java#68 added
+          #  add-68  main's usage sharing element and tracker read the
+          #          Evidence through ShareUsageEvidence.find, with java#68's
+          #          ShareUsageTracker.java and ShareUsageEvidence.java (main's
+          #          ShareUsageTracker.java is the one java#68 started from)
+          #  no-51   rc's usage sharing filter drops the never-shared key loop
+          #          and the tracker uses the plain filter again, both of
+          #          which java#51 added
+          #  add-51  main takes java#51's versions of every file it changed
+          $trees = @(
+              @{ Name = 'main'; Branch = 'main'; Base = $env:MAIN_SHA; Change = '' }
+              @{ Name = 'rc'; Branch = 'rc'; Base = $env:RC_SHA; Change = '' }
+              @{ Name = 'fix'; Branch = 'rc'; Base = $env:FIX_SHA; Change = '' }
+          )
+
+          function Invoke-Git {
+              git @args
+              if ($LASTEXITCODE -ne 0) { throw "git $($args -join ' ') exited $LASTEXITCODE" }
+          }
+
+          # Replaces exactly one match of a pattern, and fails otherwise, so a
+          # change can never apply twice or silently not at all.
+          function Edit-Once {
+              param([string]$File, [string]$Pattern, [string]$Replacement)
+              $text = [IO.File]::ReadAllText($File)
+              $count = ([regex]::Matches($text, $Pattern)).Count
+              if ($count -ne 1) { throw "Expected one match of '$Pattern' in $File, found $count" }
+              [IO.File]::WriteAllText($File, [regex]::Replace($text, $Pattern, $Replacement))
+          }
+
+          Write-Host "::group::Configure Git"
+          ./steps/configure-git.ps1 -GitHubToken $env:ACCESS_TOKEN -GitHubUser Automation51D -GitHubEmail 51DCI@51Degrees.com
+          Write-Host "::endgroup::"
+
+          foreach ($t in $trees) {
+              Write-Host "::group::Prepare $($t.Name)"
+              $t.Built = $false
+              $t.Path = "$($t.Name)/$Repo"
+              $t.M2 = Join-Path $Root "m2-$($t.Name)"
+              try {
+                  ./steps/clone-repo.ps1 -RepoName $Repo -OrgName $Org -Branch $t.Branch -DestinationDir $t.Name
+                  $p = $t.Path
+                  Invoke-Git -C $p fetch origin $t.Base
+                  Invoke-Git -C $p checkout --detach $t.Base
+                  # The pipeline's own submodules, being the JavaScript
+                  # templates and, on rc, the configuration schema. Neither
+                  # is on the measured path, so a failure only warns.
+                  $subs = @(git -C $p config -f .gitmodules --get-regexp '\.path$' | ForEach-Object { ($_ -split ' ', 2)[1] } | Where-Object { $_ -match '^pipeline/' -and $_ -notmatch 'owid' })
+                  git -C $p submodule update --init --depth 1 -- @subs
+                  if ($LASTEXITCODE -ne 0) { Write-Host "::warning title=Submodules::$($t.Name) submodule update exited $LASTEXITCODE" }
+                  switch ($t.Change) {
+                      'no-68' {
+                          Edit-Once "$p/$Base" 'ShareUsageEvidence\.find\(flowData\.getEvidence\(\)\)' 'flowData.getEvidence().asKeyMap()'
+                          Edit-Once "$p/$Tracker" 'ShareUsageEvidence\.find\(data\.getEvidence\(\)\)' 'data.getEvidence().asKeyMap()'
+                      }
+                      'add-68' {
+                          Invoke-Git -C $p fetch --depth 1 origin $env:PR68_SHA
+                          Invoke-Git -C $p checkout $env:PR68_SHA -- $Tracker $Found
+                          Edit-Once "$p/$Base" 'Map<String, Object> evidence = flowData\.getEvidence\(\)\.asKeyMap\(\);' 'Map<String, Object> evidence = fiftyone.pipeline.engines.fiftyone.data.ShareUsageEvidence.find(flowData.getEvidence());'
+                      }
+                      'no-51' {
+                          Edit-Once "$p/$Filter" '(?m)^[ \t]*for \(String neverShared : NEVER_SHARED_EVIDENCE_KEYS\) \{\r?\n(?:[^\n]*\n){5}' ''
+                          Edit-Once "$p/$Base" 'new EvidenceKeyFilterShareUsageTracker\(' 'new EvidenceKeyFilterShareUsage('
+                      }
+                      'add-51' {
+                          Invoke-Git -C $p fetch --depth 1 origin $env:PR51_SHA
+                          Invoke-Git -C $p checkout $env:PR51_SHA -- @Pr51Files
+                      }
+                  }
+                  $t.Sha = (git -C $p rev-parse HEAD).Trim()
+                  $t.Ready = $true
+                  Write-Host "$($t.Name) is $($t.Sha), change '$($t.Change)'"
+                  git -C $p --no-pager status --short
+                  git -C $p --no-pager diff HEAD
+              } catch {
+                  $t.Ready = $false
+                  Write-Host "::warning title=Tree not prepared::$($t.Name): $_"
+              }
+              Write-Host "::endgroup::"
+          }
+
+          # Each tree installs its own pipeline into its own local Maven
+          # repository, so no tree can pick up another's classes.
+          foreach ($t in $trees) {
+              if (-not $t.Ready) { continue }
+              Write-Host "::group::Build $($t.Name)"
+              try {
+                  & "./$($t.Path)/ci/setup-environment.ps1" -RepoName $t.Path -JavaSDKEnvVar $JavaVar
+                  Push-Location "$($t.Path)/pipeline"
+                  try {
+                      mvn install @Maven "-Dmaven.repo.local=$($t.M2)" -DskipTests
+                      if ($LASTEXITCODE -ne 0) { throw "mvn install exited $LASTEXITCODE" }
+                  } finally {
+                      Pop-Location
+                  }
+                  $t.Built = $true
+              } catch {
+                  Write-Host "::warning title=Tree not built::$($t.Name): $_"
+              }
+              Write-Host "::endgroup::"
+          }
+
+          $trees | ConvertTo-Json -Depth 3 | Set-Content -Path (Join-Path $Root 'trees.json')
+          $active = @($trees | Where-Object { $_.Built })
+          Write-Host "Measuring $($active.Count) trees: $(($active | ForEach-Object Name) -join ', ')"
+          if ($active.Count -eq 0) { throw "No tree built" }
+
+          function Invoke-Overhead {
+              param($Tree, [string]$Json)
+              Push-Location "$($Tree.Path)/pipeline/pipeline.engines.fiftyone"
+              try {
+                  mvn test @Maven "-Dmaven.repo.local=$($Tree.M2)" -DfailIfNoTests=false "-Dsurefire.failIfNoSpecifiedTests=false" `
+                      "-Dtest=*ShareUsageOverheadTests*" "-Dfiftyone.performance.json=$Json" |
+                      Where-Object { $_ -match 'ShareUsageOverhead|Tests run|ERROR|FAIL' } | Out-Host
+                  return $LASTEXITCODE
+              } finally {
+                  Pop-Location
+              }
+          }
+
+          # Round 0 resolves the test plugins and is not counted.
+          foreach ($t in $active) {
+              Write-Host "::group::Warm up $($t.Name)"
+              $code = Invoke-Overhead -Tree $t -Json (Join-Path $Root "warmup-$($t.Name).json")
+              Write-Host "Warm-up of $($t.Name) exited $code"
+              Write-Host "::endgroup::"
+          }
+
+          $round = 0
+          while ($true) {
+              $round++
+              $offset = ($round - 1) % $active.Count
+              $order = @($active[$offset..($active.Count - 1)])
+              if ($offset -gt 0) { $order += @($active[0..($offset - 1)]) }
+              foreach ($t in $order) {
+                  $json = Join-Path $Root "pipeline-performance-$($t.Name)-r$round.json"
+                  $code = Invoke-Overhead -Tree $t -Json $json
+                  if ($code -ne 0 -or -not (Test-Path $json)) {
+                      Write-Host "::warning title=Round carries no figures::$($t.Name) round $round exited $code"
+                  } else {
+                      $f = Get-Content -Raw $json | ConvertFrom-Json
+                      Write-Host "Round $round $($t.Name) | single $($f.LowerIsBetter.ShareUsageOverhead_SingleEvidence_ms) | hundred $($f.LowerIsBetter.ShareUsageOverhead_HundredEvidence_ms)"
+                  }
+              }
+              if ($round -ge $MaxRounds -or (Get-Date).ToUniversalTime() -gt $Until) {
+                  Write-Host "Stopped after round $round at $((Get-Date).ToUniversalTime().ToString('HH:mm:ss')) UTC"
+                  break
+              }
+          }
+
+      - name: Summarise
+        if: ${{ !cancelled() }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $Root = (Get-Location).Path
+
+          function Get-Quantile {
+              param([double[]]$Values, [double]$Q)
+              $sorted = @($Values | Sort-Object)
+              $count = $sorted.Count
+              if ($count -eq 0) { return $null }
+              $pos = ($count - 1) * $Q
+              $lo = [Math]::Floor($pos); $hi = [Math]::Ceiling($pos)
+              return $sorted[$lo] + ($sorted[$hi] - $sorted[$lo]) * ($pos - $lo)
+          }
+
+          function Format-Number {
+              param([double]$Value)
+              return $Value.ToString('0.0000')
+          }
+
+          $rows = foreach ($file in Get-ChildItem -Path $Root -Filter 'pipeline-performance-*.json') {
+              $name = $file.BaseName -replace '^pipeline-performance-', ''
+              if ($name -notmatch '^(.+)-r(\d+)$') { continue }
+              $tree = $Matches[1]
+              $round = [int]$Matches[2]
+              $json = Get-Content -Raw $file.FullName | ConvertFrom-Json -AsHashtable
+              foreach ($metric in $json['LowerIsBetter'].Keys) {
+                  [pscustomobject]@{ Tree = $tree; Round = $round; Metric = $metric; Value = [double]$json['LowerIsBetter'][$metric] }
+              }
+          }
+          $rows = @($rows)
+
+          $treeNames = @()
+          $lines = @('# Java usage sharing overhead on ubuntu-22.04-arm, main, rc and one-change trees', '')
+          if (Test-Path (Join-Path $Root 'trees.json')) {
+              $trees = Get-Content -Raw (Join-Path $Root 'trees.json') | ConvertFrom-Json
+              foreach ($t in $trees) {
+                  $treeNames += $t.Name
+                  $lines += "- ``$($t.Name)``, $($t.Sha), change '$($t.Change)', built $($t.Built)"
+              }
+              $lines += ''
+          }
+          $lines += 'One runner, ubuntu-22.04-arm. Every tree runs `*ShareUsageOverheadTests*` with the Maven options of `ci/run-performance-tests.ps1`, from its own local Maven repository. Each round runs every tree once, and the order turns by one place each round. Figures are milliseconds per call, lower is better.'
+          $lines += ''
+
+          if ($rows.Count -eq 0) {
+              $lines += '**No rounds produced any figures.**'
+          } else {
+              $metrics = @($rows | Select-Object -ExpandProperty Metric -Unique | Sort-Object)
+              $lines += '## Medians'
+              $lines += ''
+              $lines += '| Measure | Tree | Rounds | Median | Middle half | Lowest to highest |'
+              $lines += '| --- | --- | --- | --- | --- | --- |'
+              foreach ($metric in $metrics) {
+                  foreach ($tree in $treeNames) {
+                      $values = @($rows | Where-Object { $_.Metric -eq $metric -and $_.Tree -eq $tree } | Select-Object -ExpandProperty Value)
+                      if ($values.Count -eq 0) { continue }
+                      $lines += "| ``$metric`` | $tree | $($values.Count) | $(Format-Number (Get-Quantile $values 0.5)) | $(Format-Number (Get-Quantile $values 0.25)) to $(Format-Number (Get-Quantile $values 0.75)) | $(Format-Number (($values | Measure-Object -Minimum).Minimum)) to $(Format-Number (($values | Measure-Object -Maximum).Maximum)) |"
+                  }
+              }
+              $lines += ''
+
+              $pairs = @(@('rc', 'main'), @('fix', 'rc'), @('fix', 'main'))
+              $lines += '## One tree against another'
+              $lines += ''
+              $lines += '"Lower in" counts the rounds in which the first tree took less time than the second in the same round.'
+              $lines += ''
+              $lines += '| Measure | First | Second | Median change | Ranges overlap | Middle halves overlap | Lower in |'
+              $lines += '| --- | --- | --- | --- | --- | --- | --- |'
+              foreach ($metric in $metrics) {
+                  foreach ($pair in $pairs) {
+                      $a = @($rows | Where-Object { $_.Metric -eq $metric -and $_.Tree -eq $pair[0] })
+                      $b = @($rows | Where-Object { $_.Metric -eq $metric -and $_.Tree -eq $pair[1] })
+                      if ($a.Count -eq 0 -or $b.Count -eq 0) { continue }
+                      $av = [double[]]($a | Select-Object -ExpandProperty Value); $bv = [double[]]($b | Select-Object -ExpandProperty Value)
+                      $am = Get-Quantile $av 0.5; $bm = Get-Quantile $bv 0.5
+                      $change = $bm -ne 0 ? (($am - $bm) / $bm * 100) : 0
+                      $overlap = (($av | Measure-Object -Minimum).Minimum -le ($bv | Measure-Object -Maximum).Maximum) -and (($bv | Measure-Object -Minimum).Minimum -le ($av | Measure-Object -Maximum).Maximum)
+                      $mid = ((Get-Quantile $av 0.25) -le (Get-Quantile $bv 0.75)) -and ((Get-Quantile $bv 0.25) -le (Get-Quantile $av 0.75))
+                      $lower = 0; $paired = 0
+                      foreach ($x in $a) {
+                          $y = $b | Where-Object Round -eq $x.Round | Select-Object -First 1
+                          if (-not $y) { continue }
+                          $paired++
+                          if ($x.Value -lt $y.Value) { $lower++ }
+                      }
+                      $lines += "| ``$metric`` | $($pair[0]) | $($pair[1]) | $($change.ToString('+0.0;-0.0;0.0')) per cent | $($overlap ? 'yes' : 'no') | $($mid ? 'yes' : 'no') | $lower of $paired |"
+                  }
+              }
+              $lines += ''
+
+              $lines += '## Every round'
+              $lines += ''
+              foreach ($metric in $metrics) {
+                  $lines += "### $metric"
+                  $lines += ''
+                  $lines += '| Round | ' + ($treeNames -join ' | ') + ' |'
+                  $lines += '| --- | ' + (($treeNames | ForEach-Object { '---' }) -join ' | ') + ' |'
+                  foreach ($round in ($rows | Where-Object Metric -eq $metric | Select-Object -ExpandProperty Round -Unique | Sort-Object)) {
+                      $cells = foreach ($tree in $treeNames) {
+                          $v = @($rows | Where-Object { $_.Metric -eq $metric -and $_.Tree -eq $tree -and $_.Round -eq $round } | Select-Object -ExpandProperty Value)
+                          $v.Count ? (Format-Number $v[0]) : '-'
+                      }
+                      $lines += "| $round | " + ($cells -join ' | ') + ' |'
+                  }
+                  $lines += ''
+              }
+          }
+
+          $text = $lines -join "`n"
+          Set-Content -Path (Join-Path $Root 'measurement.md') -Value $text
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $text
+          Write-Host $text
+
+      - name: Upload results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: measurement
+          path: |
+            measurement.md
+            trees.json
+            pipeline-performance-*.json
+          if-no-files-found: warn
