@@ -61,10 +61,10 @@ public class ExamplesWithoutSettingsTest {
      */
     private static String runWithoutSettings(Main main) throws Exception {
         assumeTrue("Skipping, a data file or licence key is set in the environment",
-                System.getenv(DataFileHelper.IPI_PATH_ENV_VAR) == null &&
+                System.getenv(DataFileHelper.IPI_PATH_VARIABLE) == null &&
                         System.getenv(LICENSE_KEY) == null &&
                         System.getenv(LICENSE_KEY.toUpperCase()) == null);
-        String dataFile = System.clearProperty(DataFileHelper.IPI_PATH_ENV_VAR);
+        String dataFile = System.clearProperty(DataFileHelper.IPI_PATH_VARIABLE);
         String licenseKey = System.clearProperty(LICENSE_KEY);
         PrintStream out = System.out;
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -74,7 +74,7 @@ public class ExamplesWithoutSettingsTest {
         } finally {
             System.setOut(out);
             if (dataFile != null) {
-                System.setProperty(DataFileHelper.IPI_PATH_ENV_VAR, dataFile);
+                System.setProperty(DataFileHelper.IPI_PATH_VARIABLE, dataFile);
             }
             if (licenseKey != null) {
                 System.setProperty(LICENSE_KEY, licenseKey);

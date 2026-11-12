@@ -67,6 +67,15 @@ public class Main {
         new AtomicBoolean(false);
 
     /**
+     * The deprecated name of the first of the resource key names, read
+     * when that one is not set.
+     */
+    private static final String OLD_RESOURCE_KEY_VARIABLE = "RESOURCE_KEY";
+
+    private static final AtomicBoolean oldResourceKeyVariableLogged =
+        new AtomicBoolean(false);
+
+    /**
      * The cloud endpoint, taken from _51DEGREES_CLOUD_ENDPOINT when that is
      * set, which is the variable every 51Degrees cloud example honours and
      * the one the cloud request engine builder reads by itself when no
@@ -125,11 +134,26 @@ public class Main {
 
     /**
      * The 51Degrees resource key that was found, or null when none of the
-     * names above is set anywhere.
+     * names above is set anywhere. When the first name is not set its
+     * deprecated name RESOURCE_KEY is read before the others, and the
+     * first use of it is logged as a warning.
      */
     static String configuredResourceKey() {
         for (String name : RESOURCE_KEY_NAMES) {
             String value = env(name);
+            if (value == null && name.equals(RESOURCE_KEY_NAMES[0])) {
+                value = env(OLD_RESOURCE_KEY_VARIABLE);
+                if (value != null
+                    && oldResourceKeyVariableLogged.compareAndSet(
+                        false, true)) {
+                    loggerFactory.getLogger(Main.class.getName()).warn(
+                        "The environment variable " + OLD_RESOURCE_KEY_VARIABLE
+                        + " is deprecated and " + name
+                        + " replaces it. Set " + name
+                        + " to the same value, as a later release may no longer "
+                        + "read " + OLD_RESOURCE_KEY_VARIABLE + ".");
+                }
+            }
             if (value != null) {
                 return value;
             }

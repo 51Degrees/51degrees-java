@@ -45,7 +45,7 @@ public class KeyHelperTest {
      * The names getOrSetTestResourceKey reads, in its order.
      */
     private static final List<String> EXAMPLE_NAMES = Arrays.asList(
-        KeyHelper.RESOURCE_KEY_ENV_VAR, KeyHelper.TEST_RESOURCE_KEY);
+        KeyHelper.RESOURCE_KEY_VARIABLE, KeyHelper.TEST_RESOURCE_KEY);
 
     /**
      * With no key anywhere, the lookup logs that there is none and stores
@@ -118,11 +118,11 @@ public class KeyHelperTest {
     @Test
     public void requireResourceKey_ExampleNamesInTheirOrder() {
         Map<String, String> values = new HashMap<>();
-        values.put(KeyHelper.RESOURCE_KEY_ENV_VAR, KEY_A);
+        values.put(KeyHelper.RESOURCE_KEY_VARIABLE, KEY_A);
         values.put(KeyHelper.TEST_RESOURCE_KEY, KEY_B);
         assertEquals(KEY_A, KeyHelper.requireResourceKey(values::get,
             EXAMPLE_NAMES, "every IP Intelligence property", "ip"));
-        values.remove(KeyHelper.RESOURCE_KEY_ENV_VAR);
+        values.remove(KeyHelper.RESOURCE_KEY_VARIABLE);
         assertEquals(KEY_B, KeyHelper.requireResourceKey(values::get,
             EXAMPLE_NAMES, "every IP Intelligence property", "ip"));
     }

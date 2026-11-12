@@ -61,7 +61,7 @@ public class OnPremisePerformanceProfileTests {
     public void requireDataFile() {
         Assume.assumeTrue(
             "No IP Intelligence data file was found, so this test is "
-            + "skipped. Set " + FileUtils.IPI_PATH_ENV_VAR + " to the path "
+            + "skipped. Set " + FileUtils.IPI_PATH_VARIABLE + " to the path "
             + "of an .ipi file, or download the Lite file with "
             + "cxx/data/get-data-files.",
             dataFile != null);
