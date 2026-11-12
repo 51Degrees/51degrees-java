@@ -32,15 +32,11 @@ Describe 'Find-EnvironmentNameProblem' {
         @{ Line = 'System.getenv("RESOURCE_KEY")' }
         @{ Line = 'env("_51DEGREES_RESOURCE_KEY", "RESOURCE_KEY");' }
         @{ Line = 'env("_51DEGREES_LICENSE_KEY", "LICENSE_KEY");' }
-        @{ Line = 'public static final String FOD = "FOD_CLOUD_API_URL";' }
         @{ Line = '$env:LICENSE_KEY = $Keys.TestResourceKey' }
         @{ Line = '${env:LICENSE_KEY} = $Keys.TestResourceKey' }
         @{ Line = '${Env:RESOURCE_KEY}' }
         @{ Line = '$ENV:RESOURCE_KEY = "key"' }
         @{ Line = 'Remove-Item Env:\LICENSE_KEY' }
-        @{ Line = '<Endpoint>${env:FOD_CLOUD_API_URL}</Endpoint>' }
-        @{ Line = '          url: ${{ env.FOD_CLOUD_API_URL }}' }
-        @{ Line = '${FOD_CLOUD_API_URL}' }
         @{ Line = 'Constants.LEGACY_ENV_VARS' }
         @{ Line = '          LICENSE_KEY: ${{ secrets.DEVICE_DETECTION_KEY }}' }
         @{ Line = '- RESOURCE_KEY names the resource key' }
@@ -65,6 +61,19 @@ Describe 'Find-EnvironmentNameProblem' {
         @{ Line = '  PAID_RESOURCE_KEY: ${{ env.PAID_RESOURCE_KEY }}' }
         @{ Line = 'System.getenv("SUPER_RESOURCE_KEY")' }
         @{ Line = 'Set the key with !!YOUR_RESOURCE_KEY!! in the readme.' }
+    ) {
+        Get-Kind $Line | Should -BeNullOrEmpty
+    }
+
+    # The cloud endpoint is still read from its deprecated name when the
+    # current name is not set, so that name is allowed wherever it appears.
+    It 'leaves the deprecated endpoint name alone in <Line>' -ForEach @(
+        @{ Line = 'public static final String FOD = "FOD_CLOUD_API_URL";' }
+        @{ Line = 'System.getenv("FOD_CLOUD_API_URL")' }
+        @{ Line = '<Endpoint>${env:FOD_CLOUD_API_URL}</Endpoint>' }
+        @{ Line = '          url: ${{ env.FOD_CLOUD_API_URL }}' }
+        @{ Line = '${FOD_CLOUD_API_URL}' }
+        @{ Line = 'FOD_CLOUD_API_URL=https://host/api/v4/ mvn test' }
     ) {
         Get-Kind $Line | Should -BeNullOrEmpty
     }
