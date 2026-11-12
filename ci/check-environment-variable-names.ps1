@@ -1,9 +1,11 @@
 # Every 51Degrees environment variable name in this repository starts with an
 # underscore, because a POSIX shell cannot set a name that starts with a digit,
-# and each variable has one name with nothing read in its place. This reads
-# every file git tracks, which leaves out build output and the submodules, and
-# fails on any name that starts with the digit and on any old name that is
-# still read.
+# and each variable has one name with nothing read in its place. The one
+# exception is the cloud endpoint, whose deprecated name FOD_CLOUD_API_URL
+# the packages still read when _51DEGREES_CLOUD_ENDPOINT is not set, so that
+# name is allowed. This reads every file git tracks, which leaves out build
+# output and the submodules, and fails on any name that starts with the digit
+# and on any other old name that is still read.
 #
 # Dot-sourcing the script defines Find-EnvironmentNameProblem without reading
 # the repository, which is how its tests use it.
@@ -50,7 +52,7 @@ $script:DigitInitialPattern = [regex]::new(
 # variable at all.
 $script:FallbackPattern = [regex]::new(
     '(?:["'']|(?i:env)[:.]\\?|\$\{|getenv\(\s*["'']|^[\t\- ]*)' +
-    '(?:RESOURCE_KEY|LICENSE_KEY|FOD_CLOUD_API_URL)(?![A-Za-z0-9_])|' +
+    '(?:RESOURCE_KEY|LICENSE_KEY)(?![A-Za-z0-9_])|' +
     '\bLEGACY_[A-Z_]*ENV_VARS?\b')
 
 # The problems on one line, each as its kind, 'digit' or 'fallback', and the

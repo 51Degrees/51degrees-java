@@ -129,8 +129,13 @@ public class DidClientTests {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void endpoint_DefaultsToTheCloudOrTheEnvironment() {
-        String fromEnvironment = System.getenv(DidClient.ENDPOINT_VARIABLE);
+        String fromEnvironment =
+            System.getenv(DidClient.CLOUD_ENDPOINT_VARIABLE);
+        if (fromEnvironment == null || fromEnvironment.trim().isEmpty()) {
+            fromEnvironment = System.getenv(DidClient.ENDPOINT_VARIABLE);
+        }
         String expected = fromEnvironment == null
             || fromEnvironment.trim().isEmpty()
             ? DidClient.DEFAULT_ENDPOINT
