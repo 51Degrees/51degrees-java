@@ -1,0 +1,50 @@
+name: Temporary old endpoint name tests
+
+on:
+  push:
+    branches:
+      - 'tmp/endpoint-java-**'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Old endpoint name tests, ${{ matrix.os }} java ${{ matrix.java }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        java: ['8', '21']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch the OWID source the 51Did module compiles
+        run: git submodule update --init --depth 1 pipeline/owid-java
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '${{ matrix.java }}'
+          cache: maven
+      - name: Run the old endpoint name tests
+        shell: pwsh
+        run: |
+          git log --oneline -2
+          $modules = @(
+            'pipeline.cloudrequestengine',
+            'pipeline.did',
+            'pipeline.developer-examples/pipeline.developer-examples.cloud-engine')
+          mvn -B -q -f pipeline/pom.xml -pl ($modules -join ',') -am install `
+            '-DskipTests' '-Dmaven.javadoc.skip=true'
+          if ($LASTEXITCODE -ne 0) { Write-Output 'The build failed.'; exit 1 }
+          $failed = @()
+          foreach ($module in $modules) {
+            mvn -B -f pipeline/pom.xml -pl $module test `
+              '-Dtest=CloudRequestEngineBuilderTests,DidClientEnvironmentTests,EndpointTests' `
+              '-DfailIfNoTests=false' '-Dsurefire.failIfNoSpecifiedTests=false'
+            if ($LASTEXITCODE -ne 0) { $failed += $module }
+          }
+          Write-Output "Modules with failing tests: $($failed -join ', ')"
+          if ($failed.Count -ne 0) { exit 1 }
