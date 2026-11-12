@@ -548,11 +548,10 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 }
             }
 
-            // If file system watcher is enabled then set it up. The
-            // automatic update switch governs the watcher as well as the
-            // polling timer.
-            if (aspectDataFile.getAutomaticUpdatesEnabled() &&
-                    aspectDataFile.getConfiguration().getFileSystemWatcherEnabled() &&
+            // If file system watcher is enabled then set it up. The watcher
+            // runs on its own setting. Watching a file downloads nothing, so
+            // it needs neither automatic updates nor a license key.
+            if (aspectDataFile.getConfiguration().getFileSystemWatcherEnabled() &&
                     aspectDataFile.getConfiguration().getWatchKey() == null &&
                     aspectDataFile.getDataFilePath() != null &&
                     aspectDataFile.getDataFilePath().isEmpty() == false) {
