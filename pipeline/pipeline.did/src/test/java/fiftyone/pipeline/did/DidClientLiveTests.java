@@ -70,8 +70,10 @@ public class DidClientLiveTests {
         if (resourceKey == null) {
             fail(LiveCloudKeys.noResourceKey());
         }
-        client = new DidClient(
-            resourceKey, LiveCloudKeys.find(LiveCloudKeys.LICENCE_KEY_NAMES));
+        // One lookup serves both, so the key the form body sends and the
+        // one hasLicenceKey() answers for can never disagree.
+        licenceKey = LiveCloudKeys.find(LiveCloudKeys.LICENCE_KEY_NAMES);
+        client = new DidClient(resourceKey, licenceKey);
     }
 
     @Test
