@@ -1,0 +1,67 @@
+name: Temporary old name guard tests
+
+on:
+  push:
+    branches:
+      - 'tmp/endpoint-java-**'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Two tests with the old names set, java ${{ matrix.java }}
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['8', '17']
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch the submodules without their large files
+        env:
+          GIT_LFS_SKIP_SMUDGE: '1'
+        run: git submodule update --init --recursive --depth 1
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '${{ matrix.java }}'
+          cache: maven
+      - name: Build everything as the full build does
+        shell: pwsh
+        run: |
+          git log --oneline -3
+          mvn install --batch-mode --no-transfer-progress -q '-DskipTests' '-Pdev'
+          if ($LASTEXITCODE -ne 0) { Write-Output 'The build failed.'; exit 1 }
+      - name: Run the two tests with the old names set
+        shell: pwsh
+        run: |
+          # A key of the form the helpers accept, which is not a real key,
+          # and a file that exists and is not a data file. Each old name is
+          # given as a Java system property.
+          $key = 'AQAAAAAAAAAAAAAAAAAAAAAA'
+          $file = (Resolve-Path pom.xml).Path
+          # What a child of sh sees of the same names set in the environment.
+          ${env:51DEGREES_RESOURCE_KEY} = $key
+          ${env:51DEGREES_IPI_PATH} = $file
+          "Old names in this shell's environment: $(@(Get-ChildItem env: | Where-Object Name -like '51DEGREES*').Count)"
+          "Old names in the environment of a child of sh: $(sh -c 'env | grep -c ^51DEGREES')"
+          "Old names in the environment of a child of bash: $(bash -c 'env | grep -c ^51DEGREES')"
+          $tests = @(
+            'fiftyone.ipintelligence.examples.shared.KeyHelperTest'
+            'fiftyone.ipintelligence.examples.console.ExamplesWithoutSettingsTest'
+          ) -join ','
+          mvn test --batch-mode --no-transfer-progress '-Pdev' "-Dtest=$tests" `
+            "-D51DEGREES_RESOURCE_KEY=$key" "-D51DEGREES_IPI_PATH=$file" `
+            '-DfailIfNoTests=false' '-Dsurefire.failIfNoSpecifiedTests=false' `
+            '-Dmaven.test.failure.ignore=true' 2>&1 | Tee-Object -FilePath test.log |
+            Select-String -Pattern 'Tests run:|FAIL|expected|Exception|ERROR\]   ' |
+            ForEach-Object { $_.Line }
+          $classes = @(Select-String -Path test.log -Pattern 'Tests run: \d+, Failures: (\d+), Errors: (\d+), Skipped: \d+, Time elapsed')
+          $bad = @($classes | Where-Object {
+            $_.Matches[0].Groups[1].Value -ne '0' -or $_.Matches[0].Groups[2].Value -ne '0' })
+          Write-Output "Test classes run: $($classes.Count). Test classes with a failure or an error: $($bad.Count)."
+          if ($classes.Count -lt 2) { Write-Output 'Fewer than the two test classes ran.'; exit 1 }
+          if ($bad.Count -ne 0) { exit 1 }
