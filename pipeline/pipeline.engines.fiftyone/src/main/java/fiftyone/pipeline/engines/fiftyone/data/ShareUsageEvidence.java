@@ -50,11 +50,17 @@ public final class ShareUsageEvidence {
      * Every Evidence value, and every value of the web request when the
      * Evidence holds it, keyed without regard to case. A key in both keeps
      * the Evidence value. The web request itself is not one of the values.
+     * Evidence keys are already compared without regard to case, so when the
+     * Evidence holds no web request and no null value the Evidence itself is
+     * returned rather than a copy, as this runs on every request.
      * @param evidence the Evidence of the request
-     * @return the values found
+     * @return the values found, which the caller must not change
      */
     public static Map<String, Object> find(Evidence evidence) {
         Map<String, Object> values = evidence.asKeyMap();
+        if (needsCopy(values) == false) {
+            return values;
+        }
         Map<String, Object> found =
             new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
         Object request = null;
@@ -74,5 +80,21 @@ public final class ShareUsageEvidence {
             }
         }
         return found;
+    }
+
+    /**
+     * True when the values hold the web request or a null value, being the
+     * two things a copy leaves out.
+     * @param values the Evidence values
+     * @return true if the values found must be a copy
+     */
+    private static boolean needsCopy(Map<String, Object> values) {
+        for (Map.Entry<String, Object> entry : values.entrySet()) {
+            if (entry.getValue() == null ||
+                HTTP_REQUEST_KEY.equalsIgnoreCase(entry.getKey())) {
+                return true;
+            }
+        }
+        return false;
     }
 }
