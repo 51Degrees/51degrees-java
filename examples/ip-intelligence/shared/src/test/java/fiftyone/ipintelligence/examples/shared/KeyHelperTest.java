@@ -24,6 +24,7 @@ package fiftyone.ipintelligence.examples.shared;
 
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -42,7 +43,8 @@ public class KeyHelperTest {
     private static final String KEY_B = "AgAAAAAAAAAAAAAAAAAAAAAA";
 
     /**
-     * The names getOrSetTestResourceKey reads, in its order.
+     * The names getOrSetTestResourceKey reads, in its order, apart from
+     * the deprecated name it reads when the first is not set.
      */
     private static final List<String> EXAMPLE_NAMES = Arrays.asList(
         KeyHelper.RESOURCE_KEY_VARIABLE, KeyHelper.TEST_RESOURCE_KEY);
@@ -53,20 +55,24 @@ public class KeyHelperTest {
      */
     @Test
     public void getOrSetTestResourceKey_NoKey_StoresNothing() {
+        // The deprecated name is read as well, so it must not be set
+        // either.
+        List<String> namesRead = new ArrayList<>(EXAMPLE_NAMES);
+        namesRead.add(OLD_KEY_NAME);
         // A test can clear a system property but not an environment
         // variable.
-        for (String name : EXAMPLE_NAMES) {
+        for (String name : namesRead) {
             assumeTrue(name + " is set in the environment",
                 System.getenv(name) == null &&
                     System.getenv(name.toUpperCase()) == null);
         }
         Map<String, String> saved = new HashMap<>();
-        for (String name : EXAMPLE_NAMES) {
+        for (String name : namesRead) {
             saved.put(name, System.clearProperty(name));
         }
         try {
             assertNull(KeyHelper.getOrSetTestResourceKey(false));
-            for (String name : EXAMPLE_NAMES) {
+            for (String name : namesRead) {
                 assertNull(name, System.getProperty(name));
             }
         } finally {
