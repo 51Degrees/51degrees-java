@@ -1,0 +1,243 @@
+name: Temporary measurement of main against rc
+
+on:
+  push:
+    branches:
+      - 'tmp/measure-main-rc'
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  Measure:
+    name: Measure main against rc on Ubuntu_ARM_Java_17
+    runs-on: ubuntu-22.04-arm
+    timeout-minutes: 340
+    steps:
+      - name: Checkout Common
+        uses: actions/checkout@v6
+        with:
+          repository: 51Degrees/common-ci
+
+      - name: Measure
+        env:
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          DEVICE_DETECTION_KEY: ${{ secrets.DEVICE_DETECTION_KEY }}
+          DEVICE_DETECTION_URL: ${{ secrets.DEVICE_DETECTION_URL }}
+          IP_INTELLIGENCE_KEY: ${{ secrets.IP_INTELLIGENCE_KEY }}
+          IPI_DATA_FILE_URL: ${{ secrets.IPI_DATA_FILE_URL }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $false
+
+          # Each round runs main then rc, so any drift in the runner falls on
+          # both equally. The guard leaves the job time to publish its figures.
+          $Rounds = 10
+          $StopAfter = (Get-Date).AddMinutes(235)
+          $Org = '51Degrees'
+          $Repo = '51degrees-java'
+          $JavaVar = 'JAVA_HOME_17_X64'
+          $Root = (Get-Location).Path
+
+          $trees = @(
+              @{ Name = 'main'; Branch = 'main' }
+              @{ Name = 'rc'; Branch = 'rc' }
+          )
+
+          Write-Host "::group::Configure Git"
+          ./steps/configure-git.ps1 -GitHubToken $env:ACCESS_TOKEN -GitHubUser Automation51D -GitHubEmail 51DCI@51Degrees.com
+          Write-Host "::endgroup::"
+
+          foreach ($t in $trees) {
+              Write-Host "::group::Clone $($t.Branch)"
+              ./steps/clone-repo.ps1 -RepoName $Repo -OrgName $Org -Branch $t.Branch -DestinationDir $t.Name
+              $t.Path = "$($t.Name)/$Repo"
+              $t.Sha = (git -C $t.Path rev-parse HEAD).Trim()
+              $t.Cxx = (git -C "$($t.Path)/cxx" rev-parse HEAD).Trim()
+              # A local Maven repository for each tree. Both trees carry the
+              # same version, so one shared repository would leave whichever
+              # was installed last answering for both.
+              $t.Home = Join-Path $Root "home-$($t.Name)"
+              New-Item -ItemType Directory -Force -Path $t.Home | Out-Null
+              Write-Host "$($t.Branch) is at $($t.Sha), cxx at $($t.Cxx)"
+              Write-Host "::endgroup::"
+          }
+          $trees | ConvertTo-Json -Depth 3 | Set-Content -Path (Join-Path $Root 'trees.json')
+
+          foreach ($t in $trees) {
+              Write-Host "::group::Fetch assets for $($t.Name)"
+              & "./$($t.Path)/ci/fetch-assets.ps1" `
+                  -DeviceDetection $env:DEVICE_DETECTION_KEY `
+                  -DeviceDetectionUrl $env:DEVICE_DETECTION_URL `
+                  -IpIntelligence $env:IP_INTELLIGENCE_KEY `
+                  -IpIntelligenceUrl $env:IPI_DATA_FILE_URL
+              Write-Host "::endgroup::"
+          }
+
+          # The data repository generates the IP Intelligence evidence from
+          # random addresses with no seed, so each tree would otherwise look
+          # up a different set of addresses. Both trees get the first one's.
+          Write-Host "::group::Give both trees the same IP Intelligence evidence"
+          $source = "$($trees[0].Path)/cxx/data/ip-intelligence"
+          foreach ($t in $trees[1..($trees.Count - 1)]) {
+              foreach ($file in 'evidence.yml', 'evidence.csv') {
+                  Copy-Item -Force -Path "$source/$file" -Destination "$($t.Path)/cxx/data/ip-intelligence/$file"
+              }
+          }
+          foreach ($t in $trees) {
+              foreach ($dir in 'ip-intelligence', 'device-detection') {
+                  Get-ChildItem "$($t.Path)/cxx/data/$dir" -File | Get-FileHash -Algorithm MD5 | ForEach-Object {
+                      Write-Host "$($t.Name) $dir $($_.Hash) $(Split-Path $_.Path -Leaf)"
+                  }
+              }
+          }
+          Write-Host "::endgroup::"
+
+          foreach ($t in $trees) {
+              Write-Host "::group::Set up the environment for $($t.Name)"
+              & "./$($t.Path)/ci/setup-environment.ps1" -RepoName $t.Path -JavaSDKEnvVar $JavaVar
+              Write-Host "::endgroup::"
+
+              Write-Host "::group::Build $($t.Name)"
+              $env:HOME = $t.Home
+              & "./$($t.Path)/ci/build-project.ps1" -RepoName $t.Path -Name $t.Name
+              Write-Host "::endgroup::"
+          }
+
+          for ($round = 1; $round -le $Rounds; $round++) {
+              foreach ($t in $trees) {
+                  $name = "$($t.Name)-r$round"
+                  Write-Host "::group::Round $round, $($t.Name)"
+                  $env:HOME = $t.Home
+                  $global:LASTEXITCODE = 0
+                  try {
+                      & "./$($t.Path)/ci/run-performance-tests.ps1" -RepoName $t.Path -Name $name -IpIntelligenceUrl $env:IPI_DATA_FILE_URL
+                      if ($LASTEXITCODE -ne 0) {
+                          Write-Host "::warning title=Round carries no figures::$name exited $LASTEXITCODE"
+                      }
+                  } catch {
+                      Write-Host "::warning title=Round carries no figures::$name threw $_"
+                  }
+                  Write-Host "::endgroup::"
+              }
+              if ((Get-Date) -gt $StopAfter) {
+                  Write-Host "::warning title=Rounds cut short::Stopped after round $round to leave the job time to publish."
+                  break
+              }
+          }
+
+      - name: Summarise
+        if: ${{ !cancelled() }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $Root = (Get-Location).Path
+
+          function Get-Median {
+              param([double[]]$Values)
+              $sorted = @($Values | Sort-Object)
+              $count = $sorted.Count
+              if ($count -eq 0) { return $null }
+              if ($count % 2 -eq 1) { return $sorted[[int](($count - 1) / 2)] }
+              return ($sorted[$count / 2 - 1] + $sorted[$count / 2]) / 2
+          }
+
+          function Format-Number {
+              param([double]$Value)
+              if ([Math]::Abs($Value) -ge 100) { return $Value.ToString('N0') }
+              return $Value.ToString('G4')
+          }
+
+          $rows = @()
+          foreach ($file in Get-ChildItem -Path $Root -Filter 'performance-summary-*.json') {
+              $name = $file.BaseName -replace '^performance-summary-', ''
+              if ($name -notmatch '^(main|rc)-r(\d+)$') { continue }
+              $tree = $Matches[1]
+              $round = [int]$Matches[2]
+              $json = Get-Content -Raw $file.FullName | ConvertFrom-Json -AsHashtable
+              foreach ($section in 'HigherIsBetter', 'LowerIsBetter') {
+                  if (-not $json[$section]) { continue }
+                  foreach ($metric in $json[$section].Keys) {
+                      $rows += [pscustomobject]@{
+                          Tree = $tree
+                          Round = $round
+                          Section = $section
+                          Metric = $metric
+                          Value = [double]$json[$section][$metric]
+                      }
+                  }
+              }
+          }
+
+          $lines = @()
+          $lines += '# Java `main` against `rc` on Ubuntu_ARM_Java_17'
+          $lines += ''
+          if (Test-Path (Join-Path $Root 'trees.json')) {
+              $trees = Get-Content -Raw (Join-Path $Root 'trees.json') | ConvertFrom-Json
+              foreach ($t in $trees) {
+                  $lines += "- ``$($t.Name)`` at $($t.Sha), cxx submodule at $($t.Cxx)"
+              }
+              $lines += ''
+          }
+          $lines += 'Runner image ubuntu-22.04-arm, which is the image `ci/options.json` gives the configuration named Ubuntu_ARM_Java_17. Both trees were cloned whole with their submodules, built with the repository''s own `ci/build-project.ps1`, and measured with its own `ci/run-performance-tests.ps1`, which is the script whose figures Compare Performance reads. Each round ran `main` first and then `rc`. Each tree had its own local Maven repository, because both carry version 4.5.127-SNAPSHOT and one shared repository would leave whichever was installed last answering for both. Both trees share one asset cache, and both were given the same generated IP Intelligence evidence.'
+          $lines += ''
+
+          if ($rows.Count -eq 0) {
+              $lines += '**No rounds produced any figures.**'
+          } else {
+              $lines += '## Medians'
+              $lines += ''
+              $lines += '| Measure | Better | main median | main lowest to highest | rc median | rc lowest to highest | rc change | Beyond the spread |'
+              $lines += '| --- | --- | --- | --- | --- | --- | --- | --- |'
+              foreach ($metric in ($rows | Select-Object -ExpandProperty Metric -Unique | Sort-Object)) {
+                  $section = ($rows | Where-Object Metric -eq $metric | Select-Object -First 1).Section
+                  $better = $section -eq 'HigherIsBetter' ? 'higher' : 'lower'
+                  $mainValues = @($rows | Where-Object { $_.Metric -eq $metric -and $_.Tree -eq 'main' } | Select-Object -ExpandProperty Value)
+                  $rcValues = @($rows | Where-Object { $_.Metric -eq $metric -and $_.Tree -eq 'rc' } | Select-Object -ExpandProperty Value)
+                  if ($mainValues.Count -eq 0 -or $rcValues.Count -eq 0) { continue }
+                  $mainMedian = Get-Median $mainValues
+                  $rcMedian = Get-Median $rcValues
+                  $mainLow = ($mainValues | Measure-Object -Minimum).Minimum
+                  $mainHigh = ($mainValues | Measure-Object -Maximum).Maximum
+                  $rcLow = ($rcValues | Measure-Object -Minimum).Minimum
+                  $rcHigh = ($rcValues | Measure-Object -Maximum).Maximum
+                  $change = $mainMedian -ne 0 ? (($rcMedian - $mainMedian) / $mainMedian * 100) : 0
+                  $overlap = ($mainLow -le $rcHigh) -and ($rcLow -le $mainHigh)
+                  $verdict = $overlap ? 'no, the ranges overlap' : 'yes, the ranges do not overlap'
+                  $lines += "| ``$metric`` | $better | $(Format-Number $mainMedian) | $(Format-Number $mainLow) to $(Format-Number $mainHigh) | $(Format-Number $rcMedian) | $(Format-Number $rcLow) to $(Format-Number $rcHigh) | $($change.ToString('+0.0;-0.0;0.0')) per cent | $verdict |"
+              }
+              $lines += ''
+              $lines += "Rounds measured: main $(@($rows | Where-Object { $_.Tree -eq 'main' -and $_.Metric -eq $rows[0].Metric }).Count), rc $(@($rows | Where-Object { $_.Tree -eq 'rc' -and $_.Metric -eq $rows[0].Metric }).Count)."
+              $lines += ''
+              $lines += '## Every round'
+              $lines += ''
+              foreach ($metric in ($rows | Select-Object -ExpandProperty Metric -Unique | Sort-Object)) {
+                  $lines += "### $metric"
+                  $lines += ''
+                  $lines += '| Round | main | rc |'
+                  $lines += '| --- | --- | --- |'
+                  foreach ($round in ($rows | Where-Object Metric -eq $metric | Select-Object -ExpandProperty Round -Unique | Sort-Object)) {
+                      $m = @($rows | Where-Object { $_.Metric -eq $metric -and $_.Tree -eq 'main' -and $_.Round -eq $round } | Select-Object -ExpandProperty Value)
+                      $r = @($rows | Where-Object { $_.Metric -eq $metric -and $_.Tree -eq 'rc' -and $_.Round -eq $round } | Select-Object -ExpandProperty Value)
+                      $lines += "| $round | $($m.Count ? (Format-Number $m[0]) : '-') | $($r.Count ? (Format-Number $r[0]) : '-') |"
+                  }
+                  $lines += ''
+              }
+          }
+
+          $text = $lines -join "`n"
+          Set-Content -Path (Join-Path $Root 'measurement.md') -Value $text
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $text
+          Write-Host $text
+
+      - name: Upload results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: measurement
+          path: |
+            measurement.md
+            trees.json
+            performance-summary-*.json
+            pipeline-performance-*.json
+          if-no-files-found: warn
