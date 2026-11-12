@@ -32,6 +32,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
@@ -43,7 +44,20 @@ public class FileUtils {
      * supply an explicit path to the IPI data file. When set and the file
      * exists it is used in preference to searching the project space.
      */
-    public static final String IPI_PATH_ENV_VAR = "_51DEGREES_IPI_PATH";
+    public static final String IPI_PATH_VARIABLE = "_51DEGREES_IPI_PATH";
+
+    /**
+     * The old name of {@link #IPI_PATH_VARIABLE}, read only when that one
+     * is not set.
+     * @deprecated use {@link #IPI_PATH_VARIABLE}, and set the variable it
+     * names in place of this one.
+     */
+    @Deprecated
+    public static final String IPI_PATH_ENV_VAR = "51DEGREES_IPI_PATH";
+
+    // Set once the use of the deprecated name has been reported.
+    private static final AtomicBoolean OLD_NAME_REPORTED =
+        new AtomicBoolean(false);
 
     public static final String ENTERPRISE_IPI_DATA_FILE_NAME = "Enterprise-IpIntelligenceV41.ipi";
 
@@ -99,15 +113,26 @@ public class FileUtils {
     }
 
     /**
-     * Check the aligned {@link #IPI_PATH_ENV_VAR} environment variable and
-     * system property for an explicit path to the IPI data file.
+     * Check the aligned {@link #IPI_PATH_VARIABLE} environment variable and
+     * system property for an explicit path to the IPI data file, and when
+     * neither is set the deprecated {@link #IPI_PATH_ENV_VAR}, whose first
+     * use is reported on standard error.
      *
      * @return a file if the path is set and the file exists, otherwise null
      */
     private static File getExplicitHashFile() {
-        String explicitPath = System.getenv(IPI_PATH_ENV_VAR);
+        String explicitPath = environmentOrProperty(IPI_PATH_VARIABLE);
         if (Objects.isNull(explicitPath)) {
-            explicitPath = System.getProperty(IPI_PATH_ENV_VAR);
+            explicitPath = environmentOrProperty(IPI_PATH_ENV_VAR);
+            if (Objects.nonNull(explicitPath)
+                && OLD_NAME_REPORTED.compareAndSet(false, true)) {
+                System.err.println(
+                    "The environment variable " + IPI_PATH_ENV_VAR
+                    + " is deprecated and " + IPI_PATH_VARIABLE
+                    + " replaces it. Set " + IPI_PATH_VARIABLE
+                    + " to the same value, as a later release may no longer "
+                    + "read " + IPI_PATH_ENV_VAR + ".");
+            }
         }
         if (Objects.nonNull(explicitPath)) {
             File explicitFile = new File(explicitPath);
@@ -116,6 +141,19 @@ public class FileUtils {
             }
         }
         return null;
+    }
+
+    /**
+     * The value of the environment variable of this name, or of the system
+     * property where that is not set or is empty, or null when neither
+     * holds a value.
+     */
+    private static String environmentOrProperty(String name) {
+        String value = System.getenv(name);
+        if (Objects.isNull(value) || value.isEmpty()) {
+            value = System.getProperty(name);
+        }
+        return Objects.isNull(value) || value.isEmpty() ? null : value;
     }
 
     public static File getEvidenceFile() {

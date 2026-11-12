@@ -139,6 +139,8 @@ and on our [website](https://51degrees.com/documentation/_device_detection__exam
 
 Every example that calls the 51Degrees cloud takes its endpoint from the `_51DEGREES_CLOUD_ENDPOINT` environment variable, which is the cloud API base including the `/api/v4/` segment and defaults to `https://cloud.51degrees.com/api/v4/` (the cloud-engine example defaults to the star sign service it was written for, as its row above says). This is the same variable the cloud request engine in this repository honours, so setting it once points every example, and any pipeline built with the engine, at the same place. The resource key comes from `_51DEGREES_RESOURCE_KEY`.
 
+The variable was called `FOD_CLOUD_API_URL` before, and that name is deprecated. The cloud request engine, the 51Did client and the cloud-engine example still read `FOD_CLOUD_API_URL` when `_51DEGREES_CLOUD_ENDPOINT` is not set, and each logs a warning the first time it does. When both are set, `_51DEGREES_CLOUD_ENDPOINT` is used.
+
 A host other than cloud.51degrees.com would be used to (a) use an on premise web server, or (b) use a privately hosted version of the 51Degrees cloud for performance reasons. This is the private hosting option of the cloud service. Both run the same service, so the examples work unchanged.
 
 
