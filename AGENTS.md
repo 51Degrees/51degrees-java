@@ -173,7 +173,7 @@ describes.
 The cloud examples need a resource key, which a person creates in the
 configurator, so ask for one if none is set. A key with the properties most of
 the Device Detection examples use can be made
-[here](https://configure.51degrees.com/jqz435Nc?utm_source=github&utm_medium=docs&utm_campaign=51degrees-java&utm_content=agents.md&utm_term=cloud-examples).
+[here](https://51degrees.com/configure/jqz435Nc?utm_source=github&utm_medium=docs&utm_campaign=51degrees-java&utm_content=agents.md&utm_term=cloud-examples).
 The Device Detection cloud example takes the key as its first argument, or
 from a `TestResourceKey` environment variable or system property.
 
