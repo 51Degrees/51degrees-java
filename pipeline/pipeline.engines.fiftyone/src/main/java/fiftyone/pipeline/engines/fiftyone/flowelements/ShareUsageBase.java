@@ -795,7 +795,7 @@ public abstract class ShareUsageBase
         logger.debug("processData()");
         if (random.nextDouble() <= sharePercentage) {
             // Check if the tracker will allow sharing of this data
-            if (tracker.track(data)) {
+            if (track(data, found)) {
                 // Extract the data we want from the evidence and add
                 // it to the collection.
                 try {
@@ -830,6 +830,21 @@ public abstract class ShareUsageBase
                 }
             }
         }
+    }
+
+    /**
+     * Whether the tracker allows the call to be shared. A
+     * {@link ShareUsageTracker} is given the values already found, so it does
+     * not find them again.
+     * @param data the {@link FlowData} instance that provides the evidence
+     * @param found the values {@link ShareUsageEvidence#find} found for it
+     * @return true if the call should be shared
+     */
+    private boolean track(FlowData data, Map<String, Object> found) {
+        if (tracker instanceof ShareUsageTracker) {
+            return ((ShareUsageTracker) tracker).track(data, found);
+        }
+        return tracker.track(data);
     }
 
     /**
