@@ -103,6 +103,8 @@ public class PerformanceBenchmark {
     private int numberOfThreads = DEFAULT_NUMBER_OF_THREADS;
     private List<Map<String, String>> evidence;
     private String dataFileLocation;
+    // the properties asked for when not asking for all of them
+    private List<String> properties;
     private PrintWriter writer;
 
     // a default set of configurations: (profile, allProperties)
@@ -147,6 +149,7 @@ public class PerformanceBenchmark {
         logger.info("Running Performance example");
 
         this.dataFileLocation = getDataFileLocation(dataFilename);
+        this.properties = benchmarkProperties(dataFileLocation);
 
         File evidenceFile = getEvidenceFile(evidenceFilename);
         this.evidence = Collections.unmodifiableList(
@@ -242,9 +245,20 @@ public class PerformanceBenchmark {
         // Enterprise data files have RegisteredName, so the benchmark runs
         // with any of them.
         if (BooleanUtils.isFalse(config.allProperties)) {
-            builder.setProperty("RegisteredName");
-            builder.setProperty("AsnName");
+            for (String property : properties) {
+                builder.setProperty(property);
+            }
         }
+    }
+
+    /**
+     * The properties the benchmark asks for when it does not ask for all of
+     * them.
+     * @param dataFileLocation the data file the benchmark uses
+     * @return the properties to ask for
+     */
+    static List<String> benchmarkProperties(String dataFileLocation) {
+        return Arrays.asList("RegisteredName", "AsnName");
     }
 
     /**
