@@ -30,10 +30,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * Tests which name the example takes its endpoint from. The example reads
- * each name as an environment variable and then as a system property, so
- * these tests set system properties, and are skipped where the environment
- * already sets either name, because the environment would answer first.
+ * Tests which names the example takes its endpoint and its resource key
+ * from. The example reads each name as an environment variable and then as
+ * a system property, so these tests set system properties, and are skipped
+ * where the environment already sets a name they use, because the
+ * environment would answer first.
  */
 public class EndpointTests {
 
@@ -75,5 +76,44 @@ public class EndpointTests {
             : "https://cloud.51degrees.com/api/v4/";
 
         assertEquals(expected, Main.endpoint());
+    }
+
+    private static final String NEW_KEY_NAME = "_51DEGREES_RESOURCE_KEY";
+    private static final String OLD_KEY_NAME = "RESOURCE_KEY";
+
+    @Test
+    public void ResourceKey_Old_Name_Alone() {
+        assumeTrue(System.getenv(NEW_KEY_NAME) == null);
+        assumeTrue(System.getenv(OLD_KEY_NAME) == null);
+        String savedNew = System.clearProperty(NEW_KEY_NAME);
+        try {
+            System.setProperty(OLD_KEY_NAME, "old-name-key");
+
+            assertEquals("old-name-key", Main.configuredResourceKey());
+        } finally {
+            System.clearProperty(OLD_KEY_NAME);
+            if (savedNew != null) {
+                System.setProperty(NEW_KEY_NAME, savedNew);
+            }
+        }
+    }
+
+    @Test
+    public void ResourceKey_New_Name_Wins() {
+        assumeTrue(System.getenv(NEW_KEY_NAME) == null);
+        assumeTrue(System.getenv(OLD_KEY_NAME) == null);
+        String savedNew = System.clearProperty(NEW_KEY_NAME);
+        try {
+            System.setProperty(NEW_KEY_NAME, "new-name-key");
+            System.setProperty(OLD_KEY_NAME, "old-name-key");
+
+            assertEquals("new-name-key", Main.configuredResourceKey());
+        } finally {
+            System.clearProperty(OLD_KEY_NAME);
+            System.clearProperty(NEW_KEY_NAME);
+            if (savedNew != null) {
+                System.setProperty(NEW_KEY_NAME, savedNew);
+            }
+        }
     }
 }

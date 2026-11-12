@@ -126,4 +126,37 @@ public class KeyHelperTest {
         assertEquals(KEY_B, KeyHelper.requireResourceKey(values::get,
             EXAMPLE_NAMES, "every IP Intelligence property", "ip"));
     }
+
+    private static final String NEW_KEY_NAME = "_51DEGREES_RESOURCE_KEY";
+    private static final String OLD_KEY_NAME = "51DEGREES_RESOURCE_KEY";
+
+    @Test
+    public void requireResourceKey_OldNameWhenNewIsNotSet() {
+        Map<String, String> values = new HashMap<>();
+        values.put(OLD_KEY_NAME, KEY_A);
+        values.put(KeyHelper.TEST_RESOURCE_KEY, KEY_B);
+        assertEquals(KEY_A, KeyHelper.requireResourceKey(values::get,
+            Arrays.asList(NEW_KEY_NAME, KeyHelper.TEST_RESOURCE_KEY),
+            "every IP Intelligence property", "ip"));
+    }
+
+    @Test
+    public void requireResourceKey_NewNameWinsOverOld() {
+        Map<String, String> values = new HashMap<>();
+        values.put(NEW_KEY_NAME, KEY_B);
+        values.put(OLD_KEY_NAME, KEY_A);
+        assertEquals(KEY_B, KeyHelper.requireResourceKey(values::get,
+            Arrays.asList(NEW_KEY_NAME, KeyHelper.TEST_RESOURCE_KEY),
+            "every IP Intelligence property", "ip"));
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    public void oldKeyConstantKeepsItsValue() throws Exception {
+        assertEquals(OLD_KEY_NAME, KeyHelper.RESOURCE_KEY_ENV_VAR);
+        assertEquals(true, KeyHelper.class.getField("RESOURCE_KEY_ENV_VAR")
+            .isAnnotationPresent(Deprecated.class));
+        assertEquals(NEW_KEY_NAME,
+            KeyHelper.class.getField("RESOURCE_KEY_VARIABLE").get(null));
+    }
 }

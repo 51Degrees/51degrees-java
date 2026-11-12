@@ -32,11 +32,15 @@ Describe 'Find-EnvironmentNameProblem' {
         @{ Line = 'System.getenv("RESOURCE_KEY")' }
         @{ Line = 'env("_51DEGREES_RESOURCE_KEY", "RESOURCE_KEY");' }
         @{ Line = 'env("_51DEGREES_LICENSE_KEY", "LICENSE_KEY");' }
+        @{ Line = 'public static final String FOD = "FOD_CLOUD_API_URL";' }
         @{ Line = '$env:LICENSE_KEY = $Keys.TestResourceKey' }
         @{ Line = '${env:LICENSE_KEY} = $Keys.TestResourceKey' }
         @{ Line = '${Env:RESOURCE_KEY}' }
         @{ Line = '$ENV:RESOURCE_KEY = "key"' }
         @{ Line = 'Remove-Item Env:\LICENSE_KEY' }
+        @{ Line = '<Endpoint>${env:FOD_CLOUD_API_URL}</Endpoint>' }
+        @{ Line = '          url: ${{ env.FOD_CLOUD_API_URL }}' }
+        @{ Line = '${FOD_CLOUD_API_URL}' }
         @{ Line = 'Constants.LEGACY_ENV_VARS' }
         @{ Line = '          LICENSE_KEY: ${{ secrets.DEVICE_DETECTION_KEY }}' }
         @{ Line = '- RESOURCE_KEY names the resource key' }
@@ -64,19 +68,6 @@ Describe 'Find-EnvironmentNameProblem' {
     ) {
         Get-Kind $Line | Should -BeNullOrEmpty
     }
-
-    # The cloud endpoint is still read from its deprecated name when the
-    # current name is not set, so that name is allowed wherever it appears.
-    It 'leaves the deprecated endpoint name alone in <Line>' -ForEach @(
-        @{ Line = 'public static final String FOD = "FOD_CLOUD_API_URL";' }
-        @{ Line = 'System.getenv("FOD_CLOUD_API_URL")' }
-        @{ Line = '<Endpoint>${env:FOD_CLOUD_API_URL}</Endpoint>' }
-        @{ Line = '          url: ${{ env.FOD_CLOUD_API_URL }}' }
-        @{ Line = '${FOD_CLOUD_API_URL}' }
-        @{ Line = 'FOD_CLOUD_API_URL=https://host/api/v4/ mvn test' }
-    ) {
-        Get-Kind $Line | Should -BeNullOrEmpty
-    }
 }
 
 Describe 'the check over a repository' {
@@ -97,5 +88,64 @@ Describe 'the check over a repository' {
         } finally {
             Remove-Item -Recurse -Force $repo
         }
+    }
+
+    It 'passes an old name in a file that reads it as a deprecated fallback' {
+        $repo = Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid())
+        New-Item -ItemType Directory $repo | Out-Null
+        try {
+            git -C $repo init -q
+            $file = Join-Path $repo 'pipeline/pipeline.did/src/main/java/fiftyone/pipeline/did/DidClient.java'
+            New-Item -ItemType Directory (Split-Path $file) -Force | Out-Null
+            Set-Content -LiteralPath $file `
+                -Value 'String ENDPOINT_VARIABLE = "FOD_CLOUD_API_URL";'
+            git -C $repo add -A
+            { & $script:Check -RepoRoot $repo } | Should -Not -Throw
+        } finally {
+            Remove-Item -Recurse -Force $repo
+        }
+    }
+
+    It 'fails on the same old name in a file that is not named for it' {
+        $repo = Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid())
+        New-Item -ItemType Directory $repo | Out-Null
+        try {
+            git -C $repo init -q
+            Set-Content -LiteralPath (Join-Path $repo 'Other.java') `
+                -Value 'String ENDPOINT_VARIABLE = "FOD_CLOUD_API_URL";'
+            git -C $repo add -A
+            { & $script:Check -RepoRoot $repo } |
+                Should -Throw '*and 1 old names are read*'
+        } finally {
+            Remove-Item -Recurse -Force $repo
+        }
+    }
+}
+
+Describe 'Test-DeprecatedFallback' {
+
+    # An old name is allowed only in a file that reads it as a deprecated
+    # fallback or tests that read, and only the names listed for that file.
+    It 'allows <Value> in <Path>' -ForEach @(
+        @{ Path = 'pipeline/pipeline.did/src/main/java/fiftyone/pipeline/did/DidClient.java'; Value = '"FOD_CLOUD_API_URL' }
+        @{ Path = 'pipeline/pipeline.did/src/test/java/fiftyone/pipeline/did/LiveCloudKeys.java'; Value = '"RESOURCE_KEY' }
+        @{ Path = 'pipeline/pipeline.did/src/test/java/fiftyone/pipeline/did/LiveCloudKeys.java'; Value = '"LICENSE_KEY' }
+        @{ Path = 'ip-intelligence/ip-intelligence.shared/src/main/java/fiftyone/ipintelligence/shared/testhelpers/FileUtils.java'; Value = '51DEGREES_IPI_PATH' }
+        @{ Path = 'examples/device-detection/web/getting-started.onprem/src/main/webapp/WEB-INF/51Degrees-OnPrem.xml'; Value = '51DEGREES_DD_PATH' }
+    ) {
+        Test-DeprecatedFallback $Path $Value | Should -BeTrue
+    }
+
+    It 'refuses <Value> in <Path>' -ForEach @(
+        @{ Path = 'pipeline/pipeline.core/src/main/java/Any.java'; Value = '"FOD_CLOUD_API_URL' }
+        @{ Path = 'ci/run-unit-tests.ps1'; Value = 'env:RESOURCE_KEY' }
+        @{ Path = 'pipeline/pipeline.did/src/main/java/fiftyone/pipeline/did/DidClient.java'; Value = '"RESOURCE_KEY' }
+        @{ Path = 'pipeline/pipeline.did/src/main/java/fiftyone/pipeline/did/DidClient.java'; Value = 'LEGACY_ENV_VARS' }
+        @{ Path = 'pipeline/pipeline.did/src/test/java/fiftyone/pipeline/did/LiveCloudKeys.java'; Value = '"FOD_CLOUD_API_URL' }
+        @{ Path = 'ip-intelligence/ip-intelligence.shared/src/main/java/fiftyone/ipintelligence/shared/testhelpers/FileUtils.java'; Value = '51DEGREES_DD_PATH' }
+        @{ Path = 'ip-intelligence/ip-intelligence.shared/src/main/java/fiftyone/ipintelligence/shared/testhelpers/FileUtils.java'; Value = '51degrees_ipi_path' }
+        @{ Path = 'examples/device-detection/web/getting-started.onprem/src/main/webapp/WEB-INF/51Degrees-OnPrem.xml'; Value = '51DEGREES_IPI_PATH' }
+    ) {
+        Test-DeprecatedFallback $Path $Value | Should -BeFalse
     }
 }
