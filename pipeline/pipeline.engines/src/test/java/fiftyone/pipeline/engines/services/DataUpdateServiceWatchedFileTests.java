@@ -47,7 +47,10 @@ import java.nio.file.Path;
 import java.nio.file.WatchKey;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -58,6 +61,7 @@ import java.util.concurrent.locks.LockSupport;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeFalse;
 import static org.mockito.ArgumentMatchers.any;
@@ -254,14 +258,14 @@ public class DataUpdateServiceWatchedFileTests {
             watchedFile(engine(), dataFile, false, true);
 
         try {
-            long before = watchServiceThreads();
+            Set<Thread> before = watchServiceThreads();
             dataUpdate.registerDataFile(file);
-            assertTrue("Registering starts a watch service thread",
-                waitForWatchServiceThreads(before + 1));
+            assertEquals("Registering starts a watch service thread",
+                1, waitForThreadsStartedSince(before, 1).size());
 
             dataUpdate.unregisterDataFile(file);
-            assertTrue("Unregistering ends the watch service thread",
-                waitForWatchServiceThreads(before));
+            assertEquals("Unregistering ends the watch service thread",
+                0, waitForThreadsStartedSince(before, 0).size());
         }
         finally {
             cleanUp(file, directory, dataFile);
@@ -307,10 +311,10 @@ public class DataUpdateServiceWatchedFileTests {
         file.getConfiguration().setVerifyModifiedSince(false);
 
         try {
-            long before = watchServiceThreads();
+            Set<Thread> before = watchServiceThreads();
             dataUpdate.registerDataFile(file);
-            assertTrue("Registering starts a watch service thread",
-                waitForWatchServiceThreads(before + 1));
+            assertEquals("Registering starts a watch service thread",
+                1, waitForThreadsStartedSince(before, 1).size());
 
             // The polling timer downloads the new file.
             timers.get(0).run();
@@ -318,12 +322,12 @@ public class DataUpdateServiceWatchedFileTests {
                 1, refreshCount(engine));
             assertNotNull("The watch resumes after the download",
                 file.getConfiguration().getWatchKey());
-            assertTrue("The watch resumes on the same watch service",
-                waitForWatchServiceThreads(before + 1));
+            assertEquals("The watch resumes on the same watch service",
+                1, waitForThreadsStartedSince(before, 1).size());
 
             dataUpdate.unregisterDataFile(file);
-            assertTrue("Unregistering ends the watch service thread",
-                waitForWatchServiceThreads(before));
+            assertEquals("Unregistering ends the watch service thread",
+                0, waitForThreadsStartedSince(before, 0).size());
         }
         finally {
             cleanUp(file, directory, dataFile);
@@ -367,6 +371,71 @@ public class DataUpdateServiceWatchedFileTests {
             dataUpdate.unregisterDataFile(file);
             verify(task).cancel(true);
             watchKey.cancel();
+        }
+        finally {
+            cleanUp(file, directory, dataFile);
+        }
+    }
+
+    /**
+     * The watcher's task polls the watch key, so with no watch key, here
+     * because the data file's folder does not exist, no task is scheduled.
+     */
+    @Test
+    public void NoWatchKey_NoWatcherTask() throws Exception {
+        final AtomicReference<Runnable> watcher = new AtomicReference<>();
+        DataUpdateService dataUpdate = new DataUpdateServiceDefault(
+            null,
+            mock(HttpClient.class),
+            fileWrapperFactory(),
+            futureFactory(new ArrayList<>(), watcher));
+        Path directory = Files.createTempDirectory("watched");
+        Path dataFile = directory.resolve("missing").resolve("data.dat");
+        AspectEngineDataFileDefault file =
+            watchedFile(engine(), dataFile, false, true);
+
+        try {
+            dataUpdate.registerDataFile(file);
+            assertNull("No watch key without the data file's folder",
+                file.getConfiguration().getWatchKey());
+            assertNull("No watcher task without a watch key",
+                watcher.get());
+            dataUpdate.unregisterDataFile(file);
+        }
+        finally {
+            directory.toFile().delete();
+        }
+    }
+
+    /**
+     * Registering a data file again that has no watch key, as it has while
+     * the watch is paused for a download, creates the watch key again and
+     * replaces the watcher's task rather than leave the old one running.
+     */
+    @Test
+    public void RegisteredAgain_WatcherTaskReplaced() throws Exception {
+        DataUpdateService dataUpdate = new DataUpdateServiceDefault(
+            null,
+            mock(HttpClient.class),
+            fileWrapperFactory(),
+            futureFactory(new ArrayList<>(), new AtomicReference<>()));
+        Path directory = Files.createTempDirectory("watched");
+        Path dataFile = directory.resolve("data.dat");
+        Files.write(dataFile, "Old".getBytes());
+        AspectEngineDataFileDefault file =
+            watchedFile(engine(), dataFile, false, true);
+
+        try {
+            dataUpdate.registerDataFile(file);
+            ScheduledFuture<?> first = file.getPollFuture();
+            assertNotNull("The watcher's task was scheduled", first);
+
+            file.getConfiguration().setWatchKey(null);
+            dataUpdate.registerDataFile(file);
+            assertNotNull("The watch key is created again",
+                file.getConfiguration().getWatchKey());
+            verify(first).cancel(false);
+            dataUpdate.unregisterDataFile(file);
         }
         finally {
             cleanUp(file, directory, dataFile);
@@ -598,29 +667,40 @@ public class DataUpdateServiceWatchedFileTests {
     }
 
     /**
-     * The number of watch service threads running, found by the watch
-     * service's poller in each thread's stack.
+     * The watch service threads running, found by the watch service's
+     * poller in each thread's stack.
      */
-    private static long watchServiceThreads() {
-        return Thread.getAllStackTraces().values().stream()
-            .filter(stack -> Arrays.stream(stack).anyMatch(frame ->
-                frame.getClassName().endsWith("WatchService$Poller")))
-            .count();
+    private static Set<Thread> watchServiceThreads() {
+        Set<Thread> threads = new HashSet<>();
+        for (Map.Entry<Thread, StackTraceElement[]> thread :
+            Thread.getAllStackTraces().entrySet()) {
+            if (Arrays.stream(thread.getValue()).anyMatch(frame ->
+                frame.getClassName().endsWith("WatchService$Poller"))) {
+                threads.add(thread.getKey());
+            }
+        }
+        return threads;
     }
 
     /**
-     * Wait for the number of watch service threads to become the count
-     * given, as a thread starts and ends a moment after its watch service
-     * is created or closed.
+     * Wait for the watch service threads running that were not running
+     * before to number the count given, as a thread starts and ends a moment
+     * after its watch service is created or closed. Threads running before
+     * are left out, so one of those ending makes no difference.
      */
-    private static boolean waitForWatchServiceThreads(long count)
-        throws InterruptedException {
+    private static Set<Thread> waitForThreadsStartedSince(
+        Set<Thread> before,
+        int count) throws InterruptedException {
         long end = System.currentTimeMillis() + WAIT_FOR_EVENT_MILLIS;
-        while (watchServiceThreads() != count &&
+        Set<Thread> started = watchServiceThreads();
+        started.removeAll(before);
+        while (started.size() != count &&
             System.currentTimeMillis() < end) {
             Thread.sleep(RETRY_MILLIS);
+            started = watchServiceThreads();
+            started.removeAll(before);
         }
-        return watchServiceThreads() == count;
+        return started;
     }
 
     @SuppressWarnings("unchecked")
