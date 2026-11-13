@@ -188,6 +188,18 @@ public class EvidenceKeyFilterShareUsageTests {
     }
 
     /**
+     * By default every header but Cookie is shared, so a header named
+     * Cookies is shared like any other header.
+     */
+    @Test
+    public void onlyTheCookieHeaderIsBlockedByDefault() {
+        EvidenceKeyFilterShareUsage filter = defaults();
+        assertFalse(filter.include("header.cookie"));
+        assertTrue(filter.include("header.cookies"));
+        assertTrue(filter.include("header.Cookies"));
+    }
+
+    /**
      * A key that only ends with the same letters as a key never shared is
      * treated as an ordinary key.
      */

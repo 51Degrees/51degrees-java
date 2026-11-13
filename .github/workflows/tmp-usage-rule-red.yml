@@ -1,0 +1,15 @@
+name: Usage rule red test
+on:
+  push:
+    branches:
+      - tmp/usage-rule-cookies-red
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test the share usage filter
+        run: >
+          mvn -B -ntp -pl pipeline/pipeline.engines.fiftyone -am test
+          -Dtest=EvidenceKeyFilterShareUsageTests
+          -Dsurefire.failIfNoSpecifiedTests=false
