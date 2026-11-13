@@ -222,6 +222,19 @@ example. The IP Intelligence cloud examples read their key from
   example jars as above, and the example tests use the paid data files when
   CI has them.
 
+## Environment variable names
+
+[common-ci's list of environment variable names](https://github.com/51Degrees/common-ci/blob/d8a9c596eabf69dd5581a08e9360cdd1c9b3d9e8/environment-variables.md)
+holds every environment variable name that the packages, tests, examples and
+CI scripts of every language read, with what each name holds and the
+deprecated names each replaced. The list decides. Use the names it gives, and
+when a change needs a new name, or reads an old name again, change
+[`environment-variables.json`](https://github.com/51Degrees/common-ci/blob/d8a9c596eabf69dd5581a08e9360cdd1c9b3d9e8/environment-variables.json)
+in common-ci in the same piece of work. This repository's own name
+check, [`ci/check-environment-variable-names.ps1`](ci/check-environment-variable-names.ps1), still keeps a
+list of its own. Where the two differ, common-ci's list is the one to
+follow.
+
 ## One reactor, six package trees
 
 The root `pom.xml` lists the six package trees as modules but is not their
@@ -246,8 +259,11 @@ from wherever Maven is run. Do not add a `.mvn` folder below the root.
 
 Those folders are the data repository, a submodule of cxx, where each free
 data file is a `<file>.link` until `get-data-files.ps1` or `get-data-files.sh`
-downloads it. `ci/fetch-assets.ps1` runs the script, and the examples'
-`DataFileHelper.findDataFile` runs it for a file that is missing. Look for a
+downloads it. In CI, `ci/fetch-assets.ps1` puts every file there from
+common-ci's assets, which each run caches once, so no test job downloads a
+data file. A file added to the data repository needs an entry in
+common-ci's `steps/fetch-assets.ps1` before CI can use it. The examples'
+`DataFileHelper.findDataFile` runs the script for a file that is missing. Look for a
 free file by its folder and name, such as
 `device-detection/51Degrees-LiteV4.1.hash`, so the search does not stop at a
 file of the same name elsewhere, such as a Git LFS pointer in an old

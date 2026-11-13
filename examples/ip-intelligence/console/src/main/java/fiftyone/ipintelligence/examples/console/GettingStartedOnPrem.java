@@ -129,7 +129,7 @@ public class GettingStartedOnPrem {
                     "An explicit path can be supplied via the {} environment variable. " +
                     "For testing, you can obtain an enterprise data file by contacting us at " +
                     "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedonprem.java&utm_term=data-file-not-found",
-                    dataFile, DataFileHelper.IPI_PATH_ENV_VAR);
+                    dataFile, DataFileHelper.IPI_PATH_VARIABLE);
             throw e;
         }
 

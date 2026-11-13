@@ -102,6 +102,10 @@ The cloud tests need a Resource Key, passed as `-DTestResourceKey=<key>`. The
 on-premise tests need the free data files, which the script in
 [Getting the code](#getting-the-code) downloads. For the Enterprise IP
 Intelligence data file, see `ip-intelligence/README.md`.
+
+Every environment variable name that the packages, tests, examples and CI
+scripts read is in [common-ci's list of environment variable names](https://github.com/51Degrees/common-ci/blob/d8a9c596eabf69dd5581a08e9360cdd1c9b3d9e8/environment-variables.md),
+which decides.
 Tests find data files by searching from the root of this repository, so run
 Maven from here rather than from inside a package folder.
 

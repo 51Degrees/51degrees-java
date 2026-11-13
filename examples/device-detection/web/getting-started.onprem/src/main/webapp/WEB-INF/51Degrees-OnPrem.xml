@@ -29,10 +29,11 @@
                 <CreateTempDataCopy>false</CreateTempDataCopy>
                 <!--
                 The data file is taken from the _51DEGREES_DD_PATH environment
-                variable, then from TestDataFile (an environment variable or
-                system property), and otherwise the free Lite file is used.
+                variable, then from its deprecated name 51DEGREES_DD_PATH,
+                then from TestDataFile (an environment variable or system
+                property), and otherwise the free Lite file is used.
                 -->
-                <DataFile>${_51DEGREES_DD_PATH:-${TestDataFile:-cxx/data/device-detection/51Degrees-LiteV4.1.hash}}</DataFile>
+                <DataFile>${_51DEGREES_DD_PATH:-${51DEGREES_DD_PATH:-${TestDataFile:-cxx/data/device-detection/51Degrees-LiteV4.1.hash}}}</DataFile>
                 <PerformanceProfile>LowMemory</PerformanceProfile>
             </BuildParameters>
             <BuilderName>DeviceDetectionHashEngine</BuilderName>
