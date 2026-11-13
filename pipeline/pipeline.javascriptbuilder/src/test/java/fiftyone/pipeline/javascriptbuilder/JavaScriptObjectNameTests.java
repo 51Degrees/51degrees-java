@@ -224,6 +224,110 @@ public class JavaScriptObjectNameTests {
     }
 
     /**
+     * The names the specification refuses that are not reserved words of the
+     * language, being eval, arguments, and the properties of the browser's
+     * Window object that a top level var cannot replace or that navigate the
+     * page away.
+     */
+    static final String[] REFUSED_NAMES = {
+        "eval", "arguments", "window", "document", "top", "name", "status",
+        "history", "navigator", "closed", "location", "frameElement",
+        "isSecureContext", "crossOriginIsolated", "trustedTypes", "crypto",
+        "indexedDB", "localStorage", "sessionStorage", "caches",
+        "cookieStore", "speechSynthesis", "styleMedia", "crashReport",
+        "credentialless", "customElements", "documentPictureInPicture",
+        "fence", "launchQueue", "originAgentCluster"
+    };
+
+    /**
+     * Window properties that a top level var can replace, so the names stay
+     * allowed.
+     */
+    static final String[] ALLOWED_WINDOW_NAMES = {
+        "self", "frames", "parent", "opener", "length"
+    };
+
+    static Stream<String> refusedNames() {
+        return Stream.of(REFUSED_NAMES);
+    }
+
+    static Stream<String> allowedWindowNames() {
+        return Stream.of(ALLOWED_WINDOW_NAMES);
+    }
+
+    @ParameterizedTest
+    @MethodSource("refusedNames")
+    public void ObjectName_RefusedNameFromEvidence_DefaultUsed(String name) {
+        JavaScriptBuilderElement element =
+            new JavaScriptBuilderElementBuilder(loggerFactory).build();
+        evidence.put(EVIDENCE_OBJECT_NAME, name);
+
+        String script = render(element);
+
+        assertWorkingObject(script, Constants.DEFAULT_OBJECT_NAME);
+        assertFalse(Pattern.compile("var " + Pattern.quote(name) +
+                " = new fiftyoneDegreesManager\\(\\);")
+                .matcher(withoutParameters(script)).find(),
+            "the script should not declare '" + name + "'");
+        assertEquals(1, count(script, "new fiftyoneDegreesManager()"));
+        List<String> warnings = warnings();
+        assertEquals(1, warnings.size(), String.join("\n", warnings));
+    }
+
+    @ParameterizedTest
+    @MethodSource("refusedNames")
+    public void ObjectName_RefusedNameFromBuilder_Refused(String name) {
+        assertThrows(
+            PipelineConfigurationException.class,
+            () -> new JavaScriptBuilderElementBuilder(loggerFactory)
+                .setObjectName(name)
+                .build());
+    }
+
+    @ParameterizedTest
+    @MethodSource("refusedNames")
+    public void ObjectName_RefusedNameFromConstructor_Refused(String name) {
+        assertThrows(
+            PipelineConfigurationException.class,
+            () -> new JavaScriptBuilderElement(
+                loggerFactory.getLogger("test"),
+                null,
+                "",
+                name,
+                false,
+                "",
+                ""));
+    }
+
+    @ParameterizedTest
+    @MethodSource("refusedNames")
+    public void ObjectName_IsValidObjectName_RefusedName(String name) {
+        assertFalse(JavaScriptBuilderElement.isValidObjectName(name));
+    }
+
+    @ParameterizedTest
+    @MethodSource("allowedWindowNames")
+    public void ObjectName_WindowPropertyVarCanReplace_Allowed(String name) {
+        assertTrue(JavaScriptBuilderElement.isValidObjectName(name));
+        JavaScriptBuilderElement element =
+            new JavaScriptBuilderElementBuilder(loggerFactory)
+                .setObjectName(name)
+                .build();
+
+        String script = render(element);
+
+        assertTrue(script.contains("var " + name + " = new"),
+            "the script should declare '" + name + "'");
+        assertEquals(0, warnings().size());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"windows", "Window", "cachesX"})
+    public void ObjectName_NearMissOfRefusedName_Allowed(String name) {
+        assertTrue(JavaScriptBuilderElement.isValidObjectName(name));
+    }
+
+    /**
      * No name configured means the default name, whether the name was never
      * set or was set to null.
      */

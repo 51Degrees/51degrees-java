@@ -1,4 +1,5 @@
 # Contributing
 
-If you wish to contribute to this project, please see the shared 51Degrees
-[guidance](https://github.com/51Degrees/common-ci/blob/main/CONTRIBUTING.md).
+Contributions are welcome. The [51Degrees contributing guide](https://github.com/51Degrees/.github/blob/main/CONTRIBUTING.md)
+explains where a change goes and how to propose it. It applies to every
+package in this repository.

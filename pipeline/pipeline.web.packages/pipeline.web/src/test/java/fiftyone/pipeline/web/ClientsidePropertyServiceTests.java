@@ -161,6 +161,28 @@ public class ClientsidePropertyServiceTests {
     JavaScript_VaryHeader(elements, "User-Agent");
   }
 
+  /**
+   * An element that has not loaded its properties, as a cloud element
+   * after a failure to reach its service when it was built, gains its
+   * headers in the Vary header once it has them.
+   */
+  @Test
+  @SuppressWarnings("rawtypes")
+  public void JavaScript_VaryHeader_ReadAgainUntilLoaded() throws IOException {
+    FlowElement element = mock(FlowElement.class);
+    when(element.getEvidenceKeyFilter()).thenReturn(
+      new EvidenceKeyFilterWhitelist(new ArrayList<String>()),
+      new EvidenceKeyFilterWhitelist(Arrays.asList("header.User-Agent")));
+    when(element.hasLoadedProperties()).thenReturn(false, true);
+    List<FlowElement> elements = new ArrayList<>();
+    elements.add(element);
+    Configure(elements);
+
+    service.serveJavascript(request, response);
+
+    verify(response).setHeader(eq("Vary"), eq("User-Agent"));
+  }
+
   @Test
   public void JavaScript_VaryHeader_UA_AND_SEC() throws IOException {
     List<List<String>> elements = new ArrayList<List<String>>();

@@ -69,6 +69,12 @@ public class IPIntelligenceDataHashDefault
     private final List<ResultsIpiSwig> resultsList = new ArrayList<>();
 
     /**
+     * The engine which created this instance, used to turn a property name
+     * into the required property index the engine was built with.
+     */
+    private final IPIntelligenceOnPremiseEngine ipiEngine;
+
+    /**
      * Constructs a new instance.
      * @param logger used for logging
      * @param flowData the {@link FlowData} instance this element data will be
@@ -83,6 +89,18 @@ public class IPIntelligenceDataHashDefault
         IPIntelligenceOnPremiseEngine engine,
         MissingPropertyService missingPropertyService) {
         super(logger, flowData, engine, missingPropertyService);
+        this.ipiEngine = engine;
+    }
+
+    /**
+     * Get the required property index for a property name, or null when the
+     * engine has no index for that name, so the read falls back to the name.
+     * @param propertyName name of the property
+     * @return required property index, or null
+     */
+    private Integer indexOf(String propertyName) {
+        return ipiEngine == null ?
+            null : ipiEngine.getPropertyIndex(propertyName);
     }
     
     /**
@@ -184,10 +202,13 @@ public class IPIntelligenceDataHashDefault
             return null;
         }
         Class<?> valueType = parametrizedTypes[2];
+        Integer index = indexOf(propertyName);
         if (valueType.equals(Boolean.class)) {
             populateWeightedValues(
                     result,
-                    () -> results.getValuesAsWeightedBoolList(propertyName),
+                    () -> index == null ?
+                        results.getValuesAsWeightedBoolList(propertyName) :
+                        results.getValuesAsWeightedBoolList(index),
                     WeightedBoolListValueSwig::hasValue,
                     WeightedBoolListValueSwig::getNoValueMessage,
                     WeightedBoolListValueSwig::getValue,
@@ -196,7 +217,9 @@ public class IPIntelligenceDataHashDefault
         } else if (valueType.equals(Double.class)) {
             populateWeightedValues(
                     result,
-                    () -> results.getValuesAsWeightedDoubleList(propertyName),
+                    () -> index == null ?
+                        results.getValuesAsWeightedDoubleList(propertyName) :
+                        results.getValuesAsWeightedDoubleList(index),
                     WeightedDoubleListValueSwig::hasValue,
                     WeightedDoubleListValueSwig::getNoValueMessage,
                     WeightedDoubleListValueSwig::getValue,
@@ -205,7 +228,9 @@ public class IPIntelligenceDataHashDefault
         } else if (valueType.equals(Float.class)) {
             populateWeightedValues(
                     result,
-                    () -> results.getValuesAsWeightedDoubleList(propertyName),
+                    () -> index == null ?
+                        results.getValuesAsWeightedDoubleList(propertyName) :
+                        results.getValuesAsWeightedDoubleList(index),
                     WeightedDoubleListValueSwig::hasValue,
                     WeightedDoubleListValueSwig::getNoValueMessage,
                     WeightedDoubleListValueSwig::getValue,
@@ -214,7 +239,9 @@ public class IPIntelligenceDataHashDefault
         } else if (valueType.equals(Integer.class)) {
             populateWeightedValues(
                     result,
-                    () -> results.getValuesAsWeightedIntegerList(propertyName),
+                    () -> index == null ?
+                        results.getValuesAsWeightedIntegerList(propertyName) :
+                        results.getValuesAsWeightedIntegerList(index),
                     WeightedIntListValueSwig::hasValue,
                     WeightedIntListValueSwig::getNoValueMessage,
                     WeightedIntListValueSwig::getValue,
@@ -225,7 +252,9 @@ public class IPIntelligenceDataHashDefault
                 || valueType.equals(Inet6Address.class)) {
             populateWeightedValues(
                     result,
-                    () -> results.getValuesAsWeightedStringList(propertyName),
+                    () -> index == null ?
+                        results.getValuesAsWeightedStringList(propertyName) :
+                        results.getValuesAsWeightedStringList(index),
                     WeightedStringListValueSwig::hasValue,
                     WeightedStringListValueSwig::getNoValueMessage,
                     WeightedStringListValueSwig::getValue,
@@ -240,7 +269,9 @@ public class IPIntelligenceDataHashDefault
         } else if (valueType.equals(String.class)) {
             populateWeightedValues(
                     result,
-                    () -> results.getValuesAsWeightedUTF8StringList(propertyName),
+                    () -> index == null ?
+                        results.getValuesAsWeightedUTF8StringList(propertyName) :
+                        results.getValuesAsWeightedUTF8StringList(index),
                     WeightedUTF8StringListValueSwig::hasValue,
                     WeightedUTF8StringListValueSwig::getNoValueMessage,
                     WeightedUTF8StringListValueSwig::getValue,
@@ -267,9 +298,10 @@ public class IPIntelligenceDataHashDefault
         AspectPropertyValue<String> result = new AspectPropertyValueDefault<>();
         ResultsIpiSwig results = getSingleResults(propertyName);
         if (results != null) {
-
-            try (StringValueSwig value = results.getValueAsString(
-                propertyName)) {
+            Integer index = indexOf(propertyName);
+            try (StringValueSwig value = index == null ?
+                results.getValueAsString(propertyName) :
+                results.getValueAsString(index)) {
                 if (value.hasValue()) {
                     result.setValue(value.getValue());
                 }
@@ -288,8 +320,10 @@ public class IPIntelligenceDataHashDefault
             new AspectPropertyValueDefault<>();
         ResultsIpiSwig results = getSingleResults(propertyName);
         if (results != null) {
-            try (StringValueSwig value = results.getValueAsString(
-                propertyName)) {
+            Integer index = indexOf(propertyName);
+            try (StringValueSwig value = index == null ?
+                results.getValueAsString(propertyName) :
+                results.getValueAsString(index)) {
                 if (value.hasValue()) {
                     result.setValue(new JavaScript(value.getValue()));
                 }
@@ -307,8 +341,10 @@ public class IPIntelligenceDataHashDefault
         AspectPropertyValue<Integer> result = new AspectPropertyValueDefault<>();
         ResultsIpiSwig results = getSingleResults(propertyName);
         if (results != null) {
-            try (IntegerValueSwig value = results.getValueAsInteger(
-                propertyName)) {
+            Integer index = indexOf(propertyName);
+            try (IntegerValueSwig value = index == null ?
+                results.getValueAsInteger(propertyName) :
+                results.getValueAsInteger(index)) {
                 if (value.hasValue()) {
                     result.setValue(value.getValue());
                 }
@@ -325,8 +361,10 @@ public class IPIntelligenceDataHashDefault
         AspectPropertyValue<Boolean> result = new AspectPropertyValueDefault<>();
         ResultsIpiSwig results = getSingleResults(propertyName);
         if (results != null) {
-            try (BoolValueSwig value = results.getValueAsBool(
-                propertyName)) {
+            Integer index = indexOf(propertyName);
+            try (BoolValueSwig value = index == null ?
+                results.getValueAsBool(propertyName) :
+                results.getValueAsBool(index)) {
                 if (value.hasValue()) {
                     result.setValue(value.getValue());
                 }
@@ -343,8 +381,10 @@ public class IPIntelligenceDataHashDefault
         AspectPropertyValue<Double> result = new AspectPropertyValueDefault<>();
         ResultsIpiSwig results = getSingleResults(propertyName);
         if (results != null) {
-            try (DoubleValueSwig value = results.getValueAsDouble(
-                propertyName)) {
+            Integer index = indexOf(propertyName);
+            try (DoubleValueSwig value = index == null ?
+                results.getValueAsDouble(propertyName) :
+                results.getValueAsDouble(index)) {
                 if (value.hasValue()) {
                     result.setValue(value.getValue());
                 }

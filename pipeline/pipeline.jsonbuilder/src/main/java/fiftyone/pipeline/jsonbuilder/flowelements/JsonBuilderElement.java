@@ -29,6 +29,7 @@ import fiftyone.pipeline.core.data.EvidenceKeyFilter;
 import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.FlowError;
+import fiftyone.pipeline.core.data.IWeightedValue;
 import fiftyone.pipeline.core.data.PropertyMatcher;
 import fiftyone.pipeline.core.data.TryGetResult;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
@@ -62,6 +63,8 @@ public class JsonBuilderElement
     extends FlowElementBase<JsonBuilderData, ElementPropertyMetaData>
     implements JsonBuilder {
     private static final String JAVASCRIPT_PROPERTIES_NAME = "javascriptProperties";
+    private static final String RAW_WEIGHTING_KEY = "rawweighting";
+    private static final String VALUE_KEY = "value";
     private final EvidenceKeyFilter evidenceKeyFilter;
     private final List<ElementPropertyMetaData> properties;
     private final List<String> blacklist;
@@ -200,9 +203,10 @@ public class JsonBuilderElement
         try {
           sequenceNumber = getSequenceNumber(data);
         } catch (Exception e) {
-            throw new PipelineConfigurationException("Make sure there is a "
-                    + "SequenceElement placed before this JsonBuilderElement "
-                    + "in the pipeline", e);
+            // The caller reads this one, so it carries the message the
+            // specification gives, and the cause carries the same.
+            throw new PipelineConfigurationException(
+                Constants.NO_SEQUENCE_NUMBER_MESSAGE, e);
         }
         
         Map<String, Object> allProperties = getAllProperties(data, config);
@@ -222,8 +226,7 @@ public class JsonBuilderElement
             "query.sequence",
             Integer.class);
         if(sequence.hasValue() == false) {
-            throw new Exception("Sequence number not present in evidence. " +
-                "this is mandatory.");
+            throw new Exception(Constants.NO_SEQUENCE_NUMBER_MESSAGE);
         }
         return sequence.getValue();
     }
@@ -319,6 +322,11 @@ public class JsonBuilderElement
                     }
                     propertyValue = results;
                 }
+                else if (propertyValue instanceof List &&
+                    ((List<?>) propertyValue).size() > 0 &&
+                    ((List<?>) propertyValue).get(0) instanceof IWeightedValue<?>) {
+                    propertyValue = getWeightedValues((List<?>) propertyValue);
+                }
 
                 // Add this value to the output
                 values.put(value.getKey().toLowerCase(), propertyValue);
@@ -337,6 +345,25 @@ public class JsonBuilderElement
             }
         }
         return values;
+    }
+
+    /**
+     * Weighted values as objects with the lower-case keys rawweighting and
+     * value, as the weighted values page of the specification shows.
+     * @param weightedValues the weighted values
+     * @return the objects to write
+     */
+    private static List<Object> getWeightedValues(List<?> weightedValues) {
+        List<Object> results = new ArrayList<>();
+        for (Object item : weightedValues) {
+            IWeightedValue<?> weighted = (IWeightedValue<?>) item;
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put(RAW_WEIGHTING_KEY, weighted.getRawWeighting());
+            result.put(VALUE_KEY, weighted.getValue() == null ?
+                JSONObject.NULL : weighted.getValue());
+            results.add(result);
+        }
+        return results;
     }
 
     private void addJavaScriptProperties(

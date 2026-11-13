@@ -39,6 +39,14 @@ public class FiftyOneInterceptorConfigDefault implements FiftyOneInterceptorConf
     private int clientsideCacheMaxAge =
         DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS;
 
+    private String javaScriptPath;
+
+    private String jsonPath;
+
+    private boolean sequenceElementEnabled = true;
+
+    private boolean setHeadersElementEnabled = true;
+
     @Autowired
     public ServletContext servletContext;
     
@@ -63,6 +71,42 @@ public class FiftyOneInterceptorConfigDefault implements FiftyOneInterceptorConf
                     "negative, and was " + seconds + ".");
         }
         this.clientsideCacheMaxAge = seconds;
+    }
+
+    public void setJavaScriptPath(String javaScriptPath) {
+        this.javaScriptPath = javaScriptPath;
+    }
+
+    public void setJsonPath(String jsonPath) {
+        this.jsonPath = jsonPath;
+    }
+
+    public void setSequenceElementEnabled(boolean sequenceElementEnabled) {
+        this.sequenceElementEnabled = sequenceElementEnabled;
+    }
+
+    public void setSetHeadersElementEnabled(boolean setHeadersElementEnabled) {
+        this.setHeadersElementEnabled = setHeadersElementEnabled;
+    }
+
+    @Override
+    public String getJavaScriptPath() {
+        return javaScriptPath;
+    }
+
+    @Override
+    public String getJsonPath() {
+        return jsonPath;
+    }
+
+    @Override
+    public boolean getSequenceElementEnabled() {
+        return sequenceElementEnabled;
+    }
+
+    @Override
+    public boolean getSetHeadersElementEnabled() {
+        return setHeadersElementEnabled;
     }
 
     @Override

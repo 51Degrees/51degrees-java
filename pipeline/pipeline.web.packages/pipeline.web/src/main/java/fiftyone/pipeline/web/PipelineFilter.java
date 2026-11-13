@@ -40,10 +40,17 @@ import jakarta.xml.bind.Unmarshaller;
 import java.io.File;
 import java.io.IOException;
 
+import static fiftyone.pipeline.web.Constants.DEFAULT_JSON_PATH;
+import static fiftyone.pipeline.web.Constants.CORE_JS_NAME;
 import static fiftyone.pipeline.web.Constants.DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS;
 import static fiftyone.pipeline.web.Constants.DEFAULT_CLIENTSIDE_ENABLED;
 import static fiftyone.pipeline.web.Constants.DEFAULT_CONFIG_FILE;
+import static fiftyone.pipeline.web.Constants.DEFAULT_ELEMENT_ENABLED;
 import static fiftyone.pipeline.web.Constants.INIT_PARAM_CLIENTSIDE_CACHE_MAX_AGE;
+import static fiftyone.pipeline.web.Constants.INIT_PARAM_JAVASCRIPT_PATH;
+import static fiftyone.pipeline.web.Constants.INIT_PARAM_JSON_PATH;
+import static fiftyone.pipeline.web.Constants.INIT_PARAM_SEQUENCE_ELEMENT_ENABLED;
+import static fiftyone.pipeline.web.Constants.INIT_PARAM_SET_HEADERS_ELEMENT_ENABLED;
 
 /**
  * Servlet filter used to intercept HTTP requests and process them using the
@@ -84,6 +91,19 @@ public class PipelineFilter implements Filter {
         }
         int cacheMaxAgeSeconds = getCacheMaxAgeSeconds(filterConfig);
         
+        boolean sequenceElementEnabled = getBooleanInitParameter(
+            filterConfig,
+            INIT_PARAM_SEQUENCE_ELEMENT_ENABLED,
+            DEFAULT_ELEMENT_ENABLED);
+        boolean setHeadersElementEnabled = getBooleanInitParameter(
+            filterConfig,
+            INIT_PARAM_SET_HEADERS_ELEMENT_ENABLED,
+            DEFAULT_ELEMENT_ENABLED);
+        String javaScriptPath = getPathInitParameter(
+            filterConfig, INIT_PARAM_JAVASCRIPT_PATH, CORE_JS_NAME);
+        String jsonPath = getPathInitParameter(
+            filterConfig, INIT_PARAM_JSON_PATH, DEFAULT_JSON_PATH);
+
         ServletContext context = config.getServletContext();
 
         File configFile = new File(context.getRealPath(configFileName));
@@ -99,7 +119,8 @@ public class PipelineFilter implements Filter {
             PipelineOptions options = (PipelineOptions) unmarshaller.unmarshal(configFile);
 
             pipeline = StartupHelpers.buildFromConfiguration(builder, options, 
-                clientsideEnabled, context.getContextPath());
+                clientsideEnabled, context.getContextPath(), jsonPath,
+                sequenceElementEnabled, setHeadersElementEnabled);
         } catch (Exception e) {
             throw new ServletException(e);
         }
@@ -116,7 +137,26 @@ public class PipelineFilter implements Filter {
         clientsidePropertyServiceCore = clientside;
         jsService = new FiftyOneJSServiceCore.Default(
             clientsidePropertyServiceCore,
-            clientsideEnabled);
+            clientsideEnabled,
+            javaScriptPath,
+            jsonPath);
+    }
+
+    private static boolean getBooleanInitParameter(
+        FilterConfig filterConfig,
+        String name,
+        boolean defaultValue) {
+        String value = filterConfig.getInitParameter(name);
+        return value == null ? defaultValue : Boolean.parseBoolean(value);
+    }
+
+    private static String getPathInitParameter(
+        FilterConfig filterConfig,
+        String name,
+        String defaultValue) {
+        String value = filterConfig.getInitParameter(name);
+        return value == null || value.trim().isEmpty() ?
+            defaultValue : value.trim();
     }
 
     /**

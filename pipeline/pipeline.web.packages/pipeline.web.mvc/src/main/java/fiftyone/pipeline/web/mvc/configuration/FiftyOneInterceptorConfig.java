@@ -51,4 +51,38 @@ public interface FiftyOneInterceptorConfig {
     default int getClientsideCacheMaxAge() {
         return DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS;
     }
+
+    /**
+     * Get the end of the request path the JavaScript is served for.
+     * @return the path, or null or empty for the default
+     */
+    default String getJavaScriptPath() {
+        return null;
+    }
+
+    /**
+     * Get the end of the request path the JSON is served for.
+     * @return the path, or null or empty for the default
+     */
+    default String getJsonPath() {
+        return null;
+    }
+
+    /**
+     * Get whether the Sequence Element is added to the Pipeline when the
+     * configuration does not include it.
+     * @return true to add the Sequence Element
+     */
+    default boolean getSequenceElementEnabled() {
+        return true;
+    }
+
+    /**
+     * Get whether the Set Headers Element is added to the Pipeline when the
+     * configuration does not include it.
+     * @return true to add the Set Headers Element
+     */
+    default boolean getSetHeadersElementEnabled() {
+        return true;
+    }
 }

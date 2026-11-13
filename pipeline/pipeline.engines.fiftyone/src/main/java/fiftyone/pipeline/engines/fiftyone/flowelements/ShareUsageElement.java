@@ -40,12 +40,14 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 import java.util.zip.GZIPOutputStream;
 
 import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT;
+import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_INITIAL_DELAY_SECONDS_DEFAULT;
+import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT;
+import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT;
+import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_DEFAULT;
+import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_FAILURES_WINDOW_SECONDS_DEFAULT;
 import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_MAX_EVIDENCE_LENGTH;
 
 /**
@@ -309,6 +311,98 @@ public class ShareUsageElement extends ShareUsageBase {
             List<Map.Entry<String, String>> ignoreDataEvidenceFilter,
             String sessionCookieName,
             Tracker tracker) {
+        this(
+                logger,
+                sharePercentage,
+                minimumEntriesPerMessage,
+                maximumQueueSize,
+                addTimeout,
+                takeTimeout,
+                repeatEvidenceIntervalMinutes,
+                trackSession,
+                shareUsageUrl,
+                blockedHttpHeaders,
+                includedQueryStringParameters,
+                ignoreDataEvidenceFilter,
+                sessionCookieName,
+                tracker,
+                SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_DEFAULT,
+                SHARE_USAGE_FAILURES_WINDOW_SECONDS_DEFAULT,
+                SHARE_USAGE_EXPONENTIAL_BACKOFF_INITIAL_DELAY_SECONDS_DEFAULT,
+                SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT,
+                SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT,
+                false,
+                false);
+    }
+
+    /**
+     * Constructor
+     *
+     * @param logger                        the logger to use
+     * @param sharePercentage               the approximate proportion of requests to share.
+     *                                      1 = 100%, 0.5 = 50%, etc.
+     * @param minimumEntriesPerMessage      the minimum number of request entries per
+     *                                      message sent to 51Degrees
+     * @param maximumQueueSize              the maximum number of items to hold in the queue
+     *                                      at one time. This must be larger than minimum
+     *                                      entries
+     * @param addTimeout                    the timeout in milliseconds to allow when attempting to
+     *                                      add an item to the queue. If this timeout is exceeded
+     *                                      then the item is not shared
+     * @param takeTimeout                   the timeout in milliseconds to allow when attempting
+     *                                      to take an item to the queue
+     * @param repeatEvidenceIntervalMinutes the interval (in minutes) which is
+     *                                      used to decide if repeat evidence is
+     *                                      old enough to consider a new session
+     * @param trackSession                  set if the tracker should consider sessions in share
+     *                                      usage
+     * @param shareUsageUrl                 the URL to send data to
+     * @param blockedHttpHeaders            a list of the names of the HTTP headers that
+     *                                      share usage should not send to 51Degrees
+     * @param includedQueryStringParameters a list of the names of query string
+     *                                      parameters that share usage should
+     *                                      send to 51Degrees
+     * @param ignoreDataEvidenceFilter      the filter used to determine if an item
+     *                                      of evidence should be ignored or not
+     * @param sessionCookieName             the name of the cookie that contains the session
+     *                                      id
+     * @param tracker                       the {@link Tracker} to use to determine if a given
+     *                                      {@link FlowData} instance should be shared or not
+     * @param failuresToEnterRecovery       the number of failed sends within the failures
+     *                                      window that pauses sending
+     * @param failuresWindowSeconds         the time in seconds over which failed sends are
+     *                                      counted
+     * @param initialRecoveryDelaySeconds   the length in seconds of the first pause
+     * @param maxRecoveryDelaySeconds       the longest a pause can be, in seconds
+     * @param recoveryMultiplier            what the pause is multiplied by each time the send
+     *                                      tried when a pause ends fails
+     * @param shareAllEvidence              if true then all Evidence is shared, apart from
+     *                                      the keys that are never shared
+     * @param shareAllQueryStringParameters if true then all query string
+     *                                      parameters are shared
+     */
+    ShareUsageElement(
+            Logger logger,
+            double sharePercentage,
+            int minimumEntriesPerMessage,
+            int maximumQueueSize,
+            int addTimeout,
+            int takeTimeout,
+            int repeatEvidenceIntervalMinutes,
+            boolean trackSession,
+            String shareUsageUrl,
+            List<String> blockedHttpHeaders,
+            List<String> includedQueryStringParameters,
+            List<Map.Entry<String, String>> ignoreDataEvidenceFilter,
+            String sessionCookieName,
+            Tracker tracker,
+            int failuresToEnterRecovery,
+            int failuresWindowSeconds,
+            double initialRecoveryDelaySeconds,
+            double maxRecoveryDelaySeconds,
+            double recoveryMultiplier,
+            boolean shareAllEvidence,
+            boolean shareAllQueryStringParameters) {
         super(
                 logger,
                 sharePercentage,
@@ -323,7 +417,14 @@ public class ShareUsageElement extends ShareUsageBase {
                 includedQueryStringParameters,
                 ignoreDataEvidenceFilter,
                 sessionCookieName,
-                tracker);
+                tracker,
+                failuresToEnterRecovery,
+                failuresWindowSeconds,
+                initialRecoveryDelaySeconds,
+                maxRecoveryDelaySeconds,
+                recoveryMultiplier,
+                shareAllEvidence,
+                shareAllQueryStringParameters);
 
         headers.put("Content-Type", "text/xml; charset=utf-8");
         // assume default GZIP connection
@@ -336,7 +437,8 @@ public class ShareUsageElement extends ShareUsageBase {
     }
 
     /**
-     * Take data from the queue until there are fewer entries than the minimum batch size
+     * Take data from the queue until there are fewer entries than the minimum
+     * batch size, waiting out any pause after failed sends before each message
      */
     @Override
     protected void sendUsageData() {
@@ -345,10 +447,14 @@ public class ShareUsageElement extends ShareUsageBase {
         List<ShareUsageData> allData = new ArrayList<>();
         // drain queue while minimum entries in it
         do {
+            // Closing while paused ends the wait, and nothing more is sent.
+            if (waitWhilePaused() == false) {
+                break;
+            }
             logger.debug(threadMarker, "Queue size is {}", evidenceCollection.size());
             try {
                 allData.clear();
-                // for historical reasons max entries set to 2*
+                // A message holds at most twice the minimum entries.
                 while (allData.size() < minEntriesPerMessage * 2) {
                     ShareUsageData currentData = evidenceCollection.poll(takeTimeout, TimeUnit.MILLISECONDS);
                     // no data available
@@ -362,7 +468,13 @@ public class ShareUsageElement extends ShareUsageBase {
                 // drained everything - and there is no point posting a document
                 // with no entries in it.
                 if (allData.isEmpty() == false) {
-                    sendAsXML(allData);
+                    boolean accepted = false;
+                    try {
+                        sendAsXML(allData);
+                        accepted = true;
+                    } finally {
+                        recordSendResult(accepted);
+                    }
                 }
             } catch (InterruptedException interruptedException) {
                 // Deliberately not re-interrupting: the interrupt comes from
@@ -394,7 +506,10 @@ public class ShareUsageElement extends ShareUsageBase {
         // check for completion
         int code = dataUploader.getResponseCode();
         if (code != 200) {
-            throw new Exception(String.format("Share Usage response code was %d ", code));
+            throw new Exception(String.format(
+                "Share Usage response code was %d with content '%s'",
+                code,
+                dataUploader.getResponseContent()));
         }
         logger.debug(threadMarker, "Send elements done");
     }
@@ -422,7 +537,13 @@ public class ShareUsageElement extends ShareUsageBase {
      */
     protected void writeXmlData(XMLStreamWriter writer, ShareUsageData data) throws XMLStreamException {
         writer.writeStartElement("Device");
-        // --- write invariant data
+        // The elements follow the order of the specification's example.
+        // The SessionID used to track a series of requests
+        writeXmlElement(writer, "SessionId", data.sessionId);
+        // The sequence number of the request in a series of requests.
+        writeXmlElement(writer, "Sequence", String.valueOf(data.sequence));
+        // The UTC date/time this entry was written
+        writeXmlElement(writer, "DateSent", DATE_FMT.format(new Date()));
         // The version number of the Pipeline API
         writeXmlElement(writer, "Version", coreVersion);
         // Write Pipeline information
@@ -435,20 +556,12 @@ public class ShareUsageElement extends ShareUsageBase {
         writeXmlElement(writer, "Language", "java");
         // The software language version
         writeXmlElement(writer, "LanguageVersion", languageVersion);
+        // The client IP of the request
+        writeXmlElement(writer, "ClientIP", data.clientIP);
         // The IP of this server
         writeXmlElement(writer, "ServerIP", getHostAddress());
         // The OS name and version
         writeXmlElement(writer, "Platform", osVersion);
-
-        // --- write variable data
-        // The SessionID used to track a series of requests
-        writeXmlElement(writer, "SessionId", data.sessionId);
-        // The sequence number of the request in a series of requests.
-        writeXmlElement(writer, "Sequence", String.valueOf(data.sequence));
-        // The UTC date/time this entry was written
-        writeXmlElement(writer, "DateSent", DATE_FMT.format(new Date()));
-        // The client IP of the request
-        writeXmlElement(writer, "ClientIP", data.clientIP);
 
         // Write all other evidence data that has been included.
         for (Map.Entry<String, Map<String, String>> category : data.evidenceData.entrySet()) {
@@ -461,7 +574,7 @@ public class ShareUsageElement extends ShareUsageBase {
                     writer.writeStartElement(entry.getKey());
                 }
                 if (replacedString.isReplaced()) {
-                    writer.writeAttribute("replaced", "true");
+                    writer.writeAttribute("escaped", "true");
                 }
                 if (replacedString.isTruncated()) {
                     writer.writeAttribute("truncated", "true");
@@ -488,45 +601,55 @@ public class ShareUsageElement extends ShareUsageBase {
      * replace characters that cause problems in XML with the "Replacement character"
      */
     public static class ReplacedString {
-        // a set of valid XML character values (ignoring valid controls x09, x0a, x0d, x85)
-        static final Set<Integer> VALID_XML_CHARS =
-                Stream.of(  IntStream.range(0x20,0x7F),
-                            IntStream.range(0xA0, 0x100))
-                .flatMapToInt(i -> i)
-                .boxed()
-                .collect(Collectors.toCollection(HashSet::new));
-        // an array describing whether a character value is valid
-        static final Boolean[] IS_VALID_XML_CHAR = IntStream
-                .range(0, 0x100)
-                .mapToObj(VALID_XML_CHARS::contains)
-                .toArray(Boolean[]::new);
-
-        // maximum string length
+        // maximum string length, in characters
         static final int MAX_LENGTH = SHARE_USAGE_MAX_EVIDENCE_LENGTH;
 
         private boolean replaced;
         private boolean truncated;
         private final StringBuilder builder;
 
+        /**
+         * Whether the character is allowed in an XML 1.0 document, as the
+         * Char production in section 2.2 of the XML 1.0 specification says.
+         * @param codePoint the character to check
+         * @return true if the character is allowed in XML 1.0
+         */
+        static boolean isXmlChar(int codePoint) {
+            return codePoint == 0x9 || codePoint == 0xA || codePoint == 0xD ||
+                (codePoint >= 0x20 && codePoint <= 0xD7FF) ||
+                (codePoint >= 0xE000 && codePoint <= 0xFFFD) ||
+                (codePoint >= 0x10000 && codePoint <= 0x10FFFF);
+        }
+
+        /**
+         * Keep the first {@link #MAX_LENGTH} characters of the text, and write
+         * each character XML 1.0 does not allow as a backslash, an x and the
+         * four lower-case hexadecimal digits of its code. The limit counts
+         * characters, so a pair of surrogates is never split.
+         * @param text the text to prepare
+         */
         public ReplacedString(String text) {
             if (Objects.isNull(text) || text.length() == 0) {
                 builder = new StringBuilder(0);
-                // Using 'return' statement in a constructor throws compilation
-                // error in Jdk 8.
-                // return;
             } else {
-                builder = new StringBuilder(Math.min(text.length(), MAX_LENGTH));
-                truncated = text.length() > MAX_LENGTH;
-                text.chars()
-                        .limit(MAX_LENGTH)
-                        .forEach(c -> {
-                            if (c < IS_VALID_XML_CHAR.length && IS_VALID_XML_CHAR[c]) {
-                                builder.append((char) c);
-                            } else {
-                                builder.append((char) 0xFFFD);
-                                replaced = true;
-                            }
-                        });
+                int end = text.length();
+                if (text.codePointCount(0, end) > MAX_LENGTH) {
+                    end = text.offsetByCodePoints(0, MAX_LENGTH);
+                    truncated = true;
+                }
+                builder = new StringBuilder(end);
+                int index = 0;
+                while (index < end) {
+                    int codePoint = text.codePointAt(index);
+                    if (isXmlChar(codePoint)) {
+                        builder.appendCodePoint(codePoint);
+                    } else {
+                        builder.append("\\x").append(
+                            String.format("%04x", codePoint));
+                        replaced = true;
+                    }
+                    index += Character.charCount(codePoint);
+                }
             }
         }
 
@@ -555,6 +678,9 @@ public class ShareUsageElement extends ShareUsageBase {
         }
 
         HttpURLConnection connection = httpClient.connect(new URI(shareUsageUrl.trim()).toURL());
+        // A send that is never answered must end, or it stops all sending.
+        connection.setConnectTimeout(httpSendTimeout);
+        connection.setReadTimeout(httpSendTimeout);
         String response = httpClient.postData(connection, headers, baos.toByteArray());
         int responseCode = connection.getResponseCode();
         String responseMessage = connection.getResponseMessage() + "data: '" + response + "'";
