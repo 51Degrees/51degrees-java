@@ -50,11 +50,17 @@ public final class ShareUsageEvidence {
      * Every Evidence value, and every value of the web request when the
      * Evidence holds it, keyed without regard to case. A key in both keeps
      * the Evidence value. The web request itself is not one of the values.
+     * Without a web request the values found are the Evidence's own
+     * read-only map, as Evidence is already keyed without regard to case and
+     * holds no null value, so nothing is copied.
      * @param evidence the Evidence of the request
-     * @return the values found
+     * @return the values found, which the caller must not change
      */
     public static Map<String, Object> find(Evidence evidence) {
         Map<String, Object> values = evidence.asKeyMap();
+        if (values.containsKey(HTTP_REQUEST_KEY) == false) {
+            return values;
+        }
         Map<String, Object> found =
             new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
         Object request = null;

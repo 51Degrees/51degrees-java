@@ -645,12 +645,16 @@ public abstract class ShareUsageBase
     @Override
     protected void processInternal(FlowData flowData){
         boolean ignoreData = false;
-        Map<String, Object> found =
-            ShareUsageEvidence.find(flowData.getEvidence());
+        // The values are found here only for the ignore filter. Otherwise
+        // they are found once the tracker allows the call to be shared, as
+        // most calls repeat one already shared.
+        Map<String, Object> found = null;
 
         logger.debug("processInternal()");
 
-        if (ignoreDataEvidenceFilter != null) {
+        if (ignoreDataEvidenceFilter != null &&
+            ignoreDataEvidenceFilter.isEmpty() == false) {
+            found = ShareUsageEvidence.find(flowData.getEvidence());
             for (Map.Entry<String, String> entry : ignoreDataEvidenceFilter) {
                 String key = entry.getKey();
                 if (found.containsKey(key)) {
@@ -789,18 +793,21 @@ public abstract class ShareUsageBase
     /**
      * Process the supplied request data
      * @param data the {@link FlowData} instance that provides the evidence
-     * @param found the values {@link ShareUsageEvidence#find} found for it
+     * @param found the values {@link ShareUsageEvidence#find} found for it,
+     *              or null if they have not been found yet
      */
     private void processData(FlowData data, Map<String, Object> found) {
         logger.debug("processData()");
         if (random.nextDouble() <= sharePercentage) {
             // Check if the tracker will allow sharing of this data
             if (tracker.track(data)) {
+                Map<String, Object> shared = found != null ? found :
+                    ShareUsageEvidence.find(data.getEvidence());
                 // Extract the data we want from the evidence and add
                 // it to the collection.
                 try {
                     if (evidenceCollection.offer(
-                            getDataFromEvidence(found),
+                            getDataFromEvidence(shared),
                             addTimeout,
                             TimeUnit.MILLISECONDS)) {
                         queueFullReported = false;
