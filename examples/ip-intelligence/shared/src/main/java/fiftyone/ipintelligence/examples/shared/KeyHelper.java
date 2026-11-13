@@ -27,6 +27,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 
 public class KeyHelper {
     /**
@@ -34,9 +36,132 @@ public class KeyHelper {
      * hold the resource key. This name is checked first, before the legacy
      * {@link #TEST_RESOURCE_KEY} name.
      */
+    public static final String RESOURCE_KEY_VARIABLE = "_51DEGREES_RESOURCE_KEY";
+
+    /**
+     * The old name of {@link #RESOURCE_KEY_VARIABLE}, read only when that
+     * one is not set.
+     * @deprecated use {@link #RESOURCE_KEY_VARIABLE}, and set the variable
+     * it names in place of this one.
+     */
+    @Deprecated
     public static final String RESOURCE_KEY_ENV_VAR = "51DEGREES_RESOURCE_KEY";
+
+    // Set once the use of the deprecated name has been logged.
+    private static final AtomicBoolean OLD_NAME_LOGGED =
+        new AtomicBoolean(false);
     public static final String TEST_RESOURCE_KEY = "TestResourceKey";
     static Logger logger = LoggerFactory.getLogger(KeyHelper.class);
+
+    /**
+     * The names every cloud test reads a resource key from first, before
+     * the names its own example reads.
+     */
+    public static final List<String> SHARED_RESOURCE_KEY_NAMES =
+        Collections.unmodifiableList(Arrays.asList(
+            "_51DEGREES_RESOURCE_KEY",
+            "_51DEGREES_RESOURCE_KEY_BESPOKE"));
+
+    static final String CREATE_KEY_URL =
+        "https://configure.51degrees.com/?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-keyhelper.java&utm_term=no-resource-key";
+
+    /**
+     * The resource key for a test that calls the live cloud service, from
+     * {@link #SHARED_RESOURCE_KEY_NAMES} and then the names
+     * {@link #getOrSetTestResourceKey()} reads. Fails the test when there
+     * is none, because a cloud test that passes without a key has called
+     * nothing.
+     * @param asksFor what the test asks the service for
+     * @param products the products the key has to carry
+     * @return the resource key
+     */
+    public static String requireTestResourceKey(String asksFor,
+                                                String... products) {
+        return requireResourceKey(KeyHelper::readKey, Arrays.asList(
+            RESOURCE_KEY_VARIABLE, TEST_RESOURCE_KEY), asksFor, products);
+    }
+
+    static String requireResourceKey(Function<String, String> read,
+                                     List<String> exampleNames,
+                                     String asksFor,
+                                     String... products) {
+        List<String> names = new ArrayList<>(SHARED_RESOURCE_KEY_NAMES);
+        names.addAll(exampleNames);
+        for (String name : names) {
+            String value = read.apply(name);
+            if (KeyUtils.isInvalidKey(value)
+                && RESOURCE_KEY_VARIABLE.equals(name)) {
+                value = oldNameResourceKey(read);
+            }
+            if (KeyUtils.isInvalidKey(value) == false) {
+                return value.trim();
+            }
+        }
+        throw new AssertionError(noResourceKey(names, asksFor, products));
+    }
+
+    /**
+     * The key held under the deprecated {@link #RESOURCE_KEY_ENV_VAR}, or
+     * null when there is none. It is read only when
+     * {@link #RESOURCE_KEY_VARIABLE} holds no key, and its first use is
+     * logged as a warning.
+     */
+    private static String oldNameResourceKey(Function<String, String> read) {
+        String value = read.apply(RESOURCE_KEY_ENV_VAR);
+        if (KeyUtils.isInvalidKey(value)) {
+            return null;
+        }
+        if (OLD_NAME_LOGGED.compareAndSet(false, true)) {
+            logger.warn(
+                "The environment variable " + RESOURCE_KEY_ENV_VAR
+                + " is deprecated and " + RESOURCE_KEY_VARIABLE
+                + " replaces it. Set " + RESOURCE_KEY_VARIABLE
+                + " to the same value, as a later release may no longer "
+                + "read " + RESOURCE_KEY_ENV_VAR + ".");
+        }
+        return value;
+    }
+
+    static String noResourceKey(List<String> names, String asksFor,
+                                String... products) {
+        return "This test calls the live 51Degrees cloud service, so it " +
+            "needs a resource key and there is nothing to fall back on. " +
+            "None of " + String.join(", ", names) + " is set, as an " +
+            "environment variable or as a system property, tried in that " +
+            "order. The key has to carry the " + productList(products) +
+            ", because the test asks the service for " + asksFor + ". To " +
+            "see the products a key carries, open " +
+            "https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>. " +
+            "Create a key at " + CREATE_KEY_URL + ".";
+    }
+
+    private static String productList(String... products) {
+        StringBuilder list = new StringBuilder();
+        for (int i = 0; i < products.length; i++) {
+            if (i > 0) {
+                list.append(i == products.length - 1 ? " and " : ", ");
+            }
+            list.append(products[i]);
+        }
+        return list + (products.length == 1 ? " product" : " products");
+    }
+
+    /**
+     * A key read as an environment variable, as its upper case name, and
+     * then as a system property, skipping any that is not a key, such as
+     * the empty string the example poms pass for a key that is not set.
+     */
+    private static String readKey(String name) {
+        for (String value : new String[]{
+            System.getenv(name),
+            System.getenv(name.toUpperCase()),
+            System.getProperty(name)}) {
+            if (KeyUtils.isInvalidKey(value) == false) {
+                return value;
+            }
+        }
+        return null;
+    }
 
     /**
      * Obtain a resource key either from environment variable or from a property.
@@ -64,16 +189,22 @@ public class KeyHelper {
     /**
      * Obtain a resource key from the passed argument,
      * from environment variable or from a property. The aligned
-     * {@link #RESOURCE_KEY_ENV_VAR} name is checked first, then the
-     * passed variable name. Store as System Property under the
-     * passed variable name.
+     * {@link #RESOURCE_KEY_VARIABLE} name is checked first, then the
+     * deprecated {@link #RESOURCE_KEY_ENV_VAR}, then the passed variable
+     * name. Store as System Property under the passed variable name.
      */
     public static String getOrSetResourceKey(String value, String variableName,
                                              String errorMessage,
                                              boolean shouldThrow) {
         if (Objects.isNull(value)) {
             // check the aligned name first, then the legacy name
-            value = KeyUtils.getNamedKey(RESOURCE_KEY_ENV_VAR);
+            value = KeyUtils.getNamedKey(RESOURCE_KEY_VARIABLE);
+            if (Objects.isNull(value) || value.isEmpty()) {
+                String oldNameKey = oldNameResourceKey(KeyUtils::getNamedKey);
+                if (Objects.nonNull(oldNameKey)) {
+                    value = oldNameKey;
+                }
+            }
             if (Objects.isNull(value)) {
                 value = KeyUtils.getNamedKey(variableName);
             }
@@ -85,15 +216,18 @@ public class KeyHelper {
                     "runnable example,\n - as an Environment Variable named \"\u001B[36m{}\u001B[0m\"," +
                     "\n - as a System Property named \"\u001B[36m{}\u001B[0m\" " +
                     "(the legacy name \"\u001B[36m{}\u001B[0m\" is also still accepted).",
-                    RESOURCE_KEY_ENV_VAR, RESOURCE_KEY_ENV_VAR, variableName);
+                    RESOURCE_KEY_VARIABLE, RESOURCE_KEY_VARIABLE, variableName);
             logger.error(errorMessage);
             if (shouldThrow) {
                 throw new IllegalStateException("\"" + value + "\" is not a valid resource key");
             }
         }
 
-        // capture the passed parameter for next time called
-        System.setProperty(variableName, value);
+        // Keep a valid key for next time. System.setProperty throws on null,
+        // and an invalid key is not worth keeping.
+        if (KeyUtils.isInvalidKey(value) == false) {
+            System.setProperty(variableName, value);
+        }
         return value;
     }
     public static String getOrSetSuperResourceKey(String value, String variablename) {

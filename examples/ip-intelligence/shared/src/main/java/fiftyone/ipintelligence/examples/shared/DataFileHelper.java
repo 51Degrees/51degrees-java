@@ -25,7 +25,9 @@ package fiftyone.ipintelligence.examples.shared;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngineBuilder;
 import fiftyone.ipintelligence.shared.testhelpers.FileUtils;
+import fiftyone.pipeline.engines.Constants;
 import fiftyone.pipeline.engines.data.AspectEngineDataFile;
+import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneDataFile;
 import fiftyone.pipeline.util.FileFinder;
 import org.slf4j.Logger;
@@ -33,6 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -40,11 +43,11 @@ import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
@@ -53,9 +56,23 @@ public class DataFileHelper {
 
     /**
      * Sent with each download, so the Distributor can count the downloads
-     * made by these examples.
+     * made by these examples. It is left out inside GitHub Actions, where
+     * the data repository's script names the build instead, so that test
+     * runs are not counted as people using the examples.
      */
     private static final String DOWNLOAD_SOURCE = "examples-51degrees-java";
+
+    private static final boolean IN_GITHUB_ACTIONS =
+            "true".equals(System.getenv("GITHUB_ACTIONS"));
+
+    private static final String WINDOWS_POWERSHELL = "powershell";
+
+    /**
+     * Shown in place of a value for a property that the data file in use
+     * does not have. Every property the examples ask for is in the
+     * Enterprise data file.
+     */
+    public static final String NEEDS_ENTERPRISE = "needs the Enterprise data file";
 
     /**
      * Folder and name of the enterprise IP Intelligence data file, which
@@ -117,15 +134,43 @@ public class DataFileHelper {
      * hold an explicit path to the IP Intelligence data file. This name is
      * checked first, before any search of the project space.
      */
+    public static final String IPI_PATH_VARIABLE = "_51DEGREES_IPI_PATH";
+
+    /**
+     * The old name of {@link #IPI_PATH_VARIABLE}, read only when that one
+     * is not set.
+     * @deprecated use {@link #IPI_PATH_VARIABLE}, and set the variable it
+     * names in place of this one.
+     */
+    @Deprecated
     public static final String IPI_PATH_ENV_VAR = "51DEGREES_IPI_PATH";
+
+    // Set once the use of the deprecated name has been logged.
+    private static final AtomicBoolean OLD_NAME_LOGGED =
+            new AtomicBoolean(false);
+
+    /**
+     * The value of the environment variable of this name, or of the system
+     * property where that is not set or is empty, or null when neither
+     * holds a value.
+     */
+    private static String environmentOrProperty(String name) {
+        String value = System.getenv(name);
+        if (Objects.isNull(value) || value.isEmpty()) {
+            value = System.getProperty(name);
+        }
+        return Objects.isNull(value) || value.isEmpty() ? null : value;
+    }
 
 public static class DatafileInfo {
         FiftyOneDataFile fileInfo;
         String tier;
+        boolean free;
 
-        public DatafileInfo(FiftyOneDataFile fileInfo, String dataSourceTier) {
+        public DatafileInfo(FiftyOneDataFile fileInfo, String dataSourceTier, boolean free) {
             this.fileInfo = fileInfo;
             this.tier = dataSourceTier;
+            this.free = free;
         }
 
         public AspectEngineDataFile getFileInfo(){
@@ -134,15 +179,40 @@ public static class DatafileInfo {
         public String getTier() {
             return tier;
         }
-    }
-    public static DatafileInfo getDatafileMetaData(String dataFileLocation) throws Exception {
-        try(IPIntelligenceOnPremiseEngine ddhe = new IPIntelligenceOnPremiseEngineBuilder()
-                .setAutoUpdate(false)
-                .build(dataFileLocation,false)) {
-            return new DatafileInfo((FiftyOneDataFile) ddhe.getDataFileMetaData(), ddhe.getDataSourceTier());
+
+        /**
+         * @return true for the free Lite and Asn data files
+         */
+        public boolean isFree() {
+            return free;
         }
     }
 
+    /**
+     * Reads the details of a data file, such as its tier and publish date.
+     * The data file is opened with the low memory profile, which reads
+     * little of it.
+     * @param dataFileLocation the data file to read
+     * @return the data file's details
+     * @throws Exception if the data file cannot be opened
+     */
+    public static DatafileInfo getDatafileMetaData(String dataFileLocation) throws Exception {
+        try(IPIntelligenceOnPremiseEngine ddhe = new IPIntelligenceOnPremiseEngineBuilder()
+                .setPerformanceProfile(Constants.PerformanceProfiles.LowMemory)
+                .setAutoUpdate(false)
+                .build(dataFileLocation,false)) {
+            return new DatafileInfo((FiftyOneDataFile) ddhe.getDataFileMetaData(),
+                    ddhe.getDataSourceTier(), isFreeDataFile(ddhe));
+        }
+    }
+
+    /**
+     * Logs the data file in use, and a warning if it is old. An example run
+     * on a free data file says what the Enterprise data file adds in its
+     * own output, with {@link #writeEnterpriseNote},
+     * {@link #writeEnterpriseOffer} or {@link #lacksEnterpriseProperties}.
+     * @param engine the engine whose data file is logged
+     */
     public static void logDataFileInfo(IPIntelligenceOnPremiseEngine engine) {
         // Lite or Enterprise
         String dataTier = engine.getDataSourceTier();
@@ -154,13 +224,6 @@ public static class DatafileInfo {
         String displayDate = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(fileDate);
         logger.info("Used a '{}' data file, created {}, {} days ago, from location '{}'",
                 dataTier, displayDate, daysOld, dataFileLocation);
-        if (dataTier.equals("Lite")) {
-            logger.warn("This example is using the 'Lite ' data file. " +
-                    "This is used for illustration, and has limited " +
-                    "accuracy and capabilities. Find out about the " +
-                    "Enterprise data file on our pricing page: " +
-                    "https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-datafilehelper.java&utm_term=lite-data-file");
-        }
         if (daysOld > 28) {
             logger.warn("This example is using a data file that is more " +
                     "than {} days old. A more recent data file " +
@@ -168,12 +231,165 @@ public static class DatafileInfo {
         }
     }
 
+    /**
+     * True when the engine's data file has the property. The free Lite data
+     * file has only RegisteredCountry, RegisteredName and RegisteredOwner,
+     * and the free Asn data file the Asn properties, such as AsnName.
+     * @param engine the engine to check
+     * @param name the name of the property
+     * @return true if the data file has the property
+     */
+    public static boolean hasProperty(IPIntelligenceOnPremiseEngine engine, String name) {
+        for (FiftyOneAspectPropertyMetaData property : engine.getProperties()) {
+            if (property.getName().equalsIgnoreCase(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * True when the engine uses one of the free data files, Lite or Asn.
+     * Only the Enterprise data file has the range properties, so a check
+     * for IpRangeStart tells them apart.
+     * @param engine the engine to check
+     * @return true for a free data file
+     */
+    public static boolean isFreeDataFile(IPIntelligenceOnPremiseEngine engine) {
+        return hasProperty(engine, "IpRangeStart") == false;
+    }
+
+    /**
+     * For an example that needs properties only the Enterprise data file
+     * has, reports when the data file has none of them, and then says so
+     * and where to ask for a copy of the Enterprise data file. The data
+     * file is opened with the low memory profile, which reads little of it.
+     * @param dataFile the data file the example would use
+     * @param purpose what the example does, as the start of a sentence, for
+     *                example "Comparing known locations with IP Intelligence"
+     * @param properties the properties the example needs
+     * @param output where to write
+     * @param contactUs the link to the contact page, tagged with the
+     *                  example's file so an enquiry can be traced to it
+     * @return true if the data file has none of the properties
+     * @throws Exception if the data file cannot be opened
+     */
+    public static boolean lacksEnterpriseProperties(String dataFile,
+                                                    String purpose,
+                                                    List<String> properties,
+                                                    PrintWriter output,
+                                                    String contactUs) throws Exception {
+        try (IPIntelligenceOnPremiseEngine engine = new IPIntelligenceOnPremiseEngineBuilder()
+                .setPerformanceProfile(Constants.PerformanceProfiles.LowMemory)
+                .setAutoUpdate(false)
+                .build(dataFile, false)) {
+            return lacksEnterpriseProperties(
+                    engine, purpose, properties, output, contactUs);
+        }
+    }
+
+    /**
+     * As {@link #lacksEnterpriseProperties(String, String, List, PrintWriter, String)}
+     * for an engine the example has already built.
+     * @param engine the engine the example uses
+     * @param purpose what the example does, as the start of a sentence
+     * @param properties the properties the example needs
+     * @param output where to write
+     * @param contactUs the link to the contact page, tagged with the example
+     * @return true if the data file has none of the properties
+     */
+    public static boolean lacksEnterpriseProperties(IPIntelligenceOnPremiseEngine engine,
+                                                    String purpose,
+                                                    List<String> properties,
+                                                    PrintWriter output,
+                                                    String contactUs) {
+        for (String property : properties) {
+            if (hasProperty(engine, property)) {
+                return false;
+            }
+        }
+        output.println(purpose + " needs the " + joinNames(properties) +
+                " properties, which only the Enterprise data file has. The " +
+                "data file in use has none of them, so the example stops " +
+                "here. Contact us for a copy of the Enterprise data file at " +
+                contactUs);
+        output.flush();
+        return true;
+    }
+
+    /**
+     * Writes, after an example has shown properties that the data file in
+     * use does not have, where to ask for a copy of the Enterprise data
+     * file.
+     * @param output where to write
+     * @param contactUs the link to the contact page, tagged with the
+     *                  example's file so an enquiry can be traced to it
+     */
+    public static void writeEnterpriseNote(PrintWriter output, String contactUs) {
+        output.println();
+        output.println("Some of these properties need the Enterprise data " +
+                "file. Contact us for a copy at " + contactUs);
+        output.flush();
+    }
+
+    /**
+     * Writes, after an example that shows no location properties has run on
+     * a free data file, what the Enterprise data file adds and where to ask
+     * for a copy.
+     * @param output where to write
+     * @param contactUs the link to the contact page, tagged with the
+     *                  example's file so an enquiry can be traced to it
+     */
+    public static void writeEnterpriseOffer(PrintWriter output, String contactUs) {
+        output.println();
+        output.println("This example used a free data file. The Enterprise " +
+                "data file adds the location, range and connection " +
+                "properties. Contact us for a copy at " + contactUs);
+        output.flush();
+    }
+
+    /**
+     * Finds the performance profile an example is given by name, ignoring
+     * case. When no profile has the name, writes the names accepted.
+     * @param name the name given, such as MaxPerformance
+     * @param output where to write when no profile has the name
+     * @return the profile, or null when no profile has the name
+     */
+    public static Constants.PerformanceProfiles findPerformanceProfile(
+            String name,
+            PrintWriter output) {
+        List<String> names = new ArrayList<>();
+        for (Constants.PerformanceProfiles profile :
+                Constants.PerformanceProfiles.values()) {
+            if (profile.name().equalsIgnoreCase(name)) {
+                return profile;
+            }
+            names.add(profile.name());
+        }
+        output.println("'" + name + "' is not a performance profile. The " +
+                "names accepted, in upper or lower case, are " +
+                joinNames(names) + ".");
+        output.flush();
+        return null;
+    }
+
+    /**
+     * Joins names as "A, B and C".
+     */
+    private static String joinNames(List<String> names) {
+        if (names.size() == 1) {
+            return names.get(0);
+        }
+        return String.join(", ", names.subList(0, names.size() - 1)) +
+                " and " + names.get(names.size() - 1);
+    }
+
     public static void cantFindDataFile(String dataFile) {
         logger.error("Could not find the data file '{}' which must be " +
                 "somewhere in the project space to be found. An explicit " +
                 "path to the data file can be supplied via the {} " +
                 "environment variable or system property.",
-                dataFile, IPI_PATH_ENV_VAR);
+                dataFile, IPI_PATH_VARIABLE);
     }
 
     /**
@@ -202,9 +418,11 @@ public static class DatafileInfo {
     /**
      * Tries to find the passed file, or if null a default file. Handles both absolute and relative paths.
      * An absolute path supplied by the caller is used as is. Otherwise an
-     * explicit path supplied via the {@link #IPI_PATH_ENV_VAR} environment
+     * explicit path supplied via the {@link #IPI_PATH_VARIABLE} environment
      * variable or system property is checked before the folder hierarchy is
-     * searched for the passed filename.
+     * searched for the passed filename. When neither is set the deprecated
+     * {@link #IPI_PATH_ENV_VAR} is read, and its first use is logged as a
+     * warning.
      * @param dataFilename a filename to find (can be absolute or relative path)
      * @return a full pathname
      * @throws Exception if the file was not found
@@ -215,21 +433,32 @@ public static class DatafileInfo {
         // system property is checked before any search for the filename
         if (Objects.isNull(dataFilename) ||
                 Paths.get(dataFilename).isAbsolute() == false) {
-            String envDataFile = System.getenv(IPI_PATH_ENV_VAR);
+            String envName = IPI_PATH_VARIABLE;
+            String envDataFile = environmentOrProperty(envName);
             if (Objects.isNull(envDataFile)) {
-                envDataFile = System.getProperty(IPI_PATH_ENV_VAR);
+                envName = IPI_PATH_ENV_VAR;
+                envDataFile = environmentOrProperty(envName);
+                if (Objects.nonNull(envDataFile)
+                        && OLD_NAME_LOGGED.compareAndSet(false, true)) {
+                    logger.warn(
+                            "The environment variable " + IPI_PATH_ENV_VAR
+                            + " is deprecated and " + IPI_PATH_VARIABLE
+                            + " replaces it. Set " + IPI_PATH_VARIABLE
+                            + " to the same value, as a later release may no longer "
+                            + "read " + IPI_PATH_ENV_VAR + ".");
+                }
             }
             if (Objects.nonNull(envDataFile)) {
                 if (Files.exists(Paths.get(envDataFile))) {
                     return envDataFile;
                 }
                 logger.warn("Ignoring {} value '{}' as no file exists there",
-                        IPI_PATH_ENV_VAR, envDataFile);
+                        envName, envDataFile);
             }
         }
 
         if (Objects.isNull(dataFilename)) {
-            dataFilename = ENTERPRISE_DATA_FILE_REL_PATH;
+            dataFilename = LITE_DATA_FILE_REL_PATH;
         }
 
         // Check if it's an absolute path
@@ -262,7 +491,7 @@ public static class DatafileInfo {
                         DataFileHelper.cantFindDataFile(dataFilename);
                         throw new IOException("Data file not found at relative path: " + dataFilename +
                                             ". Searched in project directories and current working directory." +
-                                            " An explicit path can be supplied via the " + IPI_PATH_ENV_VAR +
+                                            " An explicit path can be supplied via the " + IPI_PATH_VARIABLE +
                                             " environment variable.", notFound);
                     }
                 }
@@ -272,28 +501,31 @@ public static class DatafileInfo {
 
     /**
      * Finds a file below the project root, as
-     * {@link FileFinder#getFilePath(String)} does. A free data file that is
-     * missing has a {@code <file>.link} in the data repository, so the data
-     * repository's script is run to download it, and the file is looked for
-     * again.
+     * {@link FileFinder#getFilePath(String)} does, and then in the data
+     * repository at the root of this repository, which is above the folder
+     * of the examples that their READMEs run them from. A free data file
+     * that is missing has a {@code <file>.link} in the data repository, so
+     * the data repository's script is run to download it, and the file is
+     * looked for again.
      * @param file the name of the file, or the end of its path
      * @return the file
      * @throws IllegalArgumentException if the file was not found, naming the
      *         command that downloads it when there is one
      */
     public static File findDataFile(String file) {
+        File repository = findDataRepository();
         try {
-            return getFilePath(file);
+            return find(file, repository);
         } catch (IllegalArgumentException notFound) {
             File link;
             try {
-                link = getFilePath(file + ".link");
+                link = find(file + ".link", repository);
             } catch (IllegalArgumentException noLink) {
                 throw notFound;
             }
             String command = runDownload(link);
             try {
-                return getFilePath(file);
+                return find(file, repository);
             } catch (IllegalArgumentException stillNotFound) {
                 String message = "Could not download '" + file +
                         "'. Run this command to download it: " + command;
@@ -301,6 +533,37 @@ public static class DatafileInfo {
                 throw new IllegalArgumentException(message, stillNotFound);
             }
         }
+    }
+
+    /**
+     * Finds a file below the project root, then below the data repository.
+     */
+    private static File find(String file, File repository) {
+        try {
+            return getFilePath(file);
+        } catch (IllegalArgumentException notFound) {
+            if (repository == null) {
+                throw notFound;
+            }
+            return getFilePath(file, repository.getPath());
+        }
+    }
+
+    /**
+     * The data repository, cxx/data, in the nearest folder at or above the
+     * working directory that has one.
+     * @return the folder, or null if there is none
+     */
+    private static File findDataRepository() {
+        File folder = new File(System.getProperty("user.dir")).getAbsoluteFile();
+        while (folder != null) {
+            File data = new File(new File(folder, "cxx"), "data");
+            if (new File(data, "get-data-files.sh").isFile()) {
+                return data;
+            }
+            folder = folder.getParentFile();
+        }
+        return null;
     }
 
     /**
@@ -314,17 +577,30 @@ public static class DatafileInfo {
         String name = link.getName().substring(
                 0, link.getName().length() - ".link".length());
         File data = link.getAbsoluteFile().getParentFile().getParentFile();
-        List<String> command;
+        List<String> command = new ArrayList<>();
+        String powerShell = null;
         if (System.getProperty("os.name", "")
                 .toLowerCase(Locale.ROOT).startsWith("windows")) {
-            command = Arrays.asList("powershell", "-NoProfile",
-                    "-ExecutionPolicy", "Bypass", "-File",
-                    new File(data, "get-data-files.ps1").getPath(), name,
-                    "-Source", DOWNLOAD_SOURCE);
+            powerShell = powerShell();
+            command.add(powerShell);
+            command.add("-NoProfile");
+            command.add("-ExecutionPolicy");
+            command.add("Bypass");
+            command.add("-File");
+            command.add(new File(data, "get-data-files.ps1").getPath());
+            command.add(name);
+            if (IN_GITHUB_ACTIONS == false) {
+                command.add("-Source");
+                command.add(DOWNLOAD_SOURCE);
+            }
         } else {
-            command = Arrays.asList("sh",
-                    new File(data, "get-data-files.sh").getPath(),
-                    "-s", DOWNLOAD_SOURCE, name);
+            command.add("sh");
+            command.add(new File(data, "get-data-files.sh").getPath());
+            if (IN_GITHUB_ACTIONS == false) {
+                command.add("-s");
+                command.add(DOWNLOAD_SOURCE);
+            }
+            command.add(name);
         }
         List<String> typed = new ArrayList<>();
         for (String argument : command) {
@@ -335,12 +611,33 @@ public static class DatafileInfo {
         logger.info("'{}' is missing, so it is being downloaded by running {}",
                 name, line);
         try {
-            new ProcessBuilder(command).inheritIO().start().waitFor();
+            ProcessBuilder builder = new ProcessBuilder(command).inheritIO();
+            if (WINDOWS_POWERSHELL.equals(powerShell)) {
+                // Started from PowerShell 7, Windows PowerShell inherits its
+                // module path and then cannot load its own commands.
+                builder.environment().remove("PSModulePath");
+            }
+            builder.start().waitFor();
         } catch (IOException e) {
             logger.error("Could not run {}. {}", line, e.getMessage());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
         return line;
+    }
+
+    /**
+     * PowerShell 7 when it is on the path, otherwise Windows PowerShell.
+     */
+    private static String powerShell() {
+        String path = System.getenv("PATH");
+        if (path != null) {
+            for (String folder : path.split(File.pathSeparator)) {
+                if (new File(folder.replace("\"", ""), "pwsh.exe").isFile()) {
+                    return "pwsh";
+                }
+            }
+        }
+        return WINDOWS_POWERSHELL;
     }
 }

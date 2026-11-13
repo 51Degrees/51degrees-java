@@ -42,7 +42,7 @@
             <BuilderName>IPIntelligenceOnPremiseEngine</BuilderName>
         </Element>
         <Element>
-            <!-- Needed to obtain additional information from 51Degrees.core.json -->
+            <!-- Needed to obtain additional information from /51dpipeline/json -->
             <BuilderName>JsonBuilderElement</BuilderName>
         </Element>
         <Element>

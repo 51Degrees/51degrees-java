@@ -60,7 +60,7 @@
         <maven.compiler.source>1.8</maven.compiler.source>
 
         <pipeline.version>${project.version}</pipeline.version>
-        <devicedetection.version>4.5.128</devicedetection.version>
+        <devicedetection.version>4.5.130</devicedetection.version>
 
         <junit.version>4.13.2</junit.version>
         <slf4j-api.version>1.7.36</slf4j-api.version>

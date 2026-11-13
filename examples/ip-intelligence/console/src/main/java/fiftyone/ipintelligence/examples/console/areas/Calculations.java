@@ -259,7 +259,7 @@ public class Calculations {
                 holes);
     }
 
-    private static LinearRing transformRing(
+    static LinearRing transformRing(
             LinearRing ring,
             CoordinateTransform transform) {
         Coordinate[] source = ring.getCoordinates();
@@ -274,6 +274,14 @@ public class Calculations {
             coordinates[i] = new Coordinate(
                     transformed.x,
                     transformed.y);
+        }
+
+        // The first and last points are the same input, but compiled code can
+        // project them one bit apart, which JTS rejects as an open ring. The
+        // last point is therefore copied from the first.
+        if (coordinates.length > 1 && ring.isClosed()) {
+            coordinates[coordinates.length - 1] =
+                    new Coordinate(coordinates[0]);
         }
 
         return ring.getFactory().createLinearRing(coordinates);

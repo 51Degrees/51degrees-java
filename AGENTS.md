@@ -125,7 +125,7 @@ java -cp examples/ip-intelligence/console/target/ip-intelligence-java-examples.c
 ```
 
 The example downloads the Lite file first when it is not there. In place of
-the argument, the `51DEGREES_IPI_PATH` environment variable or system property
+the argument, the `_51DEGREES_IPI_PATH` environment variable or system property
 can give the absolute path of a data file that is already there.
 
 On Java 24 or later, add `--enable-native-access=ALL-UNNAMED` before the class
@@ -183,7 +183,7 @@ java -cp examples/device-detection/console/target/device-detection-java-examples
 
 It prints the same `Input values:` and `Results:` blocks as the on-premise
 example. The IP Intelligence cloud examples read their key from
-`51DEGREES_RESOURCE_KEY` first and `TestResourceKey` second, and
+`_51DEGREES_RESOURCE_KEY` first and `TestResourceKey` second, and
 `examples/ip-intelligence/README.md` gives the keys to create for them.
 
 ### Pitfalls
@@ -246,8 +246,11 @@ from wherever Maven is run. Do not add a `.mvn` folder below the root.
 
 Those folders are the data repository, a submodule of cxx, where each free
 data file is a `<file>.link` until `get-data-files.ps1` or `get-data-files.sh`
-downloads it. `ci/fetch-assets.ps1` runs the script, and the examples'
-`DataFileHelper.findDataFile` runs it for a file that is missing. Look for a
+downloads it. In CI, `ci/fetch-assets.ps1` puts every file there from
+common-ci's assets, which each run caches once, so no test job downloads a
+data file. A file added to the data repository needs an entry in
+common-ci's `steps/fetch-assets.ps1` before CI can use it. The examples'
+`DataFileHelper.findDataFile` runs the script for a file that is missing. Look for a
 free file by its folder and name, such as
 `device-detection/51Degrees-LiteV4.1.hash`, so the search does not stop at a
 file of the same name elsewhere, such as a Git LFS pointer in an old

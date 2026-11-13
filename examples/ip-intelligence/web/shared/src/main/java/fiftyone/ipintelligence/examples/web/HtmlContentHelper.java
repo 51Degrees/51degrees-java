@@ -80,9 +80,8 @@ public class HtmlContentHelper {
                 "A more recent data file may be needed for the most accurate IP " +
                 "intelligence results. The latest Lite data file is downloaded by the " +
                 "scripts in the <a href=\"https://github.com/51Degrees/data\">data " +
-                "repository on GitHub</a>. Find out about the full Enterprise data file, " +
-                "which includes automatic daily updates, on our " +
-                "<a href=\"https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-shared-src-main-java-fiftyone-ipintelligence-examples-web-htmlcontenthelper.java&utm_term=data-file-age-warning\">pricing page</a>.\n" +
+                "repository on GitHub</a>. <a href=\"https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-shared-src-main-java-fiftyone-ipintelligence-examples-web-htmlcontenthelper.java&utm_term=data-file-age-warning\">Contact us</a> " +
+                "about the Enterprise data file, which includes automatic daily updates.\n" +
                 "</div>";
     }
 
@@ -90,8 +89,8 @@ public class HtmlContentHelper {
      * Build the contact-us message banner shown at the bottom of the web example
      * pages. Cloud examples are free by design, so the cloud variant is shown
      * unconditionally. On-premise examples only show the banner when running
-     * against the free Lite tier data file, so the {@code show} flag should be
-     * wired to {@code engine.getDataSourceTier().equals("Lite")}.
+     * against a free data file, so the {@code show} flag should be wired to
+     * {@code DataFileHelper.isFreeDataFile(engine)}.
      *
      * @param variant which message wording to use
      * @param show    whether the banner should be rendered at all

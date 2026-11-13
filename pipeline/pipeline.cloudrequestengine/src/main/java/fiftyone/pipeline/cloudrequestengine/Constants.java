@@ -27,6 +27,35 @@ public class Constants {
     public static final String OriginHeaderName = "Origin";
 
     public class Messages {
+        public static final String NoCredential =
+            "The Cloud Request Engine needs a resource key or a license key "
+            + "to authenticate with, as the cloud service answers 401 to a "
+            + "request that carries neither. Use setResourceKey(String) with "
+            + "a resource key created for free at "
+            + "https://configure.51degrees.com?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=pipeline.cloudrequestengine-src-main-java-fiftyone-pipeline-cloudrequestengine-constants.java&utm_term=no-credential";
+
+        public static final String LicenseKeyNeedsProperties =
+            "The Cloud Request Engine has a license key and no requested "
+            + "properties. A license key names no properties of its own, so "
+            + "the cloud service answers 400 to every request made with one "
+            + "that does not list the properties it wants. Use "
+            + "setRequestedProperties to name the fully qualified "
+            + "properties wanted, for example \"device.ismobile\" and "
+            + "\"device.iscrawler\".";
+
+        public static final String PropertiesNotCovered =
+            "The cloud service did not return the requested properties %s "
+            + "in its answer. They are not covered by the keys in use, so "
+            + "they will be missing from every result. The other requested "
+            + "properties came back and are usable.";
+
+        public static final String RequestedNamesNotProperties =
+            "The cloud service did not return the requested properties %s "
+            + "in its answer. Every property is answered, with a reason "
+            + "when it has no value, so these names are not properties. "
+            + "Check the spelling of each one. The other requested "
+            + "properties came back and are usable.";
+
         public static final String EvidenceConflict =
             "'%s:%s' evidence conflicts with %s";
         public static final String MessageNoDataInResponse =
@@ -40,6 +69,10 @@ public class Constants {
 
         public static final String ExceptionCloudError =
             "Error returned from 51Degrees cloud service: %s";
+
+        public static final String ExceptionResponseNotJson =
+            "Cloud service returned status code '%d' with content that is " +
+            "not JSON";
         
         public static final String ExceptionFailedToLoadProperties = 
                 "Failed to load aspect properties for element '%s'. This is "
@@ -48,6 +81,18 @@ public class Constants {
                 + "see our explainer: "
                 + "https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=pipeline.cloudrequestengine-src-main-java-fiftyone-pipeline-cloudrequestengine-constants.java&utm_term=exceptionfailedtoloadproperties";
         
+        public static final String MessageDiscoveryDeferred =
+                "The cloud request engine could not fetch its accessible "
+                + "properties or accepted evidence keys when it was built, "
+                + "because of a failure that can pass. It will fetch them "
+                + "again when it is first used, and sends no data request "
+                + "until it has both.";
+
+        public static final String MessageProductNotInResourceKey =
+                "The resource key does not include the '%s' product, so "
+                + "%s has no properties and its results hold no values. "
+                + "Use a resource key that includes the product to get them.";
+
         public static final String ProcessCloudEngineNotImplemented = 
                   "This method should be overridden in the class derived from "
                 + "CloudAspectEngineBase class. The implementation should use "

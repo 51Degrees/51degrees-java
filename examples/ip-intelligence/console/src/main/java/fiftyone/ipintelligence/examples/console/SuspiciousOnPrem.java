@@ -35,8 +35,9 @@
  *
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/console/src/main/java/fiftyone/ipintelligence/examples/console/SuspiciousOnPrem.java).
  *
- * This example requires an enterprise IP Intelligence data file (.ipi).
- * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=contact-us).
+ * This example needs properties only the Enterprise IP Intelligence data file has. With the free
+ * Lite data file, which it uses by default, it says which and stops. To obtain an Enterprise data
+ * file, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=contact-us).
  *
  * Required Maven Dependencies:
  * - [com.51degrees:ip-intelligence](https://central.sonatype.com/artifact/com.51degrees/ip-intelligence)
@@ -57,11 +58,12 @@ import org.slf4j.LoggerFactory;
 
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
-import static fiftyone.ipintelligence.examples.shared.DataFileHelper.ENTERPRISE_DATA_FILE_REL_PATH;
+import static fiftyone.ipintelligence.examples.shared.DataFileHelper.LITE_DATA_FILE_REL_PATH;
 import static fiftyone.ipintelligence.examples.shared.PropertyHelper.firstValue;
 import static fiftyone.ipintelligence.examples.shared.PropertyHelper.tryGet;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
@@ -80,16 +82,37 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
 public class SuspiciousOnPrem {
     private static final Logger logger = LoggerFactory.getLogger(SuspiciousOnPrem.class);
 
-    /* In this example, by default, the 51degrees IP Intelligence data file needs to be somewhere
-    in the project space, or you may specify another file as a command line parameter.
+    /* In this example, by default, the free 51degrees Lite IP Intelligence data file is used from
+    the data repository in cxx/data, and is downloaded if it is missing, or you may specify another
+    file as a command line parameter. The Lite data file has none of the properties the example
+    needs, so it says so and stops.
 
     For testing, contact us to obtain an enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=contact-us */
+
+    /**
+     * The properties the judgement uses, which only the Enterprise data file
+     * has.
+     */
+    public static final List<String> ENTERPRISE_PROPERTIES = Arrays.asList(
+            "IsCellular",
+            "HardwareDiversity",
+            "BrowserDiversity",
+            "LocationConfidence",
+            "IsHosted",
+            "CountryCode",
+            "HumanProbability");
+
+    /**
+     * Where to ask for a copy of the Enterprise data file, tagged with this
+     * example.
+     */
+    private static final String CONTACT_US = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=enterprise-data-file";
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
 
         // Use the supplied path for the data file
-        String dataFile = args.length > 0 ? args[0] : ENTERPRISE_DATA_FILE_REL_PATH;
+        String dataFile = args.length > 0 ? args[0] : LITE_DATA_FILE_REL_PATH;
         // prepare 'evidence' for use in pipeline (see below)
         List<Map<String, String>> evidence = EvidenceHelper.setUpEvidence();
         run(dataFile, evidence, System.out);
@@ -117,6 +140,15 @@ public class SuspiciousOnPrem {
             throw e;
         }
 
+        // The judgement needs properties only the Enterprise data file has.
+        if (DataFileHelper.lacksEnterpriseProperties(dataFileLocation,
+                "Judging whether an IP address is suspicious",
+                ENTERPRISE_PROPERTIES,
+                new PrintWriter(outputStream),
+                CONTACT_US)) {
+            return;
+        }
+
         /* In this example, we use the IPIntelligencePipelineBuilder and configure it in code.
 
         For more information about builders in general see the documentation at
@@ -125,12 +157,15 @@ public class SuspiciousOnPrem {
         Note that we wrap the creation of a pipeline in a try/resources to control its lifecycle */
         try (Pipeline pipeline = new IPIntelligencePipelineBuilder()
                 .useOnPremise(dataFileLocation, false)
-                // We use the max performance profile for optimal lookup speed in this
-                // example. See the documentation for more detail on this and other
-                // configuration options.
+                // We use the low memory profile, because this example needs
+                // properties only the Enterprise data file has, and that file
+                // is over 6 GB. MaxPerformance loads the whole data file into
+                // memory, which makes each lookup faster where there is memory
+                // to hold it. See the documentation for more detail on this and
+                // other configuration options.
                 // https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=automatic-datafile-updates
                 // https://51degrees.com/documentation/_pipeline_api__features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=usage-sharing
-                .setPerformanceProfile(Constants.PerformanceProfiles.MaxPerformance)
+                .setPerformanceProfile(Constants.PerformanceProfiles.LowMemory)
                 // inhibit sharing usage for this example, usually this should be set to "true"
                 .setShareUsage(false)
                 // inhibit auto-update of the data file for this example

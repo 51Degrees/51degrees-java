@@ -1,8 +1,8 @@
 # 51Degrees Device Detection Engines - Examples
 
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-device-detection-engines-examples "Data rewards the curious") **Java Device Detection**
+![51Degrees](https://raw.githubusercontent.com/51Degrees/51degrees-java/main/.github/images/logo-160.png "Data rewards the curious") **Java Device Detection**
 
-[Developer Documentation](https://51degrees.com/device-detection-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-device-detection-engines-examples "developer documentation")
+[Developer Documentation](https://51degrees.com/documentation/_device_detection__quickstart.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-device-detection-engines-examples "developer documentation")
 
 ## Introduction
 
@@ -27,7 +27,14 @@ The on-premise examples use the free Lite data file and the evidence files in
 `cxx/data/device-detection`, a folder of the
 [data](https://github.com/51Degrees/data) repository. An example that cannot
 find one of these files runs the data repository's download script for it,
-and logs the command it runs.
+and logs the command it runs. The examples find `cxx/data` whether they are
+run from the root of this repository or from this folder.
+
+Each example shows the properties that only the Enterprise data file has,
+such as HardwareVendor, HardwareName and DeviceType, as needing it, and gives
+a link to ask for a copy. [Contact us](https://51degrees.com/contact-us?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=enterprise-data-file)
+for a copy of the Enterprise data file, and pass its path as the first
+argument to use it.
 
 ## Cloud resource keys
 
@@ -115,7 +122,7 @@ case the example runs until the process is stopped:
 PORT=8100 java -jar ./web/getting-started.onprem/target/device-detection-java-examples.web.getting-started.onprem-4.4.20-jar-with-dependencies.jar
 ```
 
-The on-premise web example takes its data file from the `51DEGREES_DD_PATH`
+The on-premise web example takes its data file from the `_51DEGREES_DD_PATH`
 environment variable, then from `TestDataFile`, and otherwise uses the free Lite file
 in `cxx/data/device-detection`, which it downloads before the server starts if it is
 missing.

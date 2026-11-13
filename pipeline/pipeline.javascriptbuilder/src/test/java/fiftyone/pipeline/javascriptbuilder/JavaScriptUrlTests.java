@@ -25,6 +25,7 @@ package fiftyone.pipeline.javascriptbuilder;
 import fiftyone.common.testhelpers.TestLogger;
 import fiftyone.common.testhelpers.TestLoggerFactory;
 import fiftyone.pipeline.core.data.FlowData;
+import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
 import fiftyone.pipeline.engines.fiftyone.flowelements.SequenceElementBuilder;
@@ -32,6 +33,9 @@ import fiftyone.pipeline.javascriptbuilder.flowelements.JavaScriptBuilderElement
 import fiftyone.pipeline.javascriptbuilder.flowelements.JavaScriptBuilderElementBuilder;
 import fiftyone.pipeline.jsonbuilder.flowelements.JsonBuilderElementBuilder;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 
@@ -43,6 +47,7 @@ import java.util.regex.Pattern;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -224,6 +229,94 @@ public class JavaScriptUrlTests {
         assertEquals(1, errors.size(), String.join("\n", errors));
         assertTrue(errors.get(0).contains("\"https://exa mple.com/json\""),
             errors.get(0));
+    }
+
+    /**
+     * A refused host is logged with *** in place of everything in the host
+     * value before its last '@', so a password is never written to the log.
+     * Each case has its own element, because a refusal is logged once per
+     * element.
+     */
+    @ParameterizedTest(name = "[{index}]")
+    @CsvSource(delimiter = '|', value = {
+        "user:secret@example.com|\"https://***@example.com/json\"",
+        "a@b@example.com|\"https://***@example.com/json\"",
+        "u@[::1]:80x|\"https://***@[::1]:80x/json\"",
+        "user:pa/ss@example.com|\"https://***@example.com/json\"",
+        "user:pa?ss@example.com|\"https://***@example.com/json\"",
+        "exa mple.com/a@b|\"https://***@b/json\"",
+        "example.123|\"https://example.123/json\"",
+        "https://example.com|\"https://https://example.com/json\""})
+    public void Url_RefusedHost_LoggedWithoutUserInformation(
+        String host, String logged) throws Exception {
+        renderWithHosts(host);
+
+        List<String> errors = builderErrors();
+        assertEquals(1, errors.size(), String.join("\n", errors));
+        assertTrue(errors.get(0).contains(logged), errors.get(0));
+        for (String secret : new String[] {"secret", "pa/", "pa?", "ss@"}) {
+            assertFalse(errors.get(0).contains(secret), errors.get(0));
+        }
+    }
+
+    /**
+     * A protocol from the request that is neither http nor https gives a
+     * script with no callback, and is logged once like any other URL that
+     * is not valid.
+     */
+    @Test
+    public void Url_RefusedProtocol_NoCallbackAndLoggedOnce() throws Exception {
+        TestLoggerFactory factory = hostLoggerFactory;
+        JavaScriptBuilderElement jsElement =
+            new JavaScriptBuilderElementBuilder(factory)
+                .setEndpoint("/json")
+                .build();
+        try (Pipeline pipeline = new PipelineBuilder(factory)
+            .addFlowElement(new SequenceElementBuilder(factory).build())
+            .addFlowElement(new JsonBuilderElementBuilder(factory).build())
+            .addFlowElement(jsElement)
+            .build()) {
+            for (int i = 0; i < 2; i++) {
+                try (FlowData flowData = pipeline.createFlowData()) {
+                    flowData.addEvidence(
+                        Constants.EVIDENCE_HOST_KEY, "example.com");
+                    flowData.addEvidence(
+                        fiftyone.pipeline.core.Constants.EVIDENCE_PROTOCOL,
+                        "ftp");
+                    flowData.process();
+                    assertTrue(requestUrls(flowData.getFromElement(jsElement)
+                            .getJavaScript()).isEmpty(),
+                        "A refused protocol reached the script.");
+                }
+            }
+        }
+        List<String> errors = builderErrors();
+        assertEquals(1, errors.size(), String.join("\n", errors));
+        assertTrue(errors.get(0).contains("\"ftp://example.com/json\""),
+            errors.get(0));
+    }
+
+    /**
+     * A protocol configured on the builder is used for every request, so one
+     * the script cannot send its request with is refused. The long s is
+     * refused too, which String.equalsIgnoreCase would match to 's'.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {"ftp", "ws", "javascript", "https ", "http\u017f",
+        " ", "\t", "\u00a0"})
+    public void Protocol_ConfiguredOtherThanHttpOrHttps_IsRefused(
+        String protocol) {
+        JavaScriptBuilderElementBuilder builder =
+            new JavaScriptBuilderElementBuilder(loggerFactory);
+        assertThrows(PipelineConfigurationException.class,
+            () -> builder.setProtocol(protocol));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"http", "https", "HTTPS"})
+    public void Protocol_ConfiguredHttpOrHttps_IsAccepted(String protocol) {
+        assertNotNull(new JavaScriptBuilderElementBuilder(loggerFactory)
+            .setProtocol(protocol));
     }
 
     /**
