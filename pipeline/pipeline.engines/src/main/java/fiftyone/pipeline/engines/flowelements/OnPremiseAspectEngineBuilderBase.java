@@ -201,11 +201,25 @@ public abstract class OnPremiseAspectEngineBuilderBase<
             }
 
             if (dataFileConfig.getAutomaticUpdatesEnabled() ||
-                dataFileConfig.getUpdateOnStartup()) {
+                dataFileConfig.getUpdateOnStartup() ||
+                isWatched(dataFileConfig)) {
                 dataUpdateService.registerDataFile(dataFile);
             }
             dataFiles.add(dataFile);
         }
+    }
+
+    /**
+     * Whether the data file is to be watched for a new file on disk. The
+     * file system watcher runs on its own setting and needs neither
+     * automatic updates nor a license key, only a data update service to run
+     * it and a data file on disk.
+     */
+    private boolean isWatched(DataFileConfiguration dataFileConfig) {
+        return dataUpdateService != null &&
+            dataFileConfig.getFileSystemWatcherEnabled() &&
+            dataFileConfig.getDataFilePath() != null &&
+            dataFileConfig.getDataFilePath().isEmpty() == false;
     }
 
     /**
