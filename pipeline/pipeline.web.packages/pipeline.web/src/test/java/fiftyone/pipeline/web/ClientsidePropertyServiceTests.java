@@ -568,6 +568,44 @@ public class ClientsidePropertyServiceTests {
   }
 
   /**
+   * RFC 9110 section 13.2.1 has a server ignore If-None-Match on a method
+   * that does not select or change a representation, such as OPTIONS, so
+   * a matching one is processed and answered as without the header.
+   */
+  @Test
+  public void Json_MatchingIfNoneMatch_Options_Ignored() throws IOException {
+    Configure(null);
+    String etag = etagSent();
+    when(request.getMethod()).thenReturn("OPTIONS");
+    ifNoneMatch(etag);
+
+    service.serveJson(request, response);
+
+    verify(response, times(0)).setStatus(eq(412));
+    verify(response, times(0)).setStatus(eq(304));
+    verify(response).setStatus(eq(200));
+  }
+
+  /**
+   * Before processing, If-None-Match on a TRACE, an OPTIONS or a CONNECT is
+   * ignored, so the request is left to be processed.
+   */
+  @Test
+  public void NotModified_IgnoredMethods_NotAnswered() throws IOException {
+    Configure(null);
+    for (String method : new String[] {"CONNECT", "OPTIONS", "TRACE"}) {
+      when(request.getMethod()).thenReturn(method);
+      ifNoneMatch("*");
+
+      assertFalse(method,
+        service.serveJavascriptNotModified(flowData, request, response));
+      assertFalse(method,
+        service.serveJsonNotModified(flowData, request, response));
+      verify(response, times(0)).setStatus(anyInt());
+    }
+  }
+
+  /**
    * Without a matching If-None-Match a POST gets the JSON as before.
    */
   @Test
