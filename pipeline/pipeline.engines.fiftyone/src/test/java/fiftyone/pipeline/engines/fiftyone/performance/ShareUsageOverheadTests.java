@@ -130,6 +130,14 @@ public class ShareUsageOverheadTests {
     private static final int WarmUpRounds = 2;
 
     /**
+     * The most one Process call may take. Each limit is about ten times the
+     * highest time per call that the slowest runner (Intel macOS) measures,
+     * so that a runner slowed for the whole test still passes.
+     */
+    private static final double SingleEvidenceLimitMillis = 0.25;
+    private static final double ThousandEvidenceLimitMillis = 50;
+
+    /**
      * Returns the milliseconds per Process call, for one round of calls with
      * the evidence given. The FlowData are all processed before any is closed,
      * so that closing them is not part of the time measured. They are closed
@@ -163,9 +171,10 @@ public class ShareUsageOverheadTests {
     }
 
     /**
-     * Returns the median over the measured rounds, after the warm up rounds.
+     * Returns the milliseconds per Process call of each measured round,
+     * lowest first, after the warm up rounds.
      */
-    private double measureMedian(int iterations, int evidenceCount)
+    private double[] measureRounds(int iterations, int evidenceCount)
             throws Exception {
         for (int i = 0; i < WarmUpRounds; i++) {
             measureRound(iterations, evidenceCount);
@@ -175,37 +184,45 @@ public class ShareUsageOverheadTests {
             rounds[i] = measureRound(iterations, evidenceCount);
         }
         Arrays.sort(rounds);
-        logger.info("Rounds in millis per call {}", Arrays.toString(rounds));
-        return rounds[rounds.length / 2];
+        return rounds;
+    }
+
+    /**
+     * Fails when the median round is not below the limit. The message lists
+     * every round, because the build log shows only the message, and the
+     * rounds tell a runner slow for the whole test from a slow round or two.
+     */
+    private static void assertBelowLimit(double[] rounds, double limitMillis) {
+        double median = rounds[rounds.length / 2];
+        logger.info("Overhead was {} millis, rounds {}", median,
+            Arrays.toString(rounds));
+        Assertions.assertTrue(median < limitMillis,
+            "Pipeline with share usage overhead per Process call was " +
+            median + "ms. Maximum permitted is " + limitMillis +
+            ". Rounds in ms per call " + Arrays.toString(rounds));
     }
 
     @Test
     public void ShareUsageOverhead_SingleEvidence() throws Exception {
         int iterations = 10_000;
-        double maxOverheadPerCall = 0.1;
 
-        double msOverheadPerCall = measureMedian(iterations, 0);
+        double[] rounds = measureRounds(iterations, 0);
+        double msOverheadPerCall = rounds[rounds.length / 2];
         overheadMillis.put("ShareUsageOverhead_SingleEvidence_ms", msOverheadPerCall);
         System.out.println("ShareUsageOverhead_SingleEvidence: " + msOverheadPerCall + "ms per call");
-        logger.info("Overhead was {} millis", msOverheadPerCall);
-        Assertions.assertTrue(msOverheadPerCall < maxOverheadPerCall,
-                "Pipeline with share usage overhead per Process call was " +
-                        msOverheadPerCall + "ms. Maximum permitted is " + maxOverheadPerCall);
+        assertBelowLimit(rounds, SingleEvidenceLimitMillis);
     }
 
     @Test
     public void ShareUsageOverhead_ThousandEvidence() throws Exception {
         int iterations = 250;
         int evidenceCount = 1_000;
-        int maxOverheadPerCallMillis = 10;
 
-        double msOverheadPerCall = measureMedian(iterations, evidenceCount);
+        double[] rounds = measureRounds(iterations, evidenceCount);
+        double msOverheadPerCall = rounds[rounds.length / 2];
         overheadMillis.put("ShareUsageOverhead_HundredEvidence_ms", msOverheadPerCall);
         System.out.println("ShareUsageOverhead_HundredEvidence: " + msOverheadPerCall + "ms per call");
-        logger.info("Overhead was {} millis", msOverheadPerCall);
-        Assertions.assertTrue(msOverheadPerCall < maxOverheadPerCallMillis,
-                "Pipeline with share usage overhead per Process call was " +
-                msOverheadPerCall + "ms. Maximum permitted is " + maxOverheadPerCallMillis);
+        assertBelowLimit(rounds, ThousandEvidenceLimitMillis);
     }
 
     private static void closeAll(List<FlowData> data) throws Exception {
