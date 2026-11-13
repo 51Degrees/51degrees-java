@@ -350,9 +350,7 @@ public interface ClientsidePropertyServiceCore {
                     break;
             }
 
-            if (ifNoneMatchMatches(
-                request.getHeaders("If-None-Match"),
-                etag)) {
+            if (ifNoneMatchApplies(request, etag)) {
                 answerMatch(request, response, etag);
             } else {
                 // Otherwise, return the requested content to the client.
@@ -418,9 +416,7 @@ public interface ClientsidePropertyServiceCore {
                 return false;
             }
             String etag = getETag(flowData);
-            if (ifNoneMatchMatches(
-                request.getHeaders("If-None-Match"),
-                etag) == false) {
+            if (ifNoneMatchApplies(request, etag) == false) {
                 return false;
             }
             answerMatch(request, response, etag);
@@ -519,6 +515,28 @@ public interface ClientsidePropertyServiceCore {
                 (byte) (bytes.length >>> 8),
                 (byte) bytes.length });
             digest.update(bytes);
+        }
+
+        /**
+         * Whether the request's If-None-Match matches the ETag. RFC 9110
+         * section 13.2.1 has a server ignore the conditional headers of a
+         * method that does not select or change a representation, such as
+         * CONNECT, OPTIONS or TRACE, so for those it never matches.
+         * @param request the request
+         * @param etag the ETag of the response
+         * @return true if the method must not be performed
+         */
+        private static boolean ifNoneMatchApplies(
+            HttpServletRequest request,
+            String etag) {
+            String method = request.getMethod();
+            if ("CONNECT".equals(method) || "OPTIONS".equals(method) ||
+                "TRACE".equals(method)) {
+                return false;
+            }
+            return ifNoneMatchMatches(
+                request.getHeaders("If-None-Match"),
+                etag);
         }
 
         /**
