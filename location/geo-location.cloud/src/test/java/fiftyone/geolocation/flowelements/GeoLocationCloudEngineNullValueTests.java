@@ -142,6 +142,22 @@ public class GeoLocationCloudEngineNullValueTests {
         }
     }
 
+    /**
+     * A failed cloud request leaves no response. The engine processes
+     * nothing and throws nothing, as the Cloud Request Engine's error says
+     * why.
+     */
+    @Test
+    public void NoResponse_ProcessesNothing() throws Exception {
+        try (GeoLocationCloudEngine engine = buildEngine()) {
+            for (String response : new String[] { null, "" }) {
+                CloudGeoData data = process(engine, response);
+
+                assertFalse(data.asKeyMap().containsKey("Town"));
+            }
+        }
+    }
+
     private static void assertMissing(Runnable read) {
         try {
             read.run();

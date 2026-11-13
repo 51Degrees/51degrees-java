@@ -48,6 +48,14 @@ import org.json.JSONArray;
 
 public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> {
 
+    /**
+     * Warning logged when the Cloud Request Engine has no response to read.
+     * The argument is the name of this engine's class.
+     */
+    static final String MessageNoCloudResponse =
+        "The %s did not process, as the Cloud Request Engine has no " +
+        "response. The Cloud Request Engine's error in the log says why.";
+
     private CloudRequestEngine cloudRequestEngine = null;
     private volatile List<AspectPropertyMetaData> properties;
     private final Object metadataLock = new Object();
@@ -136,6 +144,14 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
         if (cloudRequestEngine != null) {
             CloudRequestData requestData = data.getFromElement(cloudRequestEngine);
             String json = requestData.getJsonResponse();
+
+            // A failed cloud request leaves no response. The Cloud Request
+            // Engine reports why, so this engine adds no error of its own.
+            if (json == null || json.isEmpty()) {
+                logger.warn(String.format(
+                    MessageNoCloudResponse, getClass().getSimpleName()));
+                return;
+            }
 
             JSONObject jsonObj = new JSONObject(json);
             JSONObject geoObj = getElementJson(jsonObj);
