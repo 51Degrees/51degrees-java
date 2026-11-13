@@ -68,6 +68,13 @@ import static org.apache.commons.lang3.BooleanUtils.isFalse;
 public class DataUpdateServiceDefault implements DataUpdateService {
 
     /**
+     * The log message of a failed check for a data update, with the error
+     * that says why attached.
+     */
+    private static final String CHECK_FAILED =
+        "Error during check for data update";
+
+    /**
      * The query parameter of a data update URL that holds the license keys,
      * as the 51Degrees URL formatter writes it.
      */
@@ -820,8 +827,8 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                     loggedUrl, engineType);
             HttpURLConnection connection = httpClient.connect(new URI(url.trim()).toURL());
             if (connection == null) {
-                logger.warn(connectFailure(loggedUrl, engineType, automatic,
-                        "No response from the data update service"));
+                logCheckFailure("No response from data update service at '" +
+                        loggedUrl + "' for engine '" + engineType + "'", null);
                 return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
             }
             try {
@@ -842,11 +849,10 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                             downloaded = downloadOkResponse(
                                     connection, dataFile, tempFile, automatic);
                         } catch (Exception e) {
-                            // An HTTP library's exception often names the
-                            // URL it requested.
-                            logger.warn(downloadFailure(loggedUrl, engineType,
-                                    automatic, LicenseKeyMask.maskIn(
-                                            e.getMessage(), licenseKeys)),
+                            // A download cut short is the access error, as
+                            // a failure to connect is. An HTTP library's
+                            // exception often names the URL it requested.
+                            logCheckFailure(accessFailure(loggedUrl, engineType),
                                     LicenseKeyMask.maskIn(e, licenseKeys));
                             return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
                         }
@@ -859,8 +865,8 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                     // Note: needed because TooManyRequests is not available
                     // in some versions of the HttpStatusCode enum.
                     case (429):
-                        logger.warn(downloadFailure(loggedUrl, engineType, automatic,
-                                "HTTP status code 429 (too many requests)"));
+                        logCheckFailure("Too many requests to '" + loggedUrl +
+                                "' for engine '" + engineType + "'", null);
                         return AutoUpdateStatus.AUTO_UPDATE_ERR_429_TOO_MANY_ATTEMPTS;
                     case HttpURLConnection.HTTP_NOT_MODIFIED:
                         logger.info("No data newer than {} found at '{}' for Engine '{}'",
@@ -868,12 +874,15 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                                 engineType);
                         return AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED;
                     case HttpURLConnection.HTTP_FORBIDDEN:
-                        logger.warn(downloadFailure(loggedUrl, engineType, automatic,
-                                "HTTP status code 403 (access denied)"));
+                        logCheckFailure("Access denied to data update service " +
+                                "at '" + loggedUrl + "' for engine '" +
+                                engineType + "'", null);
                         return AutoUpdateStatus.AUTO_UPDATE_ERR_403_FORBIDDEN;
                     default:
-                        logger.warn(downloadFailure(loggedUrl, engineType, automatic,
-                                "HTTP status code " + connection.getResponseCode()));
+                        logCheckFailure("HTTP status code '" +
+                                connection.getResponseCode() + "' from data " +
+                                "update service at '" + loggedUrl +
+                                "' for engine '" + engineType + "'", null);
                         return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
                 }
             } finally {
@@ -881,8 +890,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             }
         } catch (Exception e) {
             // An HTTP library's exception often names the URL it requested.
-            logger.warn(connectFailure(loggedUrl, engineType, automatic,
-                    LicenseKeyMask.maskIn(e.getMessage(), licenseKeys)),
+            logCheckFailure(accessFailure(loggedUrl, engineType),
                     LicenseKeyMask.maskIn(e, licenseKeys));
             return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
         }
@@ -911,31 +919,24 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     }
 
     /**
-     * The warning for a failed connection. The URL and the detail are
+     * The message of the Errors table's row for a failure to connect to the
+     * data update service, or to download all of its response. The URL is
      * given with each license key already masked.
      */
-    private static String connectFailure(
-            String loggedUrl,
-            String engineType,
-            boolean automatic,
-            String detail) {
-        return "An error occurred when connecting to " + loggedUrl +
-                " in order to check for data file updates for " + engineType +
-                "." + retryNote(automatic) + " Error detail: " + detail;
+    private static String accessFailure(String loggedUrl, String engineType) {
+        return "Error accessing data update service at '" + loggedUrl +
+                "' for engine '" + engineType + "'";
     }
 
     /**
-     * The warning for a failed download. The URL and the detail are given
-     * with each license key already masked.
+     * Log an Error row of the Errors table as the specification asks, at
+     * Error, reading "Error during check for data update", with an error
+     * attached that carries the row's message and the cause when there is
+     * one. The message and the cause are given with each license key
+     * already masked.
      */
-    private static String downloadFailure(
-            String loggedUrl,
-            String engineType,
-            boolean automatic,
-            String detail) {
-        return "An error occurred while downloading a data file update for " +
-                engineType + " from " + loggedUrl + "." + retryNote(automatic) +
-                " Error detail: " + detail;
+    private void logCheckFailure(String message, Throwable cause) {
+        logger.error(CHECK_FAILED, new IOException(message, cause));
     }
 
     /**
