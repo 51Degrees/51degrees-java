@@ -30,8 +30,14 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.reflect.Field;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -53,6 +59,10 @@ import fiftyone.pipeline.web.mvc.services.ClientsidePropertyService;
 import fiftyone.pipeline.web.mvc.services.FiftyOneJSService;
 import fiftyone.pipeline.web.mvc.services.PipelineResultService;
 import fiftyone.pipeline.web.mvc.services.UACHService;
+import fiftyone.pipeline.web.mvc.services.WebRequestEvidenceService;
+
+import static fiftyone.pipeline.web.Constants.CORE_JS_NAME;
+import static fiftyone.pipeline.web.Constants.HTTPCONTEXT_FLOWDATA;
 
 public class FiftyOneInterceptorTests {
     private HttpServletRequest request;
@@ -172,6 +182,68 @@ public class FiftyOneInterceptorTests {
         assertFalse(interceptor.preHandle(request, response, handler));
         verify(flowData, times(1))
             .close();
+    }
+
+    /**
+     * A request for the JavaScript whose If-None-Match matches the ETag of
+     * the Evidence it supplies is answered with a 304 without processing, as
+     * the servlet filter does.
+     */
+    @Test
+    public void FiftyOneInterceptor_MatchingIfNoneMatch_304_NotProcessed()
+        throws Exception {
+        FiftyOneInterceptorConfig config =
+            mock(FiftyOneInterceptorConfig.class);
+        when(config.getDataFilePath())
+            .thenReturn("src/test/resources/Test.xml");
+        when(config.getClientsidePropertiesEnabled()).thenReturn(true);
+        when(config.getClientsideCacheMaxAge()).thenReturn(1800);
+        when(config.getSequenceElementEnabled()).thenReturn(true);
+        when(config.getSetHeadersElementEnabled()).thenReturn(true);
+        FlowDataProvider provider = new FlowDataProvider.Default();
+        ClientsidePropertyService clientside =
+            new ClientsidePropertyService.Default(provider);
+        FiftyOneInterceptor real = new FiftyOneInterceptor(
+            config,
+            new PipelineResultService.Default(
+                new WebRequestEvidenceService.Default()),
+            provider,
+            clientside,
+            new FiftyOneJSService.Default(clientside),
+            new UACHService.Default(provider));
+
+        Map<String, Object> attributes = new HashMap<>();
+        HttpServletRequest revalidation = mock(HttpServletRequest.class);
+        when(revalidation.getMethod()).thenReturn("GET");
+        when(revalidation.getRequestURI()).thenReturn("/" + CORE_JS_NAME);
+        when(revalidation.getContextPath()).thenReturn("");
+        when(revalidation.getScheme()).thenReturn("https");
+        when(revalidation.getHeaderNames()).thenAnswer(invocation ->
+            Collections.enumeration(Arrays.asList("Host", "If-None-Match")));
+        when(revalidation.getHeader("Host")).thenReturn("example.com");
+        when(revalidation.getHeader("If-None-Match")).thenReturn("*");
+        when(revalidation.getHeaders("If-None-Match")).thenAnswer(invocation ->
+            Collections.enumeration(Collections.singletonList("*")));
+        doAnswer(invocation -> attributes.put(
+            invocation.getArgument(0), invocation.getArgument(1)))
+            .when(revalidation).setAttribute(anyString(), any());
+        when(revalidation.getAttribute(anyString())).thenAnswer(invocation ->
+            attributes.get((String) invocation.getArgument(0)));
+        HttpServletResponse answer = mock(HttpServletResponse.class);
+        when(answer.getWriter())
+            .thenReturn(new PrintWriter(new StringWriter()));
+
+        try {
+            assertFalse(real.preHandle(revalidation, answer, handler));
+        } finally {
+            real.pipeline.close();
+        }
+
+        verify(revalidation, never()).setAttribute(
+            eq(HTTPCONTEXT_FLOWDATA), any());
+        verify(answer).setStatus(304);
+        verify(answer).setHeader(
+            eq("Cache-Control"), eq("private,max-age=1800"));
     }
 
     private FiftyOneInterceptor newInterceptor(

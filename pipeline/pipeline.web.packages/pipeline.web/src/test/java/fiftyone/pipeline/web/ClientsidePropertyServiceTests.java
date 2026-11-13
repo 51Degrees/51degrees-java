@@ -409,9 +409,10 @@ public class ClientsidePropertyServiceTests {
   }
 
   /**
-   * A browser holding a good response keeps it while processing fails. The
-   * 304 carries the caching headers a 200 to the same request would, so the
-   * browser asks again next time rather than keeping it for 30 minutes.
+   * The ETag depends on the Evidence alone, so a matching If-None-Match gets
+   * the same 304 while processing fails as at any other time, carrying the
+   * headers of a good response. A browser holding a good response keeps it,
+   * with its ETag and max-age.
    */
   @Test
   public void JavaScript_ProcessingErrors_MatchingIfNoneMatch_304()
@@ -424,12 +425,7 @@ public class ClientsidePropertyServiceTests {
 
     service.serveJavascript(request, response);
 
-    verify(response).setStatus(eq(304));
-    assertEquals("", responseString.toString());
-    verify(response).setHeader(eq("Cache-Control"), eq("private, no-cache"));
-    verify(response, times(0)).setHeader(eq("ETag"), anyString());
-    verify(response).setHeader(eq("Vary"), eq("User-Agent"));
-    verify(response).setHeader(eq("Access-Control-Allow-Origin"), eq("*"));
+    Validate304(etag);
   }
 
   /**
