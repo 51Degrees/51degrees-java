@@ -30,9 +30,16 @@ public class Constants {
     public static final String CORE_JS_NAME = "51Degrees.core.js";
     
     /**
-     * The name of the JSON served to the client.
+     * The name the JSON was served under before {@link #DEFAULT_JSON_PATH}
+     * became the default. It is still answered.
      */
     public static final String CORE_JSON_NAME = "51Degrees.core.json";
+
+    /**
+     * The default path the JSON is served from, which the specification
+     * gives.
+     */
+    public static final String DEFAULT_JSON_PATH = "/51dpipeline/json";
 
     /**
      * Key prefix used for 51Degrees data stored in the HTTP context.
@@ -73,5 +80,37 @@ public class Constants {
      * Default value for the client-side enabled option.
      */
     public static final boolean DEFAULT_CLIENTSIDE_ENABLED = true;
+
+    /**
+     * Default value for the options that add the Sequence Element and the
+     * Set Headers Element.
+     */
+    public static final boolean DEFAULT_ELEMENT_ENABLED = true;
+
+    /**
+     * Name of the filter init parameter that sets the path the JavaScript is
+     * served from.
+     */
+    public static final String INIT_PARAM_JAVASCRIPT_PATH = "javascript-path";
+
+    /**
+     * Name of the filter init parameter that sets the path the JSON is
+     * served from.
+     */
+    public static final String INIT_PARAM_JSON_PATH = "json-path";
+
+    /**
+     * Name of the filter init parameter that sets whether the Sequence
+     * Element is added to the Pipeline when it is missing.
+     */
+    public static final String INIT_PARAM_SEQUENCE_ELEMENT_ENABLED =
+        "sequence-element-enabled";
+
+    /**
+     * Name of the filter init parameter that sets whether the Set Headers
+     * Element is added to the Pipeline when it is missing.
+     */
+    public static final String INIT_PARAM_SET_HEADERS_ELEMENT_ENABLED =
+        "set-headers-element-enabled";
 
 }

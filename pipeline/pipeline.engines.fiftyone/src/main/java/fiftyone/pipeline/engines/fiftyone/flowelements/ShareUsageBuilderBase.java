@@ -59,6 +59,13 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     protected final List<String> includedQueryStringParameters = new ArrayList<>();
     protected final List<Map.Entry<String, String>> ignoreDataEvidenceFilter = new ArrayList<>();
     protected boolean trackSession;
+    protected int failuresToEnterRecovery = Constants.SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_DEFAULT;
+    protected int failuresWindowSeconds = Constants.SHARE_USAGE_FAILURES_WINDOW_SECONDS_DEFAULT;
+    protected double initialRecoveryDelaySeconds = Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_INITIAL_DELAY_SECONDS_DEFAULT;
+    protected double maxRecoveryDelaySeconds = Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT;
+    protected double recoveryMultiplier = Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT;
+    protected boolean shareAllEvidence;
+    protected boolean shareAllQueryStringParameters;
 
     /**
      * Constructor
@@ -141,6 +148,56 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
         String queryStringParameterName) {
         includedQueryStringParameters.add(queryStringParameterName.trim());
         return this;
+    }
+
+    /**
+     * If set to true, every query string and HTTP form parameter is shared,
+     * rather than only those that start with 51D_ or are named in the
+     * included parameters. The whole query string and the parameters that are
+     * never shared are still not shared.
+     * <p>
+     * Default value is false
+     * @param shareAll true to share all query string parameters
+     * @return this builder
+     */
+    @DefaultValue(booleanValue = false)
+    public ShareUsageBuilderBase<T> setShareAllQueryStringParameters(
+        boolean shareAll) {
+        this.shareAllQueryStringParameters = shareAll;
+        return this;
+    }
+
+    /**
+     * Whether every query string parameter is shared.
+     * @return true if all query string parameters are shared
+     */
+    public boolean isShareAllQueryStringParameters() {
+        return shareAllQueryStringParameters;
+    }
+
+    /**
+     * If set to true, all Evidence is shared, which overrides the blocked
+     * HTTP headers and the rules for cookies, session values and query string
+     * parameters. The keys that are never shared (an email address, the salt
+     * for hashed email identifiers, the whole query string, the path and the
+     * Cookie header) are still not shared.
+     * <p>
+     * Default value is false
+     * @param shareAll true to share all Evidence
+     * @return this builder
+     */
+    @DefaultValue(booleanValue = false)
+    public ShareUsageBuilderBase<T> setShareAllEvidence(boolean shareAll) {
+        this.shareAllEvidence = shareAll;
+        return this;
+    }
+
+    /**
+     * Whether all Evidence is shared.
+     * @return true if all Evidence is shared
+     */
+    public boolean isShareAllEvidence() {
+        return shareAllEvidence;
     }
 
     /**
@@ -417,6 +474,92 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     @DefaultValue(value="false")
     public ShareUsageBuilderBase<T> setTrackSession(boolean track) {
         this.trackSession = track;
+        return this;
+    }
+
+    /**
+     * Set the number of failed sends within the failures window that pauses
+     * sending. Usage data is still queued while sending is paused, up to the
+     * maximum queue size.
+     * @param failuresToEnterRecovery the number of failed sends, from 1 to 100
+     * @return this builder
+     */
+    @DefaultValue(intValue = Constants.SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_DEFAULT)
+    public ShareUsageBuilderBase<T> setFailuresToEnterRecovery(
+        int failuresToEnterRecovery) {
+        if (failuresToEnterRecovery < Constants.SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_MIN ||
+            failuresToEnterRecovery > Constants.SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_MAX) {
+            throw new IllegalArgumentException(
+                "failuresToEnterRecovery must be from " +
+                    Constants.SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_MIN + " to " +
+                    Constants.SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_MAX +
+                    ". Received: " + failuresToEnterRecovery + ".");
+        }
+        this.failuresToEnterRecovery = failuresToEnterRecovery;
+        return this;
+    }
+
+    /**
+     * Set the time in seconds over which failed sends are counted.
+     * @param failuresWindowSeconds the time in seconds, 1 or more
+     * @return this builder
+     */
+    @DefaultValue(intValue = Constants.SHARE_USAGE_FAILURES_WINDOW_SECONDS_DEFAULT)
+    public ShareUsageBuilderBase<T> setFailuresWindowSeconds(
+        int failuresWindowSeconds) {
+        if (failuresWindowSeconds < 1) {
+            throw new IllegalArgumentException(
+                "failuresWindowSeconds must be 1 or more.");
+        }
+        this.failuresWindowSeconds = failuresWindowSeconds;
+        return this;
+    }
+
+    /**
+     * Set the length in seconds of the first pause after failed sends.
+     * @param initialDelaySeconds the length in seconds, more than 0
+     * @return this builder
+     */
+    @DefaultValue(doubleValue = Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_INITIAL_DELAY_SECONDS_DEFAULT)
+    public ShareUsageBuilderBase<T> setInitialRecoveryDelaySeconds(
+        double initialDelaySeconds) {
+        if ((initialDelaySeconds > 0) == false) {
+            throw new IllegalArgumentException(
+                "initialDelaySeconds must be more than 0.");
+        }
+        this.initialRecoveryDelaySeconds = initialDelaySeconds;
+        return this;
+    }
+
+    /**
+     * Set the longest a pause can be, in seconds.
+     * @param maxDelaySeconds the length in seconds, more than 0
+     * @return this builder
+     */
+    @DefaultValue(doubleValue = Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT)
+    public ShareUsageBuilderBase<T> setMaxRecoveryDelaySeconds(
+        double maxDelaySeconds) {
+        if ((maxDelaySeconds > 0) == false) {
+            throw new IllegalArgumentException(
+                "maxDelaySeconds must be more than 0.");
+        }
+        this.maxRecoveryDelaySeconds = maxDelaySeconds;
+        return this;
+    }
+
+    /**
+     * Set what the pause is multiplied by each time the send tried when a
+     * pause ends fails. 2 doubles the pause each time.
+     * @param multiplier the multiplier, 1 or more
+     * @return this builder
+     */
+    @DefaultValue(doubleValue = Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT)
+    public ShareUsageBuilderBase<T> setRecoveryMultiplier(double multiplier) {
+        if ((multiplier >= 1) == false) {
+            throw new IllegalArgumentException(
+                "multiplier must be 1 or more.");
+        }
+        this.recoveryMultiplier = multiplier;
         return this;
     }
 

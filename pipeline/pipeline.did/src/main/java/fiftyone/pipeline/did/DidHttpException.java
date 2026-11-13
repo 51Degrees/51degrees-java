@@ -54,7 +54,13 @@ public class DidHttpException extends IOException {
         return statusCode;
     }
 
-    /** @return the body the service answered with, never null */
+    /**
+     * The body the service answered with, as it was sent. It is not masked,
+     * and the answer to a request that sent a license key can hold that
+     * key, so a caller that logs the body or puts it in a message must
+     * mask any license key in it first.
+     * @return the body, never null
+     */
     public String getBody() {
         return body;
     }

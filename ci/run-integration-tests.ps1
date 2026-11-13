@@ -36,7 +36,10 @@ if ($Version) {
 Write-Host "::group::Pipeline developer examples"
 Push-Location "$RepoName/pipeline"
 try {
-    mvn test @MavenOptions -DfailIfNoTests=false "-Dsurefire.failIfNoSpecifiedTests=false" -Dtest=ExampleTests
+    # The cloud engine example calls the live cloud service, so it is given
+    # the test resource key, as the unit test run gives it.
+    mvn test @MavenOptions -DfailIfNoTests=false "-Dsurefire.failIfNoSpecifiedTests=false" -Dtest=ExampleTests `
+        "-DTestResourceKey=$TestResourceKey"
     if ($LASTEXITCODE -ne 0) { $failed += 'pipeline developer examples' }
 } finally {
     Pop-Location
@@ -165,7 +168,7 @@ if (-not $TestResourceKey) {
             Module = 'web/getting-started.onprem'
             Port = 8098
             ExampleEnv = @{
-                '51DEGREES_DD_PATH' = (Resolve-Path "$RepoName/cxx/data/device-detection/TAC-HashV41.hash").Path
+                '_51DEGREES_DD_PATH' = (Resolve-Path "$RepoName/cxx/data/device-detection/TAC-HashV41.hash").Path
             }
         }
     )

@@ -22,11 +22,20 @@
 
 package fiftyone.ipintelligence.engine.onpremise.flowelements;
 
+import fiftyone.ipintelligence.engine.onpremise.interop.swig.CollectionConfigSwig;
+import fiftyone.ipintelligence.engine.onpremise.interop.swig.ConfigIpiSwig;
+import fiftyone.pipeline.engines.Constants.PerformanceProfiles;
 import fiftyone.pipeline.engines.configuration.CacheConfiguration;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
+
+import java.lang.reflect.Field;
+import java.util.Arrays;
+
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertFalse;
 
 public class BuilderTests {
     protected static final ILoggerFactory loggerFactory = LoggerFactory.getILoggerFactory();
@@ -45,5 +54,138 @@ public class BuilderTests {
     @Test(expected = UnsupportedOperationException.class)
     public void Builder_CacheDisabled() {
         builder.setCache(new CacheConfiguration(1000));
+    }
+
+    /**
+     * Check that a builder whose caller sets no performance profile gives
+     * the engine the collection settings of the Balanced profile, and not
+     * the in-memory settings of MaxPerformance.
+     */
+    @Test
+    public void Builder_NoProfile_CollectionsAreBalanced() throws Exception {
+        long[] given = collections(configOf(builder));
+
+        assertArrayEquals(
+            collections(PerformanceProfiles.Balanced), given);
+        assertFalse(Arrays.equals(
+            collections(PerformanceProfiles.MaxPerformance), given));
+    }
+
+    /**
+     * Check that a profile the caller names, in code or by name as a
+     * configuration file gives it, replaces the Balanced default.
+     * MaxPerformance and LowMemory give every collection the same settings,
+     * so this cannot tell those two apart.
+     */
+    @Test
+    public void Builder_MaxPerformance_ReplacesBalanced() throws Exception {
+        long[] inMemory = collections(PerformanceProfiles.MaxPerformance);
+
+        builder.setPerformanceProfile(PerformanceProfiles.MaxPerformance);
+        assertArrayEquals(inMemory, collections(configOf(builder)));
+
+        IPIntelligenceOnPremiseEngineBuilder named =
+            new IPIntelligenceOnPremiseEngineBuilder(loggerFactory)
+                .setPerformanceProfile("MaxPerformance");
+        assertArrayEquals(inMemory, collections(configOf(named)));
+        assertFalse(Arrays.equals(
+            collections(PerformanceProfiles.Balanced), inMemory));
+    }
+
+    /**
+     * Check that every collection the configuration hands out is borrowed.
+     * The collections belong to the configuration, so a proxy that owned
+     * one would free it a second time when the proxy is deleted.
+     */
+    @Test
+    public void Config_CollectionsAreBorrowed() throws Exception {
+        ConfigIpiSwig config = new ConfigIpiSwig();
+        try {
+            config.setBalanced();
+            long[] before = collections(config);
+            CollectionConfigSwig[] all = {
+                config.getStrings(),
+                config.getComponents(),
+                config.getMaps(),
+                config.getProperties(),
+                config.getValues(),
+                config.getProfiles(),
+                config.getGraphs(),
+                config.getProfileGroups(),
+                config.getProfileOffsets(),
+                config.getPropertyTypes(),
+                config.getGraph()
+            };
+            Field own = CollectionConfigSwig.class
+                .getDeclaredField("swigCMemOwn");
+            own.setAccessible(true);
+            for (CollectionConfigSwig collection : all) {
+                assertFalse(own.getBoolean(collection));
+                collection.delete();
+            }
+            assertArrayEquals(before, collections(config));
+        } finally {
+            config.delete();
+        }
+    }
+
+    /**
+     * The native configuration the builder hands to the engine it builds.
+     */
+    private static ConfigIpiSwig configOf(
+            IPIntelligenceOnPremiseEngineBuilder builder) throws Exception {
+        Field field = IPIntelligenceOnPremiseEngineBuilder.class
+            .getDeclaredField("config");
+        field.setAccessible(true);
+        return (ConfigIpiSwig) field.get(builder);
+    }
+
+    /**
+     * The collection settings the native library gives the profile.
+     */
+    private static long[] collections(PerformanceProfiles profile) {
+        ConfigIpiSwig config = new ConfigIpiSwig();
+        try {
+            switch (profile) {
+                case Balanced:
+                    config.setBalanced();
+                    break;
+                case MaxPerformance:
+                    config.setMaxPerformance();
+                    break;
+                default:
+                    throw new IllegalArgumentException(profile.name());
+            }
+            return collections(config);
+        } finally {
+            config.delete();
+        }
+    }
+
+    /**
+     * The number of entries loaded at the start and the cache capacity of
+     * every collection in the configuration, in a fixed order. Concurrency
+     * is left out, because the builder sets its own.
+     */
+    private static long[] collections(ConfigIpiSwig config) {
+        CollectionConfigSwig[] all = {
+            config.getStrings(),
+            config.getComponents(),
+            config.getMaps(),
+            config.getProperties(),
+            config.getValues(),
+            config.getProfiles(),
+            config.getGraphs(),
+            config.getProfileGroups(),
+            config.getProfileOffsets(),
+            config.getPropertyTypes(),
+            config.getGraph()
+        };
+        long[] settings = new long[all.length * 2];
+        for (int i = 0; i < all.length; i++) {
+            settings[i * 2] = all[i].getLoaded();
+            settings[i * 2 + 1] = all[i].getCapacity();
+        }
+        return settings;
     }
 }

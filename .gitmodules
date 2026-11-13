@@ -8,3 +8,6 @@
 	path = pipeline/owid-java
 	url = https://github.com/SWAN-community/owid-java.git
 	branch = main
+[submodule "pipeline/pipeline.core/configuration-validation"]
+	path = pipeline/pipeline.core/configuration-validation
+	url = ../configuration-validation

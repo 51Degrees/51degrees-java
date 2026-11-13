@@ -28,13 +28,14 @@ repositories used to do for one package tree each.
   request tests the examples against the libraries it changes. The publish
   workflow instead tests the examples against the version it built, through
   [run-integration-tests.ps1](run-integration-tests.ps1).
-- [fetch-assets.ps1](fetch-assets.ps1) links every data file it downloads into
+- [fetch-assets.ps1](fetch-assets.ps1) fetches every data file as one of
+  common-ci's assets, which each run caches once, and links or copies it into
   `cxx/data/device-detection` or `cxx/data/ip-intelligence`, where the tests
   and examples find them. Those are the folders of the
   [data](https://github.com/51Degrees/data) repository, which is a submodule
-  of cxx. The script then runs the data repository's `get-data-files.ps1`,
-  which keeps the linked files and downloads the free files that are not
-  assets, which is the Asn file.
+  of cxx. No test job downloads a data file, so a file added to the data
+  repository needs an entry in common-ci's `steps/fetch-assets.ps1` before CI
+  can use it.
 - [run-performance-tests.ps1](run-performance-tests.ps1) measures the Pipeline
   API, Device Detection and IP Intelligence and writes one results file per
   configuration. The Device Detection and IP Intelligence metrics are prefixed

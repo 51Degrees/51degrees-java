@@ -1,8 +1,8 @@
 # 51Degrees IP Intelligence Engines - Examples
 
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-ip-intelligence-engines-examples "Data rewards the curious") **Java IP Intelligence**
+![51Degrees](https://raw.githubusercontent.com/51Degrees/51degrees-java/main/.github/images/logo-160.png "Data rewards the curious") **Java IP Intelligence**
 
-[Developer Documentation](https://51degrees.com/ip-intelligence-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-ip-intelligence-engines-examples "developer documentation")
+[Developer Documentation](https://51degrees.com/documentation/_ip_intelligence__quickstart.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-ip-intelligence-engines-examples "developer documentation")
 
 ## Introduction
 
@@ -28,8 +28,15 @@ gives a link to ask for a copy. The Compare, Metrics and Suspicious examples nee
 properties, so with a free data file they say which they need and stop.
 [Contact us](https://51degrees.com/contact-us?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=enterprise-data-file) for a copy of
 the Enterprise data file. To use it, place it in `cxx/data/ip-intelligence` and pass its path
-as the first argument, or set the `51DEGREES_IPI_PATH` environment variable or system
+as the first argument, or set the `_51DEGREES_IPI_PATH` environment variable or system
 property to its path.
+
+The Enterprise data file is over 6 GB, and the MaxPerformance profile loads all of it into
+memory, so the examples built for it, or that may be given it, use the LowMemory profile,
+which reads the file from disk as it is needed. Those are the Compare, Metrics,
+OfflineProcessing, Suspicious and UpdateDataFile examples. The Metrics and Compare examples
+take a profile as their fourth argument, and `MaxPerformance` there makes them faster on a
+machine with memory to hold the whole file.
 
 The `ExamplesWithoutSettingsTest` tests run each console example as a fresh clone does. The
 other tests use the Enterprise data file, `51Degrees-EnterpriseIpiV41.ipi`, when it is in
@@ -54,7 +61,7 @@ Compare and Suspicious examples with the Enterprise data file are skipped.
 
 The examples locate the data file in the following order:
 
-1. The `51DEGREES_IPI_PATH` environment variable or system property, which can
+1. The `_51DEGREES_IPI_PATH` environment variable or system property, which can
    be set to an explicit path to the data file. It is used in place of any
    file named without a full path.
 2. The path given as the first argument, or the free file the example uses
@@ -97,7 +104,7 @@ environment variable or system property.
 | MetadataCloud            | How to access the meta-data that relates to the properties available from the cloud IP intelligence service.                                 |
 
 Cloud examples need a resource key. The key is read from the
-`51DEGREES_RESOURCE_KEY` environment variable or system property first. The
+`_51DEGREES_RESOURCE_KEY` environment variable or system property first. The
 legacy `TestResourceKey` name is still supported and is checked second.
 
 The cloud property tiers changed in May 2026. The examples and this
