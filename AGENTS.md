@@ -300,3 +300,11 @@ into `main` from any other branch.
 
 Plain words, no em dashes, sentence case headings. Nothing in this public
 repository names a private repository or an issue in one.
+
+## Tests that fail on timing
+
+A test that fails on a time limit, a performance threshold or a timeout is
+fixed, not run again until it passes. Either the limit is set to fit the
+slowest runner the test runs on, with each runner's measurement behind it, or
+the reason it takes too long is found and fixed. A failure that comes and goes
+costs everyone who meets it the time to look into it.
