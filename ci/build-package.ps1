@@ -57,5 +57,18 @@ $modules = @($plan | ForEach-Object { Get-ModulePath $_ })
     -CodeSigningKeyVaultClientSecret $Keys['CodeSigningKeyVaultClientSecret'] `
     -CodeSigningKeyVaultCertificateName $Keys['CodeSigningKeyVaultCertificateName'] `
     -CodeSigningKeyVaultCertificateData $Keys['CodeSigningKeyVaultCertificateData']
+$exitCode = $LASTEXITCODE
 
-exit $LASTEXITCODE
+# Maven Central limits each organisation's release size and file count in a
+# calendar month, so the log gives both for the bundle this publish uploads.
+$bundle = Get-Item package/central-bundle.zip
+$zip = [IO.Compression.ZipFile]::OpenRead($bundle.FullName)
+try {
+    $files = $zip.Entries.Count
+} finally {
+    $zip.Dispose()
+}
+Write-Host ("The publishing bundle for $($plan.Count) packages is " +
+    "$($bundle.Length) bytes ({0:N1} MiB) in $files files" -f ($bundle.Length / 1MB))
+
+exit $exitCode
