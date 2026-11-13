@@ -130,9 +130,10 @@ public class ShareUsageOverheadTests {
     private static final int WarmUpRounds = 2;
 
     /**
-     * The most one Process call may take. Each limit is about ten times the
-     * highest time per call that the slowest runner (Intel macOS) measures,
-     * so that a runner slowed for the whole test still passes.
+     * The most one Process call may take. Each limit is set from the figures
+     * the slowest runner (Intel macOS) prints in the performance step, with
+     * room for that runner to run five times slower than usual for the whole
+     * test.
      */
     private static final double SingleEvidenceLimitMillis = 0.25;
     private static final double ThousandEvidenceLimitMillis = 50;
