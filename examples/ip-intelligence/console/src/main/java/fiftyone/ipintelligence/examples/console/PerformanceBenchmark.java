@@ -35,8 +35,9 @@
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/console/src/main/java/fiftyone/ipintelligence/examples/console/PerformanceBenchmark.java).
  *
  * By default the example uses the free Asn IP Intelligence data file, which it downloads when it
- * is missing, and is far smaller than the Lite file. It asks for RegisteredName and AsnName, so
- * it runs with any of the data files. To obtain an Enterprise data file, please
+ * is missing, and is far smaller than the Lite file. It asks only for the property it reads,
+ * being RegisteredName, or AsnName with the free Asn data file, which has no RegisteredName,
+ * so it runs with any of the data files. To obtain an Enterprise data file, please
  * [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-performancebenchmark.java&utm_term=header).
  *
  * Required Maven Dependencies:
@@ -51,6 +52,7 @@ import fiftyone.ipintelligence.IPIntelligencePipelineBuilder;
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
 import fiftyone.ipintelligence.examples.shared.EvidenceHelper;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
+import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngineBuilder;
 import fiftyone.ipintelligence.shared.IPIntelligenceData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.IWeightedValue;
@@ -103,6 +105,8 @@ public class PerformanceBenchmark {
     private int numberOfThreads = DEFAULT_NUMBER_OF_THREADS;
     private List<Map<String, String>> evidence;
     private String dataFileLocation;
+    // the properties asked for when not asking for all of them
+    private List<String> properties;
     private PrintWriter writer;
 
     // a default set of configurations: (profile, allProperties)
@@ -147,6 +151,7 @@ public class PerformanceBenchmark {
         logger.info("Running Performance example");
 
         this.dataFileLocation = getDataFileLocation(dataFilename);
+        this.properties = benchmarkProperties(dataFileLocation);
 
         File evidenceFile = getEvidenceFile(evidenceFilename);
         this.evidence = Collections.unmodifiableList(
@@ -237,13 +242,37 @@ public class PerformanceBenchmark {
         // Requesting properties from a single component
         // reduces processing time compared with requesting properties from multiple components.
         // If you don't specify any properties, then all properties are returned,
-        // here we choose "all properties" by specifying none, or just "RegisteredName"
-        // and "AsnName". The free Asn data file has AsnName, and the Lite and
-        // Enterprise data files have RegisteredName, so the benchmark runs
-        // with any of them.
+        // here we choose "all properties" by specifying none, or just the
+        // one property the benchmark reads, which benchmarkProperties
+        // chooses for the data file.
         if (BooleanUtils.isFalse(config.allProperties)) {
-            builder.setProperty("RegisteredName");
-            builder.setProperty("AsnName");
+            for (String property : properties) {
+                builder.setProperty(property);
+            }
+        }
+    }
+
+    /**
+     * The properties the benchmark asks for when it does not ask for all of
+     * them, being only the one it reads. That is RegisteredName where the
+     * data file has it, as the Lite and Enterprise data files do, and
+     * AsnName for the free Asn data file, which has no RegisteredName. The
+     * data file is opened with the low memory profile, which reads little
+     * of it.
+     * @param dataFileLocation the data file the benchmark uses
+     * @return the one property to ask for
+     * @throws Exception if the data file cannot be opened
+     */
+    static List<String> benchmarkProperties(String dataFileLocation)
+            throws Exception {
+        try (IPIntelligenceOnPremiseEngine engine =
+                     new IPIntelligenceOnPremiseEngineBuilder()
+                             .setPerformanceProfile(LowMemory)
+                             .setAutoUpdate(false)
+                             .build(dataFileLocation, false)) {
+            return Collections.singletonList(
+                    DataFileHelper.hasProperty(engine, "RegisteredName") ?
+                            "RegisteredName" : "AsnName");
         }
     }
 

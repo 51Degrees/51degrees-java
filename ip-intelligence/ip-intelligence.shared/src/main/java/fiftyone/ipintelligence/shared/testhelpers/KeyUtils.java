@@ -24,6 +24,7 @@ package fiftyone.ipintelligence.shared.testhelpers;
 
 import java.util.Base64;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Helpers to obtain keys from the environment
@@ -33,19 +34,48 @@ public class KeyUtils {
      * Name of the aligned environment variable or system property which
      * supplies the resource key. This name is checked before any legacy name.
      */
-    public static final String RESOURCE_KEY_ENV_VAR = "_51DEGREES_RESOURCE_KEY";
+    public static final String RESOURCE_KEY_VARIABLE = "_51DEGREES_RESOURCE_KEY";
+
+    /**
+     * The old name of {@link #RESOURCE_KEY_VARIABLE}, read only when that
+     * one is not set.
+     * @deprecated use {@link #RESOURCE_KEY_VARIABLE}, and set the variable
+     * it names in place of this one.
+     */
+    @Deprecated
+    public static final String RESOURCE_KEY_ENV_VAR = "51DEGREES_RESOURCE_KEY";
+
+    // Set once the use of the deprecated name has been reported.
+    private static final AtomicBoolean OLD_NAME_REPORTED =
+        new AtomicBoolean(false);
 
     /**
      * Obtain a resource key from an environment variable or a system property.
      * <p>
-     * The aligned name {@link #RESOURCE_KEY_ENV_VAR} is checked first and the
-     * supplied legacy name is checked second. Each name is looked up using
+     * The aligned name {@link #RESOURCE_KEY_VARIABLE} is checked first. When
+     * it is not set or is empty the deprecated {@link #RESOURCE_KEY_ENV_VAR}
+     * is checked, and its first use is reported on standard error. The
+     * supplied legacy name is checked last. Each name is looked up using
      * {@link #getNamedKey(String)}.
      * @param legacyKeyName legacy name to try when the aligned name is not set
-     * @return the resource key, or null if neither name is set
+     * @return the resource key, or null if no name is set
      */
     public static String getResourceKey(String legacyKeyName) {
-        String resourceKey = getNamedKey(RESOURCE_KEY_ENV_VAR);
+        String resourceKey = getNamedKey(RESOURCE_KEY_VARIABLE);
+        if (Objects.isNull(resourceKey) || resourceKey.isEmpty()) {
+            String oldNameKey = getNamedKey(RESOURCE_KEY_ENV_VAR);
+            if (Objects.nonNull(oldNameKey) && oldNameKey.isEmpty() == false) {
+                if (OLD_NAME_REPORTED.compareAndSet(false, true)) {
+                    System.err.println(
+                        "The environment variable " + RESOURCE_KEY_ENV_VAR
+                        + " is deprecated and " + RESOURCE_KEY_VARIABLE
+                        + " replaces it. Set " + RESOURCE_KEY_VARIABLE
+                        + " to the same value, as a later release may no longer "
+                        + "read " + RESOURCE_KEY_ENV_VAR + ".");
+                }
+                return oldNameKey;
+            }
+        }
         if (Objects.isNull(resourceKey)) {
             resourceKey = getNamedKey(legacyKeyName);
         }
