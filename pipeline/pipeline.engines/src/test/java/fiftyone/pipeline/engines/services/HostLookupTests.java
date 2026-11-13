@@ -106,7 +106,7 @@ public class HostLookupTests {
     }
 
     private static URL url() throws IOException {
-        return new URL("https://" + HOST + "/api/v4/evidencekeys");
+        return URI.create("https://" + HOST + "/api/v4/evidencekeys").toURL();
     }
 
     private static long millisSince(long start) {
