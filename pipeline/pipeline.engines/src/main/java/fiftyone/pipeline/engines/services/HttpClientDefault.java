@@ -29,8 +29,22 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Map;
 
+/**
+ * Makes requests with {@link HttpURLConnection}. The connect timeout set on
+ * a connection also limits the lookup of its host, which the connection's
+ * own timeouts do not cover.
+ */
 public class HttpClientDefault implements HttpClient {
 
+    private final HostLookup hostLookup;
+
+    public HttpClientDefault() {
+        this(HostLookup.DEFAULT);
+    }
+
+    HttpClientDefault(HostLookup hostLookup) {
+        this.hostLookup = hostLookup;
+    }
 
     @Override
     public HttpURLConnection connect(URL url) throws IOException {
@@ -49,6 +63,7 @@ public class HttpClientDefault implements HttpClient {
                 connection.setRequestProperty(e.getKey(), e.getValue());
             }
         }
+        lookUpHost(connection);
         if (data == null) {
             connection.setDoOutput(false);
         } else {
@@ -86,6 +101,7 @@ public class HttpClientDefault implements HttpClient {
                 connection.setRequestProperty(e.getKey(), e.getValue());
             }
         }
+        lookUpHost(connection);
 
         BufferedReader in = new BufferedReader(
             new InputStreamReader(connection.getResponseCode() / 100 == 2 ? 
@@ -99,5 +115,13 @@ public class HttpClientDefault implements HttpClient {
         }
         in.close();
         return response.toString();
+    }
+
+    /**
+     * Look up the connection's host within its connect timeout, before the
+     * connection makes its own lookup, which has no limit.
+     */
+    private void lookUpHost(HttpURLConnection connection) throws IOException {
+        hostLookup.lookUp(connection.getURL(), connection.getConnectTimeout());
     }
 }

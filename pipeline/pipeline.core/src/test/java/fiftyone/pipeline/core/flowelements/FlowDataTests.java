@@ -317,6 +317,25 @@ public class FlowDataTests {
         assertNull(result);
     }
 
+    /**
+     * The error logged for a processing failure carries the exception, so
+     * the log says why processing failed.
+     */
+    @Test
+    public void FlowData_AddError_LogsTheException() throws Exception {
+        Logger logger = mock(Logger.class);
+        when(logger.isErrorEnabled()).thenReturn(true);
+        Exception cause = new Exception("The cause of the failure.");
+        try (FlowData data = new FlowDataDefault(
+            logger,
+            pipeline,
+            new EvidenceDefault(mock(Logger.class)))) {
+
+            data.addError(cause, mock(FlowElement.class));
+        }
+        verify(logger).error(anyString(), same(cause));
+    }
+
     @Test(expected = IllegalStateException.class)
     public void FlowData_PipelineDisposed() throws Exception {
         when(pipeline.isClosed()).thenReturn(true);
