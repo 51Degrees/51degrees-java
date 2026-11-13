@@ -584,41 +584,49 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                     logger.error("File watcher for '{}' could not be initialised. " + e.getMessage(),
                             aspectDataFile.getDataFilePath(), e);
                 }
-                try {
-                    long pollingInterval =
-                            aspectDataFile.getConfiguration().getPollingIntervalSeconds() * 1000L;
-                    logger.debug("Setting poll future {} millis", pollingInterval);
-                    aspectDataFile.setPollFuture(futureFactory.scheduleRepeating(
-                            new Runnable() {
-                                @Override
-                                public void run() {
-                                    logger.debug("Watcher is running");
-                                    // The watch is paused while a downloaded
-                                    // file is copied into place. A repeating
-                                    // task that fails never runs again, so
-                                    // this run does nothing.
-                                    WatchKey watchKey =
-                                            aspectDataFile.getConfiguration().getWatchKey();
-                                    if (watchKey == null) {
-                                        return;
-                                    }
-                                    for (WatchEvent<?> event : watchKey.pollEvents()) {
-                                        if (event.kind() == StandardWatchEventKinds.ENTRY_MODIFY) {
-                                            if (((Path) event.context()).endsWith(aspectDataFilePath.getFileName())) {
-                                                dataFileUpdated(aspectDataFile);
+                // The watcher's task polls the watch key, so it is scheduled
+                // only when there is one, and replaces any task scheduled
+                // before rather than run beside it.
+                if (aspectDataFile.getConfiguration().getWatchKey() != null) {
+                    try {
+                        if (aspectDataFile.getPollFuture() != null) {
+                            aspectDataFile.getPollFuture().cancel(false);
+                        }
+                        long pollingInterval =
+                                aspectDataFile.getConfiguration().getPollingIntervalSeconds() * 1000L;
+                        logger.debug("Setting poll future {} millis", pollingInterval);
+                        aspectDataFile.setPollFuture(futureFactory.scheduleRepeating(
+                                new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        logger.debug("Watcher is running");
+                                        // The watch is paused while a downloaded
+                                        // file is copied into place. A repeating
+                                        // task that fails never runs again, so
+                                        // this run does nothing.
+                                        WatchKey watchKey =
+                                                aspectDataFile.getConfiguration().getWatchKey();
+                                        if (watchKey == null) {
+                                            return;
+                                        }
+                                        for (WatchEvent<?> event : watchKey.pollEvents()) {
+                                            if (event.kind() == StandardWatchEventKinds.ENTRY_MODIFY) {
+                                                if (((Path) event.context()).endsWith(aspectDataFilePath.getFileName())) {
+                                                    dataFileUpdated(aspectDataFile);
+                                                }
                                             }
                                         }
+                                        // make sure to reset the watch key or we are not called again
+                                        watchKey.reset();
                                     }
-                                    // make sure to reset the watch key or we are not called again
-                                    watchKey.reset();
-                                }
-                            },
-                            pollingInterval));
-                    logger.debug("Poll check scheduled for {} mins",
-                            aspectDataFile.getPollFuture().getDelay(TimeUnit.MINUTES));
-                } catch (Exception e) {
-                    logger.error("Could not schedule watcher for {}.",
-                            aspectDataFile.getDataFilePath(), e);
+                                },
+                                pollingInterval));
+                        logger.debug("Poll check scheduled for {} mins",
+                                aspectDataFile.getPollFuture().getDelay(TimeUnit.MINUTES));
+                    } catch (Exception e) {
+                        logger.error("Could not schedule watcher for {}.",
+                                aspectDataFile.getDataFilePath(), e);
+                    }
                 }
             }
 
