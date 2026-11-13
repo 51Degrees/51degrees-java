@@ -24,6 +24,7 @@ package fiftyone.pipeline.engines.services;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.classic.spi.IThrowableProxy;
 import ch.qos.logback.classic.spi.ThrowableProxyUtil;
 import ch.qos.logback.core.read.ListAppender;
 import fiftyone.common.wrappers.io.FileWrapperFactoryDefault;
@@ -41,6 +42,7 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
@@ -51,6 +53,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
@@ -290,20 +293,18 @@ public class DataUpdateServiceLoggingTests {
     }
 
     @Test
-    public void ConnectFails_Manual_WarnsWithoutRetryText() throws Exception {
+    public void ConnectFails_Manual_LogsTheAccessError() throws Exception {
         when(httpClient.connect(any(URL.class)))
             .thenThrow(new IOException("refused"));
         newDataFile(false, false, false);
 
         dataUpdate.checkForUpdate(engine);
 
-        assertLogged(Level.WARN, "An error occurred when connecting to " +
-            UPDATE_URL + " in order to check for data file updates for " +
-            engineType + ". Error detail: refused");
+        assertCheckFailed(accessFailure(UPDATE_URL), "refused");
     }
 
     @Test
-    public void ConnectFails_Automatic_WarnsThatUpdateWillBeTriedAgain()
+    public void ConnectFails_Automatic_LogsTheAccessError()
         throws Exception {
         when(httpClient.connect(any(URL.class)))
             .thenThrow(new IOException("refused"));
@@ -311,14 +312,11 @@ public class DataUpdateServiceLoggingTests {
 
         dataUpdate.registerDataFile(file);
 
-        assertLogged(Level.WARN, "An error occurred when connecting to " +
-            UPDATE_URL + " in order to check for data file updates for " +
-            engineType + ". Update will be attempted again later. " +
-            "Error detail: refused");
+        assertCheckFailed(accessFailure(UPDATE_URL), "refused");
     }
 
     @Test
-    public void ConnectFails_AutoUpdateOff_DoesNotPromiseAnotherTry()
+    public void ConnectFails_AutoUpdateOff_LogsTheAccessError()
         throws Exception {
         when(httpClient.connect(any(URL.class)))
             .thenThrow(new IOException("refused"));
@@ -326,37 +324,63 @@ public class DataUpdateServiceLoggingTests {
 
         dataUpdate.registerDataFile(file);
 
-        assertLogged(Level.WARN, "An error occurred when connecting to " +
-            UPDATE_URL + " in order to check for data file updates for " +
-            engineType + ". Error detail: refused");
+        assertCheckFailed(accessFailure(UPDATE_URL), "refused");
     }
 
-    private void assertStatusWarned(int status, String detail)
+    /**
+     * A 200 response whose body ends before all of it has arrived is the
+     * first row of the Errors table, as a failure to connect is.
+     */
+    @Test
+    public void DownloadCutShort_LogsTheAccessError() throws Exception {
+        when(connection.getResponseCode())
+            .thenReturn(HttpURLConnection.HTTP_OK);
+        when(connection.getInputStream()).thenReturn(new InputStream() {
+            private int sent = 0;
+
+            @Override
+            public int read() throws IOException {
+                if (sent < 10) {
+                    sent++;
+                    return 'x';
+                }
+                throw new IOException("Premature EOF");
+            }
+        });
+        newDataFile(false, false, false);
+
+        assertEquals(DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR,
+            dataUpdate.checkForUpdate(engine));
+
+        assertCheckFailed(accessFailure(UPDATE_URL), "Premature EOF");
+    }
+
+    private void assertStatusFailed(int status, String message)
         throws Exception {
         when(connection.getResponseCode()).thenReturn(status);
         newDataFile(true, false, false);
 
         dataUpdate.checkForUpdate(engine);
 
-        assertLogged(Level.WARN, "An error occurred while downloading a data " +
-            "file update for " + engineType + " from " + UPDATE_URL + ". " +
-            "Error detail: " + detail);
-        assertTrue(logged(Level.ERROR).isEmpty());
+        assertCheckFailed(message, null);
     }
 
     @Test
-    public void TooManyRequests_WarnsAboutTheDownload() throws Exception {
-        assertStatusWarned(429, "HTTP status code 429 (too many requests)");
+    public void TooManyRequests_LogsTheTableRow() throws Exception {
+        assertStatusFailed(429, "Too many requests to '" + UPDATE_URL +
+            "' for engine '" + engineType + "'");
     }
 
     @Test
-    public void Forbidden_WarnsAboutTheDownload() throws Exception {
-        assertStatusWarned(403, "HTTP status code 403 (access denied)");
+    public void Forbidden_LogsTheTableRow() throws Exception {
+        assertStatusFailed(403, "Access denied to data update service at '" +
+            UPDATE_URL + "' for engine '" + engineType + "'");
     }
 
     @Test
-    public void OtherStatus_WarnsAboutTheDownload() throws Exception {
-        assertStatusWarned(500, "HTTP status code 500");
+    public void OtherStatus_LogsTheTableRow() throws Exception {
+        assertStatusFailed(500, "HTTP status code '500' from data update " +
+            "service at '" + UPDATE_URL + "' for engine '" + engineType + "'");
     }
 
     /**
@@ -440,6 +464,39 @@ public class DataUpdateServiceLoggingTests {
      * Fails if any log entry, or any throwable logged with one, holds the
      * license key in full.
      */
+    /**
+     * An Error row of the specification's Errors table, logged at Error as
+     * "Error during check for data update" with an error attached that
+     * carries the row's message, and the cause's message when there is one.
+     */
+    private void assertCheckFailed(String message, String causeMessage) {
+        List<String> found = new ArrayList<>();
+        for (ILoggingEvent event : appender.list) {
+            if (event.getLevel() == Level.ERROR &&
+                "Error during check for data update".equals(
+                    event.getFormattedMessage()) &&
+                event.getThrowableProxy() != null) {
+                IThrowableProxy error = event.getThrowableProxy();
+                found.add(error.getMessage());
+                if (message.equals(error.getMessage())) {
+                    IThrowableProxy cause = error.getCause();
+                    assertEquals(causeMessage,
+                        cause == null ? null : cause.getMessage());
+                    assertTrue("A warning was logged as well: " +
+                        logged(Level.WARN), logged(Level.WARN).isEmpty());
+                    return;
+                }
+            }
+        }
+        fail("Expected '" + message + "' attached to an Error entry, but " +
+            "the errors attached were " + found);
+    }
+
+    private String accessFailure(String url) {
+        return "Error accessing data update service at '" + url +
+            "' for engine '" + engineType + "'";
+    }
+
     private void assertKeyOnlyMasked() {
         assertFalse(appender.list.isEmpty());
         for (ILoggingEvent event : appender.list) {
@@ -498,9 +555,8 @@ public class DataUpdateServiceLoggingTests {
 
         dataUpdate.checkForUpdate(engine);
 
-        assertLogged(Level.WARN, "An error occurred when connecting to " +
-            MASKED_URL + " in order to check for data file updates for " +
-            engineType + ". Error detail: Connection refused: " + MASKED_URL);
+        assertCheckFailed(accessFailure(MASKED_URL),
+            "Connection refused: " + MASKED_URL);
         assertKeyOnlyMasked();
     }
 
@@ -515,9 +571,8 @@ public class DataUpdateServiceLoggingTests {
 
         dataUpdate.checkForUpdate(engine);
 
-        assertLogged(Level.WARN, "An error occurred while downloading a data " +
-            "file update for " + engineType + " from " + MASKED_URL + ". " +
-            "Error detail: Premature EOF from " + MASKED_URL);
+        assertCheckFailed(accessFailure(MASKED_URL),
+            "Premature EOF from " + MASKED_URL);
         assertKeyOnlyMasked();
     }
 
@@ -529,9 +584,8 @@ public class DataUpdateServiceLoggingTests {
 
         dataUpdate.checkForUpdate(engine);
 
-        assertLogged(Level.WARN, "An error occurred while downloading a data " +
-            "file update for " + engineType + " from " + MASKED_URL + ". " +
-            "Error detail: HTTP status code 403 (access denied)");
+        assertCheckFailed("Access denied to data update service at '" +
+            MASKED_URL + "' for engine '" + engineType + "'", null);
         assertKeyOnlyMasked();
     }
 
@@ -542,10 +596,8 @@ public class DataUpdateServiceLoggingTests {
 
         dataUpdate.checkForUpdate(engine);
 
-        assertLogged(Level.WARN, "An error occurred when connecting to " +
-            MASKED_URL + " in order to check for data file updates for " +
-            engineType + ". Error detail: No response from the data update " +
-            "service");
+        assertCheckFailed("No response from data update service at '" +
+            MASKED_URL + "' for engine '" + engineType + "'", null);
         assertKeyOnlyMasked();
     }
 }
