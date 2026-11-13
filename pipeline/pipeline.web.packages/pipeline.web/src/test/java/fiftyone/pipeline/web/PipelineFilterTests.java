@@ -51,7 +51,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.reflect.Field;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -143,6 +147,57 @@ public class PipelineFilterTests {
      */
     @Test
     public void PipelineFilter_Initialise() throws ServletException {
+        filter = new PipelineFilter();
+
+        filter.init(config);
+    }
+
+    /**
+     * The client-side max-age is the default when the init parameter is
+     * not set.
+     * @throws ServletException
+     */
+    @Test
+    public void CacheMaxAge_NotSet_IsTheDefault() throws ServletException {
+        assertEquals(
+            DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS,
+            PipelineFilter.getCacheMaxAgeSeconds(config));
+    }
+
+    @Test
+    public void CacheMaxAge_Set() throws ServletException {
+        FilterConfig withMaxAge = mock(FilterConfig.class);
+        when(withMaxAge.getInitParameter(INIT_PARAM_CLIENTSIDE_CACHE_MAX_AGE))
+            .thenReturn(" 60 ");
+
+        assertEquals(60, PipelineFilter.getCacheMaxAgeSeconds(withMaxAge));
+    }
+
+    /**
+     * A max-age that is not a whole number of seconds, 0 or more, fails
+     * the filter's start rather than being ignored.
+     */
+    @Test
+    public void CacheMaxAge_Invalid_Refused() {
+        for (String value : new String[] { "-1", "1.5", "ten" }) {
+            FilterConfig invalid = mock(FilterConfig.class);
+            when(invalid.getInitParameter(INIT_PARAM_CLIENTSIDE_CACHE_MAX_AGE))
+                .thenReturn(value);
+            try {
+                PipelineFilter.getCacheMaxAgeSeconds(invalid);
+                fail("'" + value + "' was accepted");
+            } catch (ServletException e) {
+                assertTrue(e.getMessage(), e.getMessage().contains(
+                    INIT_PARAM_CLIENTSIDE_CACHE_MAX_AGE));
+            }
+        }
+    }
+
+    @Test(expected = ServletException.class)
+    public void PipelineFilter_Initialise_InvalidCacheMaxAge()
+        throws ServletException {
+        when(config.getInitParameter(INIT_PARAM_CLIENTSIDE_CACHE_MAX_AGE))
+            .thenReturn("-1");
         filter = new PipelineFilter();
 
         filter.init(config);
@@ -381,5 +436,111 @@ public class PipelineFilterTests {
                     endpointOf(built.getFlowElements()));
             }
         }
+    }
+
+    /**
+     * A request for the JavaScript whose If-None-Match matches the ETag of
+     * the Evidence it supplies is answered with a 304 carrying the headers of
+     * a good response, without processing and without the rest of the chain.
+     */
+    @Test
+    public void PipelineFilter_MatchingIfNoneMatch_304_NotProcessed()
+        throws Exception {
+        filter = new PipelineFilter();
+        filter.init(config);
+        HttpServletRequest revalidation =
+            clientsideRequest("GET", "/" + CORE_JS_NAME, "*");
+        HttpServletResponse answer = clientsideResponse();
+
+        filter.doFilter(revalidation, answer, chain);
+
+        verify(revalidation, never()).setAttribute(
+            eq(HTTPCONTEXT_FLOWDATA), any());
+        verify(answer).setStatus(304);
+        verify(answer).setHeader(
+            eq("Cache-Control"), eq("private,max-age=1800"));
+        verify(answer).setHeader(eq("ETag"), matches("W/\"[0-9a-f]{64}\""));
+        verify(chain, never()).doFilter(
+            any(ServletRequest.class), any(ServletResponse.class));
+    }
+
+    /**
+     * A POST for the JSON whose If-None-Match matches gets a 412, without
+     * processing.
+     */
+    @Test
+    public void PipelineFilter_MatchingIfNoneMatch_Post_412_NotProcessed()
+        throws Exception {
+        filter = new PipelineFilter();
+        filter.init(config);
+        HttpServletRequest revalidation =
+            clientsideRequest("POST", DEFAULT_JSON_PATH, "*");
+        HttpServletResponse answer = clientsideResponse();
+
+        filter.doFilter(revalidation, answer, chain);
+
+        verify(revalidation, never()).setAttribute(
+            eq(HTTPCONTEXT_FLOWDATA), any());
+        verify(answer).setStatus(412);
+        verify(chain, never()).doFilter(
+            any(ServletRequest.class), any(ServletResponse.class));
+    }
+
+    /**
+     * A request for the JavaScript whose If-None-Match does not match is
+     * processed and gets the JavaScript.
+     */
+    @Test
+    public void PipelineFilter_OtherIfNoneMatch_Processed() throws Exception {
+        filter = new PipelineFilter();
+        filter.init(config);
+        HttpServletRequest request =
+            clientsideRequest("GET", "/" + CORE_JS_NAME, "W/\"other\"");
+        HttpServletResponse answer = clientsideResponse();
+
+        filter.doFilter(request, answer, chain);
+
+        verify(request, times(1)).setAttribute(
+            eq(HTTPCONTEXT_FLOWDATA), any(FlowData.class));
+        verify(answer).setStatus(200);
+        verify(answer, never()).setStatus(304);
+    }
+
+    /**
+     * A request for the given path with one If-None-Match field line, whose
+     * attributes are kept as a servlet container keeps them.
+     */
+    private static HttpServletRequest clientsideRequest(
+        String method,
+        String path,
+        String ifNoneMatch) {
+        Map<String, Object> attributes = new HashMap<>();
+        HttpServletRequest clientside = mock(HttpServletRequest.class);
+        when(clientside.getMethod()).thenReturn(method);
+        when(clientside.getRequestURI()).thenReturn(path);
+        when(clientside.getContextPath()).thenReturn("");
+        when(clientside.getScheme()).thenReturn("https");
+        when(clientside.getLocalAddr()).thenReturn("");
+        when(clientside.getRequestURL())
+            .thenReturn(new StringBuffer("https://example.com" + path));
+        when(clientside.getHeaderNames()).thenAnswer(invocation ->
+            Collections.enumeration(Arrays.asList("Host", "If-None-Match")));
+        when(clientside.getHeader("Host")).thenReturn("example.com");
+        when(clientside.getHeader("If-None-Match")).thenReturn(ifNoneMatch);
+        when(clientside.getHeaders("If-None-Match")).thenAnswer(invocation ->
+            Collections.enumeration(Collections.singletonList(ifNoneMatch)));
+        doAnswer(invocation -> attributes.put(
+            invocation.getArgument(0), invocation.getArgument(1)))
+            .when(clientside).setAttribute(anyString(), any());
+        when(clientside.getAttribute(anyString())).thenAnswer(invocation ->
+            attributes.get((String) invocation.getArgument(0)));
+        return clientside;
+    }
+
+    private static HttpServletResponse clientsideResponse() throws IOException {
+        HttpServletResponse answer = mock(HttpServletResponse.class);
+        when(answer.getWriter())
+            .thenReturn(new PrintWriter(new StringWriter()));
+        return answer;
     }
 }

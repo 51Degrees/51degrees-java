@@ -67,6 +67,29 @@ public interface FiftyOneJSServiceCore {
         throws IOException;
 
     /**
+     * Answer a request for the 51Degrees JavaScript or JSON whose
+     * If-None-Match matches the ETag of the Evidence it supplies, without
+     * processing it, because that Evidence alone decides the content. A GET
+     * or HEAD gets a 304 and any other method a 412. Call it before the
+     * request is processed.
+     * @param request the {@link HttpServletRequest} to answer
+     * @param response the {@link HttpServletResponse} to write the answer to
+     * @param resultService the service that creates the request's
+     *                      {@link FlowData}, with the Evidence processing
+     *                      would use
+     * @return true if the request was answered and is not to be processed,
+     * false otherwise
+     * @throws IOException if there was a failure reading or writing to the
+     * request or response
+     */
+    default boolean serveNotModified(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        PipelineResultServiceCore resultService) throws IOException {
+        return false;
+    }
+
+    /**
      * Default implementation of the {@link FiftyOneJSServiceCore} service.
      */
     class Default implements FiftyOneJSServiceCore {
@@ -190,6 +213,38 @@ public interface FiftyOneJSServiceCore {
             }
 
             return result;
+        }
+
+        @Override
+        public boolean serveNotModified(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            PipelineResultServiceCore resultService) throws IOException {
+            // Most requests carry no If-None-Match, and need nothing more.
+            if (enabled == false ||
+                request.getHeader("If-None-Match") == null) {
+                return false;
+            }
+            boolean javaScript = matches(request, javaScriptPath);
+            if (javaScript == false &&
+                matches(request, jsonPath) == false &&
+                matches(request, CORE_JSON_NAME) == false) {
+                return false;
+            }
+            try (FlowData flowData = resultService.createFlowData(request)) {
+                if (flowData == null) {
+                    return false;
+                }
+                return javaScript ?
+                    clientsidePropertyServiceCore.serveJavascriptNotModified(
+                        flowData, request, response) :
+                    clientsidePropertyServiceCore.serveJsonNotModified(
+                        flowData, request, response);
+            } catch (IOException | RuntimeException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new IOException("FlowData could not be disposed of.", e);
+            }
         }
 
         private void serveCoreJson(
