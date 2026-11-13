@@ -37,11 +37,16 @@ import org.junit.Test;
 import org.mockito.Answers;
 import org.slf4j.Logger;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.WatchKey;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledFuture;
@@ -60,6 +65,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockingDetails;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
@@ -99,6 +105,10 @@ public class DataUpdateServiceWatchedFileTests {
     private static final String MAC_MESSAGE =
         "File watchers are not well implemented in OS X, " +
         "so don't run this unit test as it is unlikely to pass.";
+
+    private static final String POLLER_MESSAGE =
+        "The watch service on OS X polls from a thread this test cannot " +
+        "pick out.";
 
     @Test
     public void WatchedFileRefresh_PollingCarriesOn() throws Exception {
@@ -218,6 +228,145 @@ public class DataUpdateServiceWatchedFileTests {
                 assertEquals(name + ", the replaced file was loaded",
                     watching ? 1 : 0, refreshCount(engine));
             }
+        }
+        finally {
+            cleanUp(file, directory, dataFile);
+        }
+    }
+
+    /**
+     * Each watch service runs a thread of its own. Unregistering a watched
+     * data file, as closing its engine does, closes the watch service so its
+     * thread ends.
+     */
+    @Test
+    public void Unregistering_ClosesTheWatchService() throws Exception {
+        assumeFalse(POLLER_MESSAGE, isMac());
+        DataUpdateService dataUpdate = new DataUpdateServiceDefault(
+            null,
+            mock(HttpClient.class),
+            fileWrapperFactory(),
+            futureFactory(new ArrayList<>(), new AtomicReference<>()));
+        Path directory = Files.createTempDirectory("watched");
+        Path dataFile = directory.resolve("data.dat");
+        Files.write(dataFile, "Old".getBytes());
+        AspectEngineDataFileDefault file =
+            watchedFile(engine(), dataFile, false, true);
+
+        try {
+            long before = watchServiceThreads();
+            dataUpdate.registerDataFile(file);
+            assertTrue("Registering starts a watch service thread",
+                waitForWatchServiceThreads(before + 1));
+
+            dataUpdate.unregisterDataFile(file);
+            assertTrue("Unregistering ends the watch service thread",
+                waitForWatchServiceThreads(before));
+        }
+        finally {
+            cleanUp(file, directory, dataFile);
+        }
+    }
+
+    /**
+     * A downloaded data file is copied into place with the watch paused.
+     * The watch then resumes on the data file's own watch service, so no
+     * other watch service is left running, and unregistering ends the one
+     * there is.
+     */
+    @Test
+    public void DownloadedFile_WatchResumesOnTheSameWatchService()
+        throws Exception {
+        assumeFalse(POLLER_MESSAGE, isMac());
+        final List<Runnable> timers = new ArrayList<>();
+        HttpURLConnection connection = mock(HttpURLConnection.class);
+        when(connection.getResponseCode())
+            .thenReturn(HttpURLConnection.HTTP_OK);
+        when(connection.getInputStream()).thenReturn(
+            new ByteArrayInputStream("New".getBytes()));
+        HttpClient httpClient = mock(HttpClient.class);
+        when(httpClient.connect(any(URL.class))).thenReturn(connection);
+        DataUpdateService dataUpdate = new DataUpdateServiceDefault(
+            null,
+            httpClient,
+            fileWrapperFactory(),
+            timerFactory(timers));
+
+        OnPremiseAspectEngine<? extends AspectData,
+            ? extends AspectPropertyMetaData> engine = engine();
+        Path directory = Files.createTempDirectory("watched");
+        Path dataFile = directory.resolve("data.dat");
+        Files.write(dataFile, "Old".getBytes());
+        Path tempDirectory = Files.createTempDirectory("download");
+        AspectEngineDataFileDefault file =
+            watchedFile(engine, dataFile, true, true);
+        file.setTempDataDirPath(tempDirectory.toString());
+        file.getConfiguration().setDataUpdateUrl("http://www.test.com");
+        file.getConfiguration().setDecompressContent(false);
+        file.getConfiguration().setVerifyMd5(false);
+        file.getConfiguration().setVerifyModifiedSince(false);
+
+        try {
+            long before = watchServiceThreads();
+            dataUpdate.registerDataFile(file);
+            assertTrue("Registering starts a watch service thread",
+                waitForWatchServiceThreads(before + 1));
+
+            // The polling timer downloads the new file.
+            timers.get(0).run();
+            assertEquals("The downloaded file refreshes the engine",
+                1, refreshCount(engine));
+            assertNotNull("The watch resumes after the download",
+                file.getConfiguration().getWatchKey());
+            assertTrue("The watch resumes on the same watch service",
+                waitForWatchServiceThreads(before + 1));
+
+            dataUpdate.unregisterDataFile(file);
+            assertTrue("Unregistering ends the watch service thread",
+                waitForWatchServiceThreads(before));
+        }
+        finally {
+            cleanUp(file, directory, dataFile);
+            tempDirectory.toFile().delete();
+        }
+    }
+
+    /**
+     * The watcher's task repeats, and a repeating task that fails is never
+     * run again. So while the watch is paused, as it is when a downloaded
+     * file is copied into place, the task does nothing and carries on.
+     * Unregistering the data file while the watch is paused still stops the
+     * task.
+     */
+    @Test
+    public void WatchPaused_WatcherTaskCarriesOn() throws Exception {
+        final AtomicReference<Runnable> watcher = new AtomicReference<>();
+        DataUpdateService dataUpdate = new DataUpdateServiceDefault(
+            null,
+            mock(HttpClient.class),
+            fileWrapperFactory(),
+            futureFactory(new ArrayList<>(), watcher));
+        Path directory = Files.createTempDirectory("watched");
+        Path dataFile = directory.resolve("data.dat");
+        Files.write(dataFile, "Old".getBytes());
+        AspectEngineDataFileDefault file =
+            watchedFile(engine(), dataFile, false, true);
+
+        try {
+            dataUpdate.registerDataFile(file);
+            WatchKey watchKey = file.getConfiguration().getWatchKey();
+            assertNotNull("A file system watcher was created", watchKey);
+            ScheduledFuture<?> task = file.getPollFuture();
+
+            file.getConfiguration().setWatchKey(null);
+            watcher.get().run();
+            file.getConfiguration().setWatchKey(watchKey);
+            watcher.get().run();
+
+            file.getConfiguration().setWatchKey(null);
+            dataUpdate.unregisterDataFile(file);
+            verify(task).cancel(true);
+            watchKey.cancel();
         }
         finally {
             cleanUp(file, directory, dataFile);
@@ -422,6 +571,56 @@ public class DataUpdateServiceWatchedFileTests {
                 return mock(ScheduledFuture.class);
             });
         return futureFactory;
+    }
+
+    /**
+     * Keeps each one-off timer's task for the test to run itself.
+     */
+    private static FutureFactory timerFactory(final List<Runnable> timers) {
+        FutureFactory futureFactory = mock(FutureFactory.class);
+        when(futureFactory.schedule(any(Runnable.class), anyLong()))
+            .then(invocation -> {
+                timers.add((Runnable) invocation.getArgument(0));
+                return mock(ScheduledFuture.class);
+            });
+        when(futureFactory.scheduleRepeating(any(Runnable.class), anyLong()))
+            .then(invocation -> mock(ScheduledFuture.class));
+        return futureFactory;
+    }
+
+    private static FileWrapperFactory fileWrapperFactory() {
+        FileWrapperFactory fileWrapperFactory = mock(FileWrapperFactory.class);
+        when(fileWrapperFactory.build(anyString())).then(invocation ->
+            new FileWrapperDefault((String) invocation.getArgument(0)));
+        when(fileWrapperFactory.getLastModified(anyString())).then(
+            invocation -> lastModified(invocation.getArgument(0)));
+        return fileWrapperFactory;
+    }
+
+    /**
+     * The number of watch service threads running, found by the watch
+     * service's poller in each thread's stack.
+     */
+    private static long watchServiceThreads() {
+        return Thread.getAllStackTraces().values().stream()
+            .filter(stack -> Arrays.stream(stack).anyMatch(frame ->
+                frame.getClassName().endsWith("WatchService$Poller")))
+            .count();
+    }
+
+    /**
+     * Wait for the number of watch service threads to become the count
+     * given, as a thread starts and ends a moment after its watch service
+     * is created or closed.
+     */
+    private static boolean waitForWatchServiceThreads(long count)
+        throws InterruptedException {
+        long end = System.currentTimeMillis() + WAIT_FOR_EVENT_MILLIS;
+        while (watchServiceThreads() != count &&
+            System.currentTimeMillis() < end) {
+            Thread.sleep(RETRY_MILLIS);
+        }
+        return watchServiceThreads() == count;
     }
 
     @SuppressWarnings("unchecked")
