@@ -40,7 +40,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.ILoggerFactory;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
@@ -59,8 +58,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/**
+ * Times Process calls through the usage sharing element. Every call in a
+ * test carries the same Evidence, so after the first call the tracker turns
+ * each one away as a repeat and nothing more is queued. The measured rounds
+ * time that path, which finds the values to share and checks the tracker.
+ */
 public class ShareUsageOverheadTests {
-    static Logger logger = LoggerFactory.getLogger("testLogger");
     private Pipeline pipeline;
 
     private static final Map<String, Double> overheadMillis = new LinkedHashMap<>();
@@ -130,13 +134,12 @@ public class ShareUsageOverheadTests {
     private static final int WarmUpRounds = 2;
 
     /**
-     * The most one Process call may take. Each limit is set from the figures
-     * the slowest runner (Intel macOS) prints in the performance step, with
-     * room for that runner to run five times slower than usual for the whole
-     * test.
+     * The most the median Process call may take. Each limit is ten times the
+     * highest median measured on any CI runner, so a runner several times
+     * slower than usual still passes.
      */
-    private static final double SingleEvidenceLimitMillis = 0.25;
-    private static final double ThousandEvidenceLimitMillis = 50;
+    private static final double SingleEvidenceLimitMillis = 0.06;
+    private static final double ThousandEvidenceLimitMillis = 30;
 
     /**
      * Returns the milliseconds per Process call, for one round of calls with
@@ -195,8 +198,6 @@ public class ShareUsageOverheadTests {
      */
     private static void assertBelowLimit(double[] rounds, double limitMillis) {
         double median = rounds[rounds.length / 2];
-        logger.info("Overhead was {} millis, rounds {}", median,
-            Arrays.toString(rounds));
         Assertions.assertTrue(median < limitMillis,
             "Pipeline with share usage overhead per Process call was " +
             median + "ms. Maximum permitted is " + limitMillis +
@@ -204,25 +205,23 @@ public class ShareUsageOverheadTests {
     }
 
     @Test
-    public void ShareUsageOverhead_SingleEvidence() throws Exception {
+    public void ShareUsageOverhead_RepeatedSingleEvidence() throws Exception {
         int iterations = 10_000;
 
         double[] rounds = measureRounds(iterations, 0);
-        double msOverheadPerCall = rounds[rounds.length / 2];
-        overheadMillis.put("ShareUsageOverhead_SingleEvidence_ms", msOverheadPerCall);
-        System.out.println("ShareUsageOverhead_SingleEvidence: " + msOverheadPerCall + "ms per call");
+        overheadMillis.put("ShareUsageOverhead_SingleEvidence_ms",
+            rounds[rounds.length / 2]);
         assertBelowLimit(rounds, SingleEvidenceLimitMillis);
     }
 
     @Test
-    public void ShareUsageOverhead_ThousandEvidence() throws Exception {
+    public void ShareUsageOverhead_RepeatedThousandEvidence() throws Exception {
         int iterations = 250;
         int evidenceCount = 1_000;
 
         double[] rounds = measureRounds(iterations, evidenceCount);
-        double msOverheadPerCall = rounds[rounds.length / 2];
-        overheadMillis.put("ShareUsageOverhead_HundredEvidence_ms", msOverheadPerCall);
-        System.out.println("ShareUsageOverhead_HundredEvidence: " + msOverheadPerCall + "ms per call");
+        overheadMillis.put("ShareUsageOverhead_HundredEvidence_ms",
+            rounds[rounds.length / 2]);
         assertBelowLimit(rounds, ThousandEvidenceLimitMillis);
     }
 
