@@ -73,7 +73,8 @@ public class JsonBuilderTests {
     private FlowData flowData;
     private JsonBuilderData result;
     private Pipeline pipeline;
-    
+    private List<FlowError> flowErrors;
+
     public JsonBuilderTests() {
         ILoggerFactory internalLogger = mock(ILoggerFactory.class);
         when(internalLogger.getLogger(anyString())).thenReturn(mock(Logger.class));
@@ -114,6 +115,79 @@ public class JsonBuilderTests {
         Map<String, Map<String, ElementPropertyMetaData>> propertyMetaData =
             new HashMap<>();
         when(pipeline.getElementAvailableProperties()).thenReturn(propertyMetaData);
+
+        flowErrors = new ArrayList<>();
+    }
+
+    /**
+     * The errors are a list of their messages under the top-level key
+     * errors, in the order the Flow Data holds them, whichever element
+     * recorded each. See the Process section of the JSON Builder
+     * specification.
+     */
+    @Test
+    public void JsonBuilder_Errors_ListOfMessages() throws Exception {
+        FlowElement first = mock(FlowElement.class);
+        when(first.getElementDataKey()).thenReturn("first");
+        FlowElement second = mock(FlowElement.class);
+        when(second.getElementDataKey()).thenReturn("second");
+        flowErrors.add(new FlowError.Default(
+            new Exception("first element, one"), first));
+        flowErrors.add(new FlowError.Default(
+            new Exception("second element"), second));
+        flowErrors.add(new FlowError.Default(
+            new Exception("first element, two"), first));
+
+        String json = testIteration(1);
+
+        JSONArray errors = new JSONObject(json).getJSONArray("errors");
+        assertEquals(
+            Arrays.asList(
+                "first element, one",
+                "second element",
+                "first element, two"),
+            errors.toList(),
+            json);
+    }
+
+    /**
+     * An error whose throwable has no message is written as the throwable's
+     * type, so the list holds only text.
+     */
+    @Test
+    public void JsonBuilder_Errors_NoMessage_WritesType() throws Exception {
+        flowErrors.add(new FlowError.Default(
+            new IllegalStateException(), mock(FlowElement.class)));
+
+        String json = testIteration(1);
+
+        JSONArray errors = new JSONObject(json).getJSONArray("errors");
+        assertEquals(
+            Collections.singletonList(IllegalStateException.class.getName()),
+            errors.toList(),
+            json);
+    }
+
+    /**
+     * An error with no throwable has no message to write, so it is left out,
+     * and with no messages at all the key errors is left out too.
+     */
+    @Test
+    public void JsonBuilder_Errors_NoThrowable_LeftOut() throws Exception {
+        FlowElement element = mock(FlowElement.class);
+        flowErrors.add(new FlowError.Default(null, element));
+
+        String json = testIteration(1);
+        assertFalse(new JSONObject(json).has("errors"), json);
+
+        flowErrors.add(new FlowError.Default(
+            new Exception("the message"), element));
+
+        json = testIteration(1);
+        assertEquals(
+            Collections.singletonList("the message"),
+            new JSONObject(json).getJSONArray("errors").toList(),
+            json);
     }
 
     /**
@@ -598,6 +672,7 @@ public class JsonBuilderTests {
                 return result[0];
             });
         when(flowData.getPipeline()).thenReturn(pipeline);
+        when(flowData.getErrors()).thenReturn(flowErrors);
 
         jsonBuilderElement.process(flowData);
 
