@@ -156,8 +156,10 @@ public class JsonBuilderTests {
      */
     @Test
     public void JsonBuilder_Errors_NoMessage_WritesType() throws Exception {
+        FlowElement<?, ?> element = mock(FlowElement.class);
+        when(element.getElementDataKey()).thenReturn("element");
         flowErrors.add(new FlowError.Default(
-            new IllegalStateException(), mock(FlowElement.class)));
+            new IllegalStateException(), element));
 
         String json = testIteration(1);
 
