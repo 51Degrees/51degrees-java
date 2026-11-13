@@ -52,6 +52,7 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -467,7 +468,9 @@ public class DataUpdateServiceLoggingTests {
     /**
      * An Error row of the specification's Errors table, logged at Error as
      * "Error during check for data update" with an error attached that
-     * carries the row's message, and the cause's message when there is one.
+     * carries the row's message, and a cause whose message holds the given
+     * text when there is one. A cause with a License Key masked out of it
+     * is a copy whose message starts with the original's class name.
      */
     private void assertCheckFailed(String message, String causeMessage) {
         List<String> found = new ArrayList<>();
@@ -480,8 +483,13 @@ public class DataUpdateServiceLoggingTests {
                 found.add(error.getMessage());
                 if (message.equals(error.getMessage())) {
                     IThrowableProxy cause = error.getCause();
-                    assertEquals(causeMessage,
-                        cause == null ? null : cause.getMessage());
+                    if (causeMessage == null) {
+                        assertNull(cause);
+                    } else {
+                        assertNotNull(cause);
+                        assertTrue("The cause was " + cause.getMessage(),
+                            cause.getMessage().endsWith(causeMessage));
+                    }
                     assertTrue("A warning was logged as well: " +
                         logged(Level.WARN), logged(Level.WARN).isEmpty());
                     return;
