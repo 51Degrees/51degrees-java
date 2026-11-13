@@ -374,12 +374,9 @@ public class DataUpdateServiceTests {
             dataUpdate.registerDataFile(file);
 
             // Assert
-            // The automatic update switch governs the file system watcher.
-            if (autoUpdateEnabled) {
-                assertNotNull(config.getWatchKey());
-            } else {
-                assertNull(config.getWatchKey());
-            }
+            // The watcher runs on its own setting, whether or not automatic
+            // updates are on.
+            assertNotNull(config.getWatchKey());
         } finally {
             // Make sure we tidy up the temp file.
             File tempFile = new File(tempData);
@@ -398,7 +395,8 @@ public class DataUpdateServiceTests {
         // Arrange
         OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
-        config.setAutomaticUpdatesEnabled(true);
+        // The watcher needs no automatic updates.
+        config.setAutomaticUpdatesEnabled(false);
         config.setFileSystemWatcherEnabled(true);
         config.setPollingIntervalSeconds(1);
 
@@ -424,8 +422,7 @@ public class DataUpdateServiceTests {
             });
 
             // Configure a flag to be set when the watcher has applied the
-            // update. The polling timer's own check also completes, with no
-            // update found, and must not release the flag.
+            // update.
             final Semaphore completeFlag = new Semaphore(1);
             completeFlag.acquire();
             dataUpdate.onUpdateComplete(new OnUpdateComplete() {
@@ -1028,8 +1025,8 @@ public class DataUpdateServiceTests {
 
     /**
      * A programmatic update compares the data file on disk whether or not
-     * Automatic Update from File is enabled, and with automatic update off
-     * no file system watcher exists whatever the watcher flag says.
+     * Automatic Update from File is enabled, here with automatic update off
+     * and the watcher flag at its default.
      */
     @Test
     public void DataUpdateService_CheckForUpdate_FileUpdated_AutoUpdateOffWatcherFlagDefault() {

@@ -26,7 +26,11 @@ import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.engines.Constants;
 import fiftyone.pipeline.engines.configuration.DataFileConfiguration;
 import fiftyone.pipeline.engines.configuration.DataFileConfigurationDefault;
+import fiftyone.pipeline.engines.data.AspectEngineDataFile;
 import fiftyone.pipeline.engines.services.DataUpdateService;
+import fiftyone.pipeline.engines.services.DataUpdateServiceDefault;
+import fiftyone.pipeline.engines.services.HttpClient;
+import fiftyone.pipeline.engines.services.update.FutureFactory;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -42,14 +46,18 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ScheduledFuture;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @SuppressWarnings("rawtypes")
 public class OnPremiseAspectEngineBuilderBaseTest {
@@ -175,6 +183,94 @@ public class OnPremiseAspectEngineBuilderBaseTest {
         assertThrows(PipelineConfigurationException.class, builder::buildEngine);
 
         verify(updateService, never()).registerDataFile(any());
+    }
+
+    /**
+     * The file system watcher runs on its own setting and needs no license
+     * key. An engine whose update source needs a key it does not have is
+     * built with automatic updates and the update on start-up off, and its
+     * data file is still registered to be watched. With the watcher off as
+     * well, nothing is registered.
+     */
+    @Test
+    public void WatcherAlone_RegistersTheDataFile() throws Exception {
+        String[] names = {
+            "watcher on, automatic updates off, no license key",
+            "watcher off, automatic updates off, no license key"};
+        boolean[] watching = {true, false};
+        for (int i = 0; i < names.length; i++) {
+            checkWatcherAlone(names[i], watching[i]);
+        }
+    }
+
+    private static void checkWatcherAlone(String name, boolean watching)
+        throws Exception {
+        FutureFactory futureFactory = mock(FutureFactory.class);
+        when(futureFactory.scheduleRepeating(any(Runnable.class), anyLong()))
+            .then(invocation -> mock(ScheduledFuture.class));
+        DataUpdateService updateService = new DataUpdateServiceDefault(
+            null, mock(HttpClient.class), null, futureFactory);
+        OnPremiseAspectEngineBuilderBase builder =
+            keyRequiredBuilder(updateService);
+
+        Path directory = Files.createTempDirectory("watched");
+        Path dataFile = directory.resolve("data.dat");
+        Files.write(dataFile, "Data".getBytes());
+        DataFileConfigurationDefault config = new DataFileConfigurationDefault();
+        config.setIdentifier("Watched");
+        config.setDataFilePath(dataFile.toString());
+        config.setAutomaticUpdatesEnabled(false);
+        config.setUpdateOnStartup(false);
+        config.setFileSystemWatcherEnabled(watching);
+        builder.addDataFile(config);
+
+        try {
+            builder.buildEngine();
+            AspectEngineDataFile file =
+                (AspectEngineDataFile) builder.dataFiles.get(0);
+            assertEquals(name + ", the data file is registered",
+                watching, file.getIsRegistered());
+            assertEquals(name + ", a file system watcher was created",
+                watching, config.getWatchKey() != null);
+        }
+        finally {
+            for (Object file : builder.dataFiles) {
+                updateService.unregisterDataFile((AspectEngineDataFile) file);
+            }
+            if (config.getWatchKey() != null) {
+                config.getWatchKey().cancel();
+            }
+            directory.toFile().deleteOnExit();
+            if (dataFile.toFile().delete() == false) {
+                dataFile.toFile().deleteOnExit();
+            }
+            directory.toFile().delete();
+        }
+    }
+
+    /**
+     * A builder whose update source serves nothing without a license key.
+     */
+    private static OnPremiseAspectEngineBuilderBase keyRequiredBuilder(
+        DataUpdateService updateService) {
+        return new OnPremiseAspectEngineBuilderBase(null, updateService) {
+            @Override
+            public OnPremiseAspectEngineBuilderBase setPerformanceProfile(
+                Constants.PerformanceProfiles profile) {
+                return this;
+            }
+
+            @Override
+            protected AspectEngine newEngine(List properties) {
+                return null;
+            }
+
+            @Override
+            protected boolean isLicenseKeyRequired(
+                DataFileConfiguration dataFileConfig) {
+                return true;
+            }
+        };
     }
 
     private static DataFileConfiguration autoUpdateConfiguration(

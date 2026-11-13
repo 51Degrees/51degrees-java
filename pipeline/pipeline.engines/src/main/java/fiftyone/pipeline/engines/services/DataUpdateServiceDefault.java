@@ -92,6 +92,13 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     long watchedFileOpenTimeoutMillis = WATCHED_FILE_OPEN_TIMEOUT_MILLIS;
 
     final List<AspectEngineDataFile> configurations = new ArrayList<>();
+    /**
+     * The watch service of each watched data file, held under the
+     * configuration lock. A watch service runs a thread of its own, so it is
+     * closed when its data file is unregistered.
+     */
+    private final Map<AspectEngineDataFile, WatchService> watchServices =
+            new IdentityHashMap<>();
     private final Logger logger;
     private final boolean closeFutureFactory;
     private final List<OnUpdateComplete> onUpdateCompleteList = new ArrayList<>();
@@ -548,11 +555,10 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 }
             }
 
-            // If file system watcher is enabled then set it up. The
-            // automatic update switch governs the watcher as well as the
-            // polling timer.
-            if (aspectDataFile.getAutomaticUpdatesEnabled() &&
-                    aspectDataFile.getConfiguration().getFileSystemWatcherEnabled() &&
+            // If file system watcher is enabled then set it up. The watcher
+            // runs on its own setting. Watching a file downloads nothing, so
+            // it needs neither automatic updates nor a license key.
+            if (aspectDataFile.getConfiguration().getFileSystemWatcherEnabled() &&
                     aspectDataFile.getConfiguration().getWatchKey() == null &&
                     aspectDataFile.getDataFilePath() != null &&
                     aspectDataFile.getDataFilePath().isEmpty() == false) {
@@ -568,9 +574,8 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                         throw new IllegalStateException("Cannot find directory to watch");
                     }
                     logger.debug("Getting a watcher using {}", aspectDataFilePath);
-                    WatchService watcher = aspectDataFilePath
-                            .getFileSystem()
-                            .newWatchService();
+                    WatchService watcher =
+                            watchService(aspectDataFile, aspectDataFilePath);
                     logger.debug("Setting a watcher for {}", aspectDataFilePath.getParent());
                     aspectDataFile.getConfiguration().setWatchKey(aspectDataFilePath.getParent().register(
                             watcher,
@@ -579,33 +584,49 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                     logger.error("File watcher for '{}' could not be initialised. " + e.getMessage(),
                             aspectDataFile.getDataFilePath(), e);
                 }
-                try {
-                    long pollingInterval =
-                            aspectDataFile.getConfiguration().getPollingIntervalSeconds() * 1000L;
-                    logger.debug("Setting poll future {} millis", pollingInterval);
-                    aspectDataFile.setPollFuture(futureFactory.scheduleRepeating(
-                            new Runnable() {
-                                @Override
-                                public void run() {
-                                    logger.debug("Watcher is running");
-                                    for (WatchEvent<?> event :
-                                            aspectDataFile.getConfiguration().getWatchKey().pollEvents()) {
-                                        if (event.kind() == StandardWatchEventKinds.ENTRY_MODIFY) {
-                                            if (((Path) event.context()).endsWith(aspectDataFilePath.getFileName())) {
-                                                dataFileUpdated(aspectDataFile);
+                // The watcher's task polls the watch key, so it is scheduled
+                // only when there is one, and replaces any task scheduled
+                // before rather than run beside it.
+                if (aspectDataFile.getConfiguration().getWatchKey() != null) {
+                    try {
+                        if (aspectDataFile.getPollFuture() != null) {
+                            aspectDataFile.getPollFuture().cancel(false);
+                        }
+                        long pollingInterval =
+                                aspectDataFile.getConfiguration().getPollingIntervalSeconds() * 1000L;
+                        logger.debug("Setting poll future {} millis", pollingInterval);
+                        aspectDataFile.setPollFuture(futureFactory.scheduleRepeating(
+                                new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        logger.debug("Watcher is running");
+                                        // The watch is paused while a downloaded
+                                        // file is copied into place. A repeating
+                                        // task that fails never runs again, so
+                                        // this run does nothing.
+                                        WatchKey watchKey =
+                                                aspectDataFile.getConfiguration().getWatchKey();
+                                        if (watchKey == null) {
+                                            return;
+                                        }
+                                        for (WatchEvent<?> event : watchKey.pollEvents()) {
+                                            if (event.kind() == StandardWatchEventKinds.ENTRY_MODIFY) {
+                                                if (((Path) event.context()).endsWith(aspectDataFilePath.getFileName())) {
+                                                    dataFileUpdated(aspectDataFile);
+                                                }
                                             }
                                         }
+                                        // make sure to reset the watch key or we are not called again
+                                        watchKey.reset();
                                     }
-                                    // make sure to reset the watch key or we are not called again
-                                    aspectDataFile.getConfiguration().getWatchKey().reset();
-                                }
-                            },
-                            pollingInterval));
-                    logger.debug("Poll check scheduled for {} mins",
-                            aspectDataFile.getPollFuture().getDelay(TimeUnit.MINUTES));
-                } catch (Exception e) {
-                    logger.error("Could not schedule watcher for {}.",
-                            aspectDataFile.getDataFilePath(), e);
+                                },
+                                pollingInterval));
+                        logger.debug("Poll check scheduled for {} mins",
+                                aspectDataFile.getPollFuture().getDelay(TimeUnit.MINUTES));
+                    } catch (Exception e) {
+                        logger.error("Could not schedule watcher for {}.",
+                                aspectDataFile.getDataFilePath(), e);
+                    }
                 }
             }
 
@@ -630,11 +651,13 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 }
                 AspectEngineDataFileDefault aspectDataFile =
                         (AspectEngineDataFileDefault) dataFile;
+                // The watcher's task is stopped even while the watch is
+                // paused for a download.
+                if (aspectDataFile.getPollFuture() != null) {
+                    aspectDataFile.getPollFuture().cancel(true);
+                    aspectDataFile.setPollFuture(null);
+                }
                 if (aspectDataFile.getConfiguration().getWatchKey() != null) {
-                    if (aspectDataFile.getPollFuture() != null) {
-                        aspectDataFile.getPollFuture().cancel(true);
-                        aspectDataFile.setPollFuture(null);
-                    }
                     aspectDataFile.getConfiguration().getWatchKey().cancel();
                     aspectDataFile.getConfiguration().setWatchKey(null);
                 }
@@ -645,9 +668,54 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                     }
                 }
             }
+            closeWatchService(dataFile);
         }
         if (dataFile != null) {
             dataFile.setDataUpdateService(null);
+        }
+    }
+
+    /**
+     * Get the data file's watch service, creating it the first time. The
+     * data file keeps the one watch service until it is unregistered, so the
+     * watch resumes on it after a download.
+     *
+     * @param dataFile the data file to watch
+     * @param path the absolute path of the data file
+     * @return the data file's watch service
+     * @throws IOException if a watch service cannot be created
+     */
+    private WatchService watchService(
+            AspectEngineDataFile dataFile,
+            Path path) throws IOException {
+        synchronized (configLock) {
+            WatchService watcher = watchServices.get(dataFile);
+            if (watcher == null) {
+                watcher = path.getFileSystem().newWatchService();
+                watchServices.put(dataFile, watcher);
+            }
+            return watcher;
+        }
+    }
+
+    /**
+     * Close the data file's watch service, if it has one, which ends the
+     * watch service's thread.
+     *
+     * @param dataFile the data file no longer watched
+     */
+    private void closeWatchService(AspectEngineDataFile dataFile) {
+        WatchService watcher;
+        synchronized (configLock) {
+            watcher = watchServices.remove(dataFile);
+        }
+        if (watcher != null) {
+            try {
+                watcher.close();
+            } catch (IOException e) {
+                logger.warn("Could not close the file watcher for '{}'",
+                        dataFile.getDataFilePath(), e);
+            }
         }
     }
 
@@ -1137,14 +1205,20 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                             dataFile.getDataFilePath(), ex);
                     result = AutoUpdateStatus.AUTO_UPDATE_NEW_FILE_CANT_RENAME;
                 }
-                // Make sure to enable the file watcher again if needed.
+                // Make sure to enable the file watcher again if needed. The
+                // watch resumes on the data file's own watch service, unless
+                // the data file was unregistered during the download.
                 if (watchKey != null) {
                     final Path filePath =
                             Paths.get(dataFile.getDataFilePath()).toAbsolutePath();
-                    WatchService watcher = filePath.getFileSystem().newWatchService();
-                    watchKey = filePath.getParent().register(watcher,
-                            StandardWatchEventKinds.ENTRY_MODIFY);
-                    dataFile.getConfiguration().setWatchKey(watchKey);
+                    synchronized (configLock) {
+                        if (configurations.contains(dataFile)) {
+                            watchKey = filePath.getParent().register(
+                                    watchService(dataFile, filePath),
+                                    StandardWatchEventKinds.ENTRY_MODIFY);
+                            dataFile.getConfiguration().setWatchKey(watchKey);
+                        }
+                    }
                 }
             }
             return result;

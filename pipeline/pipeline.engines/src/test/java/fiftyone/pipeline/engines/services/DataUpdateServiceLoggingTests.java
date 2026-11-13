@@ -279,7 +279,8 @@ public class DataUpdateServiceLoggingTests {
 
     @Test
     public void FileSystemWatcher_LogsCreatingFileSystemWatcher() {
-        AspectEngineDataFileDefault file = newDataFile(false, true, false);
+        // The watcher needs no automatic updates.
+        AspectEngineDataFileDefault file = newDataFile(false, false, false);
         file.getConfiguration().setFileSystemWatcherEnabled(true);
 
         dataUpdate.registerDataFile(file);
