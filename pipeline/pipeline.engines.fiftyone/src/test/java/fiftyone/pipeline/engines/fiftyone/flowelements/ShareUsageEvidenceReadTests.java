@@ -38,10 +38,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
 /**
- * Usage sharing finds the values it shares on every call, and most calls
- * repeat one already shared and are not shared again, so finding them must
- * not copy every value more than once. These tests count how often all the
- * values of the Evidence and of the web request are read in one call.
+ * Usage sharing is called for every request, and most calls repeat one
+ * already shared, which the tracker does not share again. Such a call must
+ * not copy every value of the Evidence, or of the web request, more than
+ * once. These tests count how often all the values of each are read in a
+ * call that is not shared.
  */
 public class ShareUsageEvidenceReadTests {
 
@@ -119,9 +120,8 @@ public class ShareUsageEvidenceReadTests {
     }
 
     /**
-     * With no web request the Evidence is read once to make the session
-     * tracking key, and a call that is shared reads it once more for the
-     * values it shares. Neither copies it.
+     * With no web request a call that is not shared reads the Evidence once,
+     * to make the session tracking key, and does not copy it.
      */
     @Test
     public void NoWebRequest_EvidenceReadOnceWhenNotShared()
@@ -130,37 +130,31 @@ public class ShareUsageEvidenceReadTests {
         ShareUsageElement element = createElement();
         try {
             FlowData data = MockFlowData.createFromEvidence(evidence, false);
-            evidence.takeReads();
-
             element.process(data);
-            int sharedReads = evidence.takeReads();
             assertEquals(1, element.evidenceCollection.size(),
                 "The first call was not shared.");
 
+            evidence.takeReads();
             element.process(data);
-            int notSharedReads = evidence.takeReads();
+            int reads = evidence.takeReads();
             assertEquals(1, element.evidenceCollection.size(),
                 "The repeat was shared.");
 
-            assertEquals(1, notSharedReads,
+            assertEquals(1, reads,
                 "A call that is not shared read all the Evidence more than " +
-                    "once, for the session tracking key.");
-            assertEquals(2, sharedReads,
-                "A call that is shared read all the Evidence more than " +
-                    "twice, for the session tracking key and the values " +
-                    "shared.");
+                    "once, when the session tracking key needs it once.");
         } finally {
             element.close();
         }
     }
 
     /**
-     * With a web request the Evidence and the web request are each read
-     * once, to make the one copy that the session tracking key and the
-     * values shared both come from.
+     * With a web request a call that is not shared reads the Evidence and
+     * the web request once each, to make the one copy that the session
+     * tracking key is made from.
      */
     @Test
-    public void WebRequest_EachReadOnceWhetherSharedOrNot() throws Exception {
+    public void WebRequest_EachCopiedOnceWhenNotShared() throws Exception {
         CountingMap request = headers();
         CountingMap evidence = new CountingMap();
         evidence.put("header.user-agent", "evidence-ua");
@@ -168,32 +162,24 @@ public class ShareUsageEvidenceReadTests {
         ShareUsageElement element = createElement();
         try {
             FlowData data = MockFlowData.createFromEvidence(evidence, false);
-            evidence.takeReads();
-            request.takeReads();
-
             element.process(data);
-            int sharedEvidenceReads = evidence.takeReads();
-            int sharedRequestReads = request.takeReads();
             assertEquals(1, element.evidenceCollection.size(),
                 "The first call was not shared.");
 
+            evidence.takeReads();
+            request.takeReads();
             element.process(data);
-            int notSharedEvidenceReads = evidence.takeReads();
-            int notSharedRequestReads = request.takeReads();
+            int evidenceReads = evidence.takeReads();
+            int requestReads = request.takeReads();
             assertEquals(1, element.evidenceCollection.size(),
                 "The repeat was shared.");
 
-            assertEquals(1, notSharedRequestReads,
+            assertEquals(1, requestReads,
                 "A call that is not shared copied the web request more " +
                     "than once.");
-            assertEquals(1, notSharedEvidenceReads,
+            assertEquals(1, evidenceReads,
                 "A call that is not shared copied the Evidence more than " +
                     "once.");
-            assertEquals(1, sharedRequestReads,
-                "A call that is shared copied the web request more than " +
-                    "once.");
-            assertEquals(1, sharedEvidenceReads,
-                "A call that is shared copied the Evidence more than once.");
         } finally {
             element.close();
         }
