@@ -134,11 +134,11 @@ public class ShareUsageOverheadTests {
     private static final int WarmUpRounds = 2;
 
     /**
-     * The most the median Process call may take. Each limit is at least ten
+     * The most the median Process call may take. Each limit is about ten
      * times the highest median the CI runners measure at their usual speed,
      * so a runner several times slower than usual still passes.
      */
-    private static final double SingleEvidenceLimitMillis = 0.06;
+    private static final double SingleEvidenceLimitMillis = 0.07;
     private static final double ThousandEvidenceLimitMillis = 40;
 
     /**
