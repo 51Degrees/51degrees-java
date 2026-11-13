@@ -32,7 +32,11 @@ import java.util.Map;
 /**
  * Makes requests with {@link HttpURLConnection}. The connect timeout set on
  * a connection also limits the lookup of its host, which the connection's
- * own timeouts do not cover.
+ * own timeouts do not cover. A host is not looked up when the default
+ * {@link java.net.ProxySelector} sends its request through a proxy. A
+ * subclass whose {@link #connect(URL)} opens the connection through a proxy
+ * of its own still has the host looked up here, so its requests fail when
+ * the host cannot be found locally although the proxy could reach it.
  */
 public class HttpClientDefault implements HttpClient {
 

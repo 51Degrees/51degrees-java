@@ -49,6 +49,15 @@ import java.util.concurrent.TimeoutException;
  * leaves the address in the JVM's cache for the connection to use. Callers
  * waiting on the same host share one lookup, so a resolver that does not
  * answer holds one thread, not one for each request.
+ * <p>
+ * Two limits follow from relying on that cache. With the security property
+ * {@code networkaddress.cache.ttl} set to 0 nothing is cached, so the
+ * connection looks the host up again itself, with no limit. And every
+ * request is looked up here, including one the connection would send on a
+ * kept-alive socket with no lookup at all, so once the cached address
+ * expires, 30 seconds after it was found by default, a resolver that does
+ * not answer fails that request although the open socket could have served
+ * it.
  */
 final class HostLookup {
 
