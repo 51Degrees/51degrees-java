@@ -30,6 +30,8 @@ import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
 import fiftyone.pipeline.engines.exceptions.PropertyMissingException;
+import fiftyone.pipeline.engines.fiftyone.data.SequenceData;
+import fiftyone.pipeline.engines.fiftyone.flowelements.SequenceElement;
 import fiftyone.pipeline.javascriptbuilder.data.JavaScriptBuilderData;
 import fiftyone.pipeline.javascriptbuilder.flowelements.JavaScriptBuilderElement;
 import fiftyone.pipeline.javascriptbuilder.flowelements.JavaScriptBuilderElementBuilder;
@@ -57,6 +59,7 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -526,6 +529,19 @@ public class JavaScriptBuilderTests {
         );
 
         when(flowData.get(anyString())).thenReturn(elementDataMock);
+
+        // The Sequence Element's data, which is where the builder reads the
+        // session id and the sequence from, as a web integration's
+        // pipeline holds it.
+        ElementData sequenceData = mock(ElementData.class);
+        when(sequenceData.get(SequenceData.SESSION_ID_PROPERTY_NAME))
+            .thenReturn(sessionId);
+        when(sequenceData.get(SequenceData.SEQUENCE_PROPERTY_NAME))
+            .thenReturn(sequence);
+        when(flowData.getDataKeys()).thenReturn(Collections.singletonList(
+            SequenceElement.DEFAULT_ELEMENT_DATA_KEY));
+        when(flowData.get(SequenceElement.DEFAULT_ELEMENT_DATA_KEY))
+            .thenReturn(sequenceData);
 
         when(flowData.getAs(anyString(), any(Class.class))).thenReturn(new AspectPropertyValueDefault<>("None"));
 

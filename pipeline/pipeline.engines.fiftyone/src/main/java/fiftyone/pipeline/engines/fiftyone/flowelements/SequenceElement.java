@@ -23,13 +23,17 @@
 package fiftyone.pipeline.engines.fiftyone.flowelements;
 
 import fiftyone.pipeline.core.data.*;
+import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
+import fiftyone.pipeline.engines.fiftyone.data.SequenceData;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 
 /**
@@ -38,6 +42,10 @@ import org.slf4j.Logger;
  */
 public class SequenceElement 
     extends FlowElementBase<ElementData, ElementPropertyMetaData> {
+
+    private static final Pattern DIGITS = Pattern.compile("[0-9]+");
+
+    private final List<ElementPropertyMetaData> properties;
 
     /**
      * The session id and sequence of a callback, which the specification
@@ -55,48 +63,99 @@ public class SequenceElement
      * Construct a new instance of the {@link FlowElement}.
      * @param logger logger instance to use for logging
      */
-    public SequenceElement(Logger logger) {
-        super(logger, null);
+    @SuppressWarnings("this-escape")
+    public SequenceElement(final Logger logger) {
+        super(logger, new ElementDataFactory<ElementData>() {
+            @Override
+            public ElementData create(
+                FlowData flowData,
+                FlowElement<ElementData, ?> flowElement) {
+                return new SequenceData(logger, flowData);
+            }
+        });
+        properties = new ArrayList<>();
+        properties.add(new ElementPropertyMetaDataDefault(
+            SequenceData.SESSION_ID_PROPERTY_NAME,
+            this,
+            "",
+            String.class,
+            true));
+        properties.add(new ElementPropertyMetaDataDefault(
+            SequenceData.SEQUENCE_PROPERTY_NAME,
+            this,
+            "",
+            Integer.class,
+            true));
     }
 
     @Override
     protected void processInternal(FlowData data) throws Exception {
         Map<String, Object> evidence = data.getEvidence().asKeyMap();
-        
-        // If the evidence does not contain a session id then create a new one.
-        if (evidence.containsKey(Constants.EVIDENCE_SESSIONID) == false) {
-            data.addEvidence(Constants.EVIDENCE_SESSIONID, getNewSessionId());
-        }
 
-        // If the evidence does not have a sequence then add one.
-        if (evidence.containsKey(Constants.EVIDENCE_SEQUENCE) == false) {
-            data.addEvidence(Constants.EVIDENCE_SEQUENCE, 1);
-        } else {
-            data.addEvidence(
-                Constants.EVIDENCE_SEQUENCE,
-                getSequence(evidence.get(Constants.EVIDENCE_SEQUENCE)) + 1);
-        }
+        // The session id and the sequence are each used only when they are
+        // valid, and otherwise count as absent.
+        Object givenSession = evidence.get(Constants.EVIDENCE_SESSIONID);
+        String sessionId =
+            givenSession instanceof String &&
+            ((String) givenSession).isEmpty() == false ?
+                (String) givenSession : getNewSessionId();
+        Integer previous = toSequence(evidence.get(Constants.EVIDENCE_SEQUENCE));
+        int sequence = previous == null ? 1 : previous + 1;
+
+        data.addEvidence(Constants.EVIDENCE_SESSIONID, sessionId);
+        data.addEvidence(Constants.EVIDENCE_SEQUENCE, sequence);
+
+        SequenceData sequenceData = (SequenceData) data.getOrAdd(
+            getElementDataKey(),
+            getDataFactory());
+        sequenceData.setSessionId(sessionId);
+        sequenceData.setSequence(sequence);
     }
 
     /**
-     * The sequence in Evidence, which is a number when an element set it and
-     * text when it came from the query string of a callback. Anything that is
-     * not a number counts as no sequence.
+     * The sequence in Evidence, which is a whole number from 0 up, or text
+     * made only of decimal digits. A value that is anything else, is
+     * negative or has no larger int after it counts as no sequence, so that
+     * adding one never overflows.
+     * @return the sequence, or null if there is none
      */
-    private static int getSequence(Object sequence) {
-        if (sequence instanceof Number) {
-            return ((Number) sequence).intValue();
+    private static Integer toSequence(Object sequence) {
+        long value;
+        if (sequence instanceof Integer || sequence instanceof Long ||
+            sequence instanceof Short || sequence instanceof Byte) {
+            value = ((Number) sequence).longValue();
+        } else if (sequence instanceof BigInteger) {
+            BigInteger big = (BigInteger) sequence;
+            if (big.bitLength() > 31) {
+                return null;
+            }
+            value = big.longValue();
+        } else if (sequence instanceof String &&
+            DIGITS.matcher((String) sequence).matches()) {
+            // More digits than any int has cannot fit, however many zeros
+            // come first, so only the value of a short string is read.
+            String digits = ((String) sequence).replaceFirst("^0+(?=.)", "");
+            if (digits.length() > 10) {
+                return null;
+            }
+            value = Long.parseLong(digits);
+        } else {
+            return null;
         }
-        try {
-            return Integer.parseInt(String.valueOf(sequence).trim());
-        } catch (NumberFormatException e) {
-            return 0;
-        }
+        return value < Integer.MAX_VALUE && value >= 0 ?
+            Integer.valueOf((int) value) : null;
     }
+
+    /**
+     * The key the Element Data is stored under in the Flow Data, unless a
+     * subclass gives another from {@link #getElementDataKey()}.
+     * @see <a href="https://github.com/51Degrees/specifications/blob/67ead6986f3118c68f0714325800b92d48ddc71f/pipeline-specification/pipeline-elements/sequence-element.md#element-data">Specification</a>
+     */
+    public static final String DEFAULT_ELEMENT_DATA_KEY = "sequence";
 
     @Override
     public String getElementDataKey() {
-        return "sequence-element";
+        return DEFAULT_ELEMENT_DATA_KEY;
     }
 
     @Override
@@ -106,7 +165,7 @@ public class SequenceElement
 
     @Override
     public List<ElementPropertyMetaData> getProperties() {
-        return new ArrayList<>();
+        return properties;
     }
 
     @Override

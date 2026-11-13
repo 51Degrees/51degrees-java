@@ -24,6 +24,7 @@ package fiftyone.ipintelligence.examples.shared;
 
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -42,10 +43,11 @@ public class KeyHelperTest {
     private static final String KEY_B = "AgAAAAAAAAAAAAAAAAAAAAAA";
 
     /**
-     * The names getOrSetTestResourceKey reads, in its order.
+     * The names getOrSetTestResourceKey reads, in its order, apart from
+     * the deprecated name it reads when the first is not set.
      */
     private static final List<String> EXAMPLE_NAMES = Arrays.asList(
-        KeyHelper.RESOURCE_KEY_ENV_VAR, KeyHelper.TEST_RESOURCE_KEY);
+        KeyHelper.RESOURCE_KEY_VARIABLE, KeyHelper.TEST_RESOURCE_KEY);
 
     /**
      * With no key anywhere, the lookup logs that there is none and stores
@@ -53,20 +55,24 @@ public class KeyHelperTest {
      */
     @Test
     public void getOrSetTestResourceKey_NoKey_StoresNothing() {
+        // The deprecated name is read as well, so it must not be set
+        // either.
+        List<String> namesRead = new ArrayList<>(EXAMPLE_NAMES);
+        namesRead.add(OLD_KEY_NAME);
         // A test can clear a system property but not an environment
         // variable.
-        for (String name : EXAMPLE_NAMES) {
+        for (String name : namesRead) {
             assumeTrue(name + " is set in the environment",
                 System.getenv(name) == null &&
                     System.getenv(name.toUpperCase()) == null);
         }
         Map<String, String> saved = new HashMap<>();
-        for (String name : EXAMPLE_NAMES) {
+        for (String name : namesRead) {
             saved.put(name, System.clearProperty(name));
         }
         try {
             assertNull(KeyHelper.getOrSetTestResourceKey(false));
-            for (String name : EXAMPLE_NAMES) {
+            for (String name : namesRead) {
                 assertNull(name, System.getProperty(name));
             }
         } finally {
@@ -88,7 +94,7 @@ public class KeyHelperTest {
         assertEquals("This test calls the live 51Degrees cloud service, so " +
                 "it needs a resource key and there is nothing to fall back " +
                 "on. None of _51DEGREES_RESOURCE_KEY, " +
-                "_51DEGREES_RESOURCE_KEY_BESPOKE, 51DEGREES_RESOURCE_KEY, " +
+                "_51DEGREES_RESOURCE_KEY_BESPOKE, _51DEGREES_RESOURCE_KEY, " +
                 "TestResourceKey is set, as an environment variable or as a " +
                 "system property, tried in that order. The key has to carry " +
                 "the ip and device products, because the test asks the " +
@@ -118,12 +124,45 @@ public class KeyHelperTest {
     @Test
     public void requireResourceKey_ExampleNamesInTheirOrder() {
         Map<String, String> values = new HashMap<>();
-        values.put(KeyHelper.RESOURCE_KEY_ENV_VAR, KEY_A);
+        values.put(KeyHelper.RESOURCE_KEY_VARIABLE, KEY_A);
         values.put(KeyHelper.TEST_RESOURCE_KEY, KEY_B);
         assertEquals(KEY_A, KeyHelper.requireResourceKey(values::get,
             EXAMPLE_NAMES, "every IP Intelligence property", "ip"));
-        values.remove(KeyHelper.RESOURCE_KEY_ENV_VAR);
+        values.remove(KeyHelper.RESOURCE_KEY_VARIABLE);
         assertEquals(KEY_B, KeyHelper.requireResourceKey(values::get,
             EXAMPLE_NAMES, "every IP Intelligence property", "ip"));
+    }
+
+    private static final String NEW_KEY_NAME = "_51DEGREES_RESOURCE_KEY";
+    private static final String OLD_KEY_NAME = "51DEGREES_RESOURCE_KEY";
+
+    @Test
+    public void requireResourceKey_OldNameWhenNewIsNotSet() {
+        Map<String, String> values = new HashMap<>();
+        values.put(OLD_KEY_NAME, KEY_A);
+        values.put(KeyHelper.TEST_RESOURCE_KEY, KEY_B);
+        assertEquals(KEY_A, KeyHelper.requireResourceKey(values::get,
+            Arrays.asList(NEW_KEY_NAME, KeyHelper.TEST_RESOURCE_KEY),
+            "every IP Intelligence property", "ip"));
+    }
+
+    @Test
+    public void requireResourceKey_NewNameWinsOverOld() {
+        Map<String, String> values = new HashMap<>();
+        values.put(NEW_KEY_NAME, KEY_B);
+        values.put(OLD_KEY_NAME, KEY_A);
+        assertEquals(KEY_B, KeyHelper.requireResourceKey(values::get,
+            Arrays.asList(NEW_KEY_NAME, KeyHelper.TEST_RESOURCE_KEY),
+            "every IP Intelligence property", "ip"));
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    public void oldKeyConstantKeepsItsValue() throws Exception {
+        assertEquals(OLD_KEY_NAME, KeyHelper.RESOURCE_KEY_ENV_VAR);
+        assertEquals(true, KeyHelper.class.getField("RESOURCE_KEY_ENV_VAR")
+            .isAnnotationPresent(Deprecated.class));
+        assertEquals(NEW_KEY_NAME,
+            KeyHelper.class.getField("RESOURCE_KEY_VARIABLE").get(null));
     }
 }

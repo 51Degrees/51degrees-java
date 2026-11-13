@@ -84,7 +84,7 @@ import java.util.function.Supplier;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
 import static fiftyone.ipintelligence.examples.shared.DataFileHelper.LITE_DATA_FILE_REL_PATH;
-import static fiftyone.ipintelligence.examples.shared.DataFileHelper.IPI_PATH_ENV_VAR;
+import static fiftyone.ipintelligence.examples.shared.DataFileHelper.IPI_PATH_VARIABLE;
 import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asString;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
@@ -125,7 +125,7 @@ public class GettingStartedWebOnPrem extends HttpServlet {
         } catch (Exception e) {
             logger.warn("Data file not found at expected location: {}. " +
                     "An explicit path can be supplied via the {} environment variable.",
-                    dataFile, IPI_PATH_ENV_VAR);
+                    dataFile, IPI_PATH_VARIABLE);
             logger.warn("Will attempt to use default path from XML configuration");
             logger.debug("Error finding data file", e);
         }

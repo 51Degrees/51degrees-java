@@ -29,10 +29,10 @@ Created from `pipeline-java`, `device-detection-java`, `ip-intelligence-java`, `
 
 | Product | Read first | Documentation |
 | --- | --- | --- |
-| Pipeline API | [pipeline/README.md](pipeline/README.md) | [Java](https://51degrees.com/documentation/apis/pipeline-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=pipeline-java) |
-| Device Detection | [device-detection/README.md](device-detection/README.md) | [Java](https://51degrees.com/documentation/apis/device-detection-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=device-detection-java) |
-| IP Intelligence | [ip-intelligence/README.md](ip-intelligence/README.md) | [Java](https://51degrees.com/documentation/apis/ip-intelligence-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=ip-intelligence-java) |
-| Location | [location/README.md](location/README.md) | [Java](https://51degrees.com/documentation/apis/location-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=location-java) |
+| Pipeline API | [pipeline/README.md](pipeline/README.md) | [Guide](https://51degrees.com/documentation/_pipeline_api__concepts__pipeline_basics.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=pipeline-guide) and [Java API](https://51degrees.com/documentation/apis/pipeline-java/annotated.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=pipeline-java) |
+| Device Detection | [device-detection/README.md](device-detection/README.md) | [Guide](https://51degrees.com/documentation/_device_detection__quickstart.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=device-detection-guide) and [Java API](https://51degrees.com/documentation/apis/device-detection-java/annotated.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=device-detection-java) |
+| IP Intelligence | [ip-intelligence/README.md](ip-intelligence/README.md) | [Guide](https://51degrees.com/documentation/_ip_intelligence__quickstart.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=ip-intelligence-guide) and [Java API](https://51degrees.com/documentation/apis/ip-intelligence-java/annotated.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=ip-intelligence-java) |
+| Location | [location/README.md](location/README.md) | [Guide](https://51degrees.com/documentation/_reverse_geocoding__quickstart.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=location-guide) and [Java API](https://51degrees.com/documentation/apis/location-java/annotated.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=location-java) |
 
 ## What is where
 
@@ -102,6 +102,10 @@ The cloud tests need a Resource Key, passed as `-DTestResourceKey=<key>`. The
 on-premise tests need the free data files, which the script in
 [Getting the code](#getting-the-code) downloads. For the Enterprise IP
 Intelligence data file, see `ip-intelligence/README.md`.
+
+Every environment variable name that the packages, tests, examples and CI
+scripts read is in [common-ci's list of environment variable names](https://github.com/51Degrees/common-ci/blob/d8a9c596eabf69dd5581a08e9360cdd1c9b3d9e8/environment-variables.md),
+which decides.
 Tests find data files by searching from the root of this repository, so run
 Maven from here rather than from inside a package folder.
 

@@ -130,6 +130,11 @@ public class ShareUsageBuilder extends ShareUsageBuilderBase<ShareUsageElement> 
             ignoreDataEvidenceFilter,
             sessionCookieName,
             null,
+            failuresToEnterRecovery,
+            failuresWindowSeconds,
+            initialRecoveryDelaySeconds,
+            maxRecoveryDelaySeconds,
+            recoveryMultiplier,
             shareAllEvidence,
             shareAllQueryStringParameters);
         if (Objects.nonNull(this.httpClient)) {

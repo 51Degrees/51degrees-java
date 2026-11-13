@@ -51,8 +51,8 @@ public class MetadataOnPrem {
     cxx/data, and is downloaded if it is missing, or you may specify another file as a command line
     parameter.
 
-    Note that the Lite data file is only used for illustration, and has limited accuracy and
-    capabilities. Contact us for a copy of the Enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-metadataonprem.java&utm_term=lite_v_4_1_hash */
+    Note that the Lite data file is only used for illustration, and has a small number of
+    Properties. Contact us for a copy of the Enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-metadataonprem.java&utm_term=lite_v_4_1_hash */
     public static String LITE_V_4_1_HASH = "device-detection/51Degrees-LiteV4.1.hash";
 
     /**

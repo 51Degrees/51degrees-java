@@ -43,6 +43,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPOutputStream;
 
 import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT;
+import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_INITIAL_DELAY_SECONDS_DEFAULT;
+import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT;
+import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT;
+import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_DEFAULT;
+import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_FAILURES_WINDOW_SECONDS_DEFAULT;
 import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_MAX_EVIDENCE_LENGTH;
 
 /**
@@ -321,12 +326,18 @@ public class ShareUsageElement extends ShareUsageBase {
                 ignoreDataEvidenceFilter,
                 sessionCookieName,
                 tracker,
+                SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_DEFAULT,
+                SHARE_USAGE_FAILURES_WINDOW_SECONDS_DEFAULT,
+                SHARE_USAGE_EXPONENTIAL_BACKOFF_INITIAL_DELAY_SECONDS_DEFAULT,
+                SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT,
+                SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT,
                 false,
                 false);
     }
 
     /**
      * Constructor
+     *
      * @param logger                        the logger to use
      * @param sharePercentage               the approximate proportion of requests to share.
      *                                      1 = 100%, 0.5 = 50%, etc.
@@ -337,7 +348,7 @@ public class ShareUsageElement extends ShareUsageBase {
      *                                      entries
      * @param addTimeout                    the timeout in milliseconds to allow when attempting to
      *                                      add an item to the queue. If this timeout is exceeded
-     *                                      then usage sharing will be disabled
+     *                                      then the item is not shared
      * @param takeTimeout                   the timeout in milliseconds to allow when attempting
      *                                      to take an item to the queue
      * @param repeatEvidenceIntervalMinutes the interval (in minutes) which is
@@ -357,6 +368,14 @@ public class ShareUsageElement extends ShareUsageBase {
      *                                      id
      * @param tracker                       the {@link Tracker} to use to determine if a given
      *                                      {@link FlowData} instance should be shared or not
+     * @param failuresToEnterRecovery       the number of failed sends within the failures
+     *                                      window that pauses sending
+     * @param failuresWindowSeconds         the time in seconds over which failed sends are
+     *                                      counted
+     * @param initialRecoveryDelaySeconds   the length in seconds of the first pause
+     * @param maxRecoveryDelaySeconds       the longest a pause can be, in seconds
+     * @param recoveryMultiplier            what the pause is multiplied by each time the send
+     *                                      tried when a pause ends fails
      * @param shareAllEvidence              if true then all Evidence is shared, apart from
      *                                      the keys that are never shared
      * @param shareAllQueryStringParameters if true then all query string
@@ -377,6 +396,11 @@ public class ShareUsageElement extends ShareUsageBase {
             List<Map.Entry<String, String>> ignoreDataEvidenceFilter,
             String sessionCookieName,
             Tracker tracker,
+            int failuresToEnterRecovery,
+            int failuresWindowSeconds,
+            double initialRecoveryDelaySeconds,
+            double maxRecoveryDelaySeconds,
+            double recoveryMultiplier,
             boolean shareAllEvidence,
             boolean shareAllQueryStringParameters) {
         super(
@@ -394,6 +418,11 @@ public class ShareUsageElement extends ShareUsageBase {
                 ignoreDataEvidenceFilter,
                 sessionCookieName,
                 tracker,
+                failuresToEnterRecovery,
+                failuresWindowSeconds,
+                initialRecoveryDelaySeconds,
+                maxRecoveryDelaySeconds,
+                recoveryMultiplier,
                 shareAllEvidence,
                 shareAllQueryStringParameters);
 
@@ -408,7 +437,8 @@ public class ShareUsageElement extends ShareUsageBase {
     }
 
     /**
-     * Take data from the queue until there are fewer entries than the minimum batch size
+     * Take data from the queue until there are fewer entries than the minimum
+     * batch size, waiting out any pause after failed sends before each message
      */
     @Override
     protected void sendUsageData() {
@@ -417,10 +447,14 @@ public class ShareUsageElement extends ShareUsageBase {
         List<ShareUsageData> allData = new ArrayList<>();
         // drain queue while minimum entries in it
         do {
+            // Closing while paused ends the wait, and nothing more is sent.
+            if (waitWhilePaused() == false) {
+                break;
+            }
             logger.debug(threadMarker, "Queue size is {}", evidenceCollection.size());
             try {
                 allData.clear();
-                // for historical reasons max entries set to 2*
+                // A message holds at most twice the minimum entries.
                 while (allData.size() < minEntriesPerMessage * 2) {
                     ShareUsageData currentData = evidenceCollection.poll(takeTimeout, TimeUnit.MILLISECONDS);
                     // no data available
@@ -434,7 +468,13 @@ public class ShareUsageElement extends ShareUsageBase {
                 // drained everything - and there is no point posting a document
                 // with no entries in it.
                 if (allData.isEmpty() == false) {
-                    sendAsXML(allData);
+                    boolean accepted = false;
+                    try {
+                        sendAsXML(allData);
+                        accepted = true;
+                    } finally {
+                        recordSendResult(accepted);
+                    }
                 }
             } catch (InterruptedException interruptedException) {
                 // Deliberately not re-interrupting: the interrupt comes from
@@ -466,7 +506,10 @@ public class ShareUsageElement extends ShareUsageBase {
         // check for completion
         int code = dataUploader.getResponseCode();
         if (code != 200) {
-            throw new Exception(String.format("Share Usage response code was %d ", code));
+            throw new Exception(String.format(
+                "Share Usage response code was %d with content '%s'",
+                code,
+                dataUploader.getResponseContent()));
         }
         logger.debug(threadMarker, "Send elements done");
     }
@@ -635,6 +678,9 @@ public class ShareUsageElement extends ShareUsageBase {
         }
 
         HttpURLConnection connection = httpClient.connect(new URI(shareUsageUrl.trim()).toURL());
+        // A send that is never answered must end, or it stops all sending.
+        connection.setConnectTimeout(httpSendTimeout);
+        connection.setReadTimeout(httpSendTimeout);
         String response = httpClient.postData(connection, headers, baos.toByteArray());
         int responseCode = connection.getResponseCode();
         String responseMessage = connection.getResponseMessage() + "data: '" + response + "'";
