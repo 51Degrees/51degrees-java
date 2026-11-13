@@ -54,12 +54,6 @@ public class ShareUsageTracker extends TrackerBase<Date> {
     private final long interval;
 
     /**
-     * The key of the call this thread is tracking, set only while
-     * {@link #track(FlowData, Map)} runs.
-     */
-    private final ThreadLocal<DataKey> callKey = new ThreadLocal<>();
-
-    /**
      * Construct a new instance.
      * @param configuration the cache configuration to use when building the
      *                      internal cache used by this tracker
@@ -102,51 +96,17 @@ public class ShareUsageTracker extends TrackerBase<Date> {
         return filter;
     }
 
-    @Override
-    public boolean track(FlowData data) {
-        return track(data, ShareUsageEvidence.find(data.getEvidence()));
-    }
-
     /**
-     * Tracks a call from the values {@link ShareUsageEvidence#find} has
-     * already found for it, so they are not found again. The key is made
-     * once, and the look up and the store of the cache both use it.
-     * @param data the {@link FlowData} of the call
-     * @param found the values found for the call
-     * @return true if the values should be shared
-     */
-    public boolean track(FlowData data, Map<String, Object> found) {
-        callKey.set(keyOf(found));
-        try {
-            return super.track(data);
-        } finally {
-            callKey.remove();
-        }
-    }
-
-    /**
-     * The key of the call being tracked on this thread when there is one,
-     * otherwise a key made from the values found for the data.
+     * The key is made from the values {@link ShareUsageEvidence#find} finds
+     * that the filter includes, which take in the web request's values,
+     * as the session tracking hash is of the values that would be shared.
+     * The Evidence alone does not hold them.
      */
     @Override
     protected DataKey generateKey(FlowData data) {
-        DataKey key = callKey.get();
-        if (key != null) {
-            return key;
-        }
-        return keyOf(ShareUsageEvidence.find(data.getEvidence()));
-    }
-
-    /**
-     * The key is made from the values found that the filter includes, which
-     * take in the web request's values, as the session tracking hash is of
-     * the values that would be shared. The Evidence alone does not hold them.
-     * @param found the values {@link ShareUsageEvidence#find} found
-     * @return the key
-     */
-    private DataKey keyOf(Map<String, Object> found) {
         DataKeyBuilder builder = new DataKeyBuilderDefault();
-        for (Map.Entry<String, Object> entry : found.entrySet()) {
+        for (Map.Entry<String, Object> entry :
+            ShareUsageEvidence.find(data.getEvidence()).entrySet()) {
             if (filter.include(entry.getKey())) {
                 builder.add(
                     filter.order(entry.getKey()),
