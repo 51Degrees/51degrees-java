@@ -54,6 +54,10 @@
  * The output CSV file contains the input truth and the result fields for easy
  * evaluation.
  *
+ * The performance profile can be given as the fourth argument, for example
+ * MaxPerformance, which makes each lookup faster where there is memory to
+ * hold the whole data file.
+ *
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/console/src/main/java/fiftyone/ipintelligence/examples/console/CompareOnPrem.java).
  *
  * This example needs the location properties only the Enterprise IP Intelligence data file has.
@@ -126,6 +130,18 @@ public class CompareOnPrem {
     public static final String DEFAULT_OUTPUT_FILE = "compare-output.csv";
 
     /**
+     * The performance profile used unless one is given as the fourth
+     * argument. This example needs the Enterprise data file, which is over
+     * 6 GB, and LowMemory reads it from disk as it is needed, so the example
+     * runs without memory to hold the whole file. MaxPerformance loads the
+     * whole file into memory, which makes each lookup faster where there is
+     * memory to hold it.
+     */
+    public static final Constants.PerformanceProfiles
+            DEFAULT_PERFORMANCE_PROFILE =
+            Constants.PerformanceProfiles.LowMemory;
+
+    /**
      * The properties the comparison asks the engine for, which only the
      * Enterprise data file has.
      */
@@ -184,6 +200,15 @@ public class CompareOnPrem {
         String csvTruthFile = args.length > 1 ? args[1] : GEOIP_COMPARISON_EVIDENCE_REL_PATH;
         // Get the location for the output file
         String outputFile = args.length > 2 ? args[2] : DEFAULT_OUTPUT_FILE;
+        // Get the performance profile named, ignoring case, such as
+        // MaxPerformance, or use the default
+        Constants.PerformanceProfiles profile = args.length > 3 ?
+                DataFileHelper.findPerformanceProfile(
+                        args[3], new PrintWriter(System.out)) :
+                DEFAULT_PERFORMANCE_PROFILE;
+        if (profile == null) {
+            return;
+        }
 
         // The free data files have none of the location properties.
         if (DataFileHelper.lacksEnterpriseProperties(dataFile,
@@ -195,7 +220,7 @@ public class CompareOnPrem {
         }
 
         try (PrintWriter writer = new PrintWriter(new FileWriter(outputFile))) {
-            run(dataFile, csvTruthFile, writer);
+            run(dataFile, csvTruthFile, profile, writer);
         }
         logger.info("Output written to '{}'", outputFile);
     }
@@ -208,6 +233,20 @@ public class CompareOnPrem {
      */
     public static void run(String dataFile,
                            String csvTruthFile,
+                           PrintWriter output) throws Exception {
+        run(dataFile, csvTruthFile, DEFAULT_PERFORMANCE_PROFILE, output);
+    }
+
+    /**
+     * Run the example
+     * @param dataFile an IP Intelligence data file
+     * @param csvTruthFile a CSV file of truth records
+     * @param profile the performance profile to build the engine with
+     * @param output somewhere for the result CSV
+     */
+    public static void run(String dataFile,
+                           String csvTruthFile,
+                           Constants.PerformanceProfiles profile,
                            PrintWriter output) throws Exception {
         logger.info("Running CompareOnPrem example");
 
@@ -225,14 +264,15 @@ public class CompareOnPrem {
         int processors = Runtime.getRuntime().availableProcessors();
 
         // Build a new pipeline with an on-premise IP Intelligence engine using
-        // the max performance profile and restricted to the properties needed.
+        // the performance profile given and restricted to the properties
+        // needed.
         IPIntelligenceOnPremisePipelineBuilder builder = new IPIntelligencePipelineBuilder()
                 .useOnPremise(dataFileLocation, false)
-                // We use the max performance profile for optimal lookup
-                // speed in this example. See the documentation for more detail
-                // on this and other configuration options.
+                // The profile trades memory for speed, as
+                // DEFAULT_PERFORMANCE_PROFILE explains. See the documentation
+                // for more detail on this and other configuration options.
                 // https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-compareonprem.java&utm_term=automatic-datafile-updates
-                .setPerformanceProfile(Constants.PerformanceProfiles.MaxPerformance)
+                .setPerformanceProfile(profile)
                 // inhibit sharing usage for this example
                 .setShareUsage(false)
                 // inhibit auto-update of the data file for this example

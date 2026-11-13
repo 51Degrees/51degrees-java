@@ -482,6 +482,75 @@ public class JsonBuilderTests {
         }
     }
 
+    /**
+     * The Sequence Element's Element Data is in the JSON like any other
+     * element's, because the JSON Builder Element does not exclude it.
+     * @throws Exception
+     */
+    @Test
+    public void JsonBuilder_SequenceElementData_InJson() throws Exception {
+        EmptyEngine engine = new EmptyEngineBuilder(loggerFactory)
+            .setLazyLoading(new LazyLoadingConfiguration(1000))
+            .setProcessCost(500)
+            .build();
+        JsonBuilderElement jsonBuilder = new JsonBuilderElementBuilder(loggerFactory)
+            .build();
+        SequenceElement sequenceElement = new SequenceElementBuilder(loggerFactory)
+            .build();
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+            .addFlowElement(sequenceElement)
+            .addFlowElement(engine)
+            .addFlowElement(jsonBuilder)
+            .setAutoCloseElements(true)
+            .build();
+             FlowData flowData = pipeline.createFlowData()) {
+
+            flowData.process();
+
+            JsonBuilderData jsonResult = flowData.get(JsonBuilderData.class);
+            JSONObject jsonData = new JSONObject(jsonResult.getJson());
+            JSONObject sequence = jsonData.getJSONObject("sequence");
+            assertEquals(1, sequence.getLong("sequence"));
+            assertFalse(sequence.getString("session-id").isEmpty());
+        }
+    }
+
+    /**
+     * A weighted value is written as an object with the lower-case keys
+     * rawweighting and value, and no others.
+     * See the Serializing section of the weighted values page of the
+     * specification.
+     */
+    @Test
+    public void JsonBuilder_WeightedValues() throws Exception {
+        List<IWeightedValue<String>> weighted = new ArrayList<>();
+        weighted.add(new WeightedValue<>(32768, "value 1"));
+        weighted.add(new WeightedValue<>(32767, "value 2"));
+        Map<String, Object> map = new HashMap<>();
+        map.put("weighted",
+            new AspectPropertyValueDefault<List<IWeightedValue<String>>>(
+                weighted));
+        when(elementDataMock.asKeyMap()).thenReturn(map);
+
+        String json = testIteration(1);
+
+        JSONArray values = new JSONObject(json)
+            .getJSONObject("test")
+            .getJSONArray("weighted");
+        assertEquals(2, values.length(), json);
+        for (int i = 0; i < values.length(); i++) {
+            JSONObject value = values.getJSONObject(i);
+            assertEquals(
+                new HashSet<>(Arrays.asList("rawweighting", "value")),
+                value.keySet(),
+                json);
+            assertEquals(weighted.get(i).getRawWeighting(),
+                value.getInt("rawweighting"), json);
+            assertEquals(weighted.get(i).getValue(),
+                value.getString("value"), json);
+        }
+    }
+
     private String testIteration(int iteration) throws Exception {
         return testIteration(iteration, null);
     }

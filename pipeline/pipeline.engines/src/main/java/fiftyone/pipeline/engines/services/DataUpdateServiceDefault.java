@@ -36,6 +36,7 @@ import fiftyone.pipeline.engines.flowelements.OnPremiseAspectEngine;
 import fiftyone.pipeline.engines.services.update.FutureFactory;
 import fiftyone.pipeline.engines.services.update.FutureFactoryDefault;
 import fiftyone.pipeline.util.Check;
+import fiftyone.pipeline.util.LicenseKeyMask;
 import jakarta.xml.bind.DatatypeConverter;
 import org.apache.commons.lang3.ObjectUtils;
 import org.slf4j.Logger;
@@ -44,7 +45,9 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URLDecoder;
 import java.nio.file.*;
+import java.time.Instant;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -64,7 +67,38 @@ import static org.apache.commons.lang3.BooleanUtils.isFalse;
  */
 public class DataUpdateServiceDefault implements DataUpdateService {
 
+    /**
+     * The query parameter of a data update URL that holds the license keys,
+     * as the 51Degrees URL formatter writes it.
+     */
+    private static final String LICENSE_KEYS_PARAMETER = "LicenseKeys";
+
+    /**
+     * How long a watched data file is tried before the update gives up with
+     * {@link AutoUpdateStatus#AUTO_UPDATE_TIMEOUT}, as a copy over it may
+     * still be in progress.
+     */
+    static final long WATCHED_FILE_OPEN_TIMEOUT_MILLIS =
+            TimeUnit.MINUTES.toMillis(10);
+
+    /**
+     * The pause between tries to open a watched data file.
+     */
+    static final long WATCHED_FILE_OPEN_PAUSE_MILLIS = 500;
+
+    /**
+     * The wait for a watched data file, which tests shorten.
+     */
+    long watchedFileOpenTimeoutMillis = WATCHED_FILE_OPEN_TIMEOUT_MILLIS;
+
     final List<AspectEngineDataFile> configurations = new ArrayList<>();
+    /**
+     * The watch service of each watched data file, held under the
+     * configuration lock. A watch service runs a thread of its own, so it is
+     * closed when its data file is unregistered.
+     */
+    private final Map<AspectEngineDataFile, WatchService> watchServices =
+            new IdentityHashMap<>();
     private final Logger logger;
     private final boolean closeFutureFactory;
     private final List<OnUpdateComplete> onUpdateCompleteList = new ArrayList<>();
@@ -191,10 +225,14 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                         null;
         boolean newDataAvailable = false;
         if (dataFile != null) {
-            // Only check the file system if the file system watcher
-            // is not enabled and the engine is using a temporary file.
+            logger.info("Checking for update");
             logger.debug("CheckForUpdate {}", dataFile.getDataFilePath());
-            if (dataFile.getConfiguration().getFileSystemWatcherEnabled() == false &&
+            // Compare the data file with the temporary file the engine uses.
+            // A programmatic update always does, whether or not Automatic
+            // Update from File is enabled. The timer does only when no file
+            // system watcher exists to notice a new file.
+            if ((manualUpdate ||
+                    dataFile.getConfiguration().getWatchKey() == null) &&
                     dataFile.getDataFilePath() != null &&
                     dataFile.getDataFilePath().isEmpty() == false &&
                     dataFile.getTempDataFilePath() != null &&
@@ -215,7 +253,11 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             if (newDataAvailable == false &&
                     dataFile.getConfiguration().getDataUpdateUrl() != null &&
                     dataFile.getConfiguration().getDataUpdateUrl().isEmpty() == false) {
-                result = checkForUpdateFromUrl(dataFile);
+                // A failed update is tried again only when the timer is on.
+                result = checkForUpdateFromUrl(
+                        dataFile,
+                        manualUpdate == false &&
+                                dataFile.getAutomaticUpdatesEnabled());
                 newDataAvailable =
                         result == AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS ||
                                 result == AutoUpdateStatus.AUTO_UPDATE_SUCCESS;
@@ -226,6 +268,15 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 // yet been refreshed.
                 logger.debug("Calling updatedFileAvailable");
                 result = updatedFileAvailable(dataFile);
+            } else if (result == AUTO_UPDATE_SUCCESS) {
+                // The update was applied in memory. Clear the timer, as
+                // updatedFileAvailable does, so a new one is registered.
+                synchronized (futureLock) {
+                    if (dataFile.getFuture() != null) {
+                        dataFile.getFuture().cancel(true);
+                        dataFile.setFuture(null);
+                    }
+                }
             } else {
                 // No update available.
                 // If this was a manual call to update then do nothing.
@@ -249,9 +300,15 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                     }
                 }
             }
-            if (manualUpdate == false) {
+            if (manualUpdate == false ||
+                    ((result == AUTO_UPDATE_SUCCESS ||
+                            result == AUTO_UPDATE_REFRESH_FAILED) &&
+                            dataFile.getIsRegistered())) {
                 // Re-register the engine with the data update service
                 // so it knows when next set of data should be available.
+                // A manual update of a registered data file does this too,
+                // whether or not the refresh worked, as a refresh from the
+                // data file clears the timer, so polling resumes after it.
                 registerDataFile(dataFile);
             }
 
@@ -267,9 +324,10 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     /**
      * Called when a data update is available and the file at
      * engine.DataFilePath contains this new data.
-     * 1. Refresh the engine.
-     * 2. Dispose of the existing update timer if there is one.
-     * 3. Re-register the engine with the update service.
+     * 1. Dispose of the existing update timer if there is one.
+     * 2. Refresh the engine.
+     * Where the data file is registered, the caller then registers it again,
+     * which sets a new update timer.
      *
      * @param dataFile the data file to update
      * @return {@link AutoUpdateStatus#AUTO_UPDATE_SUCCESS} if the data file was
@@ -293,15 +351,18 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             return AutoUpdateStatus.AUTO_UPDATE_SUCCESS;
         }
 
+        logger.info("Attempting to refresh Engine '{}' with new data",
+                getEngineType(dataFile));
         // Try to update the file multiple times to ensure the file is not locked.
         int tries = 0;
+        Exception lastFailure = null;
         while (tries < 10) {
             try {
                 dataFile.getEngine().refreshData(dataFile.getIdentifier());
                 return AUTO_UPDATE_SUCCESS;
             } catch (Exception ex) {
-                logger.warn("File Update: Error applying a data update to engine '{}'",
-                        dataFile.getEngine().getClass().getSimpleName(), ex);
+                lastFailure = ex;
+                logger.debug("Refresh attempt {} failed", tries + 1, ex);
                 try {
                     Thread.sleep(200);
                 } catch (InterruptedException ignored) {
@@ -309,6 +370,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             }
             tries++;
         }
+        logRefreshFailure(dataFile, lastFailure, tries);
         return AUTO_UPDATE_REFRESH_FAILED;
     }
 
@@ -349,17 +411,41 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                         // before notifying the engine, otherwise the copy
                         // may still be in progress.
                         boolean fileLockable = false;
-                        while (fileLockable == false) {
+                        boolean interrupted = false;
+                        long deadline = System.nanoTime() +
+                                TimeUnit.MILLISECONDS.toNanos(
+                                        watchedFileOpenTimeoutMillis);
+                        while (fileLockable == false &&
+                                System.nanoTime() - deadline < 0) {
                             try (BinaryReader reader = fileWrapperFactory.build(
                                     aspectDataFile.getDataFilePath()).getReader()) {
                                 fileLockable = true;
-                                // Complete the update
-                                status = updatedFileAvailable(dataFile);
-                            } catch (IOException e) {
-                                logger.warn("Exception while reading the data file at '{}'",
-                                        aspectDataFile.getDataFilePath(), e);
+                            } catch (IOException ignored) {
+                                try {
+                                    Thread.sleep(WATCHED_FILE_OPEN_PAUSE_MILLIS);
+                                } catch (InterruptedException ex) {
+                                    // Interrupted, as unregistering the data
+                                    // file does, so stop trying.
+                                    Thread.currentThread().interrupt();
+                                    interrupted = true;
+                                    break;
+                                }
                             }
                         }
+                        if (fileLockable) {
+                            // Complete the update
+                            status = updatedFileAvailable(dataFile);
+                            // The refresh cancelled the polling timer, so
+                            // register the file again to set a new one.
+                            if (dataFile.getIsRegistered()) {
+                                registerDataFile(dataFile);
+                            }
+                        } else if (interrupted == false) {
+                            // The polling timer is left as it was.
+                            status = AutoUpdateStatus.AUTO_UPDATE_TIMEOUT;
+                        }
+                        // An interrupted wait leaves the update unfinished,
+                        // so the status stays AUTO_UPDATE_IN_PROGRESS.
                     }
                 }
             }
@@ -380,22 +466,19 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                         .writeBytes(data);
             } catch (Exception ex) {
                 logger.error("An error occurred when writing to " +
-                                "'" + dataFile.getDataFilePath() +
-                                "'. The engine will be updated to use the new data " +
-                                "but the file on disk will still contain old data.",
-                        ex);
+                                dataFile.getDataFilePath() +
+                                ". Error detail: " + ex.getMessage(), ex);
             }
         }
 
         try {
             // Refresh the engine using the new data.
+            logger.info("Attempting to refresh Engine '{}' with new data",
+                    getEngineType(dataFile));
             dataFile.getEngine().refreshData(dataFile.getIdentifier(), data);
             result = AUTO_UPDATE_SUCCESS;
         } catch (Exception ex) {
-            logger.error("An error occurred when applying a " +
-                            "data update to engine '" + dataFile.getEngine().getClass().getSimpleName() +
-                            "'.",
-                    ex);
+            logRefreshFailure(dataFile, ex, null);
             result = AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED;
         }
 
@@ -416,6 +499,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
         // We also want to do this synchronously so that execution
         // will block until the engine is ready.
         if (dataFile.getConfiguration().getUpdateOnStartup() && isFalse(alreadyRegistered)) {
+            logger.info("Updating on start-up");
             logger.debug("Checking for Update on Startup {}", dataFile.getDataFilePath());
             AutoUpdateStatus status = checkForUpdate(dataFile, false);
             if (ObjectUtils.notEqual(status, AUTO_UPDATE_SUCCESS) &&
@@ -471,11 +555,14 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 }
             }
 
-            // If file system watcher is enabled then set it up.
+            // If file system watcher is enabled then set it up. The watcher
+            // runs on its own setting. Watching a file downloads nothing, so
+            // it needs neither automatic updates nor a license key.
             if (aspectDataFile.getConfiguration().getFileSystemWatcherEnabled() &&
                     aspectDataFile.getConfiguration().getWatchKey() == null &&
                     aspectDataFile.getDataFilePath() != null &&
                     aspectDataFile.getDataFilePath().isEmpty() == false) {
+                logger.info("Creating file system watcher");
                 logger.debug("Initialising watch service");
                 final Path aspectDataFilePath =
                         Paths.get(aspectDataFile.getDataFilePath()).toAbsolutePath();
@@ -487,9 +574,8 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                         throw new IllegalStateException("Cannot find directory to watch");
                     }
                     logger.debug("Getting a watcher using {}", aspectDataFilePath);
-                    WatchService watcher = aspectDataFilePath
-                            .getFileSystem()
-                            .newWatchService();
+                    WatchService watcher =
+                            watchService(aspectDataFile, aspectDataFilePath);
                     logger.debug("Setting a watcher for {}", aspectDataFilePath.getParent());
                     aspectDataFile.getConfiguration().setWatchKey(aspectDataFilePath.getParent().register(
                             watcher,
@@ -498,33 +584,49 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                     logger.error("File watcher for '{}' could not be initialised. " + e.getMessage(),
                             aspectDataFile.getDataFilePath(), e);
                 }
-                try {
-                    long pollingInterval =
-                            aspectDataFile.getConfiguration().getPollingIntervalSeconds() * 1000L;
-                    logger.debug("Setting poll future {} millis", pollingInterval);
-                    aspectDataFile.setPollFuture(futureFactory.scheduleRepeating(
-                            new Runnable() {
-                                @Override
-                                public void run() {
-                                    logger.debug("Watcher is running");
-                                    for (WatchEvent<?> event :
-                                            aspectDataFile.getConfiguration().getWatchKey().pollEvents()) {
-                                        if (event.kind() == StandardWatchEventKinds.ENTRY_MODIFY) {
-                                            if (((Path) event.context()).endsWith(aspectDataFilePath.getFileName())) {
-                                                dataFileUpdated(aspectDataFile);
+                // The watcher's task polls the watch key, so it is scheduled
+                // only when there is one, and replaces any task scheduled
+                // before rather than run beside it.
+                if (aspectDataFile.getConfiguration().getWatchKey() != null) {
+                    try {
+                        if (aspectDataFile.getPollFuture() != null) {
+                            aspectDataFile.getPollFuture().cancel(false);
+                        }
+                        long pollingInterval =
+                                aspectDataFile.getConfiguration().getPollingIntervalSeconds() * 1000L;
+                        logger.debug("Setting poll future {} millis", pollingInterval);
+                        aspectDataFile.setPollFuture(futureFactory.scheduleRepeating(
+                                new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        logger.debug("Watcher is running");
+                                        // The watch is paused while a downloaded
+                                        // file is copied into place. A repeating
+                                        // task that fails never runs again, so
+                                        // this run does nothing.
+                                        WatchKey watchKey =
+                                                aspectDataFile.getConfiguration().getWatchKey();
+                                        if (watchKey == null) {
+                                            return;
+                                        }
+                                        for (WatchEvent<?> event : watchKey.pollEvents()) {
+                                            if (event.kind() == StandardWatchEventKinds.ENTRY_MODIFY) {
+                                                if (((Path) event.context()).endsWith(aspectDataFilePath.getFileName())) {
+                                                    dataFileUpdated(aspectDataFile);
+                                                }
                                             }
                                         }
+                                        // make sure to reset the watch key or we are not called again
+                                        watchKey.reset();
                                     }
-                                    // make sure to reset the watch key or we are not called again
-                                    aspectDataFile.getConfiguration().getWatchKey().reset();
-                                }
-                            },
-                            pollingInterval));
-                    logger.debug("Poll check scheduled for {} mins",
-                            aspectDataFile.getPollFuture().getDelay(TimeUnit.MINUTES));
-                } catch (Exception e) {
-                    logger.error("Could not schedule watcher for {}.",
-                            aspectDataFile.getDataFilePath(), e);
+                                },
+                                pollingInterval));
+                        logger.debug("Poll check scheduled for {} mins",
+                                aspectDataFile.getPollFuture().getDelay(TimeUnit.MINUTES));
+                    } catch (Exception e) {
+                        logger.error("Could not schedule watcher for {}.",
+                                aspectDataFile.getDataFilePath(), e);
+                    }
                 }
             }
 
@@ -549,11 +651,13 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 }
                 AspectEngineDataFileDefault aspectDataFile =
                         (AspectEngineDataFileDefault) dataFile;
+                // The watcher's task is stopped even while the watch is
+                // paused for a download.
+                if (aspectDataFile.getPollFuture() != null) {
+                    aspectDataFile.getPollFuture().cancel(true);
+                    aspectDataFile.setPollFuture(null);
+                }
                 if (aspectDataFile.getConfiguration().getWatchKey() != null) {
-                    if (aspectDataFile.getPollFuture() != null) {
-                        aspectDataFile.getPollFuture().cancel(true);
-                        aspectDataFile.setPollFuture(null);
-                    }
                     aspectDataFile.getConfiguration().getWatchKey().cancel();
                     aspectDataFile.getConfiguration().setWatchKey(null);
                 }
@@ -563,6 +667,54 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                         aspectDataFile.setFuture(null);
                     }
                 }
+            }
+            closeWatchService(dataFile);
+        }
+        if (dataFile != null) {
+            dataFile.setDataUpdateService(null);
+        }
+    }
+
+    /**
+     * Get the data file's watch service, creating it the first time. The
+     * data file keeps the one watch service until it is unregistered, so the
+     * watch resumes on it after a download.
+     *
+     * @param dataFile the data file to watch
+     * @param path the absolute path of the data file
+     * @return the data file's watch service
+     * @throws IOException if a watch service cannot be created
+     */
+    private WatchService watchService(
+            AspectEngineDataFile dataFile,
+            Path path) throws IOException {
+        synchronized (configLock) {
+            WatchService watcher = watchServices.get(dataFile);
+            if (watcher == null) {
+                watcher = path.getFileSystem().newWatchService();
+                watchServices.put(dataFile, watcher);
+            }
+            return watcher;
+        }
+    }
+
+    /**
+     * Close the data file's watch service, if it has one, which ends the
+     * watch service's thread.
+     *
+     * @param dataFile the data file no longer watched
+     */
+    private void closeWatchService(AspectEngineDataFile dataFile) {
+        WatchService watcher;
+        synchronized (configLock) {
+            watcher = watchServices.remove(dataFile);
+        }
+        if (watcher != null) {
+            try {
+                watcher.close();
+            } catch (IOException e) {
+                logger.warn("Could not close the file watcher for '{}'",
+                        dataFile.getDataFilePath(), e);
             }
         }
     }
@@ -602,36 +754,82 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     }
 
     /**
+     * The license keys to mask in messages that name the data update URL,
+     * being the data update license keys and any key in the URL's
+     * LicenseKeys parameter, such as one typed straight into the data
+     * update URL.
+     * @param dataFile the data file being updated
+     * @param url the formatted data update URL
+     * @return the keys to mask
+     */
+    private static List<String> licenseKeysToMask(
+            AspectEngineDataFile dataFile,
+            String url) {
+        List<String> keys = new ArrayList<>();
+        List<String> configured =
+                dataFile.getConfiguration().getDataUpdateLicenseKeys();
+        if (configured != null) {
+            keys.addAll(configured);
+        }
+        int query = url == null ? -1 : url.indexOf('?');
+        if (query < 0) {
+            return keys;
+        }
+        for (String parameter : url.substring(query + 1).split("&")) {
+            int equals = parameter.indexOf('=');
+            if (equals > 0 && parameter.substring(0, equals)
+                    .equalsIgnoreCase(LICENSE_KEYS_PARAMETER)) {
+                String value = parameter.substring(equals + 1);
+                try {
+                    value = URLDecoder.decode(value, "UTF-8");
+                } catch (UnsupportedEncodingException |
+                         IllegalArgumentException e) {
+                    // Masked as it is written.
+                }
+                keys.addAll(Arrays.asList(value.split("\\|")));
+            }
+        }
+        return keys;
+    }
+
+    /**
      * Get the most recent data file available from the configured update URL.
      * If the data currently used by the engine is the newest available then
      * nothing will be downloaded.
      *
-     * @param dataFile the data file to use
-     * @param tempFile the temp file to write the data to
+     * @param dataFile  the data file to use
+     * @param tempFile  the temp file to write the data to
+     * @param automatic true if the update will be tried again if it fails
      * @return the {@link AutoUpdateStatus} value indicating the result
      */
     private AutoUpdateStatus downloadFile(
             AspectEngineDataFile dataFile,
-            FileWrapper tempFile) {
+            FileWrapper tempFile,
+            boolean automatic) {
 
         String url = dataFile.getFormattedUrl();
-        logger.debug("downloadFile from {}", url);
+        String engineType = getEngineType(dataFile);
+        // The URL carries the license keys, so every message names it with
+        // each key masked.
+        List<String> licenseKeys = licenseKeysToMask(dataFile, url);
+        String loggedUrl = LicenseKeyMask.maskIn(url, licenseKeys);
+        logger.debug("downloadFile from {}", loggedUrl);
 
         try {
+            logger.info("Checking for update from '{}' for Engine '{}'",
+                    loggedUrl, engineType);
             HttpURLConnection connection = httpClient.connect(new URI(url.trim()).toURL());
             if (connection == null) {
-                logger.error("No response from data update service at '{}' for engine '{}'",
-                        dataFile.getFormattedUrl(), Objects.nonNull(dataFile.getEngine()) ?
-                                dataFile.getEngine().getClass().getSimpleName() : "No Engine");
+                logger.warn(connectFailure(loggedUrl, engineType, automatic,
+                        "No response from the data update service"));
                 return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
             }
             try {
                 // Set last-modified header to ensure that a file will only
                 // be downloaded if it is newer than the data we already have.
+                long ifModifiedSince = 0;
                 if (dataFile.getConfiguration().getVerifyModifiedSince() == true) {
-                    long ifModifiedSince = dataFile
-                            .getDataPublishedDateTime()
-                            .getTime();
+                    ifModifiedSince = getIfModifiedSince(dataFile);
                     connection.setIfModifiedSince(ifModifiedSince);
                 }
 
@@ -639,35 +837,132 @@ public class DataUpdateServiceDefault implements DataUpdateService {
 
                 switch (connection.getResponseCode()) {
                     case (HttpURLConnection.HTTP_OK):
-                        return downloadOkResponse(connection, dataFile, tempFile);
+                        AutoUpdateStatus downloaded;
+                        try {
+                            downloaded = downloadOkResponse(
+                                    connection, dataFile, tempFile, automatic);
+                        } catch (Exception e) {
+                            // An HTTP library's exception often names the
+                            // URL it requested.
+                            logger.warn(downloadFailure(loggedUrl, engineType,
+                                    automatic, LicenseKeyMask.maskIn(
+                                            e.getMessage(), licenseKeys)),
+                                    LicenseKeyMask.maskIn(e, licenseKeys));
+                            return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
+                        }
+                        if (downloaded == AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS) {
+                            logger.info("Downloaded new data from '{}' for Engine '{}'",
+                                    loggedUrl, engineType);
+                        }
+                        return downloaded;
 
                     // Note: needed because TooManyRequests is not available
                     // in some versions of the HttpStatusCode enum.
                     case (429):
-                        logger.error("Too many requests to '{}' for {}",
-                                dataFile.getFormattedUrl(), getIdForLogging(dataFile));
+                        logger.warn(downloadFailure(loggedUrl, engineType, automatic,
+                                "HTTP status code 429 (too many requests)"));
                         return AutoUpdateStatus.AUTO_UPDATE_ERR_429_TOO_MANY_ATTEMPTS;
                     case HttpURLConnection.HTTP_NOT_MODIFIED:
-                        logger.debug("No data update available from '{}' for {}",
-                                dataFile.getFormattedUrl(), getIdForLogging(dataFile));
+                        logger.info("No data newer than {} found at '{}' for Engine '{}'",
+                                Instant.ofEpochMilli(ifModifiedSince), loggedUrl,
+                                engineType);
                         return AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED;
                     case HttpURLConnection.HTTP_FORBIDDEN:
-                        logger.error("Access denied to data update service at '{}' for {}",
-                                dataFile.getFormattedUrl(), getIdForLogging(dataFile));
+                        logger.warn(downloadFailure(loggedUrl, engineType, automatic,
+                                "HTTP status code 403 (access denied)"));
                         return AutoUpdateStatus.AUTO_UPDATE_ERR_403_FORBIDDEN;
                     default:
-                        logger.error("HTTP status code '{}' from data update service at '{}' for {}",
-                                connection.getResponseCode(), dataFile.getFormattedUrl(),
-                                getIdForLogging(dataFile));
+                        logger.warn(downloadFailure(loggedUrl, engineType, automatic,
+                                "HTTP status code " + connection.getResponseCode()));
                         return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
                 }
             } finally {
                 connection.disconnect();
             }
         } catch (Exception e) {
-            logger.error("Error while processing data file download", e);
+            // An HTTP library's exception often names the URL it requested.
+            logger.warn(connectFailure(loggedUrl, engineType, automatic,
+                    LicenseKeyMask.maskIn(e.getMessage(), licenseKeys)),
+                    LicenseKeyMask.maskIn(e, licenseKeys));
             return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
         }
+    }
+
+    /**
+     * Get the time to send as If-Modified-Since. This is the publication date
+     * of the data file, or the last modified time of the data file on disk
+     * where the data file has no publication date.
+     */
+    private long getIfModifiedSince(AspectEngineDataFile dataFile) {
+        Date published = dataFile.getDataPublishedDateTime();
+        long publishedMillis = published == null ? 0 : published.getTime();
+        if (publishedMillis > 0) {
+            return publishedMillis;
+        }
+        String path = dataFile.getDataFilePath();
+        if (path != null && path.isEmpty() == false) {
+            return fileWrapperFactory.getLastModified(path);
+        }
+        return publishedMillis;
+    }
+
+    private static String retryNote(boolean automatic) {
+        return automatic ? " Update will be attempted again later." : "";
+    }
+
+    /**
+     * The warning for a failed connection. The URL and the detail are
+     * given with each license key already masked.
+     */
+    private static String connectFailure(
+            String loggedUrl,
+            String engineType,
+            boolean automatic,
+            String detail) {
+        return "An error occurred when connecting to " + loggedUrl +
+                " in order to check for data file updates for " + engineType +
+                "." + retryNote(automatic) + " Error detail: " + detail;
+    }
+
+    /**
+     * The warning for a failed download. The URL and the detail are given
+     * with each license key already masked.
+     */
+    private static String downloadFailure(
+            String loggedUrl,
+            String engineType,
+            boolean automatic,
+            String detail) {
+        return "An error occurred while downloading a data file update for " +
+                engineType + " from " + loggedUrl + "." + retryNote(automatic) +
+                " Error detail: " + detail;
+    }
+
+    /**
+     * Log the Errors table's message for a refresh that failed, with the
+     * number of tries for a refresh from the file and without it for one
+     * from data held in memory. The exception is passed to the logger, so
+     * its detail is kept beside the message.
+     */
+    private void logRefreshFailure(
+        AspectEngineDataFile dataFile,
+        Exception ex,
+        Integer tries) {
+        logger.error("An error occurred when applying a data update to " +
+                "engine '" + getEngineType(dataFile) + "'" +
+                (tries == null ? "." : " after " + tries + " tries."), ex);
+    }
+
+    private String getEngineType(AspectEngineDataFile dataFile) {
+        if (dataFile.getEngine() != null) {
+            return dataFile.getEngine().getClass().getSimpleName();
+        }
+        // The engine is built after update on start-up has run.
+        if (dataFile instanceof AspectEngineDataFileDefault &&
+                ((AspectEngineDataFileDefault) dataFile).getEngineTypeName() != null) {
+            return ((AspectEngineDataFileDefault) dataFile).getEngineTypeName();
+        }
+        return "No Engine";
     }
 
     /**
@@ -678,11 +973,16 @@ public class DataUpdateServiceDefault implements DataUpdateService {
      * {@link GZIPInputStream}, so the JDK's concatenated-gzip-member
      * decoder behaves correctly on top of {@link HttpURLConnection} on
      * every JDK from 7 upwards. See that method for the gory details.
+     * <p>
+     * A failure reading the download is thrown, for the caller to report.
+     * A failure writing {@code tempFile} is logged here as the
+     * specification's write error.
      */
     private AutoUpdateStatus downloadOkResponse(
             HttpURLConnection connection,
             AspectEngineDataFile dataFile,
-            FileWrapper tempFile) throws IOException {
+            FileWrapper tempFile,
+            boolean automatic) throws IOException {
         logger.debug("HTTP Status is OK");
         boolean verifyMd5 = dataFile.getConfiguration().getVerifyMd5();
         boolean decompress = dataFile.getConfiguration().getDecompressContent();
@@ -703,9 +1003,25 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             src = new GZIPInputStream(src);
         }
 
-        writeBodyTo(tempFile, src);
+        ReadFailureRecorder body = new ReadFailureRecorder(src);
+        try {
+            writeBodyTo(tempFile, body);
+        } catch (IOException e) {
+            if (body.readFailed) {
+                // The download failed, which the caller reports.
+                throw e;
+            }
+            logger.error("An error occurred when writing to " +
+                    tempFile.getPath() + ". Error detail: " + e.getMessage(), e);
+            return AutoUpdateStatus.AUTO_UPDATE_ERR_READING_STREAM;
+        }
 
         if (verifyMd5 && !md5Matches(md, connection)) {
+            logger.warn("An error occurred during the integrity check of new " +
+                    "data file for " + getEngineType(dataFile) + "." +
+                    retryNote(automatic) +
+                    " Error detail: the MD5 hash of the download does not " +
+                    "match the Content-MD5 header");
             return AutoUpdateStatus.AUTO_UPDATE_ERR_MD5_VALIDATION_FAILED;
         }
         return AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS;
@@ -743,6 +1059,38 @@ public class DataUpdateServiceDefault implements DataUpdateService {
         return new BufferedInputStream(lying);
     }
 
+    /**
+     * Records whether a read of the download failed, so that a failure to
+     * write the temporary file can be told from a failure to download.
+     */
+    private static final class ReadFailureRecorder extends FilterInputStream {
+        private boolean readFailed;
+
+        ReadFailureRecorder(InputStream in) {
+            super(in);
+        }
+
+        @Override
+        public int read() throws IOException {
+            try {
+                return super.read();
+            } catch (IOException e) {
+                readFailed = true;
+                throw e;
+            }
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+            try {
+                return super.read(b, off, len);
+            } catch (IOException e) {
+                readFailed = true;
+                throw e;
+            }
+        }
+    }
+
     private void writeBodyTo(FileWrapper tempFile, InputStream body) throws IOException {
         if (tempFile.getPath() != null) {
             logger.debug("Copying download stream");
@@ -776,20 +1124,17 @@ public class DataUpdateServiceDefault implements DataUpdateService {
         }
     }
 
-    private String getIdForLogging(AspectEngineDataFile dataFile) {
-        return dataFile.getEngine() == null ?
-                "data file '" + dataFile.getIdentifier() + "'" :
-                "engine '" + dataFile.getEngine().getClass().getSimpleName() + "'";
-    }
-
-    private AutoUpdateStatus checkForUpdateFromUrl(AspectEngineDataFile dataFile) {
+    private AutoUpdateStatus checkForUpdateFromUrl(
+            AspectEngineDataFile dataFile,
+            boolean automatic) {
         if (dataFile.getDataFilePath() == null || dataFile.getDataFilePath().isEmpty()) {
             // There is no data file path specified so perform the
             // update entirely in memory.
             try {
                 FileWrapper uncompressedData = new FileWrapperMemory();
 
-                AutoUpdateStatus memoryDownloadResult = downloadFile(dataFile, uncompressedData);
+                AutoUpdateStatus memoryDownloadResult =
+                        downloadFile(dataFile, uncompressedData, automatic);
                 if (memoryDownloadResult != AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS) {
                     return memoryDownloadResult;
                 }
@@ -797,6 +1142,8 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                     if (dataFile.getEngine() != null) {
                         // Tell the engine to refresh itself with
                         // the new data.
+                        logger.info("Attempting to refresh Engine '{}' with new data",
+                                getEngineType(dataFile));
                         dataFile.getEngine().refreshData(dataFile.getIdentifier(),
                                 reader.toByteArray());
                     } else {
@@ -805,23 +1152,29 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                         dataFile.getConfiguration().setData(reader.toByteArray());
                     }
                 }
-                return memoryDownloadResult;
+                // The engine, or the configuration, now holds the new data.
+                return AUTO_UPDATE_SUCCESS;
             } catch (Exception ex) {
-                logger.error("An error occurred when applying a data update to engine '{}'" ,
-                                Objects.nonNull(dataFile.getEngine())?
-                                        dataFile.getEngine().getClass().getName(): "no engine",ex);
+                logRefreshFailure(dataFile, ex, null);
                 return AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED;
             }
         }
 
-
+        if (dataFile.getTempDataDirPath() == null ||
+                dataFile.getTempDataDirPath().isEmpty()) {
+            logger.error("The data file '" + dataFile.getIdentifier() +
+                    "' is checking for updates but does not have a temporary " +
+                    "file path configured.");
+            return AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED;
+        }
         Path uncompressedTempFile = Paths.get(
                 dataFile.getTempDataDirPath(),
                 dataFile.getIdentifier() + "-" + randomUUID() + ".tmp");
         FileWrapper uncompressedData = fileWrapperFactory.build(uncompressedTempFile.toString());
         try {
             // Check if there is an update and download it if there is
-            AutoUpdateStatus result = downloadFile(dataFile, uncompressedData);
+            AutoUpdateStatus result =
+                    downloadFile(dataFile, uncompressedData, automatic);
 
             if (result == AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS) {
                 WatchKey watchKey = dataFile.getConfiguration().getWatchKey();
@@ -847,22 +1200,25 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                         logger.debug("Reading file {}", d.read());
                     }
                 } catch (Exception ex) {
-                    logger.error("An error occurred when moving a data file to replace " +
-                                    "the existing one at {} for engine '{}'.",
-                            dataFile.getDataFilePath(),
-                            Objects.nonNull(dataFile.getEngine()) ?
-                                    dataFile.getEngine().getClass().getSimpleName() : "No engine defined",
-                            ex);
+                    logger.error("An error occurred when copying a data file to " +
+                                    "replace the existing one at '{}'.",
+                            dataFile.getDataFilePath(), ex);
                     result = AutoUpdateStatus.AUTO_UPDATE_NEW_FILE_CANT_RENAME;
                 }
-                // Make sure to enable the file watcher again if needed.
+                // Make sure to enable the file watcher again if needed. The
+                // watch resumes on the data file's own watch service, unless
+                // the data file was unregistered during the download.
                 if (watchKey != null) {
                     final Path filePath =
                             Paths.get(dataFile.getDataFilePath()).toAbsolutePath();
-                    WatchService watcher = filePath.getFileSystem().newWatchService();
-                    watchKey = filePath.getParent().register(watcher,
-                            StandardWatchEventKinds.ENTRY_MODIFY);
-                    dataFile.getConfiguration().setWatchKey(watchKey);
+                    synchronized (configLock) {
+                        if (configurations.contains(dataFile)) {
+                            watchKey = filePath.getParent().register(
+                                    watchService(dataFile, filePath),
+                                    StandardWatchEventKinds.ENTRY_MODIFY);
+                            dataFile.getConfiguration().setWatchKey(watchKey);
+                        }
+                    }
                 }
             }
             return result;

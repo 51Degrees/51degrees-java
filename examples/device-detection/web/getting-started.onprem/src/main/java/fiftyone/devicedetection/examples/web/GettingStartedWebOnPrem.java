@@ -48,7 +48,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * <p>
  * The configuration file for the pipeline is at src/main/webapp/WEB-INF/51Degrees-OnPrem.xml
  * <p>
- * The data file is taken from the 51DEGREES_DD_PATH environment variable, then
+ * The data file is taken from the _51DEGREES_DD_PATH environment variable, then
  * from TestDataFile (an environment variable or system property), and otherwise
  * the free Lite file in cxx/data/device-detection is used, which is downloaded
  * before the server starts if it is missing.
@@ -62,9 +62,37 @@ public class GettingStartedWebOnPrem extends HttpServlet {
     public static String resourceBase = "examples/device-detection/web/getting-started.onprem/src/main/webapp";
     public static Logger logger = LoggerFactory.getLogger(GettingStartedWebOnPrem.class);
 
+    private static final String DD_PATH_VARIABLE = "_51DEGREES_DD_PATH";
+    private static final String OLD_DD_PATH_VARIABLE = "51DEGREES_DD_PATH";
+
+    /**
+     * Logs a warning when the configuration takes the data file from the
+     * deprecated name, which it does when that name is set and the name
+     * that replaces it is not.
+     */
+    private static void warnOfOldDataFileName() {
+        if (isSet(OLD_DD_PATH_VARIABLE) && isSet(DD_PATH_VARIABLE) == false) {
+            logger.warn(
+                "The environment variable " + OLD_DD_PATH_VARIABLE
+                + " is deprecated and " + DD_PATH_VARIABLE
+                + " replaces it. Set " + DD_PATH_VARIABLE
+                + " to the same value, as a later release may no longer "
+                + "read " + OLD_DD_PATH_VARIABLE + ".");
+        }
+    }
+
+    private static boolean isSet(String name) {
+        String value = System.getenv(name);
+        if (value == null || value.isEmpty()) {
+            value = System.getProperty(name);
+        }
+        return value != null && value.isEmpty() == false;
+    }
+
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
         logger.info("Running Example {}", GettingStartedWebOnPrem.class);
+        warnOfOldDataFileName();
 
         // If the data file the configuration names is not at that path, it
         // is searched for, and the free Lite file is downloaded if missing.

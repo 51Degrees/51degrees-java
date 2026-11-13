@@ -61,6 +61,18 @@ public class EvidenceKeyFilterShareUsageTests {
      * values and query string parameters only when their names start with
      * 51D_, and any other evidence.
      */
+    /**
+     * The whole web request is read by the Usage Sharing Element and never
+     * shared as a value, so the filter does not include it.
+     */
+    @Test
+    public void webRequestIsNeverIncluded() {
+        EvidenceKeyFilterShareUsage filter = defaults();
+
+        assertFalse(filter.include("server.http-request"));
+        assertFalse(filter.include("Server.Http-Request"));
+    }
+
     @Test
     public void defaultRules() {
         EvidenceKeyFilterShareUsage filter = defaults();
@@ -157,6 +169,22 @@ public class EvidenceKeyFilterShareUsageTests {
                 assertFalse(filter.include(key), key);
             }
         }
+    }
+
+    /**
+     * The Cookie header carries every cookie, so it is never shared, whether
+     * bare or after a prefix, and without regard to case.
+     */
+    @Test
+    public void cookieHeaderNeverShared() {
+        EvidenceKeyFilterShareUsage filter = defaults();
+        for (String key : Arrays.asList(
+            "header.cookie", "HEADER.COOKIE", "x.header.cookie",
+            "server.header.cookie")) {
+            assertFalse(filter.include(key), key);
+        }
+        assertTrue(filter.include("header.cookies-allowed"));
+        assertTrue(filter.include("server.request-method"));
     }
 
     /**

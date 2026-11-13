@@ -37,6 +37,8 @@ import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaDataDefault;
+import fiftyone.pipeline.engines.data.AspectPropertyValue;
+import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
 
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -47,15 +49,44 @@ import org.json.JSONArray;
 public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> {
 
     private CloudRequestEngine cloudRequestEngine = null;
-    private List<AspectPropertyMetaData> properties;
+    private volatile List<AspectPropertyMetaData> properties;
+    private final Object metadataLock = new Object();
     private String dataSourceTier;
     private String elementDataKey;
     private EvidenceKeyFilter evidenceKeyFilter = new EvidenceKeyFilterWhitelist(Collections.emptyList());
     private String dataProviderPrefix;
 
+    /**
+     * The property metadata, from the products the Cloud Request Engine
+     * reports. Until they are known, after a failure at build that can
+     * pass, this is empty and is read again on the next call.
+     * @return the property metadata
+     */
     @Override
     public List<AspectPropertyMetaData> getProperties() {
-        return properties;
+        List<AspectPropertyMetaData> loaded = properties;
+        if (loaded == null && cloudRequestEngine != null) {
+            synchronized (metadataLock) {
+                if (properties == null) {
+                    loadAspectProperties(cloudRequestEngine);
+                }
+                loaded = properties;
+            }
+        }
+        return loaded == null ?
+            new ArrayList<AspectPropertyMetaData>() :
+            loaded;
+    }
+
+    /**
+     * Whether the property metadata is loaded, which reads it if the Cloud
+     * Request Engine now knows the accessible properties.
+     * @return true once the property metadata is loaded
+     */
+    @Override
+    public boolean hasLoadedProperties() {
+        getProperties();
+        return properties != null;
     }
 
     @Override
@@ -107,44 +138,39 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
             String json = requestData.getJsonResponse();
 
             JSONObject jsonObj = new JSONObject(json);
-            JSONObject geoObj = jsonObj.getJSONObject(getElementDataKey());
+            JSONObject geoObj = getElementJson(jsonObj);
 
             Map<String, Object> methodData = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
             for (AspectPropertyMetaData property : getProperties()) {
+                String key = property.getName().toLowerCase();
+                // A property the response leaves out has no entry, so
+                // reading it throws a PropertyMissingException.
+                if (geoObj.has(key) == false) {
+                    continue;
+                }
+                Object value;
                 switch(property.getType().getSimpleName()) {
                     case ("List"):
-                        JSONArray jsonArray = geoObj.optJSONArray(property.getName().toLowerCase());
-                        methodData.put(
-                            property.getName(),
-                            jsonArray == null ? null : jsonArray.toList());
+                        JSONArray jsonArray = geoObj.optJSONArray(key);
+                        value = jsonArray == null ? null : jsonArray.toList();
                         break;
                     case ("JavaScript"):
-                        String javascript = geoObj.optString(property.getName().toLowerCase(), null);
-                        methodData.put(
-                            property.getName(),
-                            javascript == null ? null : new JavaScript(javascript));
+                        String javascript = geoObj.optString(key, null);
+                        value = javascript == null ?
+                            null :
+                            new JavaScript(javascript);
                         break;
                     default:
-                        methodData.put(
-                            property.getName(),
-                            geoObj.opt(property.getName().toLowerCase()));
-                            break;
+                        value = geoObj.opt(key);
+                        break;
                 }
+                methodData.put(
+                    property.getName(),
+                    toAspectPropertyValue(geoObj, key, value));
             }
 
             aspectData.populateFromMap(methodData);
-
-            Map<String, String> noValueReasonsMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-            for(Map.Entry<String, Object> entry : methodData.entrySet()){
-                if("null".equals(String.valueOf(entry.getValue()))){
-                    String key = entry.getKey().toLowerCase();
-                    Object reason = tryToGet(geoObj, key);
-                    noValueReasonsMap.put(entry.getKey().toLowerCase(), (reason == null ? "" : reason.toString()));
-                }
-            }
-
-            aspectData.setNoValueReasons(noValueReasonsMap);
         }
         else {
             throw new PipelineConfigurationException(
@@ -158,6 +184,41 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
         return jsonObj.opt(key + "nullreason");
     }
 
+    /**
+     * The message for a property with no value when the response gives no
+     * reason.
+     */
+    private static final String UNKNOWN_NULL_REASON = "Unknown";
+
+    /**
+     * Wrap a value read from the response. A JSON null is no value, with the
+     * reason the response gives under the property's name followed by
+     * nullreason.
+     * @param geoObj the response's part for this engine
+     * @param key the lower case property name
+     * @param value the value read, null or JSONObject.NULL where the
+     *              response has none
+     * @return the property value
+     */
+    private static AspectPropertyValue<Object> toAspectPropertyValue(
+        JSONObject geoObj,
+        String key,
+        Object value) {
+        AspectPropertyValue<Object> result =
+            new AspectPropertyValueDefault<>();
+        if (value == null || value == JSONObject.NULL) {
+            Object reason = tryToGet(geoObj, key);
+            result.setNoValueMessage(
+                reason == null || reason == JSONObject.NULL ?
+                    UNKNOWN_NULL_REASON :
+                    reason.toString());
+        }
+        else {
+            result.setValue(value);
+        }
+        return result;
+    }
+
     @Override
     protected void unmanagedResourcesCleanup() {
     }
@@ -167,9 +228,10 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
         if (cloudRequestEngine == null) {
             cloudRequestEngine = pipeline.getElement(CloudRequestEngine.class);
             if (cloudRequestEngine != null) {
-                if (loadAspectProperties(cloudRequestEngine) == false) {
-                    logger.error("Failed to load aspect properties");
-                }
+                // The products are not known after a failure at build that
+                // can pass, which the Cloud Request Engine has logged.
+                // getProperties reads them once they are.
+                loadAspectProperties(cloudRequestEngine);
             }
 
         }
@@ -177,16 +239,14 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
     }
 
     private boolean loadAspectProperties(CloudRequestEngine engine) {
-        Map<String, AccessiblePropertyMetaData.ProductMetaData> map =
-            engine.getPublicProperties();
+        AccessiblePropertyMetaData.ProductMetaData product =
+            findProduct(engine.getPublicProperties());
 
-        if (map != null &&
-            map.size() > 0 &&
-            map.containsKey(getElementDataKey())) {
-            properties = new ArrayList<>();
-            dataSourceTier = map.get(getElementDataKey()).dataTier;
+        if (product != null) {
+            List<AspectPropertyMetaData> loaded = new ArrayList<>();
+            dataSourceTier = product.dataTier;
 
-            for (AccessiblePropertyMetaData.PropertyMetaData item : map.get(getElementDataKey()).properties)
+            for (AccessiblePropertyMetaData.PropertyMetaData item : product.properties)
             {
                 AspectPropertyMetaData property = new AspectPropertyMetaDataDefault(
                     item.name,
@@ -199,13 +259,12 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
                     item.delayExecution,
                     item.evidenceProperties);
                 
-                properties.add(property);
+                loaded.add(property);
             }
+            properties = loaded;
             return true;
         }
         else {
-            logger.error("Aspect properties could not be loaded for" +
-                " the Device Detection cloud engine", this);
             return false;
         }
     }

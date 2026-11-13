@@ -51,7 +51,7 @@ The only server-side part of the flow is the redeem call, which adds
 the licence key the browser never sees. The `redeem` method in
 `CreatorContextDemoServer.java` is that call, and these are its
 essential lines. `DidClient` is built once at start-up from the
-resource key and the licence key (it reads `FOD_CLOUD_API_URL` itself
+resource key and the licence key (it reads `_51DEGREES_CLOUD_ENDPOINT` itself
 and falls back to the public cloud), and `did`, `result` and
 `challenge` are what the page passed on from `verify-full`:
 
@@ -90,9 +90,9 @@ scope.
 
 | Variable | Meaning |
 | --- | --- |
-| `_51DEGREES_RESOURCE_KEY` | Required. The resource key of the page, public by nature. The older name `RESOURCE_KEY` is read when this one is not set. |
-| `_51DEGREES_LICENSE_KEY` | Optional. A licence key of the same account, server side only. The older name `LICENSE_KEY` is read when this one is not set. Only an account that holds licence keys needs one to redeem, because the licence key is what keeps redemption to the acting party's own servers, so an account holding none redeems without one. |
-| `FOD_CLOUD_API_URL` | Optional. The cloud API base including the `/api/v4/` segment, defaulting to `https://cloud.51degrees.com/api/v4/`. This is the same variable the cloud request engine in this repository honours, so setting it once points every 51Degrees example at the same place. A trailing slash is added where missing. A host other than cloud.51degrees.com would be used to (a) use an on premise web server, or (b) use a privately hosted version of the 51Degrees cloud for performance reasons, which is the private hosting option of the cloud service. Both run the same service, so the examples work unchanged. |
+| `_51DEGREES_RESOURCE_KEY` | Required. The resource key of the page, public by nature. |
+| `_51DEGREES_LICENSE_KEY` | Optional. A licence key of the same account, server side only. Only an account that holds licence keys needs one to redeem, because the licence key is what keeps redemption to the acting party's own servers, so an account holding none redeems without one. |
+| `_51DEGREES_CLOUD_ENDPOINT` | Optional. The cloud API base including the `/api/v4/` segment, defaulting to `https://cloud.51degrees.com/api/v4/`. This is the same variable the cloud request engine in this repository honours, so setting it once points every 51Degrees example at the same place. A trailing slash is added where missing. A host other than cloud.51degrees.com would be used to (a) use an on premise web server, or (b) use a privately hosted version of the 51Degrees cloud for performance reasons, which is the private hosting option of the cloud service. Both run the same service, so the examples work unchanged. |
 | `PORT` | The port to listen on, defaulting to `5100`. |
 
 ### How to run
