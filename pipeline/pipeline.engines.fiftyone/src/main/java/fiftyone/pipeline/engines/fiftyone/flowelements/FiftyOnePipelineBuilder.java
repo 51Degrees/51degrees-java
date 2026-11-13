@@ -33,7 +33,7 @@ import org.slf4j.ILoggerFactory;
  */
 public class FiftyOnePipelineBuilder extends PipelineBuilder {
 
-    private boolean shareUsageEnabled = true;
+    private boolean shareUsageEnabled = Constants.SHARE_USAGE_DEFAULT_ENABLED;
 
     /**
      * Construct a new builder.
