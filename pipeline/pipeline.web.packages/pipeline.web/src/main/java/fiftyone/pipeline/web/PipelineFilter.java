@@ -195,6 +195,16 @@ public class PipelineFilter implements Filter {
         ServletResponse response,
         FilterChain chain) throws IOException, ServletException {
 
+        // A request for the 51Degrees JavaScript or JSON whose If-None-Match
+        // matches the ETag of its Evidence is answered without processing,
+        // because that Evidence alone decides the content.
+        if (jsService.serveNotModified(
+            (HttpServletRequest) request,
+            (HttpServletResponse) response,
+            resultService)) {
+            return;
+        }
+
         // Populate the request properties and store against the
         // HttpContext.
         resultService.process((HttpServletRequest)request);

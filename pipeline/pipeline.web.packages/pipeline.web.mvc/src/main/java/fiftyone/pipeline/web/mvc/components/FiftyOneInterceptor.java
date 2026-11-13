@@ -164,6 +164,14 @@ public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
         HttpServletRequest request,
         HttpServletResponse response,
         Object handler) throws Exception {
+        // A request for the 51Degrees JavaScript or JSON whose If-None-Match
+        // matches the ETag of its Evidence is answered without processing,
+        // because that Evidence alone decides the content. Nothing is left
+        // to close.
+        if (fiftyOneJsService.serveNotModified(
+            request, response, resultService)) {
+            return false;
+        }
         resultService.process(request);
 
         boolean proceed = false;

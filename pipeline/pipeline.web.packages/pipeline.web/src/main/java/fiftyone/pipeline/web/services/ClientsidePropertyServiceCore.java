@@ -94,6 +94,39 @@ public interface ClientsidePropertyServiceCore {
         HttpServletResponse response) throws IOException;
 
     /**
+     * Answer a request for the JavaScript whose If-None-Match matches the
+     * ETag of the Evidence in the {@link FlowData}, which has not been
+     * processed. A GET or HEAD gets a 304 carrying the headers of a good
+     * response, and any other method a 412.
+     * @param flowData the request's {@link FlowData}, holding its Evidence
+     * @param request the {@link HttpServletRequest} to answer
+     * @param response the {@link HttpServletResponse} to write the answer to
+     * @return true if the request was answered, false if it is to be
+     * processed
+     */
+    default boolean serveJavascriptNotModified(
+        FlowData flowData,
+        HttpServletRequest request,
+        HttpServletResponse response) {
+        return false;
+    }
+
+    /**
+     * As {@link #serveJavascriptNotModified}, for the JSON.
+     * @param flowData the request's {@link FlowData}, holding its Evidence
+     * @param request the {@link HttpServletRequest} to answer
+     * @param response the {@link HttpServletResponse} to write the answer to
+     * @return true if the request was answered, false if it is to be
+     * processed
+     */
+    default boolean serveJsonNotModified(
+        FlowData flowData,
+        HttpServletRequest request,
+        HttpServletResponse response) {
+        return false;
+    }
+
+    /**
      * Default implementation of the {@link ClientsidePropertyServiceCore}
      * interface.
      */
@@ -320,17 +353,7 @@ public interface ClientsidePropertyServiceCore {
             if (ifNoneMatchMatches(
                 request.getHeaders("If-None-Match"),
                 etag)) {
-                // The content has not changed. RFC 9110 section 13.1.2 has a
-                // GET or HEAD answered with 304, carrying the caching headers
-                // of the 200 it stands for, and any other method with 412.
-                String method = request.getMethod();
-                if ("GET".equals(method) || "HEAD".equals(method)) {
-                    response.setStatus(304);
-                    setCachingHeaders(response, etag, failed);
-                } else {
-                    response.setStatus(412);
-                    response.setHeader("Access-Control-Allow-Origin", "*");
-                }
+                answerMatch(request, response, etag);
             } else {
                 // Otherwise, return the requested content to the client.
                 String content = null;
@@ -359,6 +382,70 @@ public interface ClientsidePropertyServiceCore {
                 }
             }
 
+        }
+
+        @Override
+        public boolean serveJavascriptNotModified(
+            FlowData flowData,
+            HttpServletRequest request,
+            HttpServletResponse response) {
+            return serveNotModified(
+                flowData, request, response, JavaScriptBuilderElement.class);
+        }
+
+        @Override
+        public boolean serveJsonNotModified(
+            FlowData flowData,
+            HttpServletRequest request,
+            HttpServletResponse response) {
+            return serveNotModified(
+                flowData, request, response, JsonBuilderElement.class);
+        }
+
+        /**
+         * Answer the request if its If-None-Match matches the ETag of the
+         * Evidence in the FlowData. A Pipeline without the builder for the
+         * endpoint is left to be processed, so that the configuration error
+         * is reported.
+         */
+        private boolean serveNotModified(
+            FlowData flowData,
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Class<? extends FlowElement<?, ?>> builder) {
+            if (pipeline == null ||
+                flowData.getPipeline().getElement(builder) == null) {
+                return false;
+            }
+            String etag = getETag(flowData);
+            if (ifNoneMatchMatches(
+                request.getHeaders("If-None-Match"),
+                etag) == false) {
+                return false;
+            }
+            answerMatch(request, response, etag);
+            return true;
+        }
+
+        /**
+         * Answer a request whose If-None-Match matches. RFC 9110 section
+         * 13.1.2 has a GET or HEAD answered with 304 and any other method
+         * with 412. The ETag depends on the supplied Evidence alone, so the
+         * 304 carries the headers of a good response, as the 200 it stands
+         * for would when processing records no errors.
+         */
+        private void answerMatch(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            String etag) {
+            String method = request.getMethod();
+            if ("GET".equals(method) || "HEAD".equals(method)) {
+                response.setStatus(304);
+                setCachingHeaders(response, etag, false);
+            } else {
+                response.setStatus(412);
+                response.setHeader("Access-Control-Allow-Origin", "*");
+            }
         }
 
         /**

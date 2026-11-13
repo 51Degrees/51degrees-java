@@ -52,6 +52,7 @@ import fiftyone.pipeline.web.services.FlowDataProviderCore;
 import fiftyone.pipeline.web.services.WebRequestEvidenceServiceCore;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -765,6 +766,85 @@ public class ClientsidePropertyServiceTests {
     service.serveJavascript(request, response);
 
     ValidateFailedResponse("", JS_CONTENT_TYPE);
+  }
+
+  /**
+   * Before processing, a matching If-None-Match gets a 304 carrying the
+   * headers of a good response.
+   */
+  @Test
+  public void JavaScript_NotModified_Matching_304() throws IOException {
+    Configure(ConfigureElements(
+      Collections.singletonList(Arrays.asList("header.User-Agent"))));
+    String etag = etagSent();
+    ifNoneMatch(etag);
+
+    assertTrue(
+      service.serveJavascriptNotModified(flowData, request, response));
+
+    Validate304(etag);
+  }
+
+  /**
+   * Before processing, a POST whose If-None-Match matches gets a 412.
+   */
+  @Test
+  public void Json_NotModified_Post_412() throws IOException {
+    Configure(null);
+    String etag = etagSent();
+    when(request.getMethod()).thenReturn("POST");
+    ifNoneMatch(etag);
+
+    assertTrue(service.serveJsonNotModified(flowData, request, response));
+
+    verify(response).setStatus(eq(412));
+    verify(response, times(0)).setHeader(eq("ETag"), anyString());
+    assertEquals("", responseString.toString());
+  }
+
+  /**
+   * An If-None-Match that does not match leaves the request to be processed,
+   * with nothing written.
+   */
+  @Test
+  public void JavaScript_NotModified_OtherTag_NotAnswered() throws IOException {
+    Configure(null);
+    ifNoneMatch("W/\"other\"");
+
+    assertFalse(
+      service.serveJavascriptNotModified(flowData, request, response));
+
+    verify(response, times(0)).setStatus(anyInt());
+    verify(response, times(0)).setHeader(anyString(), anyString());
+  }
+
+  /**
+   * A Pipeline without the builder for the endpoint is left to be
+   * processed, which reports the configuration error.
+   */
+  @Test
+  public void Json_NotModified_MissingBuilder_NotAnswered() {
+    Configure(null);
+    ifNoneMatch("*");
+    when(pipeline.getElement(JsonBuilderElement.class)).thenReturn(null);
+
+    assertFalse(service.serveJsonNotModified(flowData, request, response));
+
+    verify(response, times(0)).setStatus(anyInt());
+  }
+
+  /**
+   * A service whose Pipeline is not set yet answers nothing.
+   */
+  @Test
+  public void NotModified_NoPipeline_NotAnswered() {
+    service = new ClientsidePropertyServiceCore.Default(
+      flowDataProvider, null);
+    ifNoneMatch("*");
+
+    assertFalse(
+      service.serveJavascriptNotModified(flowData, request, response));
+    verify(response, times(0)).setStatus(anyInt());
   }
 
   /**
