@@ -32,6 +32,8 @@ import fiftyone.pipeline.core.exceptions.PipelineDataException;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.engines.exceptions.PropertyMissingException;
+import fiftyone.pipeline.engines.fiftyone.data.SequenceData;
+import fiftyone.pipeline.engines.fiftyone.flowelements.SequenceElement;
 import fiftyone.pipeline.javascriptbuilder.Constants;
 import fiftyone.pipeline.javascriptbuilder.data.JavaScriptBuilderData;
 import fiftyone.pipeline.javascriptbuilder.templates.JavaScriptResource;
@@ -42,6 +44,7 @@ import org.slf4j.Logger;
 import java.io.*;
 import java.net.URLEncoder;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 import static fiftyone.pipeline.core.Constants.*;
@@ -69,6 +72,12 @@ public class JavaScriptBuilderElement
     private final Mustache mustache;
 
     /**
+     * Set once a callback URL that is not valid has been logged, because a
+     * misconfigured element would otherwise log on every request.
+     */
+    private final AtomicBoolean invalidUrlLogged = new AtomicBoolean(false);
+
+    /**
      * The object name is written into the script as the name of a global
      * variable, as a session storage key and inside string literals, with no
      * escaping of JavaScript. A name that is not a plain JavaScript identifier
@@ -82,9 +91,11 @@ public class JavaScriptBuilderElement
      * Words the pattern accepts that cannot be the name of the object. These
      * are the reserved words of the language, including those reserved only
      * in strict mode, plus the three global values a top level var cannot
-     * replace, where the object would silently never be created. The last
-     * entry is the constructor the script itself defines and calls to create
-     * the object, so that name would clash with it.
+     * replace, eval, and the properties of the browser's Window object that a
+     * top level var cannot replace or that navigate the page away, where the
+     * object would never be created. The last entry is the constructor the
+     * script itself defines and calls to create the object, so that name
+     * would clash with it.
      */
     private static final Set<String> RESERVED_OBJECT_NAMES =
         Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
@@ -96,6 +107,15 @@ public class JavaScriptBuilderElement
             "return", "static", "super", "switch", "this", "throw", "true",
             "try", "typeof", "var", "void", "while", "with", "yield",
             "Infinity", "NaN", "undefined",
+            "eval", "arguments",
+            "window", "document", "top", "name", "status", "history",
+            "navigator", "closed", "location", "frameElement",
+            "isSecureContext", "crossOriginIsolated", "trustedTypes",
+            "crypto", "indexedDB", "localStorage", "sessionStorage",
+            "caches", "cookieStore", "speechSynthesis", "styleMedia",
+            "crashReport", "credentialless", "customElements",
+            "documentPictureInPicture", "fence", "launchQueue",
+            "originAgentCluster",
             "fiftyoneDegreesManager")));
 
     /**
@@ -225,8 +245,9 @@ public class JavaScriptBuilderElement
 
         String url = getUrl(reqProtocol, reqHost);
 
-        String sessionId = getSessionId(data);
-        int sequence = getSequence(data);
+        ElementData sequenceData = getSequenceData(data);
+        String sessionId = getSessionId(sequenceData);
+        int sequence = getSequence(sequenceData);
         String serializedParameters = serializeParameters(parameters);
 
         // With the gathered resources, build a new JavaScriptResource.
@@ -392,35 +413,48 @@ public class JavaScriptBuilderElement
         return jsonObject.toString(0);
     }
 
+    /**
+     * Gets the callback URL, or null when the protocol, host or endpoint is
+     * not set or the URL is not valid, as {@link CallbackUrl} decides. A URL
+     * that is not valid is logged as an error the first time only, quoted
+     * and escaped so that it cannot start a new log line.
+     */
     private String getUrl(String protocol, String host) {
-        String url = null;
-        if (protocol != null && !protocol.isEmpty() &&
-                host != null && !host.isEmpty() &&
-                endpoint != null && !endpoint.isEmpty()) {
-            boolean contextRootPopulated = contextRoot != null &&
-                    !contextRoot.isEmpty() && !contextRoot.equals("/");
-
-            // Make sure that each part of the URL except host starts with a '/'
-            // and each part except endpoint does NOT end with one.
-            if (endpoint.charAt(0) != '/') {
-                endpoint = "/" + endpoint;
-            }
-            if (contextRootPopulated && contextRoot.charAt(0) != '/') {
-                contextRoot = "/" + contextRoot;
-            }
-            if (host.charAt(host.length() - 1) == '/') {
-                host = host.substring(0, host.length() - 1);
-            }
-            if (contextRootPopulated && contextRoot.charAt(contextRoot.length() - 1) == '/') {
-                contextRoot = contextRoot.substring(0, contextRoot.length() - 1);
-            }
-
-            url = protocol + "://" + host +
-                    (contextRootPopulated ? contextRoot : "") +
-                    endpoint;
+        CallbackUrl url = CallbackUrl.of(protocol, host, getPath());
+        if (url == null) {
+            return null;
         }
+        if (url.valid) {
+            return url.url;
+        }
+        if (invalidUrlLogged.compareAndSet(false, true)) {
+            logger.error("The generated URL " + JSONObject.quote(url.url) +
+                " is not valid, so the JavaScript has no callback URL. " +
+                "Check the JavaScript builder's protocol, host, context " +
+                "root and endpoint, and the protocol and host evidence. " +
+                "This is reported once.");
+        }
+        return null;
+    }
 
-        return url;
+    /**
+     * Gets the endpoint with the context root in front of it, where there is
+     * a context root. The context root starts with a '/' and does not end
+     * with one, and a '/' joins it to the endpoint.
+     */
+    private String getPath() {
+        boolean contextRootPopulated = contextRoot != null &&
+            contextRoot.isEmpty() == false && contextRoot.equals("/") == false;
+        if (contextRootPopulated == false || CallbackUrl.isBlank(endpoint)) {
+            return endpoint;
+        }
+        String root = contextRoot.charAt(0) == '/'
+            ? contextRoot
+            : "/" + contextRoot;
+        if (root.charAt(root.length() - 1) == '/') {
+            root = root.substring(0, root.length() - 1);
+        }
+        return root + (endpoint.charAt(0) == '/' ? endpoint : "/" + endpoint);
     }
 
     /**
@@ -442,50 +476,75 @@ public class JavaScriptBuilderElement
 
     /**
      * Gets the session id to write into the script. This is the session id
-     * evidence, set by the Sequence Element or by the request, when it
-     * matches SESSION_ID_PATTERN, and an empty string otherwise.
-     * @param data the flow data
+     * the Sequence Element wrote, when it matches SESSION_ID_PATTERN, and an
+     * empty string otherwise, including when the pipeline has no Sequence
+     * Element.
+     * @param sequenceData the Sequence Element's data, or null
      * @return the session id, or an empty string
      */
-    private String getSessionId(FlowData data) {
-        TryGetResult<Object> trySessionId =
-            data.tryGetEvidence(EVIDENCE_SESSIONID, Object.class);
-        if (trySessionId.hasValue() &&
-            trySessionId.getValue() instanceof String) {
-            String sessionId = (String) trySessionId.getValue();
-            if (SESSION_ID_PATTERN.matcher(sessionId).matches()) {
-                return sessionId;
-            }
+    private String getSessionId(ElementData sequenceData) {
+        Object value = getSequenceValue(
+            sequenceData, SequenceData.SESSION_ID_PROPERTY_NAME);
+        if (value instanceof String &&
+            SESSION_ID_PATTERN.matcher((String) value).matches()) {
+            return (String) value;
         }
         return "";
     }
 
     /**
-     * Gets the sequence to write into the script. This is the sequence
-     * evidence, as a number or as text, when it is a positive 32 bit
-     * integer, and 1 otherwise, including when there is no Sequence Element.
-     * The value is written into the script as code, so text that is not a
-     * number could break the script, and a number below 1 is not a sequence
-     * the Sequence Element would ever give.
-     * @param data the flow data
+     * Gets the sequence to write into the script. This is the sequence the
+     * Sequence Element wrote, as a number or as text, when it is a positive
+     * 32 bit integer, and 1 otherwise, including when the pipeline has no
+     * Sequence Element. The value is written into the script as code, so
+     * text that is not a number could break the script, and a number below 1
+     * is not a sequence the Sequence Element would ever give.
+     * @param sequenceData the Sequence Element's data, or null
      * @return the sequence, which is always at least 1
      */
-    private int getSequence(FlowData data) {
-        TryGetResult<Object> trySequence =
-            data.tryGetEvidence(EVIDENCE_SEQUENCE, Object.class);
+    private int getSequence(ElementData sequenceData) {
+        Object value = getSequenceValue(
+            sequenceData, SequenceData.SEQUENCE_PROPERTY_NAME);
         long sequence = 0;
-        if (trySequence.hasValue()) {
-            Object value = trySequence.getValue();
-            if (value instanceof Integer) {
-                sequence = (Integer) value;
-            } else if (value instanceof String &&
-                SEQUENCE_PATTERN.matcher((String) value).matches()) {
-                sequence = Long.parseLong((String) value);
-            }
+        if (value instanceof Integer) {
+            sequence = (Integer) value;
+        } else if (value instanceof String &&
+            SEQUENCE_PATTERN.matcher((String) value).matches()) {
+            sequence = Long.parseLong((String) value);
         }
         return sequence >= 1 && sequence <= Integer.MAX_VALUE
             ? (int) sequence
             : 1;
+    }
+
+    /**
+     * The Sequence Element's data, or null when the pipeline has no Sequence
+     * Element. Step 5 of the specification takes the session id and the
+     * sequence from that data and not from Evidence, so a pipeline with no
+     * Sequence Element renders the defaults even when the request carried a
+     * session id or a sequence of its own.
+     * @param data the flow data
+     * @return the Sequence Element's data, or null
+     * @see <a href="https://github.com/51Degrees/specifications/blob/67ead6986f3118c68f0714325800b92d48ddc71f/pipeline-specification/pipeline-elements/javascript-builder.md#process">Specification</a>
+     */
+    private static ElementData getSequenceData(FlowData data) {
+        // get(String) throws when the Flow Data holds nothing under the key,
+        // so the keys it does hold are checked first.
+        return data.getDataKeys().contains(SequenceElement.DEFAULT_ELEMENT_DATA_KEY)
+            ? data.get(SequenceElement.DEFAULT_ELEMENT_DATA_KEY)
+            : null;
+    }
+
+    /**
+     * One value from the Sequence Element's data.
+     * @param sequenceData the Sequence Element's data, or null
+     * @param name the name of the value within that data
+     * @return the value, or null
+     */
+    private static Object getSequenceValue(
+        ElementData sequenceData,
+        String name) {
+        return sequenceData == null ? null : sequenceData.get(name);
     }
 
     private void buildJavaScript(

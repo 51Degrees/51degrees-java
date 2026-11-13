@@ -25,11 +25,11 @@ package fiftyone.devicedetection.shared.testhelpers.data;
 import fiftyone.devicedetection.shared.testhelpers.Wrapper;
 
 public interface MetaDataHasher {
-    int hashProperties(int hash, Wrapper wrapper);
+    int hashProperties(int hash, Wrapper wrapper) throws Exception;
 
-    int hashValues(int hash, Wrapper wrapper);
+    int hashValues(int hash, Wrapper wrapper) throws Exception;
 
-    int hashComponents(int hash, Wrapper wrapper);
+    int hashComponents(int hash, Wrapper wrapper) throws Exception;
 
-    int hashProfiles(int hash, Wrapper wrapper);
+    int hashProfiles(int hash, Wrapper wrapper) throws Exception;
 }

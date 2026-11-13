@@ -59,7 +59,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
 
 /**
  * The client for everything a server does with a 51Did against the
@@ -114,6 +116,17 @@ public final class DidClient {
      * The environment variable read for the API base when the constructor
      * is given none, the same one the cloud request engine honours.
      */
+    public static final String CLOUD_ENDPOINT_VARIABLE =
+        "_51DEGREES_CLOUD_ENDPOINT";
+
+    /**
+     * The old name of the environment variable read for the API base, read
+     * only when {@link #CLOUD_ENDPOINT_VARIABLE} is not set.
+     *
+     * @deprecated use {@link #CLOUD_ENDPOINT_VARIABLE}, and set the
+     *             environment variable it names in place of this one.
+     */
+    @Deprecated
     public static final String ENDPOINT_VARIABLE = "FOD_CLOUD_API_URL";
 
     /**
@@ -135,6 +148,13 @@ public final class DidClient {
     static final Duration REFETCH_INTERVAL = Duration.ofMinutes(1);
 
     private static final String USER_AGENT = "pipeline.did/" + version();
+
+    /**
+     * Set once the use of {@link #ENDPOINT_VARIABLE} has been logged, so
+     * that a process creating many clients logs it once.
+     */
+    private static final AtomicBoolean OLD_VARIABLE_LOGGED =
+        new AtomicBoolean(false);
 
     /**
      * Longest encoded identifier this client will take from a caller. The
@@ -180,7 +200,7 @@ public final class DidClient {
 
     /**
      * A client for the public cloud, or the host named by
-     * {@value #ENDPOINT_VARIABLE}, with no licence key.
+     * {@value #CLOUD_ENDPOINT_VARIABLE}, with no licence key.
      *
      * @param resourceKey the page's resource key, public by nature
      */
@@ -190,7 +210,7 @@ public final class DidClient {
 
     /**
      * A client for the public cloud, or the host named by
-     * {@value #ENDPOINT_VARIABLE}, with a licence key.
+     * {@value #CLOUD_ENDPOINT_VARIABLE}, with a licence key.
      *
      * @param resourceKey the page's resource key, public by nature
      * @param licenceKey  a licence key of the same account, server side
@@ -207,9 +227,9 @@ public final class DidClient {
      * @param resourceKey the page's resource key, public by nature
      * @param licenceKey  a licence key of the same account, or null
      * @param endpoint    the API base including {@code /api/v4/}, or null
-     *                    to read {@value #ENDPOINT_VARIABLE} and fall back
-     *                    to {@link #DEFAULT_ENDPOINT}. A trailing slash is
-     *                    added where missing.
+     *                    to read {@value #CLOUD_ENDPOINT_VARIABLE} and fall
+     *                    back to {@link #DEFAULT_ENDPOINT}. A trailing
+     *                    slash is added where missing.
      */
     public DidClient(String resourceKey, String licenceKey, String endpoint) {
         this(builder(resourceKey).licenceKey(licenceKey).endpoint(endpoint));
@@ -268,8 +288,8 @@ public final class DidClient {
 
         /**
          * @param endpoint the API base including {@code /api/v4/}, or null
-         *                 to read {@value #ENDPOINT_VARIABLE} and fall back
-         *                 to {@link #DEFAULT_ENDPOINT}
+         *                 to read {@value #CLOUD_ENDPOINT_VARIABLE} and
+         *                 fall back to {@link #DEFAULT_ENDPOINT}
          * @return this builder
          */
         public Builder endpoint(String endpoint) {
@@ -940,7 +960,11 @@ public final class DidClient {
         }
     }
 
-    /** The typed result a redeem answer carries. */
+    /**
+     * The typed result a redeem answer carries. The request sent the
+     * licence key, and the answer can name it, so the messages of the
+     * errors show the key masked.
+     */
     private RedeemResult readRedeem(HttpTransport.Response response) {
         int status = response.getStatusCode();
         JSONObject json = asObject(response.getBody());
@@ -949,21 +973,22 @@ public final class DidClient {
             case 503:
                 if (json == null) {
                     throw new CompletionException(
-                        httpError("Redemption", response));
+                        httpError("Redemption", response, licenceKey));
                 }
                 return RedeemResult.parse(status, json, response.getBody());
             case 400:
                 if (json != null && json.has("errors")) {
-                    throw new IllegalArgumentException(errorsText(json));
+                    throw new IllegalArgumentException(
+                        maskLicence(errorsText(json), licenceKey));
                 }
                 throw new CompletionException(
-                    httpError("Redemption", response));
+                    httpError("Redemption", response, licenceKey));
             case 404:
                 throw new CompletionException(new DidNotSupportedException(
                     endpoint, response.getBody()));
             default:
                 throw new CompletionException(
-                    httpError("Redemption", response));
+                    httpError("Redemption", response, licenceKey));
         }
     }
 
@@ -1045,11 +1070,52 @@ public final class DidClient {
 
     private static DidHttpException httpError(
             String what, HttpTransport.Response response) {
+        return httpError(what, response, null);
+    }
+
+    /**
+     * An error whose message summarises the body, with the licence key the
+     * request sent masked in it.
+     */
+    private static DidHttpException httpError(
+            String what, HttpTransport.Response response, String licence) {
         String body = response.getBody();
-        String summary = body.length() > 200 ? body.substring(0, 200) : body;
+        String masked = maskLicence(body, licence);
+        String summary = masked.length() > 200 ?
+            masked.substring(0, 200) :
+            masked;
         return new DidHttpException(
             what + " answered HTTP " + response.getStatusCode() + ": "
             + summary, response.getStatusCode(), body);
+    }
+
+    /**
+     * The text with the licence key shown only by its last 4 characters,
+     * every character before them replaced by '*', or replaced in full when
+     * it has 4 characters or fewer. This is how every 51Degrees package
+     * writes a licence key in a message, and it matches
+     * fiftyone.pipeline.util.LicenseKeyMask, which this package cannot use
+     * because it depends on nothing in the Pipeline.
+     */
+    private static String maskLicence(String text, String licence) {
+        if (text == null || licence == null || licence.isEmpty()) {
+            return text;
+        }
+        String result = text.replace(licence, maskKey(licence));
+        String encoded = encode(licence);
+        if (encoded.equals(licence) == false) {
+            result = result.replace(encoded, maskKey(encoded));
+        }
+        return result;
+    }
+
+    private static String maskKey(String key) {
+        int hidden = key.length() > 4 ? key.length() - 4 : key.length();
+        StringBuilder masked = new StringBuilder(key.length());
+        for (int i = 0; i < hidden; i++) {
+            masked.append('*');
+        }
+        return masked.append(key, hidden, key.length()).toString();
     }
 
     /** The body as a JSON object, or null when it is not one. */
@@ -1106,14 +1172,29 @@ public final class DidClient {
     }
 
     /**
-     * The API base to use: the argument, else {@value #ENDPOINT_VARIABLE},
-     * else {@link #DEFAULT_ENDPOINT}, ending in exactly one slash so every
-     * route can be appended directly.
+     * The API base to use: the argument, else
+     * {@value #CLOUD_ENDPOINT_VARIABLE}, else the deprecated
+     * {@value #ENDPOINT_VARIABLE}, else {@link #DEFAULT_ENDPOINT}, ending
+     * in exactly one slash so every route can be appended directly. The
+     * first use of the deprecated variable in the process is logged as a
+     * warning.
      */
     static String resolveEndpoint(String endpoint) {
         String value = blankToNull(endpoint);
         if (value == null) {
+            value = blankToNull(System.getenv(CLOUD_ENDPOINT_VARIABLE));
+        }
+        if (value == null) {
             value = blankToNull(System.getenv(ENDPOINT_VARIABLE));
+            if (value != null
+                && OLD_VARIABLE_LOGGED.compareAndSet(false, true)) {
+                Logger.getLogger(DidClient.class.getName()).warning(
+                    "The environment variable " + ENDPOINT_VARIABLE
+                    + " is deprecated and " + CLOUD_ENDPOINT_VARIABLE
+                    + " replaces it. Set " + CLOUD_ENDPOINT_VARIABLE
+                    + " to the same value, as a later release may no "
+                    + "longer read " + ENDPOINT_VARIABLE + ".");
+            }
         }
         if (value == null) {
             value = DEFAULT_ENDPOINT;

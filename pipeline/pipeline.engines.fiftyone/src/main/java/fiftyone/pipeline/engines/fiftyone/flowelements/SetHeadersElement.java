@@ -38,6 +38,7 @@ import fiftyone.pipeline.core.data.EvidenceKeyFilter;
 import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
+import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
@@ -101,8 +102,20 @@ public class SetHeadersElement
 		PipelineConfig config;
 		Pipeline pipeline = data.getPipeline();
 		if ((config = pipelineConfigs.get(pipeline)) == null) {
+			// The configuration is kept once every element has loaded its
+			// properties. Until then, as after a cloud element could not
+			// reach its service when the Pipeline was built, it is built
+			// again on each request, so it gains the SetHeader properties
+			// once they are known.
+			boolean loaded = allPropertiesLoaded(pipeline);
 			config = populateConfig(pipeline);
-			config = pipelineConfigs.getOrDefault(pipeline, config);
+			if (loaded) {
+				PipelineConfig kept =
+					pipelineConfigs.putIfAbsent(pipeline, config);
+				if (kept != null) {
+					config = kept;
+				}
+			}
 		}
 		
 		SetHeadersData elementData = data.getOrAdd(
@@ -139,6 +152,21 @@ public class SetHeadersElement
 		// Nothing to clean up here
 	}
 	
+	/**
+	 * @param pipeline the Pipeline
+	 * @return true if every element of the Pipeline has loaded its
+	 * properties
+	 */
+	@SuppressWarnings("rawtypes")
+	private static boolean allPropertiesLoaded(Pipeline pipeline) {
+		for (FlowElement element : pipeline.getFlowElements()) {
+			if (element.hasLoadedProperties() == false) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	/**
 	 * Build the response headers from the SetHeader properties in the FlowData.
 	 * @param data flowData object

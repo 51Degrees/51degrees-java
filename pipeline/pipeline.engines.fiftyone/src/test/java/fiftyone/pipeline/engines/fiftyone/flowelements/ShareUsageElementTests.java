@@ -32,6 +32,7 @@ import fiftyone.pipeline.engines.services.DataUploader;
 import fiftyone.pipeline.engines.services.HttpClient;
 import fiftyone.pipeline.engines.trackers.Tracker;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Disabled;
@@ -39,6 +40,7 @@ import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -185,6 +187,18 @@ public class ShareUsageElementTests {
         tracker = new TestTracker();
     }
 
+    /**
+     * The element runs its own sending thread, which closing it stops.
+     * Closing an element a test has already closed does nothing more.
+     */
+    @AfterEach
+    public void cleanUp() throws Exception {
+        if (shareUsageElement != null) {
+            shareUsageElement.close();
+        }
+        pipeline.close();
+    }
+
     private void createShareUsage(
             double sharePercentage,
             int minimumEntriesPerMessage,
@@ -250,40 +264,41 @@ public class ShareUsageElementTests {
         evidenceData.put(EVIDENCE_COOKIE_PREFIX + EVIDENCE_SEPERATOR + FIFTYONE_COOKIE_PREFIX + "Profile", "123456");
         evidenceData.put(EVIDENCE_COOKIE_PREFIX + EVIDENCE_SEPERATOR + "RemoveMe", "123456");
 
-        FlowData data = pipeline.createFlowData();
-        data.addEvidence(evidenceData);
-        // Act
-        shareUsageElement.process(data);
-        // Wait for the consumer task to finish.
-        assertNotNull(shareUsageElement.getSendDataFuture());
-        shareUsageElement.getSendDataFuture().get();
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidenceData);
+            // Act
+            shareUsageElement.process(data);
+            // Wait for the consumer task to finish.
+            assertNotNull(shareUsageElement.getSendDataFuture());
+            shareUsageElement.getSendDataFuture().get();
 
-        ByteArrayOutputStream baos = connector.getBaos();
-        byte[] output = baos.toByteArray();
+            ByteArrayOutputStream baos = connector.getBaos();
+            byte[] output = baos.toByteArray();
 
-        DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
-        Document doc = builder.parse(new ByteArrayInputStream(output));
+            DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
+            Document doc = builder.parse(new ByteArrayInputStream(output));
 
-        NodeList devices = (NodeList) xpath.compile("//Devices/Device").evaluate(doc, XPathConstants.NODESET);
-        assertEquals(1, devices.getLength(), "One device expected");
+            NodeList devices = (NodeList) xpath.compile("//Devices/Device").evaluate(doc, XPathConstants.NODESET);
+            assertEquals(1, devices.getLength(), "One device expected");
 
-        NodeList headers = (NodeList) xpath.compile(EVIDENCE_HTTPHEADER_PREFIX).evaluate(devices.item(0), XPathConstants.NODESET);
-        assertEquals(2, headers.getLength(), "2 headers expected");
-        NodeList header1 = (NodeList) xpath.compile(EVIDENCE_HTTPHEADER_PREFIX+"[@Name='x-forwarded-for']").evaluate(devices.item(0), XPathConstants.NODESET);
-        assertEquals("5.6.7.8",header1.item(0).getTextContent());
-        NodeList header2 = (NodeList) xpath.compile(EVIDENCE_HTTPHEADER_PREFIX+"[@Name='forwarded-for']").evaluate(devices.item(0), XPathConstants.NODESET);
-        assertEquals("2001::",header2.item(0).getTextContent());
+            NodeList headers = (NodeList) xpath.compile(EVIDENCE_HTTPHEADER_PREFIX).evaluate(devices.item(0), XPathConstants.NODESET);
+            assertEquals(2, headers.getLength(), "2 headers expected");
+            NodeList header1 = (NodeList) xpath.compile(EVIDENCE_HTTPHEADER_PREFIX+"[@Name='x-forwarded-for']").evaluate(devices.item(0), XPathConstants.NODESET);
+            assertEquals("5.6.7.8",header1.item(0).getTextContent());
+            NodeList header2 = (NodeList) xpath.compile(EVIDENCE_HTTPHEADER_PREFIX+"[@Name='forwarded-for']").evaluate(devices.item(0), XPathConstants.NODESET);
+            assertEquals("2001::",header2.item(0).getTextContent());
 
-        NodeList cookies = (NodeList) xpath.compile(EVIDENCE_COOKIE_PREFIX).evaluate(devices.item(0), XPathConstants.NODESET);
-        assertEquals(1, cookies.getLength(), "1 cookie expected");
-        assertEquals("51d_Profile", cookies.item(0).getAttributes().getNamedItem("Name").getTextContent());
-        assertEquals("123456", cookies.item(0).getFirstChild().getTextContent());
+            NodeList cookies = (NodeList) xpath.compile(EVIDENCE_COOKIE_PREFIX).evaluate(devices.item(0), XPathConstants.NODESET);
+            assertEquals(1, cookies.getLength(), "1 cookie expected");
+            assertEquals("51d_Profile", cookies.item(0).getAttributes().getNamedItem("Name").getTextContent());
+            assertEquals("123456", cookies.item(0).getFirstChild().getTextContent());
 
-        NodeList clientIp = (NodeList) xpath.compile("ClientIP").evaluate(devices.item(0), XPathConstants.NODESET);
-        assertEquals(1, clientIp.getLength(), "1 client IP expected");
-        assertEquals("1.2.3.4", clientIp.item(0).getTextContent());
+            NodeList clientIp = (NodeList) xpath.compile("ClientIP").evaluate(devices.item(0), XPathConstants.NODESET);
+            assertEquals(1, clientIp.getLength(), "1 client IP expected");
+            assertEquals("1.2.3.4", clientIp.item(0).getTextContent());
 
 
+        }
     }
 
     /**
@@ -321,43 +336,44 @@ public class ShareUsageElementTests {
         evidenceData.put(EVIDENCE_COOKIE_PREFIX + EVIDENCE_SEPERATOR + FIFTYONE_COOKIE_PREFIX + "Profile", "123456");
         evidenceData.put(EVIDENCE_COOKIE_PREFIX + EVIDENCE_SEPERATOR + "RemoveMe", "123456");
 
-        FlowData data = pipeline.createFlowData();
-        data.addEvidence(evidenceData);
-        // Act
-        shareUsageElement.process(data);
-        // Wait for the consumer task to finish.
-        assertNotNull(shareUsageElement.getSendDataFuture());
-        shareUsageElement.getSendDataFuture().get();
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidenceData);
+            // Act
+            shareUsageElement.process(data);
+            // Wait for the consumer task to finish.
+            assertNotNull(shareUsageElement.getSendDataFuture());
+            shareUsageElement.getSendDataFuture().get();
 
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        byte[] zip = ((TestHttpClient)shareUsageElement.httpClient).getBuffer();
-        // unzip the buffer
-        copy(new GZIPInputStream(new ByteArrayInputStream(zip)), baos);
-        byte[] output = baos.toByteArray();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte[] zip = ((TestHttpClient)shareUsageElement.httpClient).getBuffer();
+            // unzip the buffer
+            copy(new GZIPInputStream(new ByteArrayInputStream(zip)), baos);
+            byte[] output = baos.toByteArray();
 
-        DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
-        Document doc = builder.parse(new ByteArrayInputStream(output));
+            DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
+            Document doc = builder.parse(new ByteArrayInputStream(output));
 
-        NodeList devices = (NodeList) xpath.compile("//Devices/Device").evaluate(doc, XPathConstants.NODESET);
-        assertEquals(1, devices.getLength(), "One device expected");
+            NodeList devices = (NodeList) xpath.compile("//Devices/Device").evaluate(doc, XPathConstants.NODESET);
+            assertEquals(1, devices.getLength(), "One device expected");
 
-        NodeList headers = (NodeList) xpath.compile(EVIDENCE_HTTPHEADER_PREFIX).evaluate(devices.item(0), XPathConstants.NODESET);
-        assertEquals(2, headers.getLength(), "2 headers expected");
-        NodeList header1 = (NodeList) xpath.compile(EVIDENCE_HTTPHEADER_PREFIX+"[@Name='x-forwarded-for']").evaluate(devices.item(0), XPathConstants.NODESET);
-        assertEquals("5.6.7.8",header1.item(0).getTextContent());
-        NodeList header2 = (NodeList) xpath.compile(EVIDENCE_HTTPHEADER_PREFIX+"[@Name='forwarded-for']").evaluate(devices.item(0), XPathConstants.NODESET);
-        assertEquals("2001::",header2.item(0).getTextContent());
+            NodeList headers = (NodeList) xpath.compile(EVIDENCE_HTTPHEADER_PREFIX).evaluate(devices.item(0), XPathConstants.NODESET);
+            assertEquals(2, headers.getLength(), "2 headers expected");
+            NodeList header1 = (NodeList) xpath.compile(EVIDENCE_HTTPHEADER_PREFIX+"[@Name='x-forwarded-for']").evaluate(devices.item(0), XPathConstants.NODESET);
+            assertEquals("5.6.7.8",header1.item(0).getTextContent());
+            NodeList header2 = (NodeList) xpath.compile(EVIDENCE_HTTPHEADER_PREFIX+"[@Name='forwarded-for']").evaluate(devices.item(0), XPathConstants.NODESET);
+            assertEquals("2001::",header2.item(0).getTextContent());
 
-        NodeList cookies = (NodeList) xpath.compile(EVIDENCE_COOKIE_PREFIX).evaluate(devices.item(0), XPathConstants.NODESET);
-        assertEquals(1, cookies.getLength(), "1 cookie expected");
-        assertEquals("51d_Profile", cookies.item(0).getAttributes().getNamedItem("Name").getTextContent());
-        assertEquals("123456", cookies.item(0).getFirstChild().getTextContent());
+            NodeList cookies = (NodeList) xpath.compile(EVIDENCE_COOKIE_PREFIX).evaluate(devices.item(0), XPathConstants.NODESET);
+            assertEquals(1, cookies.getLength(), "1 cookie expected");
+            assertEquals("51d_Profile", cookies.item(0).getAttributes().getNamedItem("Name").getTextContent());
+            assertEquals("123456", cookies.item(0).getFirstChild().getTextContent());
 
-        NodeList clientIp = (NodeList) xpath.compile("ClientIP").evaluate(devices.item(0), XPathConstants.NODESET);
-        assertEquals(1, clientIp.getLength(), "1 client IP expected");
-        assertEquals("1.2.3.4", clientIp.item(0).getTextContent());
+            NodeList clientIp = (NodeList) xpath.compile("ClientIP").evaluate(devices.item(0), XPathConstants.NODESET);
+            assertEquals(1, clientIp.getLength(), "1 client IP expected");
+            assertEquals("1.2.3.4", clientIp.item(0).getTextContent());
 
 
+        }
     }
 
     @Test
@@ -373,14 +389,15 @@ public class ShareUsageElementTests {
 
         Map<String, Object> evidenceData = new HashMap<>();
         evidenceData.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
-        FlowData data = pipeline.createFlowData();
-        data.addEvidence(evidenceData);
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidenceData);
 
-        // Act
-        shareUsageElement.process(data);
+            // Act
+            shareUsageElement.process(data);
 
-        // sending of data never gets triggered
-        assertNull(shareUsageElement.getSendDataFuture());
+            // sending of data never gets triggered
+            assertNull(shareUsageElement.getSendDataFuture());
+        }
     }
 
     @Test
@@ -396,30 +413,31 @@ public class ShareUsageElementTests {
 
         Map<String, Object> evidenceData = new HashMap<>();
         evidenceData.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
-        FlowData data = pipeline.createFlowData();
-        data.addEvidence(evidenceData);
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidenceData);
 
-        // Act
-        shareUsageElement.process(data);
-        shareUsageElement.process(data);
+            // Act
+            shareUsageElement.process(data);
+            shareUsageElement.process(data);
 
-        // Wait for the consumer task to finish.
-        assertNotNull(shareUsageElement.getSendDataFuture());
-        shareUsageElement.getSendDataFuture().get();
+            // Wait for the consumer task to finish.
+            assertNotNull(shareUsageElement.getSendDataFuture());
+            shareUsageElement.getSendDataFuture().get();
 
-        ByteArrayOutputStream baos = connector.getBaos();
-        byte[] output = baos.toByteArray();
+            ByteArrayOutputStream baos = connector.getBaos();
+            byte[] output = baos.toByteArray();
 
-        DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
-        Document doc = builder.parse(new ByteArrayInputStream(output));
+            DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
+            Document doc = builder.parse(new ByteArrayInputStream(output));
 
-        // Verify that there is only one devices element
-        NodeList devices = (NodeList) xpath.compile("//Devices").evaluate(doc, XPathConstants.NODESET);
-        assertEquals(1, devices.getLength(), "1 devices node expected");
+            // Verify that there is only one devices element
+            NodeList devices = (NodeList) xpath.compile("//Devices").evaluate(doc, XPathConstants.NODESET);
+            assertEquals(1, devices.getLength(), "1 devices node expected");
 
-        // Make sure there are 2 'Device' nodes
-        NodeList device = (NodeList) xpath.compile("//Device").evaluate(devices.item(0), XPathConstants.NODESET);
-        assertEquals(2, device.getLength(), "2 device nodes expected");
+            // Make sure there are 2 'Device' nodes
+            NodeList device = (NodeList) xpath.compile("//Device").evaluate(devices.item(0), XPathConstants.NODESET);
+            assertEquals(2, device.getLength(), "2 device nodes expected");
+        }
     }
 
     @Test
@@ -440,33 +458,119 @@ public class ShareUsageElementTests {
         evidenceData.put(EVIDENCE_HTTPHEADER_PREFIX + EVIDENCE_SEPERATOR + "forwarded-for", "2001::");
         evidenceData.put(EVIDENCE_HTTPHEADER_PREFIX + EVIDENCE_SEPERATOR + "user-agent", useragent);
 
-        FlowData data = pipeline.createFlowData();
-        data.addEvidence(evidenceData);
-        // Act
-        shareUsageElement.process(data);
-        // Wait for the consumer task to finish.
-        assertNotNull(shareUsageElement.getSendDataFuture());
-        shareUsageElement.getSendDataFuture().get();
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidenceData);
+            // Act
+            shareUsageElement.process(data);
+            // Wait for the consumer task to finish.
+            assertNotNull(shareUsageElement.getSendDataFuture());
+            shareUsageElement.getSendDataFuture().get();
 
-        ByteArrayOutputStream baos = connector.getBaos();
-        byte[] output = baos.toByteArray();
+            ByteArrayOutputStream baos = connector.getBaos();
+            byte[] output = baos.toByteArray();
 
-        DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
-        Document doc = builder.parse(new ByteArrayInputStream(output));
+            DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
+            Document doc = builder.parse(new ByteArrayInputStream(output));
 
-        // Verify that there is only one clientIP element
-        NodeList clientIP = (NodeList) xpath.compile("//ClientIP").evaluate(doc, XPathConstants.NODESET);
-        assertEquals(1, clientIP.getLength(), "1 ClientIP node expected");
+            // Verify that there is only one clientIP element
+            NodeList clientIP = (NodeList) xpath.compile("//ClientIP").evaluate(doc, XPathConstants.NODESET);
+            assertEquals(1, clientIP.getLength(), "1 ClientIP node expected");
 
-        // Make sure there is a header node
-        NodeList device = (NodeList) xpath.compile("//header[@Name='user-agent']").evaluate(doc, XPathConstants.NODESET);
-        assertEquals(1, device.getLength(), "1 user-agent header expected");
-        // Make sure no x-forwarded-for
-        NodeList xf = (NodeList) xpath.compile("//header[@Name='x-forwarded-for']").evaluate(doc, XPathConstants.NODESET);
-        assertEquals(0, xf.getLength(), "0 x-forwarded-for header expected");
-        // Make sure no forwarded-for
-        NodeList f = (NodeList) xpath.compile("//header[@Name='forwarded-for']").evaluate(doc, XPathConstants.NODESET);
-        assertEquals(0, f.getLength(), "0 forwarded-for header expected");
+            // Make sure there is a header node
+            NodeList device = (NodeList) xpath.compile("//header[@Name='user-agent']").evaluate(doc, XPathConstants.NODESET);
+            assertEquals(1, device.getLength(), "1 user-agent header expected");
+            // Make sure no x-forwarded-for
+            NodeList xf = (NodeList) xpath.compile("//header[@Name='x-forwarded-for']").evaluate(doc, XPathConstants.NODESET);
+            assertEquals(0, xf.getLength(), "0 x-forwarded-for header expected");
+            // Make sure no forwarded-for
+            NodeList f = (NodeList) xpath.compile("//header[@Name='forwarded-for']").evaluate(doc, XPathConstants.NODESET);
+            assertEquals(0, f.getLength(), "0 forwarded-for header expected");
+        }
+    }
+
+    /**
+     * The element accepts no Evidence, so a header no other element accepts
+     * reaches it only through the web request the web integration adds as
+     * server.http-request. It shares that header under the key it would have
+     * as Evidence, keeps the Evidence value for a key in both places, and
+     * still leaves out the cookie header, a blocked header and the web
+     * request itself.
+     */
+    @Test
+    public void ShareUsageElement_WebRequest_SharesWhatNoOtherElementAccepts()
+        throws Exception {
+        createShareUsage(
+            1,
+            1,
+            1,
+            new ArrayList<>(Collections.singletonList("x-blocked")),
+            new ArrayList<>(),
+            new ArrayList<>());
+
+        Map<String, Object> request = new HashMap<>();
+        request.put("header.User-Agent", "request-ua");
+        request.put("header.X-Test", "shared");
+        request.put("header.Cookie", "a=1; 51D_Profile=123456");
+        request.put("header.X-Blocked", "blocked");
+        request.put("cookie.51D_Profile", "123456");
+        request.put("cookie.other", "not-shared");
+        request.put("query.secret", "not-shared");
+        request.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
+        request.put("server.request-method", "GET");
+        request.put("server.request-path", "/a%2Fb/c");
+
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(
+                EVIDENCE_HTTPHEADER_PREFIX + EVIDENCE_SEPERATOR + "user-agent",
+                "evidence-ua");
+            data.addEvidence("server.http-request",
+                Collections.unmodifiableMap(request));
+            shareUsageElement.process(data);
+            assertNotNull(shareUsageElement.getSendDataFuture());
+            shareUsageElement.getSendDataFuture().get();
+
+            Document doc = docBuilderFactory.newDocumentBuilder().parse(
+                new ByteArrayInputStream(connector.getBaos().toByteArray()));
+
+            assertEquals("shared", xpath.evaluate(
+                "//header[@Name='X-Test']", doc),
+                "A header only the web request holds was not shared.");
+            NodeList userAgents = (NodeList) xpath.evaluate(
+                "//header[translate(@Name,'USERAGNT','useragnt')='user-agent']",
+                doc, XPathConstants.NODESET);
+            assertEquals(1, userAgents.getLength(),
+                "The User-Agent in both places was not shared once.");
+            assertEquals("evidence-ua", userAgents.item(0).getTextContent(),
+                "The User-Agent in both places did not keep the Evidence value.");
+            assertEquals(0, ((NodeList) xpath.evaluate(
+                "//header[@Name='Cookie' or @Name='cookie']", doc,
+                XPathConstants.NODESET)).getLength(),
+                "The cookie header was shared.");
+            assertEquals(0, ((NodeList) xpath.evaluate(
+                "//header[@Name='X-Blocked']", doc,
+                XPathConstants.NODESET)).getLength(),
+                "A blocked header was shared.");
+            assertEquals("123456", xpath.evaluate(
+                "//cookie[@Name='51D_Profile']", doc),
+                "A 51D_ cookie from the web request was not shared.");
+            assertEquals(0, ((NodeList) xpath.evaluate(
+                "//cookie[@Name='other'] | //query[@Name='secret']", doc,
+                XPathConstants.NODESET)).getLength(),
+                "A cookie or query string parameter the rules leave out was shared.");
+            assertEquals("1.2.3.4", xpath.evaluate("//ClientIP", doc),
+                "The client IP from the web request was not shared.");
+            assertEquals("GET", xpath.evaluate(
+                "//server[@Name='request-method']", doc),
+                "The method of the request line was not shared.");
+            assertEquals(0, ((NodeList) xpath.evaluate(
+                "//*[@Name='request-path']", doc,
+                XPathConstants.NODESET)).getLength(),
+                "The path of the request line was shared.");
+            assertEquals(0, ((NodeList) xpath.evaluate(
+                "//*[@Name='http-request']", doc,
+                XPathConstants.NODESET)).getLength(),
+                "The web request itself was shared.");
+        }
     }
 
     @Test
@@ -483,32 +587,33 @@ public class ShareUsageElementTests {
         Map<String, Object> evidenceData = new HashMap<>();
         evidenceData.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
 
-        FlowData data = pipeline.createFlowData();
-        data.addEvidence(evidenceData);
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidenceData);
 
-        // Act
-        int requiredEvents = 0;
-        while (connector.getBaos().size()==0 && requiredEvents <= 1000000) {
-            shareUsageElement.process(data);
-            requiredEvents++;
+            // Act
+            int requiredEvents = 0;
+            while (connector.getBaos().size()==0 && requiredEvents <= 1000000) {
+                shareUsageElement.process(data);
+                requiredEvents++;
+            }
+            // Wait for the consumer task to finish.
+            assertNotNull(shareUsageElement.getSendDataFuture());
+            shareUsageElement.getSendDataFuture().get();
+
+            logger.info("Required events was {}", requiredEvents);
+
+            // Assert
+            // On average, the number of required events should be around
+            // 100,000. However, as it's chance based it can vary
+            // significantly. We only want to catch any gross errors so just
+            // make sure the value is of the expected order of magnitude.
+            assertTrue(requiredEvents > 10000,
+                    "Expected the number of required events to be at least " +
+                            "10,000, but was actually '" + requiredEvents + "'");
+            assertTrue(requiredEvents < 1000000,
+                    "Expected the number of required events to be less than " +
+                            "1,000,000, but was actually '" + requiredEvents + "'");
         }
-        // Wait for the consumer task to finish.
-        assertNotNull(shareUsageElement.getSendDataFuture());
-        shareUsageElement.getSendDataFuture().get();
-
-        logger.info("Required events was {}", requiredEvents);
-
-        // Assert
-        // On average, the number of required events should be around
-        // 100,000. However, as it's chance based it can vary
-        // significantly. We only want to catch any gross errors so just
-        // make sure the value is of the expected order of magnitude.
-        assertTrue(requiredEvents > 10000,
-                "Expected the number of required events to be at least " +
-                        "10,000, but was actually '" + requiredEvents + "'");
-        assertTrue(requiredEvents < 1000000,
-                "Expected the number of required events to be less than " +
-                        "1,000,000, but was actually '" + requiredEvents + "'");
     }
     @Test
     public void ShareUsageElement_SendOnCleanup() throws Exception {
@@ -524,33 +629,34 @@ public class ShareUsageElementTests {
         Map<String, Object> evidenceData = new HashMap<>();
         evidenceData.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
 
-        FlowData data = pipeline.createFlowData();
-        data.addEvidence(evidenceData);
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidenceData);
 
-        // Act
-        shareUsageElement.process(data);
+            // Act
+            shareUsageElement.process(data);
 
-        // No data should be being sending yet.
-        assertNull(shareUsageElement.getSendDataFuture());
+            // No data should be being sending yet.
+            assertNull(shareUsageElement.getSendDataFuture());
 
-        // Dispose of the element.
-        shareUsageElement.close();
+            // Dispose of the element.
+            shareUsageElement.close();
 
-        // Assert
-        // data should have been sent
-        assertNotNull(shareUsageElement.getSendDataFuture());
-        assertTrue(shareUsageElement.isClosed());
+            // Assert
+            // data should have been sent
+            assertNotNull(shareUsageElement.getSendDataFuture());
+            assertTrue(shareUsageElement.isClosed());
 
-        ByteArrayOutputStream baos = connector.getBaos();
-        byte[] output = baos.toByteArray();
+            ByteArrayOutputStream baos = connector.getBaos();
+            byte[] output = baos.toByteArray();
 
-        DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
-        Document doc = builder.parse(new ByteArrayInputStream(output));
+            DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
+            Document doc = builder.parse(new ByteArrayInputStream(output));
 
-        // Check that the expected values are populated.
-        NodeList f = (NodeList) xpath.compile("//Device").evaluate(doc, XPathConstants.NODESET);
-        assertEquals(1, f.getLength(), "1 device expected");
+            // Check that the expected values are populated.
+            NodeList f = (NodeList) xpath.compile("//Device").evaluate(doc, XPathConstants.NODESET);
+            assertEquals(1, f.getLength(), "1 device expected");
 
+        }
     }
     @Test
     public void ShareUsageElement_CancelOnServerError() throws Exception {
@@ -568,17 +674,18 @@ public class ShareUsageElementTests {
         ((TestConnector)shareUsageElement.dataUploader).setResponseCode(500);
         Map<String, Object> evidenceData = new HashMap<>();
         evidenceData.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
-        FlowData data = pipeline.createFlowData();
-        data.addEvidence(evidenceData);
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidenceData);
 
-        shareUsageElement.process(data);
-        // Wait for the consumer task to finish.
-        assertNotNull(shareUsageElement.getSendDataFuture());
-        shareUsageElement.getSendDataFuture().get();
+            shareUsageElement.process(data);
+            // Wait for the consumer task to finish.
+            assertNotNull(shareUsageElement.getSendDataFuture());
+            shareUsageElement.getSendDataFuture().get();
 
-        // Assert
-        assertFalse(shareUsageElement.isCanceled());
-        assertEquals(0, shareUsageElement.evidenceCollection.size());
+            // Assert
+            assertFalse(shareUsageElement.isCanceled());
+            assertEquals(0, shareUsageElement.evidenceCollection.size());
+        }
     }
 
     @Test
@@ -598,15 +705,16 @@ public class ShareUsageElementTests {
         evidenceData.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
         evidenceData.put("header.User-Agent", "Azure Traffic Manager Endpoint Monitor");
 
-        FlowData data = pipeline.createFlowData();
-        data.addEvidence(evidenceData);
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidenceData);
 
-        // Act
-        shareUsageElement.process(data);
-        // Check that the consumer task did not start.
-        assertNull(shareUsageElement.getSendDataFuture());
+            // Act
+            shareUsageElement.process(data);
+            // Check that the consumer task did not start.
+            assertNull(shareUsageElement.getSendDataFuture());
 
-        assertEquals(0, connector.getBaos().size());
+            assertEquals(0, connector.getBaos().size());
+        }
     }
 
     @Test  @Disabled // we now throw exceptions for invalid data
@@ -672,30 +780,127 @@ public class ShareUsageElementTests {
         // (0x0018) - Cancel control character
         evidenceData.put(EVIDENCE_HEADER_USERAGENT_KEY, "<iPhone\u0018>");
 
-        FlowData data = pipeline.createFlowData();
-        data.addEvidence(evidenceData);
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidenceData);
 
-        // Act
-        shareUsageElement.process(data);
-        // Wait for the consumer task to finish.
-        assertNotNull(shareUsageElement.getSendDataFuture());
-        shareUsageElement.getSendDataFuture().get();
+            // Act
+            shareUsageElement.process(data);
+            // Wait for the consumer task to finish.
+            assertNotNull(shareUsageElement.getSendDataFuture());
+            shareUsageElement.getSendDataFuture().get();
 
-        ByteArrayOutputStream baos = connector.getBaos();
-        byte[] output = baos.toByteArray();
+            ByteArrayOutputStream baos = connector.getBaos();
+            byte[] output = baos.toByteArray();
 
-        DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
-        Document doc = builder.parse(new ByteArrayInputStream(output));
+            DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
+            Document doc = builder.parse(new ByteArrayInputStream(output));
 
-        // Check that the expected values are populated.
-        NodeList f = (NodeList) xpath.compile("//header[@Name='user-agent']").evaluate(doc, XPathConstants.NODESET);
-        assertEquals(1, f.getLength(), "1 user-agent header expected");
-        assertEquals("<iPhone\uFFFD>", f.item(0).getTextContent());
-        assertEquals("true", f.item(0).getAttributes().getNamedItem("replaced").getTextContent());
-        NodeList b = (NodeList) xpath.compile("//BadSchema").evaluate(doc, XPathConstants.NODESET);
-        assertEquals(0, b.getLength());
+            // Check that the expected values are populated.
+            NodeList f = (NodeList) xpath.compile("//header[@Name='user-agent']").evaluate(doc, XPathConstants.NODESET);
+            assertEquals(1, f.getLength(), "1 user-agent header expected");
+            assertEquals("<iPhone\\x0018>", f.item(0).getTextContent());
+            assertEquals("true", f.item(0).getAttributes().getNamedItem("escaped").getTextContent());
+            NodeList b = (NodeList) xpath.compile("//BadSchema").evaluate(doc, XPathConstants.NODESET);
+            assertEquals(0, b.getLength());
+        }
     }
     
+    /**
+     * Check that the invalid characters in a value are marked with the
+     * attribute the specification names, and that a value that is not too
+     * long is not marked as truncated.
+     */
+    @Test
+    public void ShareUsageElement_InvalidCharacter_EscapedAttributeOnly()
+        throws Exception {
+        Document doc = shareUserAgent("<iPhone" + (char) 0x18 + ">");
+
+        Node userAgent = doc.getElementsByTagName("header").item(0);
+        assertEquals("true",
+            userAgent.getAttributes().getNamedItem("escaped").getTextContent());
+        assertNull(userAgent.getAttributes().getNamedItem("replaced"));
+        assertNull(userAgent.getAttributes().getNamedItem("truncated"));
+        assertEquals("<iPhone\\x0018>", userAgent.getTextContent());
+    }
+
+    /**
+     * Check that a value that is too long is cut and marked as truncated,
+     * without the escaped attribute.
+     */
+    @Test
+    public void ShareUsageElement_LongValue_TruncatedAttributeOnly()
+        throws Exception {
+        StringBuilder longValue = new StringBuilder();
+        for (int i = 0; i < 10001; i++) {
+            longValue.append('a');
+        }
+        Document doc = shareUserAgent(longValue.toString());
+
+        Node userAgent = doc.getElementsByTagName("header").item(0);
+        assertEquals("true",
+            userAgent.getAttributes().getNamedItem("truncated").getTextContent());
+        assertNull(userAgent.getAttributes().getNamedItem("escaped"));
+        assertEquals(10000, userAgent.getTextContent().length());
+    }
+
+    /**
+     * Check that the values are written in the order the specification's
+     * example gives, and that no CDATA section or BadSchema element is used.
+     */
+    @Test
+    public void ShareUsageElement_RecordFollowsTheSpecificationExample()
+        throws Exception {
+        Document doc = shareUserAgent("<iPhone>");
+
+        Node device = doc.getElementsByTagName("Device").item(0);
+        List<String> names = new ArrayList<>();
+        for (int i = 0; i < device.getChildNodes().getLength(); i++) {
+            Node child = device.getChildNodes().item(i);
+            assertNotEquals(Node.CDATA_SECTION_NODE, child.getNodeType());
+            if (child.getNodeType() == Node.ELEMENT_NODE) {
+                names.add(child.getNodeName());
+            }
+        }
+        String[] expected = {"SessionId", "Sequence", "DateSent", "Version",
+            "Product", "FlowElement", "Language", "LanguageVersion",
+            "ClientIP", "ServerIP", "Platform"};
+        List<String> required = Arrays.asList("SessionId", "Sequence",
+            "DateSent", "Product", "Language", "LanguageVersion");
+        int last = -1;
+        for (String name : expected) {
+            int index = names.indexOf(name);
+            if (!required.contains(name)) {
+                // Only present when the Pipeline, the request and the
+                // platform give one.
+                if (index < 0) {
+                    continue;
+                }
+            }
+            assertTrue(index >= 0, name + " missing from " + names);
+            assertTrue(index > last, name + " out of order in " + names);
+            last = index;
+        }
+        assertEquals(0, doc.getElementsByTagName("BadSchema").getLength());
+        assertEquals(1, doc.getElementsByTagName("header").getLength());
+    }
+
+    private Document shareUserAgent(String userAgent) throws Exception {
+        createShareUsage(1, 1, 1, new ArrayList<>(),
+                new ArrayList<>(), new ArrayList<>());
+        Map<String, Object> evidenceData = new HashMap<>();
+        evidenceData.put(EVIDENCE_HEADER_USERAGENT_KEY, userAgent);
+        evidenceData.put("query.session-id", "session");
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidenceData);
+            shareUsageElement.process(data);
+            assertNotNull(shareUsageElement.getSendDataFuture());
+            shareUsageElement.getSendDataFuture().get();
+            byte[] output = connector.getBaos().toByteArray();
+            return docBuilderFactory.newDocumentBuilder()
+                .parse(new ByteArrayInputStream(output));
+        }
+    }
+
 /**
      * Test that the ShareUsageElement generates a session id if one is not
      * contained in the evidence and adds it to the results.
@@ -715,27 +920,28 @@ public class ShareUsageElementTests {
         Map<String, Object> evidenceData = new HashMap<>();
         evidenceData.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
 
-        FlowData data = pipeline.createFlowData();
-        data.addEvidence(evidenceData);
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidenceData);
 
-        // Act
-        sequenceElement.process(data);
-        shareUsageElement.process(data);
+            // Act
+            sequenceElement.process(data);
+            shareUsageElement.process(data);
 
-        // Wait for the consumer task to finish.
-        assertNotNull(shareUsageElement.getSendDataFuture());
-        shareUsageElement.getSendDataFuture().get();
+            // Wait for the consumer task to finish.
+            assertNotNull(shareUsageElement.getSendDataFuture());
+            shareUsageElement.getSendDataFuture().get();
 
-        ByteArrayOutputStream baos = connector.getBaos();
-        byte[] output = baos.toByteArray();
+            ByteArrayOutputStream baos = connector.getBaos();
+            byte[] output = baos.toByteArray();
 
-        DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
-        Document doc = builder.parse(new ByteArrayInputStream(output));
+            DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
+            Document doc = builder.parse(new ByteArrayInputStream(output));
 
-        NodeList f = (NodeList) xpath.compile("//SessionId").evaluate(doc, XPathConstants.NODESET);
-        assertEquals(1, f.getLength(), "Expecting 1 session ID");
-        NodeList ff = (NodeList) xpath.compile("//Sequence").evaluate(doc, XPathConstants.NODESET);
-        assertEquals("1", ff.item(0).getTextContent(), "Expecting Sequence ID 1");
+            NodeList f = (NodeList) xpath.compile("//SessionId").evaluate(doc, XPathConstants.NODESET);
+            assertEquals(1, f.getLength(), "Expecting 1 session ID");
+            NodeList ff = (NodeList) xpath.compile("//Sequence").evaluate(doc, XPathConstants.NODESET);
+            assertEquals("1", ff.item(0).getTextContent(), "Expecting Sequence ID 1");
+        }
     }
     
 /**
@@ -760,28 +966,29 @@ public class ShareUsageElementTests {
         evidenceData.put(Constants.EVIDENCE_SESSIONID, "abcdefg-hijklmn-opqrst-uvwxyz");
         evidenceData.put(Constants.EVIDENCE_SEQUENCE, 2);
 
-        FlowData data = pipeline.createFlowData();
-        data.addEvidence(evidenceData);
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidenceData);
 
-        // Act
-        sequenceElement.process(data);
-        shareUsageElement.process(data);
+            // Act
+            sequenceElement.process(data);
+            shareUsageElement.process(data);
 
-        // Wait for the consumer task to finish.
-        assertNotNull(shareUsageElement.getSendDataFuture());
-        shareUsageElement.getSendDataFuture().get();
+            // Wait for the consumer task to finish.
+            assertNotNull(shareUsageElement.getSendDataFuture());
+            shareUsageElement.getSendDataFuture().get();
 
-        ByteArrayOutputStream baos = connector.getBaos();
-        byte[] output = baos.toByteArray();
+            ByteArrayOutputStream baos = connector.getBaos();
+            byte[] output = baos.toByteArray();
 
-        DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
-        Document doc = builder.parse(new ByteArrayInputStream(output));
+            DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
+            Document doc = builder.parse(new ByteArrayInputStream(output));
 
-        NodeList f = (NodeList) xpath.compile("//SessionId").evaluate(doc, XPathConstants.NODESET);
-        assertEquals(1, f.getLength(), "Expecting 1 session ID");
-        assertEquals("abcdefg-hijklmn-opqrst-uvwxyz", f.item(0).getTextContent(), "Expecting session ID to be ...");
-        NodeList ff = (NodeList) xpath.compile("//Sequence").evaluate(doc, XPathConstants.NODESET);
-        assertEquals("3", ff.item(0).getTextContent(), "Expecting Sequence ID 1");
+            NodeList f = (NodeList) xpath.compile("//SessionId").evaluate(doc, XPathConstants.NODESET);
+            assertEquals(1, f.getLength(), "Expecting 1 session ID");
+            assertEquals("abcdefg-hijklmn-opqrst-uvwxyz", f.item(0).getTextContent(), "Expecting session ID to be ...");
+            NodeList ff = (NodeList) xpath.compile("//Sequence").evaluate(doc, XPathConstants.NODESET);
+            assertEquals("3", ff.item(0).getTextContent(), "Expecting Sequence ID 1");
+        }
     }
 
     /**
@@ -808,28 +1015,29 @@ public class ShareUsageElementTests {
         Map<String, Object> evidenceData = new HashMap<>();
         evidenceData.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
 
-        FlowData data = pipeline.createFlowData();
-        data.addEvidence(evidenceData);
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidenceData);
 
-        // collect multiple <Devices> documents
-        connector.getBaos().write("<allDevices>".getBytes(StandardCharsets.UTF_8));
-        // Act
-        for (int i=0; i < count; i++) {
-            shareUsageElement.process(data);
+            // collect multiple <Devices> documents
+            connector.getBaos().write("<allDevices>".getBytes(StandardCharsets.UTF_8));
+            // Act
+            for (int i=0; i < count; i++) {
+                shareUsageElement.process(data);
+            }
+            // Wait for the consumer task to finish.
+            shareUsageElement.close();
+
+            ByteArrayOutputStream baos = connector.getBaos();
+            baos.write("</allDevices>".getBytes(StandardCharsets.UTF_8));
+            byte[] output = baos.toByteArray();
+
+            DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
+            Document doc = builder.parse(new ByteArrayInputStream(output));
+
+            NodeList f = (NodeList) xpath.compile("//Device").evaluate(doc, XPathConstants.NODESET);
+            assertEquals(count, f.getLength(), "Expecting devices");
+
         }
-        // Wait for the consumer task to finish.
-        shareUsageElement.close();
-
-        ByteArrayOutputStream baos = connector.getBaos();
-        baos.write("</allDevices>".getBytes(StandardCharsets.UTF_8));
-        byte[] output = baos.toByteArray();
-
-        DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
-        Document doc = builder.parse(new ByteArrayInputStream(output));
-
-        NodeList f = (NodeList) xpath.compile("//Device").evaluate(doc, XPathConstants.NODESET);
-        assertEquals(count, f.getLength(), "Expecting devices");
-
     }
     /**
      * A consumer that has finished its drain loop with fewer entries left than
@@ -890,54 +1098,55 @@ public class ShareUsageElementTests {
         Map<String, Object> evidenceData = new HashMap<>();
         evidenceData.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
 
-        FlowData data = pipeline.createFlowData();
-        data.addEvidence(evidenceData);
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidenceData);
 
-        // collect multiple <Devices> documents
-        connector.getBaos().write("<allDevices>".getBytes(StandardCharsets.UTF_8));
+            // collect multiple <Devices> documents
+            connector.getBaos().write("<allDevices>".getBytes(StandardCharsets.UTF_8));
 
-        // close in a finally as well, so that an assertion failure before the
-        // Act step below still releases the lingering consumer.
-        try {
-            // Send one full batch and wait for the consumer to drain it.
-            for (int i = 0; i < minimumEntriesPerMessage; i++) {
-                shareUsageElement.process(data);
-            }
-            assertTrue(consumerHasDrainedQueue.await(LINGER_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS),
-                    "The consumer should have drained the first batch");
-
-            // Queue too few entries to start a consumer of their own, while the
-            // previous consumer's task has not completed yet.
-            for (int i = 0; i < remainder; i++) {
-                shareUsageElement.process(data);
-            }
-            assertEquals(remainder, shareUsageElement.evidenceCollection.size());
-            assertTrue(shareUsageElement.isRunning(),
-                    "The first consumer should still be reported as running");
-
-            // Act - close must flush the remainder.
-            shareUsageElement.close();
-            assertEquals(0, shareUsageElement.evidenceCollection.size(),
-                    "close should leave nothing queued");
-        } finally {
-            // Swallowed so that a failure above is still the reported one - the
-            // close in the Act step is the one under test.
+            // close in a finally as well, so that an assertion failure before the
+            // Act step below still releases the lingering consumer.
             try {
+                // Send one full batch and wait for the consumer to drain it.
+                for (int i = 0; i < minimumEntriesPerMessage; i++) {
+                    shareUsageElement.process(data);
+                }
+                assertTrue(consumerHasDrainedQueue.await(LINGER_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS),
+                        "The consumer should have drained the first batch");
+
+                // Queue too few entries to start a consumer of their own, while the
+                // previous consumer's task has not completed yet.
+                for (int i = 0; i < remainder; i++) {
+                    shareUsageElement.process(data);
+                }
+                assertEquals(remainder, shareUsageElement.evidenceCollection.size());
+                assertTrue(shareUsageElement.isRunning(),
+                        "The first consumer should still be reported as running");
+
+                // Act - close must flush the remainder.
                 shareUsageElement.close();
-            } catch (Exception exception) {
-                logger.warn("Exception closing the element under test", exception);
+                assertEquals(0, shareUsageElement.evidenceCollection.size(),
+                        "close should leave nothing queued");
+            } finally {
+                // Swallowed so that a failure above is still the reported one - the
+                // close in the Act step is the one under test.
+                try {
+                    shareUsageElement.close();
+                } catch (Exception exception) {
+                    logger.warn("Exception closing the element under test", exception);
+                }
             }
+
+            ByteArrayOutputStream baos = connector.getBaos();
+            baos.write("</allDevices>".getBytes(StandardCharsets.UTF_8));
+            byte[] output = baos.toByteArray();
+
+            DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
+            Document doc = builder.parse(new ByteArrayInputStream(output));
+
+            NodeList f = (NodeList) xpath.compile("//Device").evaluate(doc, XPathConstants.NODESET);
+            assertEquals(minimumEntriesPerMessage + remainder, f.getLength(), "Expecting devices");
         }
-
-        ByteArrayOutputStream baos = connector.getBaos();
-        baos.write("</allDevices>".getBytes(StandardCharsets.UTF_8));
-        byte[] output = baos.toByteArray();
-
-        DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
-        Document doc = builder.parse(new ByteArrayInputStream(output));
-
-        NodeList f = (NodeList) xpath.compile("//Device").evaluate(doc, XPathConstants.NODESET);
-        assertEquals(minimumEntriesPerMessage + remainder, f.getLength(), "Expecting devices");
     }
 
     @Test
@@ -962,29 +1171,30 @@ public class ShareUsageElementTests {
         Map<String, Object> evidenceData = new HashMap<>();
         evidenceData.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
 
-        FlowData data = pipeline.createFlowData();
-        data.addEvidence(evidenceData);
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidenceData);
 
-        // collect multiple <Devices> documents
-        connector.getBaos().write("<allDevices>".getBytes(StandardCharsets.UTF_8));
-        // Act
-        for (int i=0; i < count; i++) {
-            shareUsageElement.process(data);
+            // collect multiple <Devices> documents
+            connector.getBaos().write("<allDevices>".getBytes(StandardCharsets.UTF_8));
+            // Act
+            for (int i=0; i < count; i++) {
+                shareUsageElement.process(data);
+            }
+            // Wait for the consumer task to finish.
+            shareUsageElement.close();
+
+            ByteArrayOutputStream baos = connector.getBaos();
+            baos.write("</allDevices>".getBytes(StandardCharsets.UTF_8));
+            byte[] output = baos.toByteArray();
+
+            DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
+            Document doc = builder.parse(new ByteArrayInputStream(output));
+
+            NodeList f = (NodeList) xpath.compile("//Device").evaluate(doc, XPathConstants.NODESET);
+            // this shows that sending is ignoring the failures
+            assertEquals(count, f.getLength(), "Expecting devices");
+
         }
-        // Wait for the consumer task to finish.
-        shareUsageElement.close();
-
-        ByteArrayOutputStream baos = connector.getBaos();
-        baos.write("</allDevices>".getBytes(StandardCharsets.UTF_8));
-        byte[] output = baos.toByteArray();
-
-        DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
-        Document doc = builder.parse(new ByteArrayInputStream(output));
-
-        NodeList f = (NodeList) xpath.compile("//Device").evaluate(doc, XPathConstants.NODESET);
-        // this shows that sending is ignoring the failures
-        assertEquals(count, f.getLength(), "Expecting devices");
-
     }
     @Test
     public void CheckForContinueAndResumeWhenQueueFull() throws Exception {
@@ -1003,48 +1213,189 @@ public class ShareUsageElementTests {
         Map<String, Object> evidenceData = new HashMap<>();
         evidenceData.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
 
-        FlowData data = pipeline.createFlowData();
-        data.addEvidence(evidenceData);
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidenceData);
 
-        // the output document will collect multiple <Devices> documents,
-        // so we need to wrap them in a root element
-        connector.getBaos().write("<allDevices>".getBytes(StandardCharsets.UTF_8));
+            // the output document will collect multiple <Devices> documents,
+            // so we need to wrap them in a root element
+            connector.getBaos().write("<allDevices>".getBytes(StandardCharsets.UTF_8));
 
-        // Overwhelm the queue
-        int count = 55;
-        for (int i=0; i < count; i++) {
+            // Overwhelm the queue
+            int count = 55;
+            for (int i=0; i < count; i++) {
+                shareUsageElement.process(data);
+            }
+            long amountOfLostData;
+            assertTrue((amountOfLostData = shareUsageElement.lostData) > 0);
+            // wait for queue to drain
+            logger.info("Sleeping");
+            Thread.sleep(5000);
+
+            // send a new element which should reset the flag
             shareUsageElement.process(data);
+            assertEquals(amountOfLostData, shareUsageElement.lostData);
+
+            // overwhelm the queue again
+            for (int i=0; i < count; i++) {
+                shareUsageElement.process(data);
+            }
+            assertTrue(amountOfLostData < shareUsageElement.lostData);
+
+            // Wait for the consumer task to finish.
+            shareUsageElement.close();
+
+            // get the data output
+            ByteArrayOutputStream baos = connector.getBaos();
+            baos.write("</allDevices>".getBytes(StandardCharsets.UTF_8));
+            byte[] output = baos.toByteArray();
+
+            DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
+            Document doc = builder.parse(new ByteArrayInputStream(output));
+
+            NodeList f = (NodeList) xpath.compile("//Device").evaluate(doc, XPathConstants.NODESET);
+            // the count is what we put in minus what we have recorded as lost
+            assertEquals(2 * count + 1 - shareUsageElement.lostData, f.getLength(), "Expecting devices");
+
         }
-        long amountOfLostData;
-        assertTrue((amountOfLostData = shareUsageElement.lostData) > 0);
-        // wait for queue to drain
-        logger.info("Sleeping");
-        Thread.sleep(5000);
+    }
 
-        // send a new element which should reset the flag
-        shareUsageElement.process(data);
-        assertEquals(amountOfLostData, shareUsageElement.lostData);
+    /**
+     * Default settings share headers other than Cookie, the 51Degrees cookies
+     * and query string parameters, and other evidence, and leave out ordinary
+     * cookies, other parameters, session values and the evidence that is
+     * never shared.
+     */
+    @Test
+    public void ShareUsageElement_DefaultSharesOnlyAcceptedEvidence() throws Exception {
+        // Arrange
+        createShareUsage(
+            1,
+            1,
+            1,
+            new ArrayList<>(),
+            new ArrayList<>(),
+            new ArrayList<>());
 
-        // overwhelm the queue again
-        for (int i=0; i < count; i++) {
+        Map<String, Object> evidenceData = new HashMap<>();
+        evidenceData.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
+        evidenceData.put("header.user-agent", "some user agent");
+        evidenceData.put("cookie.51d_screenpixelswidth", "screen width");
+        evidenceData.put("query.51D_Test", "fiftyone parameter");
+        evidenceData.put("cookie.sessionid", "sessionid cookie");
+        evidenceData.put("header.cookie", "cookie header");
+        evidenceData.put("query.password", "password parameter");
+        evidenceData.put("query.id.email", "email parameter");
+        evidenceData.put("header.id.email", "email header");
+        evidenceData.put("id.salt", "salt value");
+        evidenceData.put("server.request-query", "whole query string");
+        evidenceData.put("server.request-path", "request path");
+        evidenceData.put("session.org.example.attribute", "session attribute");
+
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(evidenceData);
+
+            // Act
             shareUsageElement.process(data);
+            assertNotNull(shareUsageElement.getSendDataFuture());
+            shareUsageElement.getSendDataFuture().get();
         }
-        assertTrue(amountOfLostData < shareUsageElement.lostData);
 
-        // Wait for the consumer task to finish.
+        // Assert
+        String output = new String(
+            connector.getBaos().toByteArray(), StandardCharsets.UTF_8);
+        for (String shared : Arrays.asList(
+            "some user agent", "screen width", "fiftyone parameter")) {
+            assertTrue(output.contains(shared), shared);
+        }
+        for (String withheld : Arrays.asList(
+            "sessionid cookie", "cookie header", "password parameter",
+            "email parameter", "email header", "salt value",
+            "whole query string", "request path", "session attribute")) {
+            assertFalse(output.contains(withheld), withheld);
+        }
+    }
+
+    /**
+     * The default tracker does not share again a request that differs from
+     * one already shared only in its session id and sequence number.
+     */
+    @Test
+    public void ShareUsageElement_RepeatWithNewSequence_NotShared() throws Exception {
+        // Arrange
+        tracker = null;
+        createShareUsage(
+            1,
+            3,
+            1,
+            new ArrayList<>(),
+            new ArrayList<>(),
+            new ArrayList<>());
+
+        // Act
+        for (int sequence = 1; sequence <= 2; sequence++) {
+            Map<String, Object> evidenceData = new HashMap<>();
+            evidenceData.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
+            evidenceData.put("header.user-agent", "repeated user agent");
+            evidenceData.put(Constants.EVIDENCE_SESSIONID, "session " + sequence);
+            evidenceData.put(Constants.EVIDENCE_SEQUENCE, sequence);
+            try (FlowData data = pipeline.createFlowData()) {
+                data.addEvidence(evidenceData);
+                shareUsageElement.process(data);
+            }
+        }
         shareUsageElement.close();
 
-        // get the data output
-        ByteArrayOutputStream baos = connector.getBaos();
-        baos.write("</allDevices>".getBytes(StandardCharsets.UTF_8));
-        byte[] output = baos.toByteArray();
+        // Assert
+        Document doc = docBuilderFactory.newDocumentBuilder().parse(
+            new ByteArrayInputStream(connector.getBaos().toByteArray()));
+        NodeList devices = (NodeList) xpath.compile("//Device")
+            .evaluate(doc, XPathConstants.NODESET);
+        assertEquals(1, devices.getLength(), "1 device expected");
+    }
 
-        DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
-        Document doc = builder.parse(new ByteArrayInputStream(output));
+    /**
+     * The session cookie the element names is read by the tracker, whatever
+     * the case of its name, and never sent. With sessions tracked, the same
+     * evidence from a new session is shared again. The element accepts no
+     * Evidence, so the cookie reaches the tracker from what it finds rather
+     * than through its accepted Evidence.
+     */
+    @Test
+    public void ShareUsageElement_TrackSession_SessionCookie() throws Exception {
+        // Arrange
+        tracker = null;
+        createShareUsage(
+            1,
+            3,
+            1,
+            new ArrayList<>(),
+            new ArrayList<>(),
+            new ArrayList<>());
+        String sessionCookie = EVIDENCE_COOKIE_PREFIX + EVIDENCE_SEPERATOR +
+            DEFAULT_SESSION_COOKIE_NAME;
 
-        NodeList f = (NodeList) xpath.compile("//Device").evaluate(doc, XPathConstants.NODESET);
-        // the count is what we put in minus what we have recorded as lost
-        assertEquals(2 * count + 1 - shareUsageElement.lostData, f.getLength(), "Expecting devices");
+        // Act
+        for (int session = 1; session <= 2; session++) {
+            Map<String, Object> evidenceData = new HashMap<>();
+            evidenceData.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
+            evidenceData.put("header.user-agent", "repeated user agent");
+            evidenceData.put(sessionCookie, "session cookie " + session);
+            try (FlowData data = pipeline.createFlowData()) {
+                data.addEvidence(evidenceData);
+                shareUsageElement.process(data);
+            }
+        }
+        shareUsageElement.close();
 
+        // Assert
+        assertFalse(shareUsageElement.getEvidenceKeyFilter().include(sessionCookie));
+        byte[] output = connector.getBaos().toByteArray();
+        assertFalse(new String(output, StandardCharsets.UTF_8).contains(
+            "session cookie"), "the session cookie is never sent");
+        Document doc = docBuilderFactory.newDocumentBuilder().parse(
+            new ByteArrayInputStream(output));
+        NodeList devices = (NodeList) xpath.compile("//Device")
+            .evaluate(doc, XPathConstants.NODESET);
+        assertEquals(2, devices.getLength(), "1 device expected for each session");
     }
 }

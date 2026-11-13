@@ -29,6 +29,7 @@ import fiftyone.devicedetection.shared.testhelpers.data.DataValidator;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.engines.exceptions.NoValueException;
+import fiftyone.pipeline.engines.fiftyone.data.CloseableIterable;
 import fiftyone.pipeline.engines.fiftyone.data.ComponentMetaData;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
 
@@ -91,8 +92,16 @@ public class DataValidatorHash implements DataValidator {
         // rather than a fixed value, and that valid evidence produces at least
         // one result.
         int componentCount = 0;
-        for (ComponentMetaData component : engine.getComponents()) {
-            componentCount++;
+        // The collection holds the engine's data set until it is closed.
+        try (CloseableIterable<ComponentMetaData> components =
+                 engine.getComponents()) {
+            for (ComponentMetaData component : components) {
+                componentCount++;
+            }
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
         }
         int matchedUserAgents = elementData.getUserAgents().getValue().size();
         assertTrue(

@@ -22,6 +22,7 @@
 
 package fiftyone.devicedetection.examples.web;
 
+import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import fiftyone.devicedetection.shared.DeviceData;
 import fiftyone.pipeline.core.configuration.PipelineOptions;
 import fiftyone.pipeline.core.configuration.PipelineOptionsFactory;
@@ -34,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.File;
 import java.io.PrintWriter;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
@@ -46,9 +48,10 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * <p>
  * The configuration file for the pipeline is at src/main/webapp/WEB-INF/51Degrees-OnPrem.xml
  * <p>
- * The data file is taken from the 51DEGREES_DD_PATH environment variable, then
+ * The data file is taken from the _51DEGREES_DD_PATH environment variable, then
  * from TestDataFile (an environment variable or system property), and otherwise
- * the free Lite file in device-detection-data is used.
+ * the free Lite file in cxx/data/device-detection is used, which is downloaded
+ * before the server starts if it is missing.
  * <p>
  * The server listens on port 8081 and stops when Enter is pressed. If the PORT
  * environment variable is set, the server listens on that port instead and runs
@@ -59,9 +62,47 @@ public class GettingStartedWebOnPrem extends HttpServlet {
     public static String resourceBase = "examples/device-detection/web/getting-started.onprem/src/main/webapp";
     public static Logger logger = LoggerFactory.getLogger(GettingStartedWebOnPrem.class);
 
+    private static final String DD_PATH_VARIABLE = "_51DEGREES_DD_PATH";
+    private static final String OLD_DD_PATH_VARIABLE = "51DEGREES_DD_PATH";
+
+    /**
+     * Logs a warning when the configuration takes the data file from the
+     * deprecated name, which it does when that name is set and the name
+     * that replaces it is not.
+     */
+    private static void warnOfOldDataFileName() {
+        if (isSet(OLD_DD_PATH_VARIABLE) && isSet(DD_PATH_VARIABLE) == false) {
+            logger.warn(
+                "The environment variable " + OLD_DD_PATH_VARIABLE
+                + " is deprecated and " + DD_PATH_VARIABLE
+                + " replaces it. Set " + DD_PATH_VARIABLE
+                + " to the same value, as a later release may no longer "
+                + "read " + OLD_DD_PATH_VARIABLE + ".");
+        }
+    }
+
+    private static boolean isSet(String name) {
+        String value = System.getenv(name);
+        if (value == null || value.isEmpty()) {
+            value = System.getProperty(name);
+        }
+        return value != null && value.isEmpty() == false;
+    }
+
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
         logger.info("Running Example {}", GettingStartedWebOnPrem.class);
+        warnOfOldDataFileName();
+
+        // If the data file the configuration names is not at that path, it
+        // is searched for, and the free Lite file is downloaded if missing.
+        String dataFile = PipelineOptionsFactory.getOptionsFromFile(
+                getFilePath(resourceBase) + "/WEB-INF/51Degrees-OnPrem.xml")
+                .findAndSubstitute("DeviceDetectionHashEngine", "DataFile");
+        if (!new File(dataFile).exists()) {
+            System.setProperty("TestDataFile",
+                    DataFileHelper.getDataFileLocation(dataFile));
+        }
 
         String portEnv = System.getenv("PORT");
         if (portEnv != null) {

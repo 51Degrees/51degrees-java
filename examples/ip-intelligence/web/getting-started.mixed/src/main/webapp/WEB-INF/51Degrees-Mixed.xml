@@ -27,7 +27,7 @@
             <BuildParameters>
                 <AutoUpdate>false</AutoUpdate>
                 <CreateTempDataCopy>false</CreateTempDataCopy>
-                <DataFile>${TestDeviceDetectionDataFile:-cxx/device-detection-data/51Degrees-LiteV4.1.hash}</DataFile>
+                <DataFile>${TestDeviceDetectionDataFile:-cxx/data/device-detection/51Degrees-LiteV4.1.hash}</DataFile>
                 <PerformanceProfile>LowMemory</PerformanceProfile>
             </BuildParameters>
             <BuilderName>DeviceDetectionHashEngine</BuilderName>
@@ -36,13 +36,13 @@
             <BuildParameters>
                 <AutoUpdate>false</AutoUpdate>
                 <CreateTempDataCopy>false</CreateTempDataCopy>
-                <DataFile>${TestDataFile:-cxx/ip-intelligence-data/51Degrees-EnterpriseIpiV41.ipi}</DataFile>
+                <DataFile>${TestDataFile:-cxx/data/ip-intelligence/51Degrees-EnterpriseIpiV41.ipi}</DataFile>
                 <PerformanceProfile>LowMemory</PerformanceProfile>
             </BuildParameters>
             <BuilderName>IPIntelligenceOnPremiseEngine</BuilderName>
         </Element>
         <Element>
-            <!-- Needed to obtain additional information from 51Degrees.core.json -->
+            <!-- Needed to obtain additional information from /51dpipeline/json -->
             <BuilderName>JsonBuilderElement</BuilderName>
         </Element>
         <Element>

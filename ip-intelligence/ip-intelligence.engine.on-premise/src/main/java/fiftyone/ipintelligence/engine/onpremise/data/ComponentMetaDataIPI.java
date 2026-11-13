@@ -22,6 +22,7 @@
 
 package fiftyone.ipintelligence.engine.onpremise.data;
 
+import fiftyone.pipeline.engines.fiftyone.data.CloseableIterable;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
 import fiftyone.ipintelligence.engine.onpremise.interop.PropertyIterable;
 import fiftyone.ipintelligence.engine.onpremise.interop.swig.ComponentMetaDataSwig;
@@ -77,7 +78,7 @@ public class ComponentMetaDataIPI implements ComponentMetaData {
     }
 
     @Override
-    public Iterable<FiftyOneAspectPropertyMetaData> getProperties() {
+    public CloseableIterable<FiftyOneAspectPropertyMetaData> getProperties() {
         return new PropertyIterable(
             engine,
             properties,

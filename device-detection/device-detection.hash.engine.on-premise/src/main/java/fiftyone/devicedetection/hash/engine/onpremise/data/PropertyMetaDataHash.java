@@ -22,6 +22,7 @@
 
 package fiftyone.devicedetection.hash.engine.onpremise.data;
 
+import fiftyone.pipeline.engines.fiftyone.data.CloseableIterable;
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.Swig;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.ValueIterable;
@@ -136,7 +137,7 @@ public class PropertyMetaDataHash implements FiftyOneAspectPropertyMetaData {
     }
 
     @Override
-    public Iterable<ValueMetaData> getValues() {
+    public CloseableIterable<ValueMetaData> getValues() {
         return new ValueIterable(
             engine,
             engine.getMetaData().getValuesForProperty(source));

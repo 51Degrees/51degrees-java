@@ -130,8 +130,8 @@ public class FiftyOneAspectPropertyMetaDataDefault
     }
 
     @Override
-    public Iterable<ValueMetaData> getValues() {
-        return () -> {
+    public CloseableIterable<ValueMetaData> getValues() {
+        return new CloseableIterableDefault<ValueMetaData>(() -> {
             Iterator<ValueMetaDataDefault> innerValues =
                     values.iterator();
             return new Iterator<ValueMetaData>() {
@@ -145,7 +145,7 @@ public class FiftyOneAspectPropertyMetaDataDefault
                     return innerValues.next();
                 }
             };
-        };
+        });
     }
 
     @Override

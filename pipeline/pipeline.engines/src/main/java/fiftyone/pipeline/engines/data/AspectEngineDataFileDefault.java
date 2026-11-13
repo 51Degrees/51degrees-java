@@ -41,6 +41,7 @@ public class AspectEngineDataFileDefault implements AspectEngineDataFile {
     private DataFileConfiguration configuration;
     private DataUpdateService dataUpdateService = null;
     private String tempDataDirPath;
+    private String engineTypeName;
 
     @Override
     public String getIdentifier() {
@@ -85,6 +86,23 @@ public class AspectEngineDataFileDefault implements AspectEngineDataFile {
     @Override
     public void setTempDataFilePath(String path) {
         this.tempDataFilePath = path;
+    }
+
+    /**
+     * The type name of the engine this data file is for, which the update
+     * service logs until the engine is set.
+     * @return the engine type name, or null if it is not known
+     */
+    public String getEngineTypeName() {
+        return engineTypeName;
+    }
+
+    /**
+     * Set the type name of the engine this data file is for.
+     * @param engineTypeName the engine type name
+     */
+    public void setEngineTypeName(String engineTypeName) {
+        this.engineTypeName = engineTypeName;
     }
 
     @Override

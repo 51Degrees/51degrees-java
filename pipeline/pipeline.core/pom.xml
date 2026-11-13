@@ -38,7 +38,7 @@
 
     <name>51Degrees :: Pipeline :: Core</name>
     <description>Core library for the 51Degrees Pipeline API</description>
-    <url>https://51degrees.com?utm_source=maven&amp;utm_medium=package&amp;utm_campaign=51degrees-java&amp;utm_content=pipeline.core-pom.xml&amp;utm_term=url</url>
+    <url>https://github.com/51Degrees/51degrees-java</url>
 
     <dependencies>
         <dependency>
@@ -88,6 +88,19 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- The configuration schema, from the configuration-validation
+                 submodule rather than a copy. -->
+            <resource>
+                <directory>configuration-validation</directory>
+                <includes>
+                    <include>pipelineOptions.xsd</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

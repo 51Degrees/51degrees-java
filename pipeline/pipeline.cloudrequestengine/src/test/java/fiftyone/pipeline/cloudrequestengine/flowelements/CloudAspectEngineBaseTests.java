@@ -22,7 +22,6 @@
 
 package fiftyone.pipeline.cloudrequestengine.flowelements;
 
-import static fiftyone.pipeline.cloudrequestengine.Constants.Messages.ExceptionFailedToLoadProperties;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -30,10 +29,12 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import fiftyone.common.testhelpers.TestLogger;
 import fiftyone.common.testhelpers.TestLoggerFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,6 +58,7 @@ import fiftyone.pipeline.core.flowelements.PipelineBuilder;
 import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectDataBase;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
+import fiftyone.pipeline.engines.data.MultiProfileData;
 import fiftyone.pipeline.engines.flowelements.AspectEngine;
 import fiftyone.pipeline.engines.flowelements.AspectEngineBase;
 
@@ -104,6 +106,55 @@ public class CloudAspectEngineBaseTests {
                 fail("'json' value should not be null or empty if " +
                         "this method is called");                
             }        
+        }
+    }
+
+    public class TestProfiles extends AspectDataBase
+        implements MultiProfileData<TestData> {
+        private final List<TestData> profiles = new ArrayList<>();
+
+        public TestProfiles(
+            Logger logger,
+            FlowData flowData,
+            AspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine) {
+            super(logger, flowData, engine);
+        }
+
+        @Override
+        public List<TestData> getProfiles() {
+            return profiles;
+        }
+
+        @Override
+        public void addProfile(TestData profile) {
+            profiles.add(profile);
+        }
+    }
+
+    private class TestKeyedInstance
+        extends PropertyKeyedCloudEngineBase<TestProfiles, TestData> {
+        public TestKeyedInstance() {
+            super(loggerFactory.getLogger("TestKeyedInstance"), new ElementDataFactory<TestProfiles>() {
+                @Override
+                public TestProfiles create(FlowData flowData, FlowElement<TestProfiles, ?> flowElement) {
+                    return new TestProfiles(null, flowData, (AspectEngine<TestProfiles, ?>) flowElement);
+                }
+            });
+        }
+
+        @Override
+        public String getElementDataKey() {
+            return "test";
+        }
+
+        @Override
+        protected TestData createProfileData(FlowData flowData) {
+            return new TestData(null, flowData, this);
+        }
+
+        @Override
+        protected void unmanagedResourcesCleanup() {
+
         }
     }
 
@@ -181,9 +232,15 @@ public class CloudAspectEngineBaseTests {
     }
 
     @AfterEach
-    public void cleanUp() {
-        loggerFactory.assertMaxWarnings(maxWarnings);
-        loggerFactory.assertMaxErrors(maxErrors);
+    public void cleanUp() throws Exception {
+        try {
+            loggerFactory.assertMaxWarnings(maxWarnings);
+            loggerFactory.assertMaxErrors(maxErrors);
+        } finally {
+            if (pipeline != null) {
+                pipeline.close();
+            }
+        }
     }
     
     private <T extends ElementPropertyMetaData> boolean propertiesContainName(
@@ -221,31 +278,26 @@ public class CloudAspectEngineBaseTests {
     }
     
     /**
-    * Test that an exception is thrown by the Properties auto property if 
-    * the cloud request engine returns no properties.
-    * @throws Exception 
+    * A resource key that includes no products at all includes none for this
+    * engine, so the Pipeline builds, the engine has empty property metadata
+    * and the missing product is logged once.
+    * @throws Exception
     */
     @Test
     public void loadProperties_noProperties() throws Exception {
-        try {
-            createPipeline();
-            fail("RuntimeException should be thrown");
-        } catch (RuntimeException ex){
-            assertEquals(
-                String.format(
-                    ExceptionFailedToLoadProperties,
-                    "test",
-                    "test"),
-                ex.getMessage()
-            );
-        }
-        maxErrors = 1;
+        createPipeline();
+
+        assertEquals(0, engine.getProperties().size());
+        assertProductMissingLoggedOnce();
+        maxWarnings = 1;
     }
-    
+
     /**
-     * Test that an exception is thrown by the Properties auto property if
-     * the cloud engine only returns properties for other engines.
-     * @throws Exception 
+     * A resource key whose products hold only other engines' properties
+     * does not include this engine's product. The Pipeline builds, the engine
+     * has empty property metadata, and the missing product is logged once
+     * however often the metadata is read.
+     * @throws Exception
      */
     @Test
     public void loadProperties_wrongProperties() throws Exception {
@@ -257,20 +309,154 @@ public class CloudAspectEngineBaseTests {
         devicePropertyData.properties = properties;
         propertiesReturnedByRequestEngine.put("test2", devicePropertyData);
 
-        try {
-            createPipeline();
-            fail("RuntimeException should be thrown");
-        } catch (RuntimeException ex){
-            assertEquals(
-                String.format(
-                    ExceptionFailedToLoadProperties,
-                    "test",
-                    "test"),
-                ex.getMessage()
-            );
-        }
+        createPipeline();
 
-        maxErrors = 1;
+        for (int i = 0; i < 3; i++) {
+            assertEquals(0, engine.getProperties().size());
+        }
+        assertProductMissingLoggedOnce();
+        maxWarnings = 1;
+    }
+
+    /**
+     * Accessible properties the Cloud Request Engine has not fetched yet,
+     * after a failure at build that can pass, are not a missing product.
+     * The Pipeline builds, the metadata is empty and nothing is logged, and
+     * the metadata is read again once the properties are known rather than
+     * kept empty.
+     * @throws Exception
+     */
+    @Test
+    public void loadProperties_notLoaded() throws Exception {
+        propertiesReturnedByRequestEngine = null;
+        createPipeline();
+
+        assertEquals(0, engine.getProperties().size());
+
+        List<AccessiblePropertyMetaData.PropertyMetaData> properties = new ArrayList<>();
+        properties.add(new AccessiblePropertyMetaData.PropertyMetaData("ismobile", "Boolean", null, null));
+        AccessiblePropertyMetaData.ProductMetaData product = new AccessiblePropertyMetaData.ProductMetaData();
+        product.properties = properties;
+        Map<String, AccessiblePropertyMetaData.ProductMetaData> products = new HashMap<>();
+        products.put("test", product);
+        requestEngine.setPublicProperties(products);
+
+        assertEquals(1, engine.getProperties().size());
+        assertTrue(propertiesContainName(engine.getProperties(), "ismobile"));
+    }
+
+    /**
+     * The Pipeline's map of available properties, built before the Cloud
+     * Request Engine knows the accessible properties, holds the engine's
+     * properties once they are known rather than keeping what it first saw.
+     * @throws Exception
+     */
+    @Test
+    public void elementAvailableProperties_ReadAgainOnceKnown() throws Exception {
+        propertiesReturnedByRequestEngine = null;
+        createPipeline();
+
+        assertTrue(
+            pipeline.getElementAvailableProperties().get("test") == null ||
+            pipeline.getElementAvailableProperties().get("test").isEmpty());
+
+        List<AccessiblePropertyMetaData.PropertyMetaData> properties = new ArrayList<>();
+        properties.add(new AccessiblePropertyMetaData.PropertyMetaData("ismobile", "Boolean", null, null));
+        AccessiblePropertyMetaData.ProductMetaData product = new AccessiblePropertyMetaData.ProductMetaData();
+        product.properties = properties;
+        Map<String, AccessiblePropertyMetaData.ProductMetaData> products = new HashMap<>();
+        products.put("test", product);
+        requestEngine.setPublicProperties(products);
+
+        assertTrue(pipeline.getElementAvailableProperties().get("test")
+            .containsKey("ismobile"));
+    }
+
+    /**
+     * A property keyed engine, such as the hardware profile engine, whose
+     * product the resource key does not include builds, gives no profiles
+     * for a response that holds nothing for it, and logs nothing on each
+     * request.
+     * @throws Exception
+     */
+    @Test
+    public void propertyKeyed_productMissing_noProfiles() throws Exception {
+        List<AccessiblePropertyMetaData.PropertyMetaData> properties = new ArrayList<>();
+        properties.add(new AccessiblePropertyMetaData.PropertyMetaData("ismobile", "Boolean", null, null));
+        AccessiblePropertyMetaData.ProductMetaData otherProduct = new AccessiblePropertyMetaData.ProductMetaData();
+        otherProduct.properties = properties;
+        propertiesReturnedByRequestEngine.put("test2", otherProduct);
+        TestKeyedInstance keyed = new TestKeyedInstance();
+        requestEngine = new TestRequestEngine();
+        requestEngine.setPublicProperties(propertiesReturnedByRequestEngine);
+        pipeline = new PipelineBuilder(loggerFactory)
+            .addFlowElement(requestEngine)
+            .addFlowElement(keyed)
+            .build();
+
+        for (int i = 0; i < 3; i++) {
+            TestProfiles profiles = new TestProfiles(
+                null,
+                Mockito.mock(FlowData.class),
+                keyed);
+            keyed.processCloudEngine(
+                Mockito.mock(FlowData.class),
+                profiles,
+                "{ \"test2\": { \"ismobile\": true } }");
+            assertEquals(0, profiles.getProfiles().size());
+        }
+        assertEquals(0, keyed.getProperties().size());
+        assertProductMissingLoggedOnce();
+        maxWarnings = 1;
+    }
+
+    /**
+     * A property keyed engine whose product the resource key includes gives
+     * no profiles, and throws nothing, for a response that holds no part
+     * for it or a part without profiles, as the Processing section of the
+     * cloud aspect engine specification says.
+     * @throws Exception
+     */
+    @Test
+    public void propertyKeyed_productPresent_noProfiles() throws Exception {
+        List<AccessiblePropertyMetaData.PropertyMetaData> properties = new ArrayList<>();
+        properties.add(new AccessiblePropertyMetaData.PropertyMetaData("ismobile", "Boolean", null, null));
+        AccessiblePropertyMetaData.ProductMetaData product = new AccessiblePropertyMetaData.ProductMetaData();
+        product.properties = properties;
+        propertiesReturnedByRequestEngine.put("test", product);
+        TestKeyedInstance keyed = new TestKeyedInstance();
+        requestEngine = new TestRequestEngine();
+        requestEngine.setPublicProperties(propertiesReturnedByRequestEngine);
+        pipeline = new PipelineBuilder(loggerFactory)
+            .addFlowElement(requestEngine)
+            .addFlowElement(keyed)
+            .build();
+
+        for (String response : Arrays.asList(
+            "{ \"test2\": { \"ismobile\": true } }",
+            "{ \"test\": { } }")) {
+            TestProfiles profiles = new TestProfiles(
+                null,
+                Mockito.mock(FlowData.class),
+                keyed);
+            keyed.processCloudEngine(
+                Mockito.mock(FlowData.class),
+                profiles,
+                response);
+            assertEquals(0, profiles.getProfiles().size(), response);
+        }
+    }
+
+    private void assertProductMissingLoggedOnce() {
+        List<String> errors = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
+        for (TestLogger logger : loggerFactory.loggers) {
+            errors.addAll(logger.errorsLogged);
+            warnings.addAll(logger.warningsLogged);
+        }
+        assertEquals(1, warnings.size(), warnings.toString());
+        assertTrue(warnings.get(0).contains("'test'"), warnings.get(0));
+        assertEquals(0, errors.size(), errors.toString());
     }
 
     /**
@@ -370,9 +556,10 @@ public class CloudAspectEngineBaseTests {
 			        .addFlowElement(mockRequestEngine)
 			        .addFlowElement(mockTestInstance)
 			        .build();
-			FlowData flowData = pipeline.createFlowData();
-			flowData.addEvidence("query.user-agent", "iPhone");
-			flowData.process();
+			try (FlowData flowData = pipeline.createFlowData()) {
+				flowData.addEvidence("query.user-agent", "iPhone");
+				flowData.process();
+			}
 			
 		} catch (Exception e) {
 			fail("An exception has occurred here.");
@@ -422,9 +609,10 @@ public class CloudAspectEngineBaseTests {
 			        .addFlowElement(mockRequestEngine)
 			        .addFlowElement(mockTestInstance)
 			        .build();
-			FlowData flowData = pipeline.createFlowData();
-			flowData.addEvidence("query.user-agent", "iPhone");
-			flowData.process();
+			try (FlowData flowData = pipeline.createFlowData()) {
+				flowData.addEvidence("query.user-agent", "iPhone");
+				flowData.process();
+			}
 			
 		} catch (Exception e) {
 			fail("An exception has occurred here.");
@@ -480,9 +668,10 @@ public class CloudAspectEngineBaseTests {
 			        .addFlowElement(mockTestInstance)
 			        .addFlowElement(mockRequestEngine)
 			        .build();
-			FlowData flowData = pipeline.createFlowData();
-			flowData.addEvidence("query.user-agent", "iPhone");
-			flowData.process();
+			try (FlowData flowData = pipeline.createFlowData()) {
+				flowData.addEvidence("query.user-agent", "iPhone");
+				flowData.process();
+			}
 			fail("Expected exception was not thrown");
 			
 		} catch (Exception ex) {

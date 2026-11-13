@@ -30,6 +30,7 @@ import java.io.File;
 import java.io.IOException;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 
 public class FileUtilsTest {
 
@@ -47,5 +48,69 @@ public class FileUtilsTest {
         assertEquals(". and user dir should be the same", f.getCanonicalPath(), g.getCanonicalPath());
     }
 
+    private static final String NEW_PATH_NAME = "_51DEGREES_IPI_PATH";
+    private static final String OLD_PATH_NAME = "51DEGREES_IPI_PATH";
 
+    /**
+     * System properties stand in for the environment variables, because
+     * the lookup reads either and a test cannot set an environment
+     * variable.
+     */
+    @Test
+    public void oldPathNameIsReadWhenNewIsNotSet() throws IOException {
+        assumePathNamesNotInEnvironment();
+        String savedNew = System.clearProperty(NEW_PATH_NAME);
+        String savedOld = System.clearProperty(OLD_PATH_NAME);
+        File file = File.createTempFile("old-path-name", ".ipi");
+        try {
+            System.setProperty(OLD_PATH_NAME, file.getPath());
+            assertEquals(file, FileUtils.getHashFile());
+        } finally {
+            restore(NEW_PATH_NAME, savedNew);
+            restore(OLD_PATH_NAME, savedOld);
+            file.delete();
+        }
+    }
+
+    @Test
+    public void newPathNameWinsOverOld() throws IOException {
+        assumePathNamesNotInEnvironment();
+        String savedNew = System.clearProperty(NEW_PATH_NAME);
+        String savedOld = System.clearProperty(OLD_PATH_NAME);
+        File newFile = File.createTempFile("new-path-name", ".ipi");
+        File oldFile = File.createTempFile("old-path-name", ".ipi");
+        try {
+            System.setProperty(NEW_PATH_NAME, newFile.getPath());
+            System.setProperty(OLD_PATH_NAME, oldFile.getPath());
+            assertEquals(newFile, FileUtils.getHashFile());
+        } finally {
+            restore(NEW_PATH_NAME, savedNew);
+            restore(OLD_PATH_NAME, savedOld);
+            newFile.delete();
+            oldFile.delete();
+        }
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    public void oldPathConstantKeepsItsValue() throws Exception {
+        assertEquals(OLD_PATH_NAME, FileUtils.IPI_PATH_ENV_VAR);
+        assertTrue(FileUtils.class.getField("IPI_PATH_ENV_VAR")
+            .isAnnotationPresent(Deprecated.class));
+        assertEquals(NEW_PATH_NAME,
+            FileUtils.class.getField("IPI_PATH_VARIABLE").get(null));
+    }
+
+    private static void assumePathNamesNotInEnvironment() {
+        assumeTrue(System.getenv(NEW_PATH_NAME) == null);
+        assumeTrue(System.getenv(OLD_PATH_NAME) == null);
+    }
+
+    private static void restore(String name, String value) {
+        if (value == null) {
+            System.clearProperty(name);
+        } else {
+            System.setProperty(name, value);
+        }
+    }
 }

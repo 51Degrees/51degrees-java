@@ -63,6 +63,13 @@ public class PipelineBuilder
     private final Set<Class<?>> elementBuilders;
 
     /**
+     * Element builders prepared in code, which
+     * {@link #buildFromConfiguration(PipelineOptions)} uses in preference to
+     * constructing new ones.
+     */
+    private final List<Object> preparedBuilders = new ArrayList<>();
+
+    /**
      * Construct a new builder.
      */
     public PipelineBuilder() {
@@ -78,6 +85,27 @@ public class PipelineBuilder
     public PipelineBuilder(ILoggerFactory loggerFactory) {
         super(loggerFactory);
         elementBuilders = getAvailableElementBuilders();
+    }
+
+    /**
+     * Add an element builder prepared in code, which
+     * {@link #buildFromConfiguration(PipelineOptions)} uses for any element
+     * whose builder name resolves to the builder's type, in place of
+     * constructing a new builder. Code can then set the options a
+     * configuration file cannot express, such as the sources and
+     * translations of a Translation Engine, and the configuration sets the
+     * remaining options and builds the element.
+     * <p>
+     * The builder's type must still be one the configuration can name, being
+     * annotated with {@link ElementBuilder}. When more than one prepared
+     * builder is of that type, the first added is used, and every element
+     * of that type in the configuration uses the same instance.
+     * @param builder the prepared builder
+     * @return this builder
+     */
+    public PipelineBuilder addElementBuilder(Object builder) {
+        preparedBuilders.add(getNotNull(builder, "builder cannot be null"));
+        return this;
     }
 
     @Override
@@ -122,9 +150,12 @@ public class PipelineBuilder
                         "The following builder parameters could not be processed: "
                                 + stringJoin(builderParams, ","));
             }
-        } catch (PipelineConfigurationException ex) {
-            logger.debug("Problem with pipeline configuration, " +
-                "failed to create pipeline.", ex);
+        } catch (Exception | Error ex) {
+            if (ex instanceof PipelineConfigurationException) {
+                logger.debug("Problem with pipeline configuration, " +
+                    "failed to create pipeline.", ex);
+            }
+            closeAfterFailure(flowElements, ex);
             throw ex;
         }
         // As the elements are all created within the builder, the user
@@ -134,7 +165,32 @@ public class PipelineBuilder
 
         // Build and return the pipeline using the list of flow elements
         // that have been created from the configuration options.
-        return build();
+        try {
+            return build();
+        } catch (Exception | Error ex) {
+            closeAfterFailure(flowElements, ex);
+            throw ex;
+        }
+    }
+
+    /**
+     * Closes the elements built so far when building from configuration
+     * fails, as no pipeline exists to close them. A failure to close one is
+     * added to the original failure, which is the one reported.
+     * @param elements the elements built so far, emptied once closed
+     * @param failure the reason building failed
+     */
+    private static void closeAfterFailure(
+        List<FlowElement> elements,
+        Throwable failure) {
+        for (FlowElement element : elements) {
+            try {
+                element.close();
+            } catch (Exception e) {
+                failure.addSuppressed(e);
+            }
+        }
+        elements.clear();
     }
 
     /**
@@ -216,10 +272,13 @@ public class PipelineBuilder
         }
 
 
-        // A service collection does not exist in the builder, so try
-        // to construct a builder instance from the assemblies
-        // currently loaded.
-        Object builderInstance = getBuilder(builderType);
+        // Use a builder prepared in code if there is one, because it can
+        // carry options a configuration file cannot express. Otherwise
+        // construct a new builder.
+        Object builderInstance = getPreparedBuilder(builderType);
+        if (builderInstance == null) {
+            builderInstance = getBuilder(builderType);
+        }
         if (builderInstance == null) {
             throw new PipelineConfigurationException(
                 "Builder '" + builderType.getName() + "' for " +
@@ -325,10 +384,14 @@ public class PipelineBuilder
         try {
             result = buildMethod.invoke(builderInstance, parameters.toArray());
         } catch (Exception e) {
+            // Keep the build method's own message, which says why the
+            // element could not be built.
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
             throw new PipelineConfigurationException(
                 "Failed to build " + elementLocation + " using " +
-                    "'" + builderType.getName() + "'.",
-                e);
+                    "'" + builderType.getName() + "'." +
+                    (cause.getMessage() == null ? "" : " " + cause.getMessage()),
+                cause);
         }
         if (result == null) {
             throw new PipelineConfigurationException(
@@ -377,17 +440,24 @@ public class PipelineBuilder
         // Iterate through the sub elements, creating them and
         // adding them to the list.
         int subCounter = 0;
-        for (ElementOptions subElement : elementOptions.subElements) {
-            if (subElement.subElements != null &&
-                subElement.subElements.size() > 0) {
-                throw new PipelineConfigurationException(
-                    "ElementOptions " + elementIndex + " contains nested " +
-                        "sub elements. This is not supported.");
-            } else {
-                addElementToList(parallelElements, subElement,
-                    "element " + subCounter + " in element " + elementIndex);
+        try {
+            for (ElementOptions subElement : elementOptions.subElements) {
+                if (subElement.subElements != null &&
+                    subElement.subElements.size() > 0) {
+                    throw new PipelineConfigurationException(
+                        "ElementOptions " + elementIndex + " contains nested " +
+                            "sub elements. This is not supported.");
+                } else {
+                    addElementToList(parallelElements, subElement,
+                        "element " + subCounter + " in element " + elementIndex);
+                }
+                subCounter++;
             }
-            subCounter++;
+        } catch (RuntimeException | Error ex) {
+            // These elements are not in the builder's list yet, so they are
+            // closed here.
+            closeAfterFailure(parallelElements, ex);
+            throw ex;
         }
         // Now we've created all the elements, create the
         // ParallelElements instance and add it to the pipeline's
@@ -493,6 +563,21 @@ public class PipelineBuilder
                 "Failed to create builder '" + builderType.getName() + 
                 "'. See inner, 'cause' exception for more details", e);
         }
+    }
+
+    /**
+     * Get the first builder added with {@link #addElementBuilder(Object)}
+     * that is an instance of the builder type provided.
+     * @param builderType type of builder to find
+     * @return the prepared builder, or null if none is of the type
+     */
+    private Object getPreparedBuilder(Class<?> builderType) {
+        for (Object builder : preparedBuilders) {
+            if (builderType.isInstance(builder)) {
+                return builder;
+            }
+        }
+        return null;
     }
 
     /**
@@ -946,10 +1031,15 @@ public class PipelineBuilder
         try {
             parsedValue = parse.invoke(new Object(), value);
         } catch (Exception e) {
+            // Keep the parse method's own message, which says what is wrong
+            // with the value.
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
             throw new PipelineConfigurationException(
                 errorTextPrefix + ". Failed to parse value " +
                     "'" + value + "' using the static " +
-                    "'parse' method.");
+                    "'parse' method." +
+                    (cause.getMessage() == null ? "" : " " + cause.getMessage()),
+                cause);
         }
         return parsedValue;
     }

@@ -22,6 +22,7 @@
 
 package fiftyone.ipintelligence.engine.onpremise.data;
 
+import fiftyone.pipeline.engines.fiftyone.data.CloseableIterable;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
 import fiftyone.ipintelligence.engine.onpremise.interop.Swig;
 import fiftyone.ipintelligence.engine.onpremise.interop.ValueIterable;
@@ -136,7 +137,7 @@ public class PropertyMetaDataIPI implements FiftyOneAspectPropertyMetaData {
     }
 
     @Override
-    public Iterable<ValueMetaData> getValues() {
+    public CloseableIterable<ValueMetaData> getValues() {
         return new ValueIterable(
             engine,
             engine.getMetaData().getValuesForProperty(source));

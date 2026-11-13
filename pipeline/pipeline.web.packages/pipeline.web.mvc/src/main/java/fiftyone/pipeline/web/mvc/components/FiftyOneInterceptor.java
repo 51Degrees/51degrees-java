@@ -51,6 +51,7 @@ import java.io.File;
 
 import static fiftyone.pipeline.web.Constants.CORE_JS_NAME;
 import static fiftyone.pipeline.web.Constants.CORE_JSON_NAME;
+import static fiftyone.pipeline.web.Constants.DEFAULT_JSON_PATH;
 
 /**
  * The 51Degrees middleware component.
@@ -93,6 +94,10 @@ public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
             configFileName = Constants.DEFAULT_CONFIG_FILE;
         }
 
+        String jsonPath = config.getJsonPath() == null ||
+            config.getJsonPath().isEmpty() ?
+            DEFAULT_JSON_PATH : config.getJsonPath();
+
         File configFile = new File(configFileName);
         PipelineBuilder builder = new PipelineBuilder()
             .addService(new DataUpdateServiceDefault(
@@ -104,9 +109,13 @@ public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
             // Bind the configuration to a pipeline options instance
             PipelineOptions options = (PipelineOptions) unmarshaller.unmarshal(configFile);
             pipeline = StartupHelpers.buildFromConfiguration(
-                    builder, 
-                    options, 
-                    config.getClientsidePropertiesEnabled());
+                    builder,
+                    options,
+                    config.getClientsidePropertiesEnabled(),
+                    null,
+                    jsonPath,
+                    config.getSequenceElementEnabled(),
+                    config.getSetHeadersElementEnabled());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -114,11 +123,38 @@ public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
         resultService.setPipeline(pipeline);
         clientsidePropertyService.setPipeline(pipeline);
         fiftyOneJsService.enable(config.getClientsidePropertiesEnabled());
+        fiftyOneJsService.setPaths(config.getJavaScriptPath(), jsonPath);
     }
 
     public static void enableClientsideProperties(ViewControllerRegistry viewControllerRegistry) {
         viewControllerRegistry.addViewController("/" + CORE_JS_NAME);
+        viewControllerRegistry.addViewController(DEFAULT_JSON_PATH);
         viewControllerRegistry.addViewController("/" + CORE_JSON_NAME);
+    }
+
+    /**
+     * Map the JavaScript and JSON paths that are not the defaults, which
+     * the application sets in its {@link FiftyOneInterceptorConfig}.
+     * @param viewControllerRegistry the registry to add the paths to
+     * @param javaScriptPath the JavaScript path, or null or empty for the
+     *                       default
+     * @param jsonPath the JSON path, or null or empty for the default
+     */
+    public static void enableClientsideProperties(
+        ViewControllerRegistry viewControllerRegistry,
+        String javaScriptPath,
+        String jsonPath) {
+        viewControllerRegistry.addViewController("/" + withoutSlash(
+            javaScriptPath == null || javaScriptPath.isEmpty() ?
+                CORE_JS_NAME : javaScriptPath));
+        viewControllerRegistry.addViewController("/" + withoutSlash(
+            jsonPath == null || jsonPath.isEmpty() ?
+                DEFAULT_JSON_PATH : jsonPath));
+        viewControllerRegistry.addViewController("/" + CORE_JSON_NAME);
+    }
+
+    private static String withoutSlash(String path) {
+        return path.startsWith("/") ? path.substring(1) : path;
     }
 
     @Override
@@ -127,15 +163,24 @@ public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
         HttpServletResponse response,
         Object handler) throws Exception {
         resultService.process(request);
-        
-        // Set the Client Hints request headers
-        uachService.setResponseHeaders(request, response);
-        
-        if (fiftyOneJsService.serveJS(request,  response) == false &&
-                fiftyOneJsService.serveJson(request, response) == false) {
-            return super.preHandle(request, response, handler);
+
+        boolean proceed = false;
+        try {
+            // Set the Client Hints request headers
+            uachService.setResponseHeaders(request, response);
+
+            proceed = fiftyOneJsService.serveJS(request,  response) == false &&
+                fiftyOneJsService.serveJson(request, response) == false &&
+                super.preHandle(request, response, handler);
+            return proceed;
+        } finally {
+            // Spring calls afterCompletion, which closes the FlowData, only
+            // when preHandle returns true. In every other case, serving the
+            // JavaScript or JSON included, the FlowData is closed here.
+            if (proceed == false) {
+                flowDataProvider.getFlowData(request).close();
+            }
         }
-        return false;
     }
 
     @Override

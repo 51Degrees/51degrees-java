@@ -67,7 +67,7 @@ public class MetaDataHashTests extends TestsBase {
      * assumption rather than failing.
      */
     @Test
-    public void MetaData_Performance_Properties() {
+    public void MetaData_Performance_Properties() throws Exception {
         MetaDataHasherHash hasher = new MetaDataHasherHash();
         long start = System.currentTimeMillis();
         hasher.hashProperties(0, getWrapper());
@@ -85,7 +85,7 @@ public class MetaDataHashTests extends TestsBase {
      * assumption rather than failing.
      */
     @Test
-    public void MetaData_Performance_Components() {
+    public void MetaData_Performance_Components() throws Exception {
         MetaDataHasherHash hasher = new MetaDataHasherHash();
         long start = System.currentTimeMillis();
         hasher.hashComponents(0, getWrapper());
@@ -103,7 +103,7 @@ public class MetaDataHashTests extends TestsBase {
      * assumption rather than failing.
      */
     @Test
-    public void MetaData_Performance_Values() {
+    public void MetaData_Performance_Values() throws Exception {
         MetaDataHasherHash hasher = new MetaDataHasherHash();
         long start = System.currentTimeMillis();
         hasher.hashValues(0, getWrapper());
@@ -121,7 +121,7 @@ public class MetaDataHashTests extends TestsBase {
      * assumption rather than failing.
      */
     @Test
-    public void MetaData_Performance_Profiles() {
+    public void MetaData_Performance_Profiles() throws Exception {
         MetaDataHasherHash hasher = new MetaDataHasherHash();
         long start = System.currentTimeMillis();
         hasher.hashProfiles(0, getWrapper());

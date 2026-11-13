@@ -1,8 +1,8 @@
 # 51Degrees IP Intelligence Engines - Examples
 
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-ip-intelligence-engines-examples "Data rewards the curious") **Java IP Intelligence**
+![51Degrees](https://raw.githubusercontent.com/51Degrees/51degrees-java/main/.github/images/logo-160.png "Data rewards the curious") **Java IP Intelligence**
 
-[Developer Documentation](https://51degrees.com/ip-intelligence-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-ip-intelligence-engines-examples "developer documentation")
+[Developer Documentation](https://51degrees.com/documentation/_ip_intelligence__quickstart.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-ip-intelligence-engines-examples "developer documentation")
 
 ## Introduction
 
@@ -10,39 +10,66 @@ These examples are not distributed as maven jars and need to be built by you.
 
 ## Required Files
 
-See [ip-intelligence-data](https://github.com/51Degrees/ip-intelligence-data/)
-repository for instructions on obtaining the necessary data files for on-premise IP intelligence.
+The data files for on-premise IP intelligence are kept in `cxx/data/ip-intelligence`, a
+folder of the [data](https://github.com/51Degrees/data) repository, which is a submodule of
+cxx.
 
-**IMPORTANT**: The enterprise IP Intelligence data file must be placed in the `ip-intelligence-data`
-directory at the root of this repository. The expected filename is `51Degrees-EnterpriseIpiV41.ipi`.
+The examples use the free data files by default, so they run from a fresh clone with no
+settings. The examples that show location and network properties use the Lite file
+(`51Degrees-LiteV41.ipi`), which has the registration properties, and the performance and
+update examples use the much smaller ASN file (`51Degrees-IPIV4AsnIpiV41.ipi`). An example
+that cannot find its file runs the data repository's script to download it, and logs the
+command it runs. To download both first, run `cxx/data/get-data-files.sh ip-intelligence`
+from the root of this repository, or `cxx\data\get-data-files.ps1 ip-intelligence` in
+PowerShell on Windows.
 
-Two free data files are also usable for many of the examples. The ASN file
-(`51Degrees-IPIV4AsnIpiV41.ipi`) is included in the `ip-intelligence-data` submodule, and the
-Lite file (`51Degrees-LiteV41.ipi`) can be downloaded by running
-`ip-intelligence-data/get-lite-file-from-azure.ps1` (or `.sh`). When the enterprise file is
-absent, the tests for examples that work with any data file fall back to the ASN file and
-then the Lite file. The OfflineProcessing and PerformanceBenchmark examples need the
-RegisteredName property, which the ASN file does not contain, so their tests fall back to
-the Lite file only. Tests for examples needing enterprise-only properties (Metrics, Compare
-and Suspicious) are skipped instead.
+Each example shows the properties that only the Enterprise data file has as needing it, and
+gives a link to ask for a copy. The Compare, Metrics and Suspicious examples need those
+properties, so with a free data file they say which they need and stop.
+[Contact us](https://51degrees.com/contact-us?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=enterprise-data-file) for a copy of
+the Enterprise data file. To use it, place it in `cxx/data/ip-intelligence` and pass its path
+as the first argument, or set the `_51DEGREES_IPI_PATH` environment variable or system
+property to its path.
+
+The Enterprise data file is over 6 GB, and the MaxPerformance profile loads all of it into
+memory, so the examples built for it, or that may be given it, use the LowMemory profile,
+which reads the file from disk as it is needed. Those are the Compare, Metrics,
+OfflineProcessing, Suspicious and UpdateDataFile examples. The Metrics and Compare examples
+take a profile as their fourth argument, and `MaxPerformance` there makes them faster on a
+machine with memory to hold the whole file.
+
+The `ExamplesWithoutSettingsTest` tests run each console example as a fresh clone does. The
+other tests use the Enterprise data file, `51Degrees-EnterpriseIpiV41.ipi`, when it is in
+`cxx/data/ip-intelligence`. When it is absent, the tests for examples that work with any data
+file fall back to the ASN file and then the Lite file. The OfflineProcessing and
+PerformanceBenchmark tests fall back to the Lite file only, and the tests of the Metrics,
+Compare and Suspicious examples with the Enterprise data file are skipped.
 
 ```
-ip-intelligence-java-examples/
-├── ip-intelligence-data/
-│   └── 51Degrees-EnterpriseIpiV41.ipi
-├── console/
-├── web/
-└── shared/
+51degrees-java/
+├── cxx/
+│   └── data/
+│       └── ip-intelligence/
+│           ├── 51Degrees-LiteV41.ipi
+│           └── 51Degrees-IPIV4AsnIpiV41.ipi
+└── examples/
+    └── ip-intelligence/
+        ├── console/
+        ├── web/
+        └── shared/
 ```
 
 The examples locate the data file in the following order:
 
-1. The `51DEGREES_IPI_PATH` environment variable or system property, which can
-   be set to an explicit path to the data file.
-2. A search of the project folder hierarchy for the expected file name.
-3. The expected location `ip-intelligence-data/51Degrees-EnterpriseIpiV41.ipi`
-   (the configuration files for the getting started examples fall back to the
-   free Lite file `ip-intelligence-data/51Degrees-LiteV41.ipi`).
+1. The `_51DEGREES_IPI_PATH` environment variable or system property, which can
+   be set to an explicit path to the data file. It is used in place of any
+   file named without a full path.
+2. The path given as the first argument, or the free file the example uses
+   by default, searched for below the folder the example is run from and then
+   below `cxx/data`, so that the examples find it whether they are run from
+   the root of this repository or from this folder.
+3. A free file that is still missing is downloaded by the data repository's
+   script.
 
 This project contains sub-modules - **console**, giving examples that are intended
 to be run from the command line/console and **web**, illustrating use
@@ -77,7 +104,7 @@ environment variable or system property.
 | MetadataCloud            | How to access the meta-data that relates to the properties available from the cloud IP intelligence service.                                 |
 
 Cloud examples need a resource key. The key is read from the
-`51DEGREES_RESOURCE_KEY` environment variable or system property first. The
+`_51DEGREES_RESOURCE_KEY` environment variable or system property first. The
 legacy `TestResourceKey` name is still supported and is checked second.
 
 The cloud property tiers changed in May 2026. The examples and this
@@ -121,14 +148,14 @@ to get a paid subscription with more properties.
 
 ## Running Examples and Tests
 
-**IMPORTANT**: All examples and tests must be run from the repository root directory (`ip-intelligence-java-examples/`).
+**IMPORTANT**: All examples and tests must be run from this folder, `examples/ip-intelligence`.
 
 ### Running Tests
 
 To run all tests:
 
 ```bash
-# From the repository root directory
+# From examples/ip-intelligence
 mvn test
 ```
 
@@ -147,14 +174,14 @@ mvn test -pl web/getting-started.onprem
 Console examples can be run directly using Maven exec plugin:
 
 ```bash
-# From the repository root directory
+# From examples/ip-intelligence
 mvn compile exec:java -pl console -Dexec.mainClass="fiftyone.ipintelligence.examples.console.GettingStartedOnPrem"
 ```
 
 Web examples:
 
 ```bash
-# From the repository root directory
+# From examples/ip-intelligence
 mvn compile exec:java -pl web/getting-started.onprem -Dexec.mainClass="fiftyone.ipintelligence.examples.web.GettingStartedWebOnPrem"
 ```
 

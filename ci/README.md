@@ -12,9 +12,9 @@ repositories used to do for one package tree each.
   generated accessors. The other scripts loop over it rather than naming
   folders themselves.
 - The root `pom.xml` builds every tree in one reactor but is not their parent,
-  so [build-package.ps1](build-package.ps1) sets the version in each tree
-  before it deploys from the root. The examples are built and tested but left
-  out of the deploy.
+  so [build-package.ps1](build-package.ps1) has common-ci set the version in
+  each tree before it deploys from the root. The examples are built and tested
+  but left out of the deploy.
 - [build-project.ps1](build-project.ps1) and
   [run-unit-tests.ps1](run-unit-tests.ps1) use the `dev` profile, so a pull
   request tests the examples against the libraries it changes. The publish
@@ -29,9 +29,14 @@ repositories used to do for one package tree each.
   is built, which
   [release-pull-request.yml](../.github/workflows/release-pull-request.yml)
   does on every entry.
-- [fetch-assets.ps1](fetch-assets.ps1) links every data file it downloads into
-  `cxx/device-detection-data` or `cxx/ip-intelligence-data`, where the tests
-  and examples find them.
+- [fetch-assets.ps1](fetch-assets.ps1) fetches every data file as one of
+  common-ci's assets, which each run caches once, and links or copies it into
+  `cxx/data/device-detection` or `cxx/data/ip-intelligence`, where the tests
+  and examples find them. Those are the folders of the
+  [data](https://github.com/51Degrees/data) repository, which is a submodule
+  of cxx. No test job downloads a data file, so a file added to the data
+  repository needs an entry in common-ci's `steps/fetch-assets.ps1` before CI
+  can use it.
 - [run-performance-tests.ps1](run-performance-tests.ps1) measures the Pipeline
   API, Device Detection and IP Intelligence and writes one results file per
   configuration. The Device Detection and IP Intelligence metrics are prefixed
@@ -60,7 +65,7 @@ To run the on-premise tests:
 
 To run the cloud tests:
 
-- `_51DEGREES_RESOURCE_KEY_BESPOKE`: [resource key](https://51degrees.com/documentation/_info__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=ci-readme.md&utm_term=secrets)
+- `_51DEGREES_RESOURCE_KEY_BESPOKE`: [resource key](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=ci-readme.md&utm_term=secrets)
   passed to the tests as `TestResourceKey` and `SuperResourceKey`.
 - `_51DEGREES_LICENSE_KEY_51DID`: license key for the 51Did cloud tests,
   together with the `_51DEGREES_RESOURCE_KEY_BASIC` and

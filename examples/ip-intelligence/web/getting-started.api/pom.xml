@@ -37,7 +37,7 @@
     <properties>
         <slf4j-api.version>2.0.20</slf4j-api.version>
         <logback-classic.version>1.3.16</logback-classic.version>
-        <pipeline.jsonbuilder.version>4.5.128</pipeline.jsonbuilder.version>
+        <pipeline.jsonbuilder.version>4.5.130</pipeline.jsonbuilder.version>
         <org.json.version>20231013</org.json.version>
     </properties>
 

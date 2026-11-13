@@ -1,8 +1,8 @@
 # 51Degrees Device Detection Engines - Examples
 
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-device-detection-engines-examples "Data rewards the curious") **Java Device Detection**
+![51Degrees](https://raw.githubusercontent.com/51Degrees/51degrees-java/main/.github/images/logo-160.png "Data rewards the curious") **Java Device Detection**
 
-[Developer Documentation](https://51degrees.com/device-detection-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-device-detection-engines-examples "developer documentation")
+[Developer Documentation](https://51degrees.com/documentation/_device_detection__quickstart.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-device-detection-engines-examples "developer documentation")
 
 ## Introduction
 
@@ -21,11 +21,26 @@ Among other things, the examples illustrate:
 - use of device detection pipeline for off-line processing tasks
 - configuring device detection trade-offs between speed and conserving memory
 
+## Data files
+
+The on-premise examples use the free Lite data file and the evidence files in
+`cxx/data/device-detection`, a folder of the
+[data](https://github.com/51Degrees/data) repository. An example that cannot
+find one of these files runs the data repository's download script for it,
+and logs the command it runs. The examples find `cxx/data` whether they are
+run from the root of this repository or from this folder.
+
+Each example shows the properties that only the Enterprise data file has,
+such as HardwareVendor, HardwareName and DeviceType, as needing it, and gives
+a link to ask for a copy. [Contact us](https://51degrees.com/contact-us?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=enterprise-data-file)
+for a copy of the Enterprise data file, and pass its path as the first
+argument to use it.
+
 ## Cloud resource keys
 
-You will require [resource keys](https://51degrees.com/documentation/_info__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-resource-keys)
+You will require [resource keys](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-resource-keys)
 to use the Cloud API, as described on our website. Get resource keys from
-our [configurator](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-resource-keys), see our [documentation](https://51degrees.com/documentation/_concepts__configurator.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-resource-keys) on
+our [configurator](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-resource-keys), see our [documentation](https://51degrees.com/documentation/_services__configurator.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-resource-keys) on
 how to use this.
  
 A resource key configured with the properties needed
@@ -41,23 +56,18 @@ resource keys and license keys at our [pricing page](https://51degrees.com/prici
 
 ## Running examples with changes to Pipeline packages
 
-A common use case is to make a change to the Pipeline logic in
-device-detection-java and then use these examples to observe the results of the
-change.
+A common use case is to make a change to the Device Detection or Pipeline
+packages in this repository and then use these examples to observe the
+results of the change.
 
-By default, the examples are configured to use the packages from Maven central.
-In order to produce and use local packages instead:
+By default, the examples use the packages from Maven Central. To build them
+against the packages in this repository instead, run Maven from the root of
+the repository with the `dev` profile, as the
+[root README](../../README.md#examples) describes:
 
-- Clone and make your changes to device-detection-java
-- Set the version of the device detection packages that we're going to create to 0.0.0:
-  `mvn versions:set-property -Dproperty="project.version" "-DnewVersion=0.0.0"`
-- Create and install the packages locally (skipping tests is needed):
-  `mvn clean install [-DskipTests]`
-- Modify the POM for the examples to reference these new local packages. This can
-  be done by editing the POM directly or by using the command line:
-  `mvn versions:set-property -Dproperty="device-detection.version" "-DnewVersion=0.0.0"`
-
-The same principle can be applied to incorporate changes in pipeline-java if needed.
+```
+mvn install -DskipTests -Pdev
+```
 
 ## Examples
 
@@ -112,9 +122,10 @@ case the example runs until the process is stopped:
 PORT=8100 java -jar ./web/getting-started.onprem/target/device-detection-java-examples.web.getting-started.onprem-4.4.20-jar-with-dependencies.jar
 ```
 
-The on-premise web example takes its data file from the `51DEGREES_DD_PATH`
+The on-premise web example takes its data file from the `_51DEGREES_DD_PATH`
 environment variable, then from `TestDataFile`, and otherwise uses the free Lite file
-in `device-detection-data`.
+in `cxx/data/device-detection`, which it downloads before the server starts if it is
+missing.
 
 ### Native library access
 

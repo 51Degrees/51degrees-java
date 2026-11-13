@@ -74,12 +74,14 @@ import static fiftyone.pipeline.core.Constants.EVIDENCE_HEADER_USERAGENT_KEY;
  *     .build(Enums.GeoLocationProvider.FiftyOneDegrees);
  * ```
  *
- * 2. Build a new Pipeline containing the engines which were just created.
+ * 2. Build a new Pipeline containing the engines which were just created,
+ * and ask it to close them when it is closed.
  * ```
  * Pipeline pipeline = new PipelineBuilder(loggerFactory)
  *     .addFlowElement(cloudRequestEngine)
  *     .addFlowElement(deviceDetectionEngine)
  *     .addFlowElement(locationEngine)
+ *     .setAutoCloseElements(true)
  *     .build();
  * ```
  *
@@ -92,9 +94,10 @@ import static fiftyone.pipeline.core.Constants.EVIDENCE_HEADER_USERAGENT_KEY;
  *     .build();
  * ```
  * 3. Create a new FlowData instance ready to be populated with evidence for
- * the Pipeline.
+ * the Pipeline, in a try-with-resources block so that it is closed when it
+ * is finished with.
  * ```
- * FlowData data = pipeline.createFlowData();
+ * try (FlowData data = pipeline.createFlowData()) {
  * ```
  *
  * 4. Process a longitude, latitude and User-Agent to retrieve the values
@@ -148,14 +151,16 @@ public class CombiningServices {
                 new GeoLocationCloudEngineBuilder(loggerFactory)
                 .build(Enums.GeoLocationProvider.FiftyOneDegrees);
 
-            Pipeline pipeline =
+            // The engines are not closed anywhere else, so the pipeline is
+            // asked to close them when it is closed.
+            try (Pipeline pipeline =
                 new PipelineBuilder(loggerFactory)
                 .addFlowElement(cloudRequestEngine)
                 .addFlowElement(deviceDetectionEngine)
                 .addFlowElement(locationEngine)
+                .setAutoCloseElements(true)
                 .build();
-
-            try (FlowData flowData = pipeline.createFlowData()) {
+                FlowData flowData = pipeline.createFlowData()) {
                 flowData
                     .addEvidence(EVIDENCE_HEADER_USERAGENT_KEY, mobileUserAgent)
                     .addEvidence(EVIDENCE_GEO_LAT_PARAM_KEY, "51.458048")
@@ -173,7 +178,6 @@ public class CombiningServices {
                 System.out.println("Country: " + country.toString());
                 System.out.println("IsMobile: " + isMobile.toString());
             }
-            pipeline.close();
         }
     }
 

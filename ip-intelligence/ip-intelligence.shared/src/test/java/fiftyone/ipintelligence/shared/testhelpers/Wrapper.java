@@ -24,6 +24,7 @@ package fiftyone.ipintelligence.shared.testhelpers;
 
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.data.AspectData;
+import fiftyone.pipeline.engines.fiftyone.data.CloseableIterable;
 import fiftyone.pipeline.engines.fiftyone.data.ComponentMetaData;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
 import fiftyone.pipeline.engines.fiftyone.data.ProfileMetaData;
@@ -38,11 +39,11 @@ public interface Wrapper extends Closeable {
 
     Iterable<FiftyOneAspectPropertyMetaData> getProperties();
 
-    Iterable<ValueMetaData> getValues();
+    CloseableIterable<ValueMetaData> getValues();
 
-    Iterable<ProfileMetaData> getProfiles();
+    CloseableIterable<ProfileMetaData> getProfiles();
 
-    Iterable<ComponentMetaData> getComponents();
+    CloseableIterable<ComponentMetaData> getComponents();
 
     FiftyOneAspectEngine<? extends AspectData, ? extends FiftyOneAspectPropertyMetaData> getEngine();
 }

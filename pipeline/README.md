@@ -1,8 +1,8 @@
 # 51Degrees Pipeline
 
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=top "Data rewards the curious") **Java Pipeline**
+![51Degrees](https://raw.githubusercontent.com/51Degrees/51degrees-java/main/.github/images/logo-160.png "Data rewards the curious") **Java Pipeline**
 
-[Developer Documentation](https://51degrees.com/pipeline-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=top "developer documentation")
+[Developer Documentation](https://51degrees.com/documentation/_pipeline_api__concepts__pipeline_basics.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=top "developer documentation")
 
 ## Introduction
 This repository contains all the projects required to build the Java implementation of the 51Degrees Pipeline API.
@@ -12,11 +12,11 @@ is also available on GitHub and is recommended reading if you wish to understand
 the concepts and design of this API.
 
 Reference documentation for the Java implementation can be found on the
-[Java API documentation](https://51degrees.com/pipeline-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=introduction) page.
+[Java API documentation](https://51degrees.com/documentation/apis/pipeline-java/annotated.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=introduction) page.
 
 ## Pre-requisites
 
-The [tested versions](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=pre-requisites) page shows 
+The [tested versions](https://51degrees.com/documentation/_product_summaries__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=pre-requisites) page shows 
 the JDK versions that we currently test against. The software may run fine against other versions, 
 but additional caution should be applied.
 
@@ -123,7 +123,7 @@ There are several examples available in the `pipeline.developer-examples` folder
 how to make use of the Pipeline API in isolation. These are described in the table below.
 If you want examples that demonstrate how to use 51Degrees products such as device detection, 
 then these are available in the corresponding [repository](https://github.com/51Degrees/51degrees-java/tree/main/device-detection) 
-and on our [website](https://51degrees.com/documentation/_examples__device_detection__index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=examples).
+and on our [website](https://51degrees.com/documentation/_device_detection__examples__index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=examples).
 
 | Example                                            | Description |
 |----------------------------------------------------|-------------|
@@ -131,13 +131,15 @@ and on our [website](https://51degrees.com/documentation/_examples__device_detec
 | pipeline.developer-examples.onpremise-engine       | Shows how to modify SimpleFlowElement to make use of the 'engine' functionality and use a custom data file to map dates to star signs rather than relying on hard coded data. |
 | pipeline.developer-examples.clientside-element     | Shows how to modify SimpleFlowElement to request the data of birth from the user using client-side JavaScript. |
 | pipeline.developer-examples.clientside-element-mvc | An example project showing how to use the code from SimpleClientSideElement in a Java web application using the Model-View-Controller Pattern. |
-| pipeline.developer-examples.cloud-engine           | Shows how to modify SimpleFlowElement to perform the star sign lookup via a cloud service rather than locally. The endpoint and resource key come from `FOD_CLOUD_API_URL` and `_51DEGREES_RESOURCE_KEY` when set, otherwise the star sign service the example was written for. |
+| pipeline.developer-examples.cloud-engine           | Shows how to modify SimpleFlowElement to perform the star sign lookup via a cloud service rather than locally. The endpoint and resource key come from `_51DEGREES_CLOUD_ENDPOINT` and `_51DEGREES_RESOURCE_KEY` when set, otherwise the star sign service the example was written for. |
 | pipeline.developer-examples.usage-sharing          | Shows how to share usage with 51Degrees. This helps us to keep our products up to date and accurate. |
 | pipeline.developer-examples.fodid                  | Shows how to read a 51Did, and, in a web demo, how a browser creates and verifies one against the 51Degrees cloud and the server redeems the encrypted result, so that the creator context proves the identifier is being presented by the browser it was created on. The module README describes the flow, the environment variables, what a run costs and the redeem call to copy into your own server. |
 
 ### Pointing the cloud examples at another host
 
-Every example that calls the 51Degrees cloud takes its endpoint from the `FOD_CLOUD_API_URL` environment variable, which is the cloud API base including the `/api/v4/` segment and defaults to `https://cloud.51degrees.com/api/v4/` (the cloud-engine example defaults to the star sign service it was written for, as its row above says). This is the same variable the cloud request engine in this repository honours, so setting it once points every example, and any pipeline built with the engine, at the same place. The resource key comes from `_51DEGREES_RESOURCE_KEY`, or the older `RESOURCE_KEY`.
+Every example that calls the 51Degrees cloud takes its endpoint from the `_51DEGREES_CLOUD_ENDPOINT` environment variable, which is the cloud API base including the `/api/v4/` segment and defaults to `https://cloud.51degrees.com/api/v4/` (the cloud-engine example defaults to the star sign service it was written for, as its row above says). This is the same variable the cloud request engine in this repository honours, so setting it once points every example, and any pipeline built with the engine, at the same place. The resource key comes from `_51DEGREES_RESOURCE_KEY`.
+
+The variable was called `FOD_CLOUD_API_URL` before, and that name is deprecated. The cloud request engine, the 51Did client and the cloud-engine example still read `FOD_CLOUD_API_URL` when `_51DEGREES_CLOUD_ENDPOINT` is not set, and each logs a warning the first time it does. When both are set, `_51DEGREES_CLOUD_ENDPOINT` is used.
 
 A host other than cloud.51degrees.com would be used to (a) use an on premise web server, or (b) use a privately hosted version of the 51Degrees cloud for performance reasons. This is the private hosting option of the cloud service. Both run the same service, so the examples work unchanged.
 
