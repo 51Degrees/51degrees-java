@@ -127,9 +127,9 @@ public class JsonBuilderTests {
      */
     @Test
     public void JsonBuilder_Errors_ListOfMessages() throws Exception {
-        FlowElement first = mock(FlowElement.class);
+        FlowElement<?, ?> first = mock(FlowElement.class);
         when(first.getElementDataKey()).thenReturn("first");
-        FlowElement second = mock(FlowElement.class);
+        FlowElement<?, ?> second = mock(FlowElement.class);
         when(second.getElementDataKey()).thenReturn("second");
         flowErrors.add(new FlowError.Default(
             new Exception("first element, one"), first));
@@ -174,7 +174,7 @@ public class JsonBuilderTests {
      */
     @Test
     public void JsonBuilder_Errors_NoThrowable_LeftOut() throws Exception {
-        FlowElement element = mock(FlowElement.class);
+        FlowElement<?, ?> element = mock(FlowElement.class);
         flowErrors.add(new FlowError.Default(null, element));
 
         String json = testIteration(1);
