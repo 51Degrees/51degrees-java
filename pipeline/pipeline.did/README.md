@@ -357,7 +357,7 @@ import fiftyone.pipeline.did.RedeemResult;
 // The resource key is the page's and public by nature. The licence key is
 // server side only and is needed to redeem where the account holds licence
 // keys. The endpoint defaults to https://cloud.51degrees.com/api/v4/, or
-// the FOD_CLOUD_API_URL environment variable where that is set.
+// the _51DEGREES_CLOUD_ENDPOINT environment variable where that is set.
 DidClient client = new DidClient(resourceKey, licenceKey);
 ```
 

@@ -3,6 +3,9 @@ name: Cloud 51Did Tests
 # Runs the live cloud 51Did integration test (pipeline/pipeline.did,
 # DidClientLiveTests) once for every _51DEGREES_RESOURCE_KEY* key passed in
 # below. Each run sets the single _51DEGREES_RESOURCE_KEY the test reads.
+# Only keys that carry the fodid product are passed in, because the tests ask
+# the cloud for a 51Did and fail, saying so, when a key gets an answer with no
+# identifier in it. That is entitlement working rather than a fault.
 #
 # The secrets are named one by one rather than passed as toJSON(secrets).
 # GitHub marks a workflow that hands every secret to a step as possibly
@@ -10,10 +13,10 @@ name: Cloud 51Did Tests
 # A new resource key therefore needs a line here as well as the organisation
 # secret.
 #
-# The test skips itself when no key is set, so a run with no secrets is green
-# and proves nothing. That is deliberate, because a pull request from a fork
-# has no secrets, and it is the reason the loop below reports which key each
-# run used.
+# A run with no key available fails. A cloud test that passes without
+# calling the cloud reports success having proved nothing, and that is worse
+# than a red job. A pull request from a fork gets no secrets, so run this
+# workflow from a branch in this repository.
 
 on:
   workflow_dispatch:
@@ -51,7 +54,6 @@ jobs:
       - name: Cloud 51Did test for each resource key secret
         shell: pwsh
         env:
-          _51DEGREES_RESOURCE_KEY_BASIC: ${{ vars._51DEGREES_RESOURCE_KEY_BASIC }}
           _51DEGREES_RESOURCE_KEY_BESPOKE: ${{ secrets._51DEGREES_RESOURCE_KEY_BESPOKE }}
           _51DEGREES_RESOURCE_KEY_51DID: ${{ vars._51DEGREES_RESOURCE_KEY_51DID }}
           # Without a license key the tests that redeem a sealed verdict skip.
@@ -63,8 +65,11 @@ jobs:
           $keys = Get-ChildItem env: |
             Where-Object { $_.Name -like '_51DEGREES_RESOURCE_KEY*' -and $_.Value }
           if (-not $keys) {
-            Write-Host 'No _51DEGREES_RESOURCE_KEY* secrets available; skipping.'
-            exit 0
+            throw ('No _51DEGREES_RESOURCE_KEY* secret is available, so the ' +
+              'live 51Did tests cannot call the cloud service. The keys ' +
+              'carry the fodid product these tests need. A pull request ' +
+              'from a fork gets no secrets, so run this workflow from a ' +
+              'branch in this repository.')
           }
           $failed = $false
           foreach ($k in $keys) {

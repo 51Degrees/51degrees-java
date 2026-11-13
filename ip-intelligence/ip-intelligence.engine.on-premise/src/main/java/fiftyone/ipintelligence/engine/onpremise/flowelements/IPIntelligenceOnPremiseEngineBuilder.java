@@ -257,6 +257,7 @@ public class IPIntelligenceOnPremiseEngineBuilder
             dataFile,
             config,
             requiredProperties,
+            properties,
             new IpiDataFactory(loggerFactory),
             tempDir);
     }

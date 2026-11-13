@@ -47,6 +47,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
@@ -133,7 +134,33 @@ public class DataFileHelper {
      * hold an explicit path to the IP Intelligence data file. This name is
      * checked first, before any search of the project space.
      */
+    public static final String IPI_PATH_VARIABLE = "_51DEGREES_IPI_PATH";
+
+    /**
+     * The old name of {@link #IPI_PATH_VARIABLE}, read only when that one
+     * is not set.
+     * @deprecated use {@link #IPI_PATH_VARIABLE}, and set the variable it
+     * names in place of this one.
+     */
+    @Deprecated
     public static final String IPI_PATH_ENV_VAR = "51DEGREES_IPI_PATH";
+
+    // Set once the use of the deprecated name has been logged.
+    private static final AtomicBoolean OLD_NAME_LOGGED =
+            new AtomicBoolean(false);
+
+    /**
+     * The value of the environment variable of this name, or of the system
+     * property where that is not set or is empty, or null when neither
+     * holds a value.
+     */
+    private static String environmentOrProperty(String name) {
+        String value = System.getenv(name);
+        if (Objects.isNull(value) || value.isEmpty()) {
+            value = System.getProperty(name);
+        }
+        return Objects.isNull(value) || value.isEmpty() ? null : value;
+    }
 
 public static class DatafileInfo {
         FiftyOneDataFile fileInfo;
@@ -362,7 +389,7 @@ public static class DatafileInfo {
                 "somewhere in the project space to be found. An explicit " +
                 "path to the data file can be supplied via the {} " +
                 "environment variable or system property.",
-                dataFile, IPI_PATH_ENV_VAR);
+                dataFile, IPI_PATH_VARIABLE);
     }
 
     /**
@@ -391,9 +418,11 @@ public static class DatafileInfo {
     /**
      * Tries to find the passed file, or if null a default file. Handles both absolute and relative paths.
      * An absolute path supplied by the caller is used as is. Otherwise an
-     * explicit path supplied via the {@link #IPI_PATH_ENV_VAR} environment
+     * explicit path supplied via the {@link #IPI_PATH_VARIABLE} environment
      * variable or system property is checked before the folder hierarchy is
-     * searched for the passed filename.
+     * searched for the passed filename. When neither is set the deprecated
+     * {@link #IPI_PATH_ENV_VAR} is read, and its first use is logged as a
+     * warning.
      * @param dataFilename a filename to find (can be absolute or relative path)
      * @return a full pathname
      * @throws Exception if the file was not found
@@ -404,16 +433,27 @@ public static class DatafileInfo {
         // system property is checked before any search for the filename
         if (Objects.isNull(dataFilename) ||
                 Paths.get(dataFilename).isAbsolute() == false) {
-            String envDataFile = System.getenv(IPI_PATH_ENV_VAR);
+            String envName = IPI_PATH_VARIABLE;
+            String envDataFile = environmentOrProperty(envName);
             if (Objects.isNull(envDataFile)) {
-                envDataFile = System.getProperty(IPI_PATH_ENV_VAR);
+                envName = IPI_PATH_ENV_VAR;
+                envDataFile = environmentOrProperty(envName);
+                if (Objects.nonNull(envDataFile)
+                        && OLD_NAME_LOGGED.compareAndSet(false, true)) {
+                    logger.warn(
+                            "The environment variable " + IPI_PATH_ENV_VAR
+                            + " is deprecated and " + IPI_PATH_VARIABLE
+                            + " replaces it. Set " + IPI_PATH_VARIABLE
+                            + " to the same value, as a later release may no longer "
+                            + "read " + IPI_PATH_ENV_VAR + ".");
+                }
             }
             if (Objects.nonNull(envDataFile)) {
                 if (Files.exists(Paths.get(envDataFile))) {
                     return envDataFile;
                 }
                 logger.warn("Ignoring {} value '{}' as no file exists there",
-                        IPI_PATH_ENV_VAR, envDataFile);
+                        envName, envDataFile);
             }
         }
 
@@ -451,7 +491,7 @@ public static class DatafileInfo {
                         DataFileHelper.cantFindDataFile(dataFilename);
                         throw new IOException("Data file not found at relative path: " + dataFilename +
                                             ". Searched in project directories and current working directory." +
-                                            " An explicit path can be supplied via the " + IPI_PATH_ENV_VAR +
+                                            " An explicit path can be supplied via the " + IPI_PATH_VARIABLE +
                                             " environment variable.", notFound);
                     }
                 }
