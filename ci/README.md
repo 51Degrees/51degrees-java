@@ -64,9 +64,16 @@ repositories used to do for one package tree each.
   that stops leaves every package tagged or none, and then makes one GitHub
   release per tag. Maven Central refuses a version it already has, so when
   the push fails after the upload, push the tags the log names by hand
-  rather than running the publish again. Its Pester 5 tests are
-  [publish-package.Tests.ps1](publish-package.Tests.ps1), which the same
-  workflow runs.
+  rather than running the publish again. When `gh release create` fails
+  part way, every tag is pushed but the packages after the failure have no
+  GitHub release, and a publish run again plans nothing and so makes none.
+  Make each missing release by hand. For each tag the log names after
+  "Pushing" for which `gh release view <tag>` finds no release, run
+  `gh release create <tag> --verify-tag --title "<package> <version>"
+  --notes "<package> <version>: <reason>."`, with the reason the Configure
+  job's plan gives for that package, as the script does. Its Pester 5
+  tests are [publish-package.Tests.ps1](publish-package.Tests.ps1), which the
+  same workflow runs.
 
 ## Secrets
 
