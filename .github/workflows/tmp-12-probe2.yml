@@ -1,0 +1,31 @@
+name: tmp 12 probe 2
+on: push
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    env:
+      LK: ${{ secrets._51DEGREES_LICENSE_KEY_51DID }}
+      BASE: https://cloud.51degrees.com/api/v4
+      UA: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36"
+    steps:
+      # Only the status and the names of the fields are printed, and every
+      # run of 16 or more letters and digits is replaced, so that no key
+      # and no value from an answer reaches the log.
+      - name: Data requests under the 51Did license key alone
+        run: |
+          ask() {
+            echo "== values=$1"
+            code=$(curl -s -o out.json -w '%{http_code}' -X POST \
+              --data-urlencode "license=$LK" \
+              --data-urlencode "values=$1" \
+              --data-urlencode "header.user-agent=$UA" \
+              --data-urlencode "query.client-ip=8.8.8.8" "$BASE/json")
+            echo "status $code"
+            jq -c 'to_entries | map({(.key): (.value | if type == "object" then keys elif type == "array" then map(tostring) else type end)}) | add' out.json 2>/dev/null \
+              | sed -E 's/[A-Za-z0-9+\/=_-]{16,}/<long>/g' | cut -c1-600
+            rm -f out.json
+          }
+          ask "FODiD.IdProbGlobal"
+          ask "FODiD.IdProbGlobal,device.ismobile"
+          ask "FODiD.IdProbGlobal,device.notaproperty51d"
+          ask "FODiD.IdProbGlobal,FODiD.IdProbLic,ip.country"
