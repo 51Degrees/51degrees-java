@@ -40,7 +40,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.time.Duration;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.Map;
 import java.util.function.BooleanSupplier;
@@ -52,6 +54,7 @@ import static fiftyone.pipeline.core.Constants.EVIDENCE_CLIENTIP_KEY;
 import static fiftyone.pipeline.engines.Constants.DEFAULT_SESSION_COOKIE_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -432,5 +435,149 @@ public class ShareUsageElementBackOffTests {
 
         assertTrue(failure.getMessage().contains("500"));
         assertTrue(failure.getMessage().contains("the service says no"));
+    }
+
+    /**
+     * A logger that records each error, warning and information message it
+     * is given as its level followed by its arguments.
+     */
+    private static Logger levelLogger(List<String> records) {
+        return (Logger) Proxy.newProxyInstance(
+            Logger.class.getClassLoader(),
+            new Class<?>[] {Logger.class},
+            (proxy, method, args) -> {
+                String name = method.getName();
+                if (name.equals("error") ||
+                    name.equals("warn") ||
+                    name.equals("info")) {
+                    records.add(name.toUpperCase(Locale.ROOT) + " " +
+                        Arrays.deepToString(args));
+                    return null;
+                }
+                if (method.getReturnType() == boolean.class) {
+                    return false;
+                }
+                if (method.getReturnType() == int.class) {
+                    return 0;
+                }
+                if (method.getReturnType() == String.class) {
+                    return "test";
+                }
+                return null;
+            });
+    }
+
+    /**
+     * A refused send is logged at Error with the status code and the
+     * content of the answer, and processing goes on, so evidence processed
+     * after it is still sent once the service answers.
+     */
+    @Test
+    public void ShareUsageElement_RefusedSend_LoggedAndProcessingGoesOn()
+        throws Exception {
+        List<String> records = new CopyOnWriteArrayList<>();
+        logger = levelLogger(records);
+        useBackOff(DEFAULT_FAILURES, 2, 2, 100);
+        uploader.content = "the service says no";
+
+        failSends(1);
+
+        assertTrue(records.stream().anyMatch(record ->
+                record.startsWith("ERROR") &&
+                record.contains("500") &&
+                record.contains("the service says no")),
+            "The refused send was not logged with its status and content. " +
+                "Logged: " + records);
+        uploader.code = 200;
+        String later = process();
+        waitFor(
+            () -> uploader.accepted().contains(later),
+            () -> "Evidence processed after the refused send was not sent.");
+    }
+
+    /**
+     * Pausing, and each lengthening of the pause, is logged as a warning
+     * that gives the delay, and resuming is logged as information.
+     */
+    @Test
+    public void ShareUsageElement_PauseAndResume_AreLogged() throws Exception {
+        List<String> records = new CopyOnWriteArrayList<>();
+        logger = levelLogger(records);
+        useBackOff(1, 2, 8, 100);
+
+        element.recordSendResult(false);
+        element.recordSendResult(false);
+        element.recordSendResult(true);
+
+        int paused = indexOf(records, "WARN", "paused for", "2.0]");
+        int lengthened = indexOf(records, "WARN", "paused for", "4.0]");
+        int resumed = indexOf(records, "INFO", "resumed", "]");
+        assertTrue(paused >= 0 && lengthened > paused && resumed > lengthened,
+            "The pause, its lengthening and the resumption were not logged " +
+                "in turn. Logged: " + records);
+    }
+
+    /**
+     * Closing while paused discards what is queued and logs how many
+     * entries were not sent.
+     */
+    @Test
+    public void ShareUsageElement_CloseWhilePaused_LogsTheNumberNotSent()
+        throws Exception {
+        List<String> records = new CopyOnWriteArrayList<>();
+        logger = levelLogger(records);
+        useBackOff(1, 60, 60, 100);
+        failSends(1);
+        process();
+        process();
+        process();
+
+        element.close();
+
+        assertTrue(indexOf(records, "", "were not sent", ", 3]") >= 0,
+            "The three entries not sent were not counted in the log. " +
+                "Logged: " + records);
+    }
+
+    /**
+     * Processing during a pause neither waits for the pause nor is stopped
+     * by it, so the evidence is queued. The pause is two minutes, so
+     * processing that waited for it could not finish within the limit.
+     */
+    @Test
+    public void ShareUsageElement_ProcessDuringPause_DoesNotWait()
+        throws Exception {
+        useBackOff(1, 120, 120, 100);
+        failSends(1);
+
+        assertTimeoutPreemptively(Duration.ofSeconds(30), () -> {
+            for (int i = 0; i < 5; i++) {
+                process();
+            }
+        });
+
+        assertEquals(1, uploader.count(), "A send was made during the pause.");
+        assertEquals(5, element.evidenceCollection.size(),
+            "The evidence processed during the pause was not queued.");
+    }
+
+    /**
+     * The index of the first record at the level that holds the text and
+     * ends with the given end, or -1 if there is none.
+     */
+    private static int indexOf(
+        List<String> records,
+        String level,
+        String text,
+        String end) {
+        for (int i = 0; i < records.size(); i++) {
+            String record = records.get(i);
+            if (record.startsWith(level) &&
+                record.contains(text) &&
+                record.endsWith(end)) {
+                return i;
+            }
+        }
+        return -1;
     }
 }
