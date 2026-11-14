@@ -28,7 +28,10 @@ repositories used to do for one package tree each.
   macOS and performance run only when `rc` itself or the release pull request
   is built, which
   [release-pull-request.yml](../.github/workflows/release-pull-request.yml)
-  does on every entry.
+  does on every entry. The Pester 5 tests of select-options.ps1 are
+  [select-options.Tests.ps1](select-options.Tests.ps1), which
+  [ci-script-tests.yml](../.github/workflows/ci-script-tests.yml) runs on
+  Linux and Windows for each pull request that changes this folder.
 - [fetch-assets.ps1](fetch-assets.ps1) fetches every data file as one of
   common-ci's assets, which each run caches once, and links or copies it into
   `cxx/data/device-detection` or `cxx/data/ip-intelligence`, where the tests
