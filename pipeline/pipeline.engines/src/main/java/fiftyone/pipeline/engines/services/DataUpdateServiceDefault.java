@@ -228,7 +228,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
         AutoUpdateStatus result;
         try {
             result = runCheck(state, manualUpdate);
-        } catch (RuntimeException ex) {
+        } catch (RuntimeException | Error ex) {
             report(state, AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR, dataFile);
             throw ex;
         }
@@ -249,7 +249,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
         AutoUpdateStatus result;
         try {
             result = runCheck(dataFile, false);
-        } catch (RuntimeException ex) {
+        } catch (RuntimeException | Error ex) {
             logUnhandledError(dataFile, ex);
             result = AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR;
             scheduleNextCheck(dataFile);
@@ -440,7 +440,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
         AutoUpdateStatus status;
         try {
             status = applyWatchedFile(dataFile);
-        } catch (RuntimeException ex) {
+        } catch (RuntimeException | Error ex) {
             logUnhandledError(dataFile, ex);
             status = AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR;
         }
@@ -1015,11 +1015,13 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     /**
      * Log the Errors table's message for an error in a check started by
      * update polling or the file watcher that no other row covers, or one
-     * raised by an update callback, with the error attached.
+     * raised by an update callback, with the error attached. A Java Error,
+     * such as one from the native code during a refresh, is a failure of
+     * the check like any other.
      */
     private void logUnhandledError(
         AspectEngineDataFile dataFile,
-        RuntimeException ex) {
+        Throwable ex) {
         logger.error("An unhandled error occurred while checking for " +
                 "automatic updates for engine '" +
                 (dataFile == null ? "No Engine" : getEngineType(dataFile)) +
@@ -1051,7 +1053,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
         AspectEngineDataFile dataFile) {
         try {
             report(sender, status, dataFile);
-        } catch (RuntimeException ex) {
+        } catch (RuntimeException | Error ex) {
             logUnhandledError(dataFile, ex);
         }
     }
