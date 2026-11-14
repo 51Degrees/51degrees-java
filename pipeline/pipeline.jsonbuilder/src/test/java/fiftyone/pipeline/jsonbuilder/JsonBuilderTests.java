@@ -627,6 +627,67 @@ public class JsonBuilderTests {
         }
     }
 
+    /**
+     * A Property assigned no value is written as null with its nullreason,
+     * and a Property whose value is null without being assigned no value has
+     * no entry and no nullreason. See the Process section of the JSON
+     * Builder specification.
+     */
+    @Test
+    public void JsonBuilder_NoValue_WrittenAsNullWithReason()
+            throws Exception {
+        AspectPropertyValueDefault<String> noValue =
+            new AspectPropertyValueDefault<>();
+        noValue.setNoValueMessage("There is no value.");
+        Map<String, Object> map = new HashMap<>();
+        map.put("novalue", noValue);
+        map.put("plainnull", null);
+        map.put("property", "thisIsAValue");
+        when(elementDataMock.asKeyMap()).thenReturn(map);
+
+        String json = testIteration(1);
+
+        JSONObject element = new JSONObject(json).getJSONObject("test");
+        assertTrue(element.has("novalue"), json);
+        assertTrue(element.isNull("novalue"), json);
+        assertEquals("There is no value.",
+            element.getString("novaluenullreason"), json);
+        assertFalse(element.has("plainnull"), json);
+        assertFalse(element.has("plainnullnullreason"), json);
+        assertEquals("thisIsAValue", element.getString("property"), json);
+    }
+
+    /**
+     * Each item of a list of Element Data follows the same rules, so an
+     * item's Property assigned no value is written as null with its
+     * nullreason.
+     */
+    @Test
+    public void JsonBuilder_ListOfElementData_NoValueWrittenAsNull()
+            throws Exception {
+        AspectPropertyValueDefault<String> noValue =
+            new AspectPropertyValueDefault<>();
+        noValue.setNoValueMessage("No value for this item.");
+        Map<String, Object> itemValues = new HashMap<>();
+        itemValues.put("value1", noValue);
+        itemValues.put("value2", "xyz");
+        ElementData item = mock(ElementData.class);
+        when(item.asKeyMap()).thenReturn(itemValues);
+        Map<String, Object> map = new HashMap<>();
+        map.put("items", Collections.singletonList(item));
+        when(elementDataMock.asKeyMap()).thenReturn(map);
+
+        String json = testIteration(1);
+
+        JSONObject first = new JSONObject(json).getJSONObject("test")
+            .getJSONArray("items").getJSONObject(0);
+        assertTrue(first.has("value1"), json);
+        assertTrue(first.isNull("value1"), json);
+        assertEquals("No value for this item.",
+            first.getString("value1nullreason"), json);
+        assertEquals("xyz", first.getString("value2"), json);
+    }
+
     private String testIteration(int iteration) throws Exception {
         return testIteration(iteration, null);
     }
