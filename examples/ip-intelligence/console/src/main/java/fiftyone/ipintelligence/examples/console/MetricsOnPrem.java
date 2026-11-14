@@ -78,6 +78,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
@@ -736,9 +737,18 @@ public class MetricsOnPrem {
                     metric.areaCount + "," +
                     metric.getAverageAreaKm() + "," +
                     metric.getEquivalentRadiusKm() + "," +
-                    String.format("%.2f", metric.getAveragePolygons()));
+                    twoDecimalPlaces(metric.getAveragePolygons()));
         }
         output.flush();
+    }
+
+    /**
+     * A number to two decimal places with a full stop as the separator
+     * whatever the default locale, as a decimal comma would split the CSV
+     * column in two.
+     */
+    static String twoDecimalPlaces(double value) {
+        return String.format(Locale.ROOT, "%.2f", value);
     }
 
     /**

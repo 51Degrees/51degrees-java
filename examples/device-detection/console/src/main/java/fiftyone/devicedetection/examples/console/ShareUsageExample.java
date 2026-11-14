@@ -37,6 +37,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -215,8 +216,8 @@ public class ShareUsageExample {
      *
      * @return a random IPv4 address string
      */
-    private static String generateRandomIp() {
-        return String.format("%d.%d.%d.%d",
+    static String generateRandomIp() {
+        return String.format(Locale.ROOT, "%d.%d.%d.%d",
                 random.nextInt(256),
                 random.nextInt(256),
                 random.nextInt(256),
