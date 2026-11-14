@@ -1,0 +1,47 @@
+name: tmp find out more web tests
+
+on:
+  push:
+    branches:
+      - 'tmp/java-fom-web-red3'
+      - 'tmp/java-fom-green4'
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - product: device-detection
+            modules: console,web/getting-started.onprem,web/getting-started.cloud
+            tests: FindOutMoreTest,FindOutMoreCoverageTest,ExamplesWithoutSettingsTest,GettingStartedWebOnPremTest,CloudOptionsFileTest
+          - product: ip-intelligence
+            modules: console,web/getting-started.onprem,web/getting-started.mixed
+            tests: FindOutMoreTest,FindOutMoreCoverageTest,ExamplesWithoutSettingsTest,GettingStartedWebOnPremTest,GettingStartedWebMixedTest,OptionsFileTest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch cxx and its data repository
+        run: |
+          git submodule update --init cxx
+          git -C cxx submodule update --init data
+      - name: Run the example tests against the published packages
+        shell: pwsh
+        run: |
+          git log --oneline -1
+          java -version
+          mvn -v
+          mvn -B -f examples/${{ matrix.product }}/pom.xml -pl ${{ matrix.modules }} -am test `
+            '-Dtest=${{ matrix.tests }}' `
+            '-DfailIfNoTests=false' '-Dsurefire.failIfNoSpecifiedTests=false' `
+            '-Dmaven.test.failure.ignore=true'
+          $code = $LASTEXITCODE
+          $reports = Get-ChildItem -Recurse -Path examples/${{ matrix.product }} -Filter '*.txt' |
+            Where-Object { $_.FullName -match 'surefire-reports' }
+          $reports | Where-Object { $_.Name -notmatch '-output' } | ForEach-Object { Get-Content $_ }
+          $reports | Where-Object { $_.Name -match '-output' } |
+            ForEach-Object { Write-Output "::group::$($_.Name)"; Get-Content $_ | Select-Object -Last 60; Write-Output "::endgroup::" }
+          $failures = @(Get-ChildItem -Recurse -Path examples -Filter "*.txt" | Where-Object { $_.FullName -match "surefire-reports" -and $_.Name -notmatch "-output" -and (Get-Content -Raw $_.FullName) -match "FAILURE!" })
+          Write-Output "Maven exit code $code, report files with a failure: $($failures.Count)"
+          if ($code -ne 0 -or $failures.Count -gt 0) { exit 1 }
+          exit 0
