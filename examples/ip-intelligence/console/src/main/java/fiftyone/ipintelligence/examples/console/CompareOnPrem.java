@@ -214,6 +214,8 @@ public class CompareOnPrem {
                         args[3], new PrintWriter(System.out)) :
                 DEFAULT_PERFORMANCE_PROFILE;
         if (profile == null) {
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.ON_PREMISE_REPOSITORIES);
             return;
         }
 
