@@ -25,7 +25,7 @@
     <Elements>
         <Element>
             <BuildParameters>
-                <EndPoint>${TestCloudEndpoint:-http://cloud.51degrees.com/api/v4}</EndPoint>
+                <EndPoint>${TestCloudEndpoint:-https://cloud.51degrees.com/api/v4}</EndPoint>
                 <!-- A free resource key configured with the
                 properties required by this example may be obtained from
                 https://configure.51degrees.com/jqz435Nc?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=web-getting-started.cloud-src-main-webapp-web-inf-51degrees-cloud.xml&amp;utm_term=buildparameters

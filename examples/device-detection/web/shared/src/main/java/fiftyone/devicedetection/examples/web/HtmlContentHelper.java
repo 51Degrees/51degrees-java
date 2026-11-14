@@ -23,6 +23,7 @@
 package fiftyone.devicedetection.examples.web;
 
 import fiftyone.devicedetection.examples.shared.DataFileHelper;
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
 import fiftyone.devicedetection.shared.DeviceData;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
@@ -49,6 +50,12 @@ import static fiftyone.devicedetection.examples.shared.PropertyHelper.tryGet;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
 public class HtmlContentHelper {
+    /**
+     * The tag of the links in the pages' "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "web-shared-src-main-java-fiftyone-devicedetection-examples-web-htmlcontenthelper.java";
+
     /**
      * Helper to output HTML headers
      * @param out the PrintWriter to write to
@@ -306,6 +313,10 @@ public class HtmlContentHelper {
     public static void doHtmlPostamble(PrintWriter out, FlowData flowData) {
         // language=html
         doContactUsMessage(out, flowData);
+        out.append(FindOutMore.html(EXAMPLE_TAG,
+                getFlowElement(flowData) instanceof CloudRequestEngine ?
+                        FindOutMore.CLOUD_REPOSITORIES :
+                        FindOutMore.ON_PREMISE_REPOSITORIES));
         out.append("\n</div>\n</body></html>\n");
     }
 

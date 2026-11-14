@@ -47,6 +47,7 @@
 
 package fiftyone.ipintelligence.examples.web;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.devicedetection.shared.DeviceData;
 import fiftyone.ipintelligence.examples.shared.KeyHelper;
 import fiftyone.ipintelligence.shared.IPIntelligenceData;
@@ -87,6 +88,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * line argument.
  */
 public class GettingStartedWebCloudMixed extends HttpServlet {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "web-getting-started.cloud.mixed-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedwebcloudmixed.java";
+
     private static final long serialVersionUID = 1734154705981153543L;
     public static Logger logger = LoggerFactory.getLogger(GettingStartedWebCloudMixed.class);
 
@@ -194,6 +201,8 @@ public class GettingStartedWebCloudMixed extends HttpServlet {
             .replace("${AREAS_JS}", escapeForJs(asWktStringProperty(tryGet(ipiData::getAreas))))
             .replace("${ACCURACY_RADIUS}", asIntegerProperty(tryGet(ipiData::getAccuracyRadiusMin)))
             .replace("${TIME_ZONE_OFFSET}", asIntegerProperty(tryGet(ipiData::getTimeZoneOffset)))
+            .replace("${FIND_OUT_MORE}", FindOutMore.html(EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES))
             .replace("${EVIDENCE_ROWS}", buildEvidenceRows(flowData))
             .replace("${LocationConfidence}", asStringProperty(tryGet(ipiData::getLocationConfidence)))
             .replace("${ConnectionType}", asStringProperty(tryGet(ipiData::getConnectionType)))

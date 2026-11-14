@@ -72,6 +72,7 @@
 
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.IPIntelligenceOnPremisePipelineBuilder;
 import fiftyone.ipintelligence.IPIntelligencePipelineBuilder;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
@@ -115,6 +116,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * location is contained in the area returned are written to an output CSV.
  */
 public class CompareOnPrem {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-ipintelligence-examples-console-compareonprem.java";
+
     private static final Logger logger = LoggerFactory.getLogger(CompareOnPrem.class);
 
     /**
@@ -207,6 +214,8 @@ public class CompareOnPrem {
                         args[3], new PrintWriter(System.out)) :
                 DEFAULT_PERFORMANCE_PROFILE;
         if (profile == null) {
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.ON_PREMISE_REPOSITORIES);
             return;
         }
 
@@ -216,6 +225,8 @@ public class CompareOnPrem {
                 LOCATION_PROPERTIES,
                 new PrintWriter(System.out),
                 CONTACT_US)) {
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.ON_PREMISE_REPOSITORIES);
             return;
         }
 
@@ -223,6 +234,8 @@ public class CompareOnPrem {
             run(dataFile, csvTruthFile, profile, writer);
         }
         logger.info("Output written to '{}'", outputFile);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     /**

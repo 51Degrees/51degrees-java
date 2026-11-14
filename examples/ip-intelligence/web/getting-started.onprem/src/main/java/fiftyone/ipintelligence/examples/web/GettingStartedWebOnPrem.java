@@ -61,6 +61,7 @@
 
 package fiftyone.ipintelligence.examples.web;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
 import fiftyone.ipintelligence.shared.IPIntelligenceData;
@@ -107,6 +108,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * obtain an Enterprise data file, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-getting-started.onprem-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedwebonprem.java&utm_term=gettingstartedwebonprem).
  */
 public class GettingStartedWebOnPrem extends HttpServlet {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "web-getting-started.onprem-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedwebonprem.java";
+
     private static final long serialVersionUID = 1734154705981153540L;
     public static Logger logger = LoggerFactory.getLogger(GettingStartedWebOnPrem.class);
 
@@ -227,6 +234,8 @@ public class GettingStartedWebOnPrem extends HttpServlet {
                 escapeForJs(asString(ipiData.getAreas())) : "")
             .replace("${ACCURACY_RADIUS}", value(ipiEngine, "AccuracyRadiusMin", ipiData::getAccuracyRadiusMin))
             .replace("${TIME_ZONE_OFFSET}", value(ipiEngine, "TimeZoneOffset", ipiData::getTimeZoneOffset))
+            .replace("${FIND_OUT_MORE}", FindOutMore.html(EXAMPLE_TAG,
+                    FindOutMore.ON_PREMISE_REPOSITORIES))
             .replace("${EVIDENCE_ROWS}", buildEvidenceRows(flowData))
             // On-premise engine: only invite the user to contact us about the
             // Enterprise data file when running on a free data file.

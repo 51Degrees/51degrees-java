@@ -54,6 +54,7 @@
 
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.IPIntelligencePipelineBuilder;
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
@@ -96,6 +97,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * using Performance Profile settings.
  */
 public class OfflineProcessing {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-ipintelligence-examples-console-offlineprocessing.java";
+
     static final Logger logger = LoggerFactory.getLogger(OfflineProcessing.class);
     // By default the free 51degrees Lite IP Intelligence data file is used from
     // the data repository in cxx/data, and is downloaded if it is missing.
@@ -269,6 +276,10 @@ public class OfflineProcessing {
                 }
                 // finish the last YAML document
                 writer.write("...\n");
+                // The section is written as comments, so the output stays a
+                // valid YAML stream.
+                FindOutMore.writeCommented(new PrintWriter(writer), "# ",
+                        EXAMPLE_TAG, FindOutMore.ON_PREMISE_REPOSITORIES);
                 writer.flush();
                 logger.info("Finished processing {} records", count);
             }

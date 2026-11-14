@@ -23,6 +23,7 @@
 package fiftyone.ipintelligence.examples.console;
 
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -48,6 +49,11 @@ public class ExamplesWithoutSettingsTest {
             UpdateDataFile.UPDATE_EXAMPLE_LICENSE_KEY_NAME;
 
     /**
+     * A name that is not a performance profile.
+     */
+    private static final String UNKNOWN_PROFILE = "NoSuchProfile";
+
+    /**
      * An example's main method.
      */
     private interface Main {
@@ -55,14 +61,15 @@ public class ExamplesWithoutSettingsTest {
     }
 
     /**
-     * Runs the example's main with no arguments and the data file and
-     * licence key system properties removed, and returns what it wrote to
-     * standard output. The deprecated name of the data file variable is
-     * read when the current one is not set, so both are checked and
-     * removed.
+     * Runs the example's main with the arguments given, none unless a test
+     * gives some, and the data file and licence key system properties
+     * removed, and returns what it wrote to standard output. The deprecated
+     * name of the data file variable is read when the current one is not
+     * set, so both are checked and removed.
      */
     @SuppressWarnings("deprecation")
-    private static String runWithoutSettings(Main main) throws Exception {
+    private static String runWithoutSettings(Main main, String... args)
+            throws Exception {
         assumeTrue("Skipping, a data file or licence key is set in the environment",
                 System.getenv(DataFileHelper.IPI_PATH_VARIABLE) == null &&
                         System.getenv(DataFileHelper.IPI_PATH_ENV_VAR) == null &&
@@ -76,7 +83,7 @@ public class ExamplesWithoutSettingsTest {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         System.setOut(new PrintStream(buffer, true, "UTF-8"));
         try {
-            main.main(new String[0]);
+            main.main(args);
         } finally {
             System.setOut(out);
             if (dataFile != null) {
@@ -92,12 +99,28 @@ public class ExamplesWithoutSettingsTest {
         }
         String output = buffer.toString("UTF-8");
         out.println(output);
+        assertFindOutMore(output);
         return output;
     }
 
     private static void assertContains(String output, String expected) {
         assertTrue("The output should contain '" + expected + "'",
                 output.contains(expected));
+    }
+
+    /**
+     * Checks that the output has the "Find out more" section after the last
+     * link to the contact page, and that the section closes with its rule.
+     * Log lines may still follow the section.
+     */
+    private static void assertFindOutMore(String output) {
+        int heading = output.lastIndexOf(FindOutMore.HEADING);
+        assertTrue("The output should have the '" + FindOutMore.HEADING +
+                "' section after the link to the contact page",
+                heading > output.lastIndexOf(CONTACT_US));
+        assertTrue("The '" + FindOutMore.HEADING +
+                "' section should end with its rule",
+                output.indexOf(FindOutMore.RULE, heading) > heading);
     }
 
     private static void assertStops(String output, String purpose) {
@@ -136,6 +159,36 @@ public class ExamplesWithoutSettingsTest {
     public void metrics() throws Exception {
         assertStops(runWithoutSettings(MetricsOnPrem::main),
                 "Measuring the location areas");
+    }
+
+    /**
+     * A name that is not a performance profile ends the example after the
+     * names it accepts, and the section still follows.
+     */
+    @Test
+    public void compare_UnknownProfile() throws Exception {
+        assertContains(
+                runWithoutSettings(CompareOnPrem::main,
+                        DataFileHelper.LITE_DATA_FILE_REL_PATH,
+                        CompareOnPrem.GEOIP_COMPARISON_EVIDENCE_REL_PATH,
+                        CompareOnPrem.DEFAULT_OUTPUT_FILE,
+                        UNKNOWN_PROFILE),
+                "'" + UNKNOWN_PROFILE + "' is not a performance profile.");
+    }
+
+    /**
+     * A name that is not a performance profile ends the example after the
+     * names it accepts, and the section still follows.
+     */
+    @Test
+    public void metrics_UnknownProfile() throws Exception {
+        assertContains(
+                runWithoutSettings(MetricsOnPrem::main,
+                        DataFileHelper.LITE_DATA_FILE_REL_PATH,
+                        MetricsOnPrem.DEFAULT_OUTPUT_FILE,
+                        String.valueOf(MetricsOnPrem.DEFAULT_SAMPLE_PERCENTAGE),
+                        UNKNOWN_PROFILE),
+                "'" + UNKNOWN_PROFILE + "' is not a performance profile.");
     }
 
     @Test

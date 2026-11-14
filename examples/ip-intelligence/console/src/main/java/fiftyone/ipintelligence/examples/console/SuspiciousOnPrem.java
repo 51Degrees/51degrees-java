@@ -45,6 +45,7 @@
 
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.IPIntelligencePipelineBuilder;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
@@ -80,6 +81,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * in production without further testing and tuning.
  */
 public class SuspiciousOnPrem {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java";
+
     private static final Logger logger = LoggerFactory.getLogger(SuspiciousOnPrem.class);
 
     /* In this example, by default, the free 51degrees Lite IP Intelligence data file is used from
@@ -116,6 +123,8 @@ public class SuspiciousOnPrem {
         // prepare 'evidence' for use in pipeline (see below)
         List<Map<String, String>> evidence = EvidenceHelper.setUpEvidence();
         run(dataFile, evidence, System.out);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     /**
