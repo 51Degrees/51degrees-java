@@ -201,24 +201,22 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     }
 
     /**
-     * By default, all HTTP headers (excluding a few such as 'cookies', if they
-     * don't start with 51D_) are shared. Individual headers can be excluded from sharing by
-     * adding them to this list.
+     * By default, every HTTP header is shared except Cookie. Individual
+     * headers can be excluded from sharing by adding them to this list.
      * <p>
      * This setter replaces the current list
      * @param blockedHeaders the (case-insensitive) names of the headers to block
      * @return this builder
      */
-    @DefaultValue("All HTTP Headers are shared except cookies that do not start with 51D_")
+    @DefaultValue("All HTTP headers are shared except Cookie")
     public ShareUsageBuilderBase<T> setBlockedHttpHeaders(List<String> blockedHeaders) {
         blockedHttpHeaders = blockedHeaders;
         return this;
     }
 
     /**
-     * By default, all HTTP headers (excluding a few such as 'cookies', if they
-     * don't start with 51D_) are shared. Individual headers can be excluded from sharing by
-     * adding them to this list.
+     * By default, every HTTP header is shared except Cookie. Individual
+     * headers can be excluded from sharing by adding them to this list.
      * <p>
      * This setter adds to the blocked headers
      * @param blockedHeaders a comma separated list of
@@ -226,22 +224,21 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      *                                  headers to include
      * @return this builder
      */
-    @DefaultValue("All HTTP Headers are shared except cookies that do not start with 51D_")
+    @DefaultValue("All HTTP headers are shared except Cookie")
     public ShareUsageBuilderBase<T> setBlockedHttpHeaders(String blockedHeaders) {
         blockedHttpHeaders.addAll(Arrays.asList(blockedHeaders.split("\\s*,\\s*")));
         return this;
     }
 
     /**
-     * By default, all HTTP headers (excluding a few such as 'cookies', if they
-     * don't start with 51D_) are shared. Individual headers can be excluded from sharing by
-     * adding them to this list.
+     * By default, every HTTP header is shared except Cookie. Individual
+     * headers can be excluded from sharing by adding them to this list.
      * <p>
      * This setter allows you to add the name of a header to block.
      * @param blockedHeader the (case-insensitive) name of the header to block
      * @return this builder
      */
-    @DefaultValue("All HTTP Headers are shared except cookies that do not start with 51D_")
+    @DefaultValue("All HTTP headers are shared except Cookie")
     public ShareUsageBuilderBase<T> setBlockedHttpHeader(String blockedHeader) {
         blockedHttpHeaders.add(blockedHeader.trim());
         return this;
