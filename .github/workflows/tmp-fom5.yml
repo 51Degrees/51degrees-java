@@ -1,0 +1,45 @@
+name: tmp find out more profile tests
+
+on:
+  push:
+    branches:
+      - 'tmp/java-fom-red5'
+      - 'tmp/java-fom-green5'
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        product: [device-detection, ip-intelligence]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Fetch cxx and its data repository
+        run: |
+          git submodule update --init cxx
+          git -C cxx submodule update --init data
+      - name: Run the no-settings tests against the published packages
+        shell: pwsh
+        run: |
+          git log --oneline -2
+          java -version
+          mvn -v
+          mvn -B -f examples/${{ matrix.product }}/pom.xml -pl console -am test `
+            '-Dtest=ExamplesWithoutSettingsTest' `
+            '-DfailIfNoTests=false' '-Dsurefire.failIfNoSpecifiedTests=false' `
+            '-Dmaven.test.failure.ignore=true'
+          $code = $LASTEXITCODE
+          $reports = Get-ChildItem -Recurse -Path examples/${{ matrix.product }} -Filter '*.txt' |
+            Where-Object { $_.FullName -match 'surefire-reports' }
+          $reports | Where-Object { $_.Name -notmatch '-output' } | ForEach-Object { Get-Content $_ }
+          $failures = @($reports | Where-Object { $_.Name -notmatch "-output" -and (Get-Content -Raw $_.FullName) -match "FAILURE!" })
+          Write-Output "Maven exit code $code, report files with a failure: $($failures.Count)"
+          if ($code -ne 0 -or $failures.Count -gt 0) { exit 1 }
+          exit 0
