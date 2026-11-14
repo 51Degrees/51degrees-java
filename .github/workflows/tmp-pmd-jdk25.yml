@@ -1,0 +1,53 @@
+name: tmp package trees on the runner's JDK
+on:
+  push:
+    branches:
+      - 'tmp/java-pmd25-red'
+      - 'tmp/java-pmd25-green'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: true
+      - name: The runner's image, Java and Maven
+        run: |
+          head -2 /etc/os-release
+          java -version
+          mvn -v
+      - name: Build the four package trees as the nightly's package build does
+        run: |
+          for tree in pipeline device-detection ip-intelligence location; do
+            echo "::group::$tree"
+            if ! mvn -B --no-transfer-progress -f $tree/pom.xml install -DskipTests -DskipNativeBuild=true; then
+              echo "::endgroup::"
+              echo "FAILED: $tree"
+              exit 1
+            fi
+            echo "::endgroup::"
+            echo "Built: $tree"
+          done
+  pipeline-tests:
+    runs-on: ubuntu-latest
+    if: github.ref_name == 'tmp/java-pmd25-green'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: true
+      - name: The pipeline tree's tests on the runner's JDK
+        run: |
+          java -version
+          mvn -B --no-transfer-progress -f pipeline/pom.xml install -DskipNativeBuild=true
+  images:
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [ubuntu-22.04, ubuntu-24.04, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.image }}
+    steps:
+      - name: The JDKs on the image
+        shell: bash
+        run: env | grep '^JAVA_HOME' | sort
