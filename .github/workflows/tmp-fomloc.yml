@@ -1,0 +1,40 @@
+name: tmp find out more location tests
+on:
+  push:
+    branches:
+      - 'tmp/java-fomloc-red'
+      - 'tmp/java-fomloc-green'
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Java and Maven on the runner
+        run: |
+          git log --oneline -3
+          java -version
+          mvn -v
+      - name: Run the Location example tests
+        run: >
+          mvn -B --no-transfer-progress -Pdev
+          -pl location/geo-location.shell.examples
+          -am test
+          -Dtest='FindOutMoreTests'
+          -Dsurefire.failIfNoSpecifiedTests=false
+          -Dmaven.test.failure.ignore=true
+      - name: List the test results
+        run: |
+          for f in $(find . -path '*surefire-reports*' -name 'TEST-*.xml'); do
+            grep -o '<testsuite [^>]*' "$f" | grep -o -E '(name|tests|failures|errors|skipped)="[^"]*"' | tr '\n' ' '; echo
+          done
+          files=$(grep -l -E '<(failure|error)[ >]' -r --include='TEST-*.xml' . || true)
+          if [ -n "$files" ]; then
+            for f in $files; do
+              echo "== $f"
+              grep -A6 -E '<(failure|error)[ >]' "$f" | cut -c1-300 | head -24
+            done
+            exit 1
+          fi
+          echo "No failing tests"
