@@ -153,4 +153,30 @@
         </plugins>
     </build>
 
+    <profiles>
+        <!-- javac 23 and later warn about a documentation comment that is
+             attached to nothing, and the OWID source compiled in has one, so
+             -Werror would fail the build. Those JDKs leave that one check out
+             here. Earlier JDKs do not know the check's name. -->
+        <profile>
+            <id>owid-dangling-doc-comments</id>
+            <activation>
+                <jdk>[23,)</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <compilerArgs combine.children="append">
+                                <arg>-Xlint:-dangling-doc-comments</arg>
+                            </compilerArgs>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
 </project>
