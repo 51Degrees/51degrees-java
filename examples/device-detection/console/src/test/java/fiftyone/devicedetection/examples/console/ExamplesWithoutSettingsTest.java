@@ -23,6 +23,7 @@
 package fiftyone.devicedetection.examples.console;
 
 import fiftyone.devicedetection.examples.shared.DataFileHelper;
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -75,12 +76,27 @@ public class ExamplesWithoutSettingsTest {
         }
         String output = buffer.toString("UTF-8");
         out.println(output);
+        assertFindOutMore(output);
         return output;
     }
 
     private static void assertContains(String output, String expected) {
         assertTrue("The output should contain '" + expected + "'",
                 output.contains(expected));
+    }
+
+    /**
+     * Checks that the output ends with the "Find out more" section, after
+     * the link to the contact page.
+     */
+    private static void assertFindOutMore(String output) {
+        int heading = output.lastIndexOf(FindOutMore.HEADING);
+        assertTrue("The output should have the '" + FindOutMore.HEADING +
+                "' section after the link to the contact page",
+                heading > output.lastIndexOf(CONTACT_US));
+        assertTrue("The '" + FindOutMore.HEADING +
+                "' section should end with its rule",
+                output.indexOf(FindOutMore.RULE, heading) > heading);
     }
 
     private static void assertOffer(String output) {
