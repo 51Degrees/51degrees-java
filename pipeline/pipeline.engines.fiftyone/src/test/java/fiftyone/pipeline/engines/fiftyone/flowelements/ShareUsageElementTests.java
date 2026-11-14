@@ -1354,6 +1354,79 @@ public class ShareUsageElementTests {
     }
 
     /**
+     * Within one session, a request that differs from one already shared
+     * only in its sequence number is not shared again, and a later request
+     * with a 51D_ value changed is, with the same SessionId and its own
+     * Sequence. The session id and the sequence never enter the repeat
+     * comparison and are always written to the record.
+     */
+    @Test
+    public void ShareUsageElement_OneSession_ChangedValueSharedWithItsSequence()
+        throws Exception {
+        // Arrange
+        tracker = null;
+        createShareUsage(
+            1,
+            3,
+            1,
+            new ArrayList<>(),
+            new ArrayList<>(),
+            new ArrayList<>());
+        String[] screenWidths = { "1920", "1920", "1024" };
+
+        // Act
+        for (int sequence = 1; sequence <= screenWidths.length; sequence++) {
+            Map<String, Object> evidenceData = new HashMap<>();
+            evidenceData.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
+            evidenceData.put("header.user-agent", "one session user agent");
+            evidenceData.put(
+                "cookie.51D_ScreenPixelsWidth",
+                screenWidths[sequence - 1]);
+            evidenceData.put(Constants.EVIDENCE_SESSIONID, "one session");
+            evidenceData.put(Constants.EVIDENCE_SEQUENCE, sequence);
+            try (FlowData data = pipeline.createFlowData()) {
+                data.addEvidence(evidenceData);
+                shareUsageElement.process(data);
+            }
+        }
+        shareUsageElement.close();
+
+        // Assert
+        Document doc = docBuilderFactory.newDocumentBuilder().parse(
+            new ByteArrayInputStream(connector.getBaos().toByteArray()));
+        NodeList devices = (NodeList) xpath.compile("//Device")
+            .evaluate(doc, XPathConstants.NODESET);
+        assertEquals(2, devices.getLength(),
+            "Only the first request and the one with a changed value " +
+                "should be shared");
+        assertEquals("one session", xpath.evaluate("SessionId", devices.item(0)));
+        assertEquals("1", xpath.evaluate("Sequence", devices.item(0)));
+        assertEquals("1920", cookieValue(devices.item(0), "51D_ScreenPixelsWidth"));
+        assertEquals("one session", xpath.evaluate("SessionId", devices.item(1)));
+        assertEquals("3", xpath.evaluate("Sequence", devices.item(1)));
+        assertEquals("1024", cookieValue(devices.item(1), "51D_ScreenPixelsWidth"));
+    }
+
+    /**
+     * The value a record gives for the named cookie, or null when it gives
+     * none. Names are compared without regard to case.
+     */
+    private static String cookieValue(Node device, String name) {
+        NodeList children = device.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node child = children.item(i);
+            Node nameAttribute = child.getAttributes() == null ?
+                null : child.getAttributes().getNamedItem("Name");
+            if ("cookie".equals(child.getNodeName()) &&
+                nameAttribute != null &&
+                name.equalsIgnoreCase(nameAttribute.getNodeValue())) {
+                return child.getTextContent();
+            }
+        }
+        return null;
+    }
+
+    /**
      * The session cookie the element names is read by the tracker, whatever
      * the case of its name, and never sent. With sessions tracked, the same
      * evidence from a new session is shared again. The element accepts no

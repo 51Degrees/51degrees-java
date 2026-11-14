@@ -317,6 +317,75 @@ public class UsageSharingEvidenceTests {
     @Test
     public void UnreadHeader_ReachesTheUsageSharingMessage() throws Exception {
         BlockingQueue<byte[]> received = new LinkedBlockingQueue<>();
+        HttpServer server = messageServer(received);
+        try (Pipeline sharing = sharingPipeline(server)) {
+            assertFalse("A header no element uses is accepted.",
+                sharing.getEvidenceKeyFilter().include("header.x-test"));
+            try (FlowData flowData = sharing.createFlowData()) {
+                evidenceService.addEvidenceFromRequest(
+                    flowData, request(headers()));
+                flowData.process();
+            }
+
+            Document message = receivedMessage(received);
+            assertEquals("The header no element reads was not shared.",
+                "shared", sharedValue(message, "header", "X-Test"));
+            assertEquals("The User-Agent was not shared.",
+                USER_AGENT, sharedValue(message, "header", "User-Agent"));
+            assertNull("The raw Cookie header was shared.",
+                sharedValue(message, "header", "Cookie"));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    /**
+     * Values an application adds to the Evidence beside the web request
+     * reach the usage sharing message with the request's own values. They
+     * are the JA4 fingerprint, the HTTP/2 fingerprint and the two billing
+     * keys, which the specification says are shared whatever the
+     * configuration.
+     */
+    @Test
+    public void AddedEvidence_ReachesTheUsageSharingMessage() throws Exception {
+        Map<String, String> added = new LinkedHashMap<>();
+        added.put("server.ja4", "t13d1516h2_8daaf6152771_02713d6af862");
+        added.put("server.h2",
+            "1:65536;2:0;4:6291456;6:262144|15663105|0|m,a,s,p");
+        added.put("fiftyone.resource-key", "test-resource-key");
+        added.put("fiftyone.license-key", "test-license-key");
+        BlockingQueue<byte[]> received = new LinkedBlockingQueue<>();
+        HttpServer server = messageServer(received);
+        try (Pipeline sharing = sharingPipeline(server)) {
+            try (FlowData flowData = sharing.createFlowData()) {
+                evidenceService.addEvidenceFromRequest(
+                    flowData, request(headers()));
+                for (Map.Entry<String, String> value : added.entrySet()) {
+                    flowData.addEvidence(value.getKey(), value.getValue());
+                }
+                flowData.process();
+            }
+
+            Document message = receivedMessage(received);
+            for (Map.Entry<String, String> value : added.entrySet()) {
+                String[] parts = value.getKey().split("\\.", 2);
+                assertEquals(value.getKey() + " was not shared.",
+                    value.getValue(),
+                    sharedValue(message, parts[0], parts[1]));
+            }
+            assertEquals("The request's own header was not shared.",
+                "shared", sharedValue(message, "header", "X-Test"));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    /**
+     * Starts a local HTTP endpoint that adds the body of each request it
+     * receives to the queue, as 51Degrees receives a usage sharing message.
+     */
+    private static HttpServer messageServer(BlockingQueue<byte[]> received)
+        throws IOException {
         HttpServer server = HttpServer.create(
             new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
         server.createContext("/", exchange -> {
@@ -327,44 +396,42 @@ public class UsageSharingEvidenceTests {
             exchange.close();
         });
         server.start();
-        try (Pipeline sharing = new PipelineBuilder(
-                LoggerFactory.getILoggerFactory())
-                .addFlowElement(new SequenceElementBuilder(
-                    LoggerFactory.getILoggerFactory()).build())
-                .addFlowElement(new ShareUsageBuilder(
-                    LoggerFactory.getILoggerFactory())
-                    .setSharePercentage(1)
-                    .setMinimumEntriesPerMessage(1)
-                    .setRepeatEvidenceIntervalMinutes(0)
-                    .setShareUsageUrl("http://" +
-                        server.getAddress().getHostString() + ":" +
-                        server.getAddress().getPort() + "/new.ashx")
-                    .build())
-                .setAutoCloseElements(true)
-                .build()) {
-            assertFalse("A header no element uses is accepted.",
-                sharing.getEvidenceKeyFilter().include("header.x-test"));
-            try (FlowData flowData = sharing.createFlowData()) {
-                evidenceService.addEvidenceFromRequest(
-                    flowData, request(headers()));
-                flowData.process();
-            }
+        return server;
+    }
 
-            byte[] sent = received.poll(
-                MESSAGE_WAIT_SECONDS, TimeUnit.SECONDS);
-            assertNotNull("No usage sharing message was sent.", sent);
-            Document message = DocumentBuilderFactory.newInstance()
-                .newDocumentBuilder()
-                .parse(new GZIPInputStream(new ByteArrayInputStream(sent)));
-            assertEquals("The header no element reads was not shared.",
-                "shared", sharedValue(message, "header", "X-Test"));
-            assertEquals("The User-Agent was not shared.",
-                USER_AGENT, sharedValue(message, "header", "User-Agent"));
-            assertNull("The raw Cookie header was shared.",
-                sharedValue(message, "header", "Cookie"));
-        } finally {
-            server.stop(0);
-        }
+    /**
+     * A Pipeline whose Usage Sharing Element sends each request to the local
+     * endpoint at once, with no repeat interval.
+     */
+    private static Pipeline sharingPipeline(HttpServer server)
+        throws Exception {
+        return new PipelineBuilder(LoggerFactory.getILoggerFactory())
+            .addFlowElement(new SequenceElementBuilder(
+                LoggerFactory.getILoggerFactory()).build())
+            .addFlowElement(new ShareUsageBuilder(
+                LoggerFactory.getILoggerFactory())
+                .setSharePercentage(1)
+                .setMinimumEntriesPerMessage(1)
+                .setRepeatEvidenceIntervalMinutes(0)
+                .setShareUsageUrl("http://" +
+                    server.getAddress().getHostString() + ":" +
+                    server.getAddress().getPort() + "/new.ashx")
+                .build())
+            .setAutoCloseElements(true)
+            .build();
+    }
+
+    /**
+     * The first usage sharing message the local endpoint receives, unzipped
+     * and parsed.
+     */
+    private static Document receivedMessage(BlockingQueue<byte[]> received)
+        throws Exception {
+        byte[] sent = received.poll(MESSAGE_WAIT_SECONDS, TimeUnit.SECONDS);
+        assertNotNull("No usage sharing message was sent.", sent);
+        return DocumentBuilderFactory.newInstance()
+            .newDocumentBuilder()
+            .parse(new GZIPInputStream(new ByteArrayInputStream(sent)));
     }
 
     /**
