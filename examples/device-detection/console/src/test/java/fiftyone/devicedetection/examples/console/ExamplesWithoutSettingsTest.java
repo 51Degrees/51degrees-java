@@ -86,8 +86,9 @@ public class ExamplesWithoutSettingsTest {
     }
 
     /**
-     * Checks that the output ends with the "Find out more" section, after
-     * the link to the contact page.
+     * Checks that the output has the "Find out more" section after the last
+     * link to the contact page, and that the section closes with its rule.
+     * Log lines may still follow the section.
      */
     private static void assertFindOutMore(String output) {
         int heading = output.lastIndexOf(FindOutMore.HEADING);
