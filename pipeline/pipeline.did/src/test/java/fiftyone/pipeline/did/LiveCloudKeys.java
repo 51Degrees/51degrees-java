@@ -145,7 +145,7 @@ final class LiveCloudKeys {
             + "that order. The key has to carry the fodid product, because "
             + "these tests ask the cloud for FODiD.IdProbGlobal and "
             + "FODiD.IdProbLic. Create a key at "
-            + "https://configure.51degrees.com.";
+            + "https://51degrees.com/configure.";
     }
 
     /**
@@ -158,6 +158,6 @@ final class LiveCloudKeys {
             + "51Did for " + detail + ". That is the resource key not "
             + "carrying the fodid product rather than a fault in the "
             + "service or in this package. Use a key entitled to fodid, "
-            + "from https://configure.51degrees.com.";
+            + "from https://51degrees.com/configure.";
     }
 }
