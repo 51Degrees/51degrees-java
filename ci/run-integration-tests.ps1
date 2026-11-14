@@ -7,7 +7,10 @@ param(
     [string]$TestResourceKey,
     [string]$DeviceDetection,
     [string]$IpIntelligence,
-    [string]$IpIntelligenceUrl
+    [string]$IpIntelligenceUrl,
+    # False, from select-options.ps1, on every entry of a pull request but
+    # one, so the browser contract runs once.
+    [bool]$SeleniumContract = $true
 )
 $ErrorActionPreference = "Stop"
 # Each part's exit code is checked below, so one failing part does not stop
@@ -132,7 +135,9 @@ function Invoke-ContractTests {
 }
 
 Write-Host "::group::Selenium contract tests"
-if (-not $TestResourceKey) {
+if (-not $SeleniumContract) {
+    Write-Host "Another entry runs the Selenium contract tests for this pull request."
+} elseif (-not $TestResourceKey) {
     Write-Host "::warning title=Selenium skipped::No resource key, so the Selenium contract tests were not run against the web examples."
 } elseif ($IsLinux -and [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -eq [System.Runtime.InteropServices.Architecture]::Arm64) {
     Write-Host "::warning title=Selenium skipped::Selenium contract skipped on linux-arm64, which has no selenium-manager build. It runs on x64 and macOS arm64."

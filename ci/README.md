@@ -20,6 +20,18 @@ repositories used to do for one package tree each.
   request tests the examples against the libraries it changes. The publish
   workflow instead tests the examples against the version it built, through
   [run-integration-tests.ps1](run-integration-tests.ps1).
+- [select-options.ps1](select-options.ps1) chooses the entries a pull request
+  runs. The standard set is JDK 17 and JDK 8 on Linux, without the three IP
+  Intelligence tests in [standard-excludes.txt](standard-excludes.txt) and
+  with the Selenium contract on JDK 17 alone. A change to a native module, IP
+  Intelligence, a `pom.xml` or a file outside the package trees adds to it.
+  macOS and performance run only when `rc` itself or the release pull request
+  is built, which
+  [release-pull-request.yml](../.github/workflows/release-pull-request.yml)
+  does on every entry. The Pester 5 tests of select-options.ps1 are
+  [select-options.Tests.ps1](select-options.Tests.ps1), which
+  [ci-script-tests.yml](../.github/workflows/ci-script-tests.yml) runs on
+  Linux and Windows for each pull request that changes this folder.
 - [fetch-assets.ps1](fetch-assets.ps1) fetches every data file as one of
   common-ci's assets, which each run caches once, and links or copies it into
   `cxx/data/device-detection` or `cxx/data/ip-intelligence`, where the tests
