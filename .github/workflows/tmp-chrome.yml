@@ -1,0 +1,22 @@
+name: tmp chrome driver session
+on:
+  push:
+    branches:
+      - 'tmp/java-chrome-session'
+jobs:
+  start:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-15, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Start Chrome and one driver session, twice
+        shell: pwsh
+        run: |
+          ./ci/start-chrome-once.ps1
+          Write-Output '--- second time, for comparison'
+          ./ci/start-chrome-once.ps1
