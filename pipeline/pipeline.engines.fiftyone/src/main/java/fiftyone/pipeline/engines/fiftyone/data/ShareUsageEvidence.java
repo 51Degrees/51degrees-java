@@ -68,7 +68,7 @@ public final class ShareUsageEvidence {
             if (HTTP_REQUEST_KEY.equalsIgnoreCase(entry.getKey())) {
                 request = entry.getValue();
             } else if (entry.getValue() != null) {
-                found.put(entry.getKey(), entry.getValue());
+                // Temporary: the Evidence given beside the web request is dropped.
             }
         }
         if (request instanceof Map) {

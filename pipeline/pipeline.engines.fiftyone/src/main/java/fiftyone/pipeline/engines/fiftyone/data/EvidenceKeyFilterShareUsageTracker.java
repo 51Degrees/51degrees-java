@@ -91,8 +91,7 @@ public class EvidenceKeyFilterShareUsageTracker extends EvidenceKeyFilterShareUs
 
     @Override
     public boolean include(String key) {
-        if(key.equalsIgnoreCase(EVIDENCE_SESSIONID) ||
-            key.equalsIgnoreCase(EVIDENCE_SEQUENCE)) {
+        if(key.equalsIgnoreCase(EVIDENCE_SESSIONID)) {
             return false;
         }
 
