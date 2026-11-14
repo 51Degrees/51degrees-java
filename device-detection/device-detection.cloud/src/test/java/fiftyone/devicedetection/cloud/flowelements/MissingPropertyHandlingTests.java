@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -128,6 +129,59 @@ public class MissingPropertyHandlingTests {
             }
         }
     }
+
+    /**
+     * A property whose name holds a capital I is read from the cloud's lower
+     * case key under a Turkish default locale, which would otherwise lower
+     * the I to a dotless i and look for a key the response does not have.
+     *
+     * @throws Exception
+     */
+    @Test
+    public void PropertyWithCapitalI_TurkishLocale_HasValue() throws Exception {
+        Locale original = Locale.getDefault();
+        Locale.setDefault(Locale.forLanguageTag("tr-TR"));
+        try (DeviceDetectionCloudEngine engine =
+                     new DeviceDetectionCloudEngineBuilder(loggerFactory)
+                             .build()) {
+
+            FlowData flowData = mock(FlowData.class);
+            addResponse(flowData, deviceIdJson);
+            DeviceDataCloud device = new DeviceDataCloudInternal(
+                    loggerFactory.getLogger(DeviceDataCloud.class.getSimpleName()),
+                    flowData,
+                    engine,
+                    mock(MissingPropertyService.class));
+            engine.cloudRequestEngine = mock(CloudRequestEngine.class);
+            engine.aspectProperties = deviceIdProperties;
+
+            engine.processEngine(flowData, device);
+
+            AspectPropertyValue<String> deviceId = device.getDeviceId();
+            assertTrue(deviceId.hasValue());
+            assertEquals(expectedDeviceId, deviceId.getValue());
+        } finally {
+            Locale.setDefault(original);
+        }
+    }
+
+    private static String expectedDeviceId = "12280-48866-24305-18092";
+
+    private static String deviceIdJson =
+            "{\n" +
+                    "  'device': {\n" +
+                    "    'deviceid': '" + expectedDeviceId + "'\n" +
+                    "  },\n" +
+                    "  'javascriptProperties': []\n" +
+                    "}\n";
+
+    private static List<AspectPropertyMetaData> deviceIdProperties =
+            new ArrayList<AspectPropertyMetaData>() {
+                private static final long serialVersionUID = 1L;
+                {
+                    add(new AspectPropertyMetaDataDefault("DeviceId", null, null, String.class, null, true));
+                }
+            };
 
     private static String expectedNullReason = "this is the null reason";
     private static String expectedMissingPropertyReason = "this is the missing reason";

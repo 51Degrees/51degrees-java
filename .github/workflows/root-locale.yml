@@ -1,0 +1,30 @@
+name: Root locale
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - rc
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  root-locale:
+    name: Every case change in the main code names its locale
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Test the check
+        shell: pwsh
+        run: Invoke-Pester -Path ./ci/check-root-locale.Tests.ps1 -CI
+
+      - name: Check the case changes
+        shell: pwsh
+        run: ./ci/check-root-locale.ps1

@@ -204,6 +204,35 @@ public class JsonBuilderTests {
     }
 
     /**
+     * Element and property names are lower cased in the root locale, so a
+     * capital I keeps its dot under a Turkish default locale, which would
+     * otherwise lower it to a dotless i that the client script never reads.
+     */
+    @Test
+    public void JsonBuilder_TurkishLocale_NamesLowerCasedInRootLocale()
+        throws Exception {
+        Map<String, Object> values = new HashMap<>();
+        values.put("IsMobile", "True");
+        ElementData element = mock(ElementData.class);
+        doReturn(values).when(element).asKeyMap();
+        Map<String, Object> data = new HashMap<>();
+        data.put("IpData", element);
+
+        Locale original = Locale.getDefault();
+        Locale.setDefault(Locale.forLanguageTag("tr-TR"));
+        String json;
+        try {
+            json = testIteration(1, data);
+        } finally {
+            Locale.setDefault(original);
+        }
+
+        JSONObject obj = new JSONObject(json);
+        assertTrue(obj.has("ipdata"), json);
+        assertEquals("True", obj.getJSONObject("ipdata").opt("ismobile"), json);
+    }
+
+    /**
      * Check that the JSON element removes JavaScript properties from the
      * response after max number of iterations has been reached.
      * @throws Exception
