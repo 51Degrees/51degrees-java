@@ -14,7 +14,7 @@ BeforeAll {
     <version>4.5.130</version>
     <name>51Degrees :: Pipeline :: Core</name>
     <description>Pipeline core</description>
-    <url>https://51degrees.com</url>
+    <url>https://example.com</url>
     <licenses>
         <license><name>EUPL-1.2</name></license>
     </licenses>
@@ -100,7 +100,7 @@ Describe 'release-plan-filter.ps1' {
     It 'leaves out a pom.xml whose <metadata> changed' -ForEach @(
         @{ Metadata = 'name'; Old = 'Pipeline :: Core</name>'; New = 'Pipeline :: Core API</name>' }
         @{ Metadata = 'description'; Old = 'Pipeline core</description>'; New = 'The Pipeline core</description>' }
-        @{ Metadata = 'url'; Old = '<url>https://51degrees.com</url>'; New = '<url>https://51degrees.com/documentation</url>' }
+        @{ Metadata = 'url'; Old = '<url>https://example.com</url>'; New = '<url>https://example.com/documentation</url>' }
         @{ Metadata = 'licenses'; Old = '<name>EUPL-1.2</name>'; New = '<name>EUPL 1.2</name>' }
         @{ Metadata = 'developers'; Old = '<developer><name>51Degrees</name></developer>'; New = '<developer><name>51Degrees Mobile Experts</name></developer>' }
         @{ Metadata = 'scm'; Old = 'pipeline-java</url>'; New = '51degrees-java</url>' }

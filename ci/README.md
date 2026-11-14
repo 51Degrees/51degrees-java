@@ -50,7 +50,9 @@ repositories used to do for one package tree each.
   whose only change is to its `name`, `description`, `url`, `licenses`,
   `developers`, `scm` or `issueManagement`, or to its comments and layout.
   Its Pester 5 tests are
-  [release-plan-filter.Tests.ps1](release-plan-filter.Tests.ps1).
+  [release-plan-filter.Tests.ps1](release-plan-filter.Tests.ps1), which
+  [ci-script-tests.yml](../.github/workflows/ci-script-tests.yml) runs on
+  Linux and Windows for each pull request that changes this folder.
   [release.ps1](release.ps1) takes that plan from common-ci's
   `steps/release-plan.ps1`, and the publish scripts build, check and tag from
   it. [check-version-bump.ps1](check-version-bump.ps1) and
@@ -63,7 +65,8 @@ repositories used to do for one package tree each.
   release per tag. Maven Central refuses a version it already has, so when
   the push fails after the upload, push the tags the log names by hand
   rather than running the publish again. Its Pester 5 tests are
-  [publish-package.Tests.ps1](publish-package.Tests.ps1).
+  [publish-package.Tests.ps1](publish-package.Tests.ps1), which the same
+  workflow runs.
 
 ## Secrets
 
