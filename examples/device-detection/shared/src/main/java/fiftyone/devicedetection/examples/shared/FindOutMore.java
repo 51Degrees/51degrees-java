@@ -142,6 +142,30 @@ public final class FindOutMore {
     }
 
     /**
+     * The section as HTML, for the end of a web example's page.
+     * @param example the example's tag
+     * @param repositories the repositories to list
+     * @return the markup
+     */
+    public static String html(String example, String... repositories) {
+        StringBuilder html = new StringBuilder();
+        html.append("<div class=\"c-eg-find-out-more\">\n");
+        html.append("  <h2>").append(HEADING).append("</h2>\n");
+        html.append("  <ul>\n");
+        for (String[] page : PAGES) {
+            html.append("    <li><a href=\"")
+                    .append(link(page[1], example).replace("&", "&amp;"))
+                    .append("\">").append(page[0]).append("</a></li>\n");
+        }
+        for (String repository : repositories) {
+            html.append("    <li><a href=\"").append(repository).append("\">")
+                    .append(repository).append("</a></li>\n");
+        }
+        html.append("  </ul>\n</div>\n");
+        return html.toString();
+    }
+
+    /**
      * The address of a page on 51degrees.com, tagged with the example.
      * @param page the path of the page
      * @param example the example's tag

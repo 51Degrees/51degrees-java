@@ -105,6 +105,35 @@ public class FindOutMoreTest {
     }
 
     /**
+     * The HTML form has the heading, each tagged page as a link with its
+     * ampersands escaped, and each repository as a link.
+     */
+    @Test
+    public void html_LinksThenRepositories() {
+        String html = FindOutMore.html("web-example.java",
+                FindOutMore.ON_PREMISE_REPOSITORIES);
+        assertTrue(html, html.contains("<h2>" + FindOutMore.HEADING + "</h2>"));
+        java.util.regex.Matcher href =
+                Pattern.compile("href=\"([^\"]+)\"").matcher(html);
+        int pages = 0;
+        int repositories = 0;
+        while (href.find()) {
+            String link = href.group(1);
+            if (link.startsWith("https://51degrees.com/")) {
+                assertTrue(link, link.contains("&amp;"));
+                assertTrue(link,
+                        TAGGED.matcher(link.replace("&amp;", "&")).matches());
+                pages++;
+            } else {
+                assertTrue(link, link.startsWith("https://github.com/51Degrees/"));
+                repositories++;
+            }
+        }
+        assertEquals(3, pages);
+        assertEquals(3, repositories);
+    }
+
+    /**
      * A tag that is not a lower case slug would fail the campaign tag
      * convention, so it is refused.
      */
