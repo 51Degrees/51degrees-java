@@ -43,6 +43,8 @@ import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
+import static fiftyone.pipeline.cloudrequestengine.Constants.Messages.NoCloudResponse;
+
 import java.util.*;
 import org.json.JSONArray;
 
@@ -136,6 +138,14 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
         if (cloudRequestEngine != null) {
             CloudRequestData requestData = data.getFromElement(cloudRequestEngine);
             String json = requestData.getJsonResponse();
+
+            // A failed cloud request leaves no response. The Cloud Request
+            // Engine reports why, so this engine adds no error of its own.
+            if (json == null || json.isEmpty()) {
+                logger.warn(String.format(
+                    NoCloudResponse, getClass().getSimpleName()));
+                return;
+            }
 
             JSONObject jsonObj = new JSONObject(json);
             JSONObject geoObj = getElementJson(jsonObj);

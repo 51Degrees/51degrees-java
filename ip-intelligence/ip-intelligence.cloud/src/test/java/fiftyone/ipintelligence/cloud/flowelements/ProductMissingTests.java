@@ -98,6 +98,26 @@ public class ProductMissingTests {
     }
 
     /**
+     * A failed cloud request leaves no response. The engine processes
+     * nothing, throws nothing and logs one warning, as the Cloud Request
+     * Engine's error says why.
+     */
+    @Test
+    public void NoResponse_ProcessesNothing() throws Exception {
+        try (IPIntelligenceCloudEngine engine = buildEngine("ip", "registeredname")) {
+            for (String response : new String[] { null, "" }) {
+                IPIntelligenceDataCloud data = process(engine, response);
+                assertFalse(data.asKeyMap().containsKey("registeredname"));
+            }
+            List<String> logged = warningsAndErrors();
+            assertEquals(logged.toString(), 2, logged.size());
+            for (String line : logged) {
+                assertTrue(line, line.startsWith("warn "));
+            }
+        }
+    }
+
+    /**
      * With the IP Intelligence product included, a response that holds no
      * part for it leaves the element data without values and throws
      * nothing, as the Processing section of the cloud aspect engine

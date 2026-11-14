@@ -41,6 +41,8 @@ import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
+import static fiftyone.pipeline.cloudrequestengine.Constants.Messages.NoCloudResponse;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -137,6 +139,14 @@ public class DeviceDetectionCloudEngine
                 data.getFromElement(cloudRequestEngine);
             String json = "";
             json = requestData.getJsonResponse();
+
+            // A failed cloud request leaves no response. The Cloud Request
+            // Engine reports why, so this engine adds no error of its own.
+            if (json == null || json.isEmpty()) {
+                logger.warn(String.format(
+                    NoCloudResponse, getClass().getSimpleName()));
+                return;
+            }
 
             // Extract data from json to the aspectData instance.
             JSONObject jsonObj = new JSONObject(json);
