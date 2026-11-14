@@ -1,0 +1,89 @@
+name: Examples from a fresh clone
+
+# Builds each product's console examples as AGENTS.md says, from a clone
+# with its submodules, against the packages published on Maven Central, with
+# the JDK and Maven the runner has. Then runs the getting started example
+# from the repository root with no settings. A fresh clone holds only a link
+# for each free data file, so the example downloads its file first.
+
+on:
+  pull_request:
+    paths:
+      - 'examples/**'
+      - 'cxx'
+      - '.github/workflows/examples-fresh-clone.yml'
+  push:
+    branches:
+      - main
+      - rc
+  schedule:
+    - cron: '30 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fresh-clone:
+    name: ${{ matrix.product }} on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # macOS runners are shared by the whole organisation, so pull
+        # requests leave them out and the pushes and the daily run use them.
+        os: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu-latest", "windows-latest"]' || '["ubuntu-latest", "windows-latest", "macos-latest"]') }}
+        product: [device-detection, ip-intelligence]
+        include:
+          - product: device-detection
+            example: fiftyone.devicedetection.examples.console.GettingStartedOnPrem
+          - product: ip-intelligence
+            example: fiftyone.ipintelligence.examples.console.GettingStartedOnPrem
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Clone the repository with its submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: The runner's Java and Maven
+        shell: pwsh
+        run: |
+          java -version
+          mvn -v
+
+      - name: Build the console examples against the published packages
+        working-directory: examples/${{ matrix.product }}
+        shell: pwsh
+        run: mvn -B --no-transfer-progress -pl console -am package -DskipTests
+
+      - name: Run the getting started example from the repository root
+        shell: pwsh
+        run: |
+          $jar = Get-ChildItem 'examples/${{ matrix.product }}/console/target' `
+              -Filter '*-jar-with-dependencies.jar' | Select-Object -First 1
+          if ($null -eq $jar) {
+              Write-Output '::error::The build made no jar with dependencies.'
+              exit 1
+          }
+          $output = & java -cp $jar.FullName '${{ matrix.example }}' 2>&1 |
+              ForEach-Object { "$_" }
+          $code = $LASTEXITCODE
+          $output
+          $text = $output -join "`n"
+          $failed = $false
+          if ($code -ne 0) {
+              Write-Output "::error::The example exited with $code."
+              $failed = $true
+          }
+          if ($text -notmatch 'is missing, so it is being downloaded') {
+              Write-Output '::error::The example did not download its free data file.'
+              $failed = $true
+          }
+          if ($text -notmatch 'Results:') {
+              Write-Output '::error::The example printed no results.'
+              $failed = $true
+          }
+          if ($failed) {
+              exit 1
+          }
