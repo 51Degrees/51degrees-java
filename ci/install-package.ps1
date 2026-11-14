@@ -7,6 +7,11 @@ param(
 
 ./java/install-package.ps1 @PSBoundParameters
 
+# Temporary, on the dry run branch only. Lets common-ci's Package job run
+# ci/publish-package.ps1 off main, which the dry run keeps from uploading or
+# pushing anything.
+$global:PublishAnyBranch = $true
+
 if ($IsMacOS) {
     # Native libraries extracted from a downloaded jar can be refused by
     # Gatekeeper, which shows only as an engine that will not load. This shows
