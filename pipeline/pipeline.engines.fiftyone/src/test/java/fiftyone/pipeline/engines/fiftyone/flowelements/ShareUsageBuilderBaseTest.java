@@ -78,9 +78,14 @@ public class ShareUsageBuilderBaseTest {
 
     @Test
     public void setBlockedHttpHeaders() {
+        // The text setter adds to the list, as its Javadoc says, where the
+        // list setter replaces it.
         base.setBlockedHttpHeaders("g, h, i");
         base.setBlockedHttpHeaders("a, b, c");
-        assertEquals(3, base.blockedHttpHeaders.size());
+        assertEquals(6, base.blockedHttpHeaders.size());
+        assertTrue(base.blockedHttpHeaders.contains("g"));
+        assertTrue(base.blockedHttpHeaders.contains("h"));
+        assertTrue(base.blockedHttpHeaders.contains("i"));
         assertTrue(base.blockedHttpHeaders.contains("a"));
         assertTrue(base.blockedHttpHeaders.contains("b"));
         assertTrue(base.blockedHttpHeaders.contains("c"));
@@ -261,10 +266,11 @@ public class ShareUsageBuilderBaseTest {
         assertEquals(1, base.repeatEvidenceInterval);
     }
     @Test
-    public void setRepeatEvidenceIntervalMinutes1() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            base.setRepeatEvidenceIntervalMinutes(-1);
-        });
+    public void setRepeatEvidenceIntervalMinutes_Negative_Kept() {
+        // A negative interval is not refused. It shares every repeat, as 0
+        // does.
+        base.setRepeatEvidenceIntervalMinutes(-1);
+        assertEquals(-1, base.repeatEvidenceInterval);
     }
 
     @Test

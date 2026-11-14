@@ -450,7 +450,8 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      * If exactly the same evidence values are seen multiple times within this
      * time limit then they will only be shared once.
      * <p>
-     * The default value for this is 0 - meaning always share.
+     * The default is 20 minutes. An interval of 0, or a negative one,
+     * shares every repeat.
      * @param interval the interval in minutes
      * @return this builder
      */
