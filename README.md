@@ -23,7 +23,7 @@ Each product is a separate Maven Central package. For Device Detection, cloud or
 
 The product guides below list the other packages. To build from source, see [Getting the code](#getting-the-code).
 
-Try the [User-Agent tester](https://51degrees.com/developers/user-agent-tester?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=install) and [IP tester](https://51degrees.com/developers/ip-tester?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=install). For cloud use, [create a Resource Key](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=install).
+Try the [User-Agent tester](https://51degrees.com/developers/user-agent-tester?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=install) and [IP tester](https://51degrees.com/developers/ip-tester?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=install). For cloud use, [create a Resource Key](https://51degrees.com/configure/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=install).
 
 Created from `pipeline-java`, `device-detection-java`, `ip-intelligence-java`, `location-java`, `device-detection-java-examples`, and `ip-intelligence-java-examples`, this repository continues their work.
 
@@ -136,9 +136,12 @@ does the same.
 
 ## Versions
 
-The repository has one version, and every package is released with it. CI
-sets the version on each package tree before a release and tags the commit
-with the plain version, such as `4.5.127`.
+Each package has its own version, and a release publishes only the packages
+that changed since their last release and the packages that depend on them.
+A change only to documentation, tests, examples or the descriptive parts of a
+`pom.xml`, such as its links, releases nothing.
+Each is tagged with its name and version, such as `pipeline.core/4.5.131`.
+[ci/README.md](ci/README.md) describes how CI works out what to release.
 
 ## History
 

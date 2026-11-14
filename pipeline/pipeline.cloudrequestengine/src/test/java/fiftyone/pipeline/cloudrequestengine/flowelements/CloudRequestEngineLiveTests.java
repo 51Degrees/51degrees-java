@@ -98,7 +98,7 @@ public class CloudRequestEngineLiveTests {
             "The live cloud service listed no products for this resource "
             + "key. A key carries the products its account holds, so this "
             + "is an entitlement problem and not a fault in the service. "
-            + "Create a key at https://configure.51degrees.com.");
+            + "Create a key at https://51degrees.com/configure.");
         assertTrue(products.containsKey("device"),
             "The live cloud service listed the products "
             + String.join(", ", products.keySet()) + " for this resource "

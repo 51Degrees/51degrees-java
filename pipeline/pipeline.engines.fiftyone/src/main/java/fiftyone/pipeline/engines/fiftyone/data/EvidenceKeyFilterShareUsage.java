@@ -29,6 +29,7 @@ import fiftyone.pipeline.engines.fiftyone.trackers.ShareUsageTracker;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 import static fiftyone.pipeline.core.Constants.*;
@@ -166,15 +167,15 @@ public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
         this.blockedHttpHeaders.add("cookie");
         this.includeSession = includeSession;
         this.sessionCookieName = sessionCookieName == null ?
-            null : sessionCookieName.toLowerCase();
+            null : sessionCookieName.toLowerCase(Locale.ROOT);
         for (String header : blockedHttpHeaders) {
-            String lowerHeader = header.toLowerCase();
+            String lowerHeader = header.toLowerCase(Locale.ROOT);
             if (!this.blockedHttpHeaders.contains(lowerHeader)) {
                 this.blockedHttpHeaders.add(lowerHeader);
             }
         }
         for (String parameter : includedQueryStringParams) {
-            String lowerParameter = parameter.toLowerCase();
+            String lowerParameter = parameter.toLowerCase(Locale.ROOT);
             if (!this.includedQueryStringParams.contains(lowerParameter)) {
                 this.includedQueryStringParams.add(lowerParameter);
             }
@@ -188,7 +189,7 @@ public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
         if (ShareUsageEvidence.HTTP_REQUEST_KEY.equalsIgnoreCase(key)) {
             return false;
         }
-        String lowerKey = key.toLowerCase();
+        String lowerKey = key.toLowerCase(Locale.ROOT);
         for (String neverShared : NEVER_SHARED_EVIDENCE_KEYS) {
             if (lowerKey.equals(neverShared) ||
                 lowerKey.endsWith(EVIDENCE_SEPERATOR + neverShared)) {

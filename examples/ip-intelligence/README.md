@@ -117,9 +117,9 @@ documentation now reflect what is free and what needs a paid subscription.
   and AccuracyRadiusMin.
 
 A free resource key selecting the free tier properties can be created at
-https://configure.51degrees.com/Wkqxf3Bs?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon. A resource key that also includes
+https://51degrees.com/configure/Wkqxf3Bs?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon. A resource key that also includes
 the paid properties used by the examples can be created at
-https://configure.51degrees.com/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon. See https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon
+https://51degrees.com/configure/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon. See https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon
 to get a paid subscription with more properties.
 
 ### On-Premise
