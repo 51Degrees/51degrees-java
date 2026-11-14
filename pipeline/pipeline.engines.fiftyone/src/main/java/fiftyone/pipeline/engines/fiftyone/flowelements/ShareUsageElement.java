@@ -482,7 +482,7 @@ public class ShareUsageElement extends ShareUsageBase {
                 // throw immediately, spinning this loop instead of draining it.
                 logger.error("Interrupted exception caught while waiting on share usage queue");
             } catch (Exception exception) {
-                logger.error("Exception sending usage data", exception);
+                // MUTANT: the failure is not logged.
             }
           // send in minEntries batches unless closing in which case drain the queue
         } while (evidenceCollection.size() >= minEntriesPerMessage ||

@@ -83,7 +83,9 @@ public class ShareUsageTracker extends TrackerBase<Date> {
         // interval starts from this share.
         long now = System.currentTimeMillis();
         synchronized (value) {
-            if (value.getTime() <= now - interval) {
+            long last = value.getTime();
+            value.setTime(now); // MUTANT: every repeat resets the time.
+            if (last <= now - interval) {
                 value.setTime(now);
                 return true;
             }

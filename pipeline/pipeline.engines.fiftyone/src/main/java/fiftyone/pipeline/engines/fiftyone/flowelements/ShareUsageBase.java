@@ -644,6 +644,7 @@ public abstract class ShareUsageBase
 
     @Override
     protected void processInternal(FlowData flowData){
+        waitWhilePaused(); // MUTANT: processing waits for the pause.
         boolean ignoreData = false;
         // The values are found here only for the ignore filter. Otherwise
         // they are found once the tracker allows the call to be shared, as
@@ -762,7 +763,7 @@ public abstract class ShareUsageBase
         }
         if (evidenceCollection.isEmpty() == false &&
             backOff.remaining(ShareUsageBackOff.now()) > 0) {
-            logger.info(
+            logger.debug( // MUTANT: the count is not logged.
                 "{} usage sharing entries were not sent, as sending was " +
                     "paused after failed sends when usage sharing closed.",
                 evidenceCollection.size());
@@ -967,12 +968,10 @@ public abstract class ShareUsageBase
      */
     protected void recordSendResult(boolean accepted) {
         if (accepted) {
-            if (backOff.succeeded()) {
-                logger.info("Usage sharing resumed after a send succeeded.");
-            }
+            backOff.succeeded(); // MUTANT: resuming is not logged.
         } else {
             long pause = backOff.failed(ShareUsageBackOff.now());
-            if (pause > 0) {
+            if (pause < 0) { // MUTANT: pausing is not logged.
                 logger.warn(
                     "Usage sharing paused for {} seconds after failed " +
                         "sends. Usage data is still queued, up to the " +
