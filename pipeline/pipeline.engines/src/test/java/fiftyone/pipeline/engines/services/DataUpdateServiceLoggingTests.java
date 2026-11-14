@@ -462,10 +462,6 @@ public class DataUpdateServiceLoggingTests {
     }
 
     /**
-     * Fails if any log entry, or any throwable logged with one, holds the
-     * license key in full.
-     */
-    /**
      * An Error row of the specification's Errors table, logged at Error as
      * "Error during check for data update" with an error attached that
      * carries the row's message, and a cause whose message holds the given
@@ -505,6 +501,10 @@ public class DataUpdateServiceLoggingTests {
             "' for engine '" + engineType + "'";
     }
 
+    /**
+     * Fails if any log entry, or any throwable logged with one, holds the
+     * license key in full.
+     */
     private void assertKeyOnlyMasked() {
         assertFalse(appender.list.isEmpty());
         for (ILoggingEvent event : appender.list) {
