@@ -52,7 +52,7 @@ import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_US
 
 /**
  * Flow element that sends usage data to 51Degrees for analysis. 
- * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/pipeline-elements/usage-sharing-element.md">Specification</a>
+ * @see <a href="https://github.com/51Degrees/specifications/blob/c8128ca4fa68c6348d76ddb2889bb5087de1aa5f/pipeline-specification/pipeline-elements/usage-sharing-element.md">Specification</a>
  */
 public class ShareUsageElement extends ShareUsageBase {
     // max time to wait to send data
@@ -426,7 +426,7 @@ public class ShareUsageElement extends ShareUsageBase {
                 shareAllEvidence,
                 shareAllQueryStringParameters);
 
-        headers.put("Content-Type", "text/xml; charset=utf-8");
+        headers.put("Content-Type", "text/xml");
         // assume default GZIP connection
         headers.put("Content-Encoding", "gzip");
 
@@ -521,7 +521,6 @@ public class ShareUsageElement extends ShareUsageBase {
     private void streamXml(List<ShareUsageData> allData, OutputStream os) throws XMLStreamException {
         XMLStreamWriter writer = xmlOutputFactory.createXMLStreamWriter(os, "UTF-8");
         writer.writeStartElement("Devices");
-        writer.writeAttribute("version", "1.1");
         for (ShareUsageData data : allData) {
             writeXmlData(writer, data);
         }
@@ -543,7 +542,7 @@ public class ShareUsageElement extends ShareUsageBase {
         // The sequence number of the request in a series of requests.
         writeXmlElement(writer, "Sequence", String.valueOf(data.sequence));
         // The UTC date/time this entry was written
-        writeXmlElement(writer, "DateSent", DATE_FMT.format(new Date()));
+        writeXmlElement(writer, "DateSent", dateSentNow());
         // The version number of the Pipeline API
         writeXmlElement(writer, "Version", coreVersion);
         // Write Pipeline information
