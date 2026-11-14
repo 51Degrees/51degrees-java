@@ -25,6 +25,7 @@ package fiftyone.pipeline.core.data;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Comparator;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -76,15 +77,15 @@ public class EvidenceKeyFilterAggregatorTests {
     }
     
     /**
-     * Check that aggregated case-sensitive and case-insensitive filters
-     * still work as expected.
+     * Check that an aggregated case-insensitive filter, and one given a
+     * comparator that compares with case, still work as expected.
      */
     @Test
     public void EvidenceKeyFilterAggregator_CaseSensitivity() {
         EvidenceKeyFilter filter1 = new EvidenceKeyFilterWhitelist(
             Arrays.asList("key1"), String.CASE_INSENSITIVE_ORDER);
         EvidenceKeyFilter filter2 = new EvidenceKeyFilterWhitelist(
-            Arrays.asList("key2"));
+            Arrays.asList("key2"), Comparator.naturalOrder());
 
         EvidenceKeyFilterAggregator filter = new EvidenceKeyFilterAggregator();
         filter.addFilter(filter1);
