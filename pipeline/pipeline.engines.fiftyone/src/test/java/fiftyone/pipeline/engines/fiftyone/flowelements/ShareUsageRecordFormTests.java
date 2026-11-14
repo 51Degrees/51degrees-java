@@ -188,6 +188,14 @@ public class ShareUsageRecordFormTests {
         Map<String, Object> evidence = new HashMap<>();
         evidence.put(EVIDENCE_HEADER_USERAGENT_KEY, "<iPhone> & co");
         evidence.put(EVIDENCE_CLIENTIP_KEY, "192.0.2.1");
+        return send(evidence);
+    }
+
+    /**
+     * Send one record of the Evidence given and return the text the
+     * element wrote.
+     */
+    private String send(Map<String, Object> evidence) throws Exception {
         try (FlowData data = pipeline.createFlowData()) {
             data.addEvidence(evidence);
             data.process();
@@ -284,6 +292,27 @@ public class ShareUsageRecordFormTests {
             name + " " + version, text(parse(send()), "Platform"));
     }
 
+    /**
+     * ClientIP is written, empty, when the Evidence holds no client IP, as
+     * the specification's example does not mark it optional. It stays in
+     * its place between LanguageVersion and ServerIP.
+     */
+    @Test
+    public void ClientIP_IsWrittenEmpty_WhenTheEvidenceHasNone()
+        throws Exception {
+        build();
+        Map<String, Object> evidence = new HashMap<>();
+        evidence.put(EVIDENCE_HEADER_USERAGENT_KEY, "<iPhone> & co");
+        String xml = send(evidence);
+
+        assertEquals("", text(parse(xml), "ClientIP"));
+        assertTrue(
+            Pattern.compile(
+                "</LanguageVersion><ClientIP(></ClientIP>| ?/>)<ServerIP>")
+                .matcher(xml).find(),
+            xml);
+    }
+
     /** The message is sent as text/xml, compressed with gzip. */
     @Test
     public void ContentType_IsTextXml() throws Exception {
@@ -303,7 +332,9 @@ public class ShareUsageRecordFormTests {
     /**
      * The whole record, compared as text. DateSent and ServerIP are read
      * from the record, as they differ from run to run, and the values that
-     * name the runtime are the ones this JVM gives.
+     * name the runtime are the ones this JVM gives. Version is written
+     * even when the classes carry no version, as when the tests run from
+     * the build's class folders, and is then empty.
      */
     @Test
     public void WholeRecord_MatchesTheSpecificationExample() throws Exception {
@@ -329,9 +360,8 @@ public class ShareUsageRecordFormTests {
             .append("</SessionId>")
             .append("<Sequence>1</Sequence>")
             .append("<DateSent>").append(date.group(1)).append("</DateSent>");
-        if (version != null) {
-            expected.append("<Version>").append(version).append("</Version>");
-        }
+        expected.append("<Version>").append(version == null ? "" : version)
+            .append("</Version>");
         expected.append("<Product>Pipeline</Product>")
             .append("<FlowElement>fiftyone.pipeline.engines.fiftyone."
                 + "flowelements.SequenceElement</FlowElement>")
