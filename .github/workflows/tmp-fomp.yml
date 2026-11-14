@@ -11,6 +11,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Fetch the owid-java submodule
+        run: git submodule update --init --depth 1 pipeline/owid-java
       - name: Java and Maven on the runner
         run: |
           git log --oneline -3
