@@ -111,7 +111,8 @@ function Invoke-ContractTests {
 
         $env:EXAMPLE_URL = "http://localhost:$Port"
         $env:EXAMPLE_LANG = 'java'
-        dotnet test selenium-api-tests -c Release --filter TestCategory=Contract
+        # Normal verbosity prints each test's time, passed or failed.
+        dotnet test selenium-api-tests -c Release --filter TestCategory=Contract --logger "console;verbosity=normal"
         # PowerShell does not stop for a native command that returns non-zero,
         # so without this the browser tests could fail every case and the job
         # would still be reported as a success.
@@ -145,6 +146,15 @@ if (-not $TestResourceKey) {
     }
     $env:CLOUD_ROOT_URL = "https://cloud.51degrees.com/"
     $env:PAID_RESOURCE_KEY = $TestResourceKey
+
+    # Chrome's first start on a fresh runner is many times slower than the
+    # starts after it, so it is made here rather than inside the first test.
+    # The tests still run when it cannot be made.
+    try {
+        & "$PSScriptRoot/start-chrome-once.ps1"
+    } catch {
+        Write-Host "::warning title=Chrome not started::$_"
+    }
 
     $contracts = @(
         @{
