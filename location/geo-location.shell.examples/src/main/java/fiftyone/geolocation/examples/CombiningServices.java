@@ -179,6 +179,10 @@ public class CombiningServices {
                 System.out.println("IsMobile: " + isMobile.toString());
             }
         }
+        FindOutMore.write(
+            System.out,
+            "https://51degrees.com/documentation/_reverse_geocoding__examples__combining_services.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-combiningservices.java&utm_term=find-out-more",
+            "https://51degrees.com/location?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-combiningservices.java&utm_term=find-out-more");
     }
 
     private static void outputUntilCancelled(
