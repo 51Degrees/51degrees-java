@@ -37,21 +37,39 @@ import fiftyone.pipeline.web.services.WebRequestEvidenceServiceCore;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import com.sun.net.httpserver.HttpServer;
 import org.mockito.ArgumentCaptor;
 import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.zip.GZIPInputStream;
+
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -74,6 +92,12 @@ public class UsageSharingEvidenceTests {
 
     private static final String SESSION_ID =
         "1f2e3d4c-5b6a-4987-8a1b-2c3d4e5f6a7b";
+
+    /**
+     * How long to wait for the usage sharing message to arrive. It is sent
+     * at once, so this is only an upper bound for a slow runner.
+     */
+    private static final int MESSAGE_WAIT_SECONDS = 60;
 
     private Pipeline pipeline;
 
@@ -283,6 +307,93 @@ public class UsageSharingEvidenceTests {
             verify(revalidationResponse, never()).setStatus(200);
             verify(revalidationResponse, never()).setContentType(anyString());
         }
+    }
+
+    /**
+     * A header no element reads, sent through the web integration, reaches
+     * the usage sharing message. The message is sent over HTTP to a local
+     * endpoint, as it would be to 51Degrees, and read back from there.
+     */
+    @Test
+    public void UnreadHeader_ReachesTheUsageSharingMessage() throws Exception {
+        BlockingQueue<byte[]> received = new LinkedBlockingQueue<>();
+        HttpServer server = HttpServer.create(
+            new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
+        server.createContext("/", exchange -> {
+            try (InputStream body = exchange.getRequestBody()) {
+                received.add(readAll(body));
+            }
+            exchange.sendResponseHeaders(200, -1);
+            exchange.close();
+        });
+        server.start();
+        try (Pipeline sharing = new PipelineBuilder(
+                LoggerFactory.getILoggerFactory())
+                .addFlowElement(new SequenceElementBuilder(
+                    LoggerFactory.getILoggerFactory()).build())
+                .addFlowElement(new ShareUsageBuilder(
+                    LoggerFactory.getILoggerFactory())
+                    .setSharePercentage(1)
+                    .setMinimumEntriesPerMessage(1)
+                    .setRepeatEvidenceIntervalMinutes(0)
+                    .setShareUsageUrl("http://" +
+                        server.getAddress().getHostString() + ":" +
+                        server.getAddress().getPort() + "/new.ashx")
+                    .build())
+                .setAutoCloseElements(true)
+                .build()) {
+            assertFalse("A header no element uses is accepted.",
+                sharing.getEvidenceKeyFilter().include("header.x-test"));
+            try (FlowData flowData = sharing.createFlowData()) {
+                evidenceService.addEvidenceFromRequest(
+                    flowData, request(headers()));
+                flowData.process();
+            }
+
+            byte[] sent = received.poll(
+                MESSAGE_WAIT_SECONDS, TimeUnit.SECONDS);
+            assertNotNull("No usage sharing message was sent.", sent);
+            Document message = DocumentBuilderFactory.newInstance()
+                .newDocumentBuilder()
+                .parse(new GZIPInputStream(new ByteArrayInputStream(sent)));
+            assertEquals("The header no element reads was not shared.",
+                "shared", sharedValue(message, "header", "X-Test"));
+            assertEquals("The User-Agent was not shared.",
+                USER_AGENT, sharedValue(message, "header", "User-Agent"));
+            assertNull("The raw Cookie header was shared.",
+                sharedValue(message, "header", "Cookie"));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    /**
+     * The value the message gives for the named value of a category, such
+     * as header, or null when it gives none. Names are compared without
+     * regard to case.
+     */
+    private static String sharedValue(
+        Document message,
+        String category,
+        String name) {
+        NodeList values = message.getElementsByTagName(category);
+        for (int i = 0; i < values.getLength(); i++) {
+            Element value = (Element) values.item(i);
+            if (name.equalsIgnoreCase(value.getAttribute("Name"))) {
+                return value.getTextContent();
+            }
+        }
+        return null;
+    }
+
+    private static byte[] readAll(InputStream input) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        int read;
+        while ((read = input.read(buffer)) != -1) {
+            output.write(buffer, 0, read);
+        }
+        return output.toByteArray();
     }
 
     private static HttpServletResponse response() throws Exception {

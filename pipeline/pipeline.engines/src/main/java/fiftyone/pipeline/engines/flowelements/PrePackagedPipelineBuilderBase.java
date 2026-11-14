@@ -23,6 +23,7 @@
 package fiftyone.pipeline.engines.flowelements;
 
 import fiftyone.pipeline.core.flowelements.PipelineBuilderBase;
+import fiftyone.pipeline.engines.Constants;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
 
@@ -35,13 +36,14 @@ public abstract class PrePackagedPipelineBuilderBase
     <TBuilder extends PrePackagedPipelineBuilderBase<TBuilder>>
     extends PipelineBuilderBase<TBuilder> {
 
-    protected boolean lazyLoading = false;
+    protected boolean lazyLoading = Constants.DEFAULT_LAZY_LOADING;
 
-    protected boolean resultsCache = false;
+    protected boolean resultsCache = Constants.DEFAULT_RESULTS_CACHE;
 
-    protected long lazyLoadingTimeoutMillis = 1000;
+    protected long lazyLoadingTimeoutMillis =
+        Constants.DEFAULT_LAZY_LOADING_TIMEOUT_MILLIS;
 
-    protected int resultsCacheSize = 1000;
+    protected int resultsCacheSize = Constants.DEFAULT_RESULTS_CACHE_SIZE;
 
     /**
      * Construct a new instance using the default {@link ILoggerFactory}
@@ -63,7 +65,8 @@ public abstract class PrePackagedPipelineBuilderBase
     }
 
     /**
-     * Enable lazy loading of results. Uses a default timeout of 5 seconds.
+     * Enable lazy loading of results, with the timeout
+     * {@link Constants#DEFAULT_LAZY_LOADING_TIMEOUT_MILLIS}.
      * @return this builder instance
      */
     @SuppressWarnings("unchecked")
@@ -75,7 +78,7 @@ public abstract class PrePackagedPipelineBuilderBase
     /**
      * Enable lazy loading of results.
      * @param timeoutMillis the timeout to use when attempting to access
-     *                      lazy-loaded values. Default is 5 seconds
+     *                      lazy-loaded values
      * @return this builder
      */
     @SuppressWarnings("unchecked")
@@ -86,7 +89,8 @@ public abstract class PrePackagedPipelineBuilderBase
     }
 
     /**
-     * Enable caching of results. Uses a default cache size of 1000.
+     * Enable caching of results, with the size
+     * {@link Constants#DEFAULT_RESULTS_CACHE_SIZE}.
      * @return this builder
      */
     @SuppressWarnings("unchecked")
@@ -98,7 +102,7 @@ public abstract class PrePackagedPipelineBuilderBase
     /**
      * Enable caching of results.
      * @param size the maximum number of results to hold in the device detection
-     *             cache. Default is 1000
+     *             cache
      * @return this builder
      */
     @SuppressWarnings("unchecked")
