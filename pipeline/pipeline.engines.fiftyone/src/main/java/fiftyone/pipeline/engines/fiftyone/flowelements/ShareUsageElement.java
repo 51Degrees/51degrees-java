@@ -536,15 +536,17 @@ public class ShareUsageElement extends ShareUsageBase {
      */
     protected void writeXmlData(XMLStreamWriter writer, ShareUsageData data) throws XMLStreamException {
         writer.writeStartElement("Device");
-        // The elements follow the order of the specification's example.
+        // The elements follow the order of the specification's example, and
+        // each one the example does not mark optional is always written,
+        // empty when there is no value.
         // The SessionID used to track a series of requests
-        writeXmlElement(writer, "SessionId", data.sessionId);
+        writeRequiredXmlElement(writer, "SessionId", data.sessionId);
         // The sequence number of the request in a series of requests.
         writeXmlElement(writer, "Sequence", String.valueOf(data.sequence));
         // The UTC date/time this entry was written
         writeXmlElement(writer, "DateSent", dateSentNow());
         // The version number of the Pipeline API
-        writeXmlElement(writer, "Version", coreVersion);
+        writeRequiredXmlElement(writer, "Version", coreVersion);
         // Write Pipeline information
         // The product name
         writeXmlElement(writer, "Product", "Pipeline");
@@ -554,13 +556,13 @@ public class ShareUsageElement extends ShareUsageBase {
         }
         writeXmlElement(writer, "Language", "java");
         // The software language version
-        writeXmlElement(writer, "LanguageVersion", languageVersion);
+        writeRequiredXmlElement(writer, "LanguageVersion", languageVersion);
         // The client IP of the request
-        writeXmlElement(writer, "ClientIP", data.clientIP);
+        writeRequiredXmlElement(writer, "ClientIP", data.clientIP);
         // The IP of this server
-        writeXmlElement(writer, "ServerIP", getHostAddress());
+        writeRequiredXmlElement(writer, "ServerIP", getHostAddress());
         // The OS name and version
-        writeXmlElement(writer, "Platform", osVersion);
+        writeRequiredXmlElement(writer, "Platform", osVersion);
 
         // Write all other evidence data that has been included.
         for (Map.Entry<String, Map<String, String>> category : data.evidenceData.entrySet()) {
@@ -594,6 +596,20 @@ public class ShareUsageElement extends ShareUsageBase {
             writer.writeCharacters(elementContent);
             writer.writeEndElement();
         }
+    }
+
+    /**
+     * Write an element the record always holds, empty when there is no
+     * value.
+     */
+    private void writeRequiredXmlElement(
+        XMLStreamWriter writer,
+        String elementName,
+        String elementContent) throws XMLStreamException {
+        writeXmlElement(
+            writer,
+            elementName,
+            elementContent == null ? "" : elementContent);
     }
 
     /**
