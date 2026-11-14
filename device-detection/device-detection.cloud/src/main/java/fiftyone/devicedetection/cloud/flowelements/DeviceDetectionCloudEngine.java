@@ -43,6 +43,7 @@ import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
@@ -146,6 +147,12 @@ public class DeviceDetectionCloudEngine
                 new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
             for (AspectPropertyMetaData property : getProperties()) {
+                // A property the response leaves out has no entry, so
+                // reading it throws a PropertyMissingException.
+                if (deviceObj.has(
+                    property.getName().toLowerCase(Locale.ROOT)) == false) {
+                    continue;
+                }
                 String type = property.getType().getSimpleName();
                 switch(type) {
                     case ("List"):
@@ -390,6 +397,12 @@ public class DeviceDetectionCloudEngine
     }
 
     /**
+     * The message for a property with no value when the response gives no
+     * reason.
+     */
+    private static final String UNKNOWN_NULL_REASON = "Unknown";
+
+    /**
      * Get the reason for the value of a property not being present in the cloud
      * engine's JSON response.
      * @param deviceObj to get the null reason from
@@ -398,7 +411,9 @@ public class DeviceDetectionCloudEngine
      */
     private String getNoValueReason(JSONObject deviceObj, String key){
         Object reason = tryToGet(deviceObj, key + "nullreason");
-        return reason == null ? null : reason.toString();
+        return reason == null || reason == JSONObject.NULL ?
+            UNKNOWN_NULL_REASON :
+            reason.toString();
     }
 
     /**
