@@ -19,17 +19,28 @@ $plan = @(Get-ReleasePlan $RepoName)
 ./java/publish-package-maven.ps1 -RepoName $RepoName -MavenSettings $Keys['MavenSettings'] -Version $Version -DryRun $DryRun
 
 # One tag and one GitHub release per package, '<package>/<version>', in place
-# of common-ci's single tag, which would name no package. The notes list the
-# commits that touched the package's files since its last release.
+# of common-ci's single tag, which would name no package. The tags go up in one
+# atomic push, so a publish that stops leaves every package tagged or none.
+# A release tagged in part would leave the untagged dependants out of the plan
+# of a run made again, because the plan skips a package tagged here and finds
+# dependants only from packages that changed.
+$tags = @($plan | ForEach-Object { "$($_.Name)/$($_.Version)" })
+foreach ($tag in $tags) {
+    git -C $RepoName tag $tag
+}
+if ($tags.Count -eq 0 -or $DryRun -eq $true) {
+    # A push with no tags named would push the branch instead.
+    Write-Output "Dry run or empty plan - tagged '$($tags -join ', ')' locally, not pushed, no release made"
+    $global:SkipUpdateTag = $true
+    return
+}
+Write-Output "Pushing $($tags -join ', ')"
+git -C $RepoName push --atomic origin @tags
+
+# The notes list the commits that touched the package's files since its last
+# release.
 foreach ($release in $plan) {
     $tag = "$($release.Name)/$($release.Version)"
-    git -C $RepoName tag $tag
-    if ($DryRun -eq $true) {
-        Write-Output "Dry run - tagged '$tag' locally, not pushed, no release made"
-        continue
-    }
-    git -C $RepoName push origin $tag
-
     $notes = "$($release.Name) $($release.Version): $($release.Reason)."
     if ($null -ne $release.Previous) {
         $package = Get-PublishedPackages $RepoName |
