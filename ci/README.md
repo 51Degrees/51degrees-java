@@ -11,15 +11,35 @@ repositories used to do for one package tree each.
   publish, the two on-premise engines that build a native library, and the
   generated accessors. The other scripts loop over it rather than naming
   folders themselves.
-- The root `pom.xml` builds every tree in one reactor but is not their parent,
-  so [build-package.ps1](build-package.ps1) has common-ci set the version in
-  each tree before it deploys from the root. The examples are built and tested
-  but left out of the deploy.
+- [packages.json](packages.json) lists every published module as a package,
+  named by its artifactId, with its folder, the other folders its build takes
+  files from, and the packages it depends on, its parent included. A parent's
+  folder is its `pom.xml` alone, because the rest of the folder is its
+  modules. [build-project.ps1](build-project.ps1) fails a pull request whose
+  poms refer to a package that `DependsOn` does not name, or add a module
+  that has no entry.
+- The root `pom.xml` builds every tree in one reactor but is not their parent.
+  [build-package.ps1](build-package.ps1) writes each published module's own
+  version into its `pom.xml`, with the versions of its parent and of the
+  packages it depends on, and deploys only the modules being released. The
+  examples are built and tested but left out of the deploy.
 - [build-project.ps1](build-project.ps1) and
   [run-unit-tests.ps1](run-unit-tests.ps1) use the `dev` profile, so a pull
   request tests the examples against the libraries it changes. The publish
   workflow instead tests the examples against the version it built, through
   [run-integration-tests.ps1](run-integration-tests.ps1).
+- [select-options.ps1](select-options.ps1) chooses the entries a pull request
+  runs. The standard set is JDK 17 and JDK 8 on Linux, without the three IP
+  Intelligence tests in [standard-excludes.txt](standard-excludes.txt) and
+  with the Selenium contract on JDK 17 alone. A change to a native module, IP
+  Intelligence, a `pom.xml` or a file outside the package trees adds to it.
+  macOS and performance run only when `rc` itself or the release pull request
+  is built, which
+  [release-pull-request.yml](../.github/workflows/release-pull-request.yml)
+  does on every entry. The Pester 5 tests of select-options.ps1 are
+  [select-options.Tests.ps1](select-options.Tests.ps1), which
+  [ci-script-tests.yml](../.github/workflows/ci-script-tests.yml) runs on
+  Linux and Windows for each pull request that changes this folder.
 - [fetch-assets.ps1](fetch-assets.ps1) fetches every data file as one of
   common-ci's assets, which each run caches once, and links or copies it into
   `cxx/data/device-detection` or `cxx/data/ip-intelligence`, where the tests
@@ -32,9 +52,40 @@ repositories used to do for one package tree each.
   API, Device Detection and IP Intelligence and writes one results file per
   configuration. The Device Detection and IP Intelligence metrics are prefixed
   with the product, as both use the same names.
-- The repository has one version, tagged as a plain version such as `4.5.127`.
-  [get-next-package-version.ps1](get-next-package-version.ps1) moves only the
-  patch number.
+- Each package has its own version, tagged `<package>/<version>`, such as
+  `pipeline.core/4.5.131`. A publish releases a package when a file under its
+  folders changed since its last tag, and every package that depends on it,
+  each at its last tag with the patch number moved. Changes only to Markdown,
+  `LICENSE` files, or files under folders named `docs`, `tests`, `test` or
+  `examples`, which takes in each module's `src/test`, release nothing, and
+  [release-plan-filter.ps1](release-plan-filter.ps1) leaves out a `pom.xml`
+  whose only change is to its `name`, `description`, `url`, `licenses`,
+  `developers`, `scm` or `issueManagement`, or to its comments and layout.
+  Its Pester 5 tests are
+  [release-plan-filter.Tests.ps1](release-plan-filter.Tests.ps1), which
+  [ci-script-tests.yml](../.github/workflows/ci-script-tests.yml) runs on
+  Linux and Windows for each pull request that changes this folder.
+  [release.ps1](release.ps1) takes that plan from common-ci's
+  `steps/release-plan.ps1`, and the publish scripts build, check and tag from
+  it. [check-version-bump.ps1](check-version-bump.ps1) and
+  [check-release-interval.ps1](check-release-interval.ps1) check each package
+  against its own tags, for a major or minor move and for a release less than
+  a week after its last.
+- [publish-package.ps1](publish-package.ps1) uploads the one publishing
+  bundle, then pushes every package's tag in one atomic push, so a publish
+  that stops leaves every package tagged or none, and then makes one GitHub
+  release per tag. Maven Central refuses a version it already has, so when
+  the push fails after the upload, push the tags the log names by hand
+  rather than running the publish again. When `gh release create` fails
+  part way, every tag is pushed but the packages after the failure have no
+  GitHub release, and a publish run again plans nothing and so makes none.
+  Make each missing release by hand. For each tag the log names after
+  "Pushing" for which `gh release view <tag>` finds no release, run
+  `gh release create <tag> --verify-tag --title "<package> <version>"
+  --notes "<package> <version>: <reason>."`, with the reason the Configure
+  job's plan gives for that package, as the script does. Its Pester 5
+  tests are [publish-package.Tests.ps1](publish-package.Tests.ps1), which the
+  same workflow runs.
 
 ## Secrets
 

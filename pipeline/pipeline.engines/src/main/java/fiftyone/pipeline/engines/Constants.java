@@ -22,6 +22,8 @@
 
 package fiftyone.pipeline.engines;
 
+import fiftyone.pipeline.engines.configuration.CacheConfiguration;
+
 public class Constants {
     public static final String FIFTYONE_COOKIE_PREFIX = "51d_";
     public static final String DEFAULT_SESSION_COOKIE_NAME = "JSESSIONID";
@@ -33,6 +35,31 @@ public class Constants {
     public static final boolean DEFAULT_VERIFY_MD5 = true;
     public static final boolean DEFAULT_VERIFY_IF_MODIFIED_SINCE = true;
     public static final boolean DEFAULT_UPDATE_ON_STARTUP = false;
+
+    /**
+     * Whether a pre-packaged Pipeline loads results lazily, unless its builder
+     * is told otherwise.
+     */
+    public static final boolean DEFAULT_LAZY_LOADING = false;
+
+    /**
+     * How long a lazily loaded value is waited for when lazy loading is used
+     * without a timeout.
+     */
+    public static final long DEFAULT_LAZY_LOADING_TIMEOUT_MILLIS = 1000;
+
+    /**
+     * Whether a pre-packaged Pipeline caches results, unless its builder is
+     * told otherwise.
+     */
+    public static final boolean DEFAULT_RESULTS_CACHE = false;
+
+    /**
+     * How many results are cached when the results cache is used without a
+     * size, which is the cache size the caching specification gives.
+     */
+    public static final int DEFAULT_RESULTS_CACHE_SIZE =
+        CacheConfiguration.defaultSize;
 
     public enum PerformanceProfiles {
         LowMemory,

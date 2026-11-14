@@ -131,7 +131,7 @@ public class NativeModelCloud {
  *
  * Unlike other examples, use of this example requires a license key which can be purchased from [our
  * pricing page](https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-nativemodelcloud.java&utm_term=top). Once this is done, a resource key with the
- * properties required by this example can be created at [here](https://configure.51degrees.com/QKyYH5XT?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-nativemodelcloud.java&utm_term=top).
+ * properties required by this example can be created at [here](https://51degrees.com/configure/QKyYH5XT?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-nativemodelcloud.java&utm_term=top).
  *
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/device-detection/console/src/main/java/fiftyone/devicedetection/examples/console/NativeModelCloud.java).
  */
