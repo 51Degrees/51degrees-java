@@ -1,0 +1,29 @@
+name: tmp builders specification tests
+on:
+  push:
+    branches:
+      - 'tmp/java-builders-red'
+      - 'tmp/java-builders-green'
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Fetch the pipeline submodules
+        run: git submodule update --init --depth 1 pipeline/owid-java pipeline/pipeline.core/configuration-validation pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates
+      - name: Java and Maven on the runner
+        run: |
+          git log --oneline -3
+          java -version
+      - name: Run the JSON Builder and JavaScript Builder tests
+        run: >
+          mvn -B --no-transfer-progress -Pdev
+          -pl pipeline/pipeline.jsonbuilder,pipeline/pipeline.javascriptbuilder -am test
+          -Dtest='JsonBuilderTests,JavaScriptBuilderElementBuilderTests'
+          -Dsurefire.failIfNoSpecifiedTests=false
