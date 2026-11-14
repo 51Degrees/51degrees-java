@@ -22,7 +22,7 @@ param(
 
 $Standard = @('Ubuntu_Java_17', 'Ubuntu_Java_8')
 $Contract = 'Ubuntu_Java_17'
-$Native = @('Windows_Java_17', 'Ubuntu_ARM_Java_17')
+$NativeEntries = @('Windows_Java_17', 'Ubuntu_ARM_Java_17')
 $Jdk = @('Ubuntu_Java_11', 'Ubuntu_Java_21')
 
 $PackageTrees = @('pipeline/', 'device-detection/', 'ip-intelligence/',
@@ -56,7 +56,7 @@ foreach ($entry in $Options) {
     }
     $why = if ($Standard -contains $name) { 'the standard set' }
         elseif ($other) { 'a change outside the package trees' }
-        elseif ($native -and $Native -contains $name) { 'a native change' }
+        elseif ($native -and $NativeEntries -contains $name) { 'a native change' }
         elseif ($poms -and $Jdk -contains $name) { 'a pom.xml change' }
     if (!$why) {
         Write-Host "$name is not needed for this change"
