@@ -47,7 +47,9 @@ import java.util.List;
 public class IPIntelligenceOnPremisePipelineBuilder
     extends PrePackagedPipelineBuilderBase<IPIntelligenceOnPremisePipelineBuilder> {
 
-    protected boolean shareUsageEnabled = true;
+    protected boolean shareUsageEnabled =
+        fiftyone.pipeline.engines.fiftyone.flowelements.Constants
+            .SHARE_USAGE_DEFAULT_ENABLED;
     private String filename;
     private boolean createTempDataCopy;
     private int concurrency = -1;
