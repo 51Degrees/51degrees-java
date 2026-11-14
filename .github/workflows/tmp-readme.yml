@@ -1,0 +1,44 @@
+name: tmp examples from their own folders
+on:
+  push:
+    branches:
+      - 'tmp/java-readme-run'
+jobs:
+  run:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest]
+        product: [device-detection, ip-intelligence]
+        include:
+          - product: device-detection
+            package: devicedetection
+          - product: ip-intelligence
+            package: ipintelligence
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Build as the README says, from the examples folder
+        working-directory: examples/${{ matrix.product }}
+        shell: pwsh
+        run: mvn -B --no-transfer-progress -pl console -am package -DskipTests
+      - name: Run two examples from the examples folder, with no settings
+        working-directory: examples/${{ matrix.product }}
+        shell: pwsh
+        run: |
+          Get-Location
+          $jar = (Get-ChildItem console/target -Filter '*-jar-with-dependencies.jar' | Select-Object -First 1).Name
+          Write-Output "jar: $jar"
+          foreach ($example in 'GettingStartedOnPrem', 'OfflineProcessing') {
+            Write-Output "=== $example"
+            & java -cp "./console/target/$jar" "fiftyone.${{ matrix.package }}.examples.console.$example" 2>&1 |
+              ForEach-Object { "$_" } | Select-Object -Last 40
+            Write-Output "=== $example exit code $LASTEXITCODE"
+          }
