@@ -7,6 +7,11 @@ name: Cloud 51Did Tests
 # the cloud for a 51Did and fail, saying so, when a key gets an answer with no
 # identifier in it. That is entitlement working rather than a fault.
 #
+# A run that has a license key also runs the Cloud Request Engine's live test
+# on a license key alone (pipeline/pipeline.cloudrequestengine,
+# CloudRequestEngineLiveTests), because no other workflow has a license key
+# for the cloud service. Without one that test skips.
+#
 # The secrets are named one by one rather than passed as toJSON(secrets).
 # GitHub marks a workflow that hands every secret to a step as possibly
 # malicious and holds each run for manual approval, so the nightly never ran.
@@ -32,6 +37,7 @@ on:
     branches: [main, rc]
     paths:
       - 'pipeline/pipeline.did/**'
+      - 'pipeline/pipeline.cloudrequestengine/**'
       - 'pipeline/owid-java/**'
       - '.github/workflows/cloud-51did.yml'
 
@@ -73,7 +79,7 @@ jobs:
           }
           $failed = $false
           foreach ($k in $keys) {
-            Write-Host "::group::DidClientLiveTests with $($k.Name)"
+            Write-Host "::group::Live tests with $($k.Name)"
             $env:_51DEGREES_RESOURCE_KEY = $k.Value
             $licenseName = $k.Name -replace '^_51DEGREES_RESOURCE_KEY', '_51DEGREES_LICENSE_KEY'
             $license = [Environment]::GetEnvironmentVariable($licenseName)
@@ -85,8 +91,10 @@ jobs:
               Remove-Item Env:_51DEGREES_LICENSE_KEY -ErrorAction SilentlyContinue
             }
             # Only the Pipeline API tree is built, as in its own repository.
-            mvn -B -f pipeline/pom.xml -pl pipeline.did -am test `
-              -Dtest=DidClientLiveTests -DfailIfNoTests=false
+            mvn -B -f pipeline/pom.xml `
+              -pl pipeline.did,pipeline.cloudrequestengine -am test `
+              '-Dtest=DidClientLiveTests,CloudRequestEngineLiveTests#build_Process_LicenseKeyAlone*' `
+              -DfailIfNoTests=false
             if ($LASTEXITCODE -ne 0) { $failed = $true }
             Write-Host '::endgroup::'
           }
