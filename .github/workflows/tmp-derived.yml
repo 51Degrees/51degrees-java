@@ -1,0 +1,44 @@
+name: tmp derived property element tests
+on:
+  push:
+    branches:
+      - 'tmp/java-derived-*'
+jobs:
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [17, 8]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - name: Fetch the pipeline submodules
+        run: git submodule update --init --depth 1 pipeline/owid-java pipeline/pipeline.core/configuration-validation pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates pipeline/derived-properties
+      - name: Java and Maven on the runner
+        run: |
+          git log --oneline -3
+          git -C pipeline/derived-properties log --oneline -1
+          java -version
+          mvn -version
+      - name: Run the Derived Property Element tests
+        run: >
+          mvn -B --no-transfer-progress -Pdev
+          -pl pipeline/pipeline.derivedproperty,pipeline/pipeline.developer-examples/pipeline.developer-examples.derivedproperty
+          -am test
+          -Dtest='SharedCasesTests,BuiltInScriptTests,DerivedPropertyElementTests,DerivedPropertyElementConfigurationTests,DerivedScriptParserTests,SourceValuesTests,ExampleTests,FindOutMoreTests'
+          -Dsurefire.failIfNoSpecifiedTests=false
+      - name: Report the test counts
+        if: always()
+        run: |
+          for f in $(find pipeline/pipeline.derivedproperty pipeline/pipeline.developer-examples/pipeline.developer-examples.derivedproperty -name 'TEST-*.xml' 2>/dev/null); do
+            s=$(grep -o '<testsuite [^>]*>' "$f" | head -1)
+            n=$(echo "$s" | grep -o ' name="[^"]*"' | head -1)
+            c=$(echo "$s" | grep -o 'tests="[0-9]*"\|failures="[0-9]*"\|errors="[0-9]*"\|skipped="[0-9]*"' | tr '\n' ' ')
+            echo "::notice title=Java ${{ matrix.java }}::$n $c"
+          done
