@@ -59,6 +59,7 @@
 
 package fiftyone.ipintelligence.examples.web;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.examples.shared.KeyHelper;
 import fiftyone.ipintelligence.shared.IPIntelligenceData;
 import fiftyone.pipeline.core.data.FlowData;
@@ -99,6 +100,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * line argument.
  */
 public class GettingStartedWebCloud extends HttpServlet {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "web-getting-started.cloud-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedwebcloud.java";
+
     private static final long serialVersionUID = 1734154705981153542L;
     public static Logger logger = LoggerFactory.getLogger(GettingStartedWebCloud.class);
 
@@ -203,6 +210,8 @@ public class GettingStartedWebCloud extends HttpServlet {
             .replace("${AREAS_JS}", escapeForJs(asWktStringProperty(tryGet(ipiData::getAreas))))
             .replace("${ACCURACY_RADIUS}", asIntegerProperty(tryGet(ipiData::getAccuracyRadiusMin)))
             .replace("${TIME_ZONE_OFFSET}", asIntegerProperty(tryGet(ipiData::getTimeZoneOffset)))
+            .replace("${FIND_OUT_MORE}", FindOutMore.html(EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES))
             .replace("${EVIDENCE_ROWS}", buildEvidenceRows(flowData));
     }
 
