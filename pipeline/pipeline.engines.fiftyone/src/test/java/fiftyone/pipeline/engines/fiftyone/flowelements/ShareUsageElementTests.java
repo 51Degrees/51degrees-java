@@ -864,17 +864,14 @@ public class ShareUsageElementTests {
         String[] expected = {"SessionId", "Sequence", "DateSent", "Version",
             "Product", "FlowElement", "Language", "LanguageVersion",
             "ClientIP", "ServerIP", "Platform"};
-        List<String> required = Arrays.asList("SessionId", "Sequence",
-            "DateSent", "Product", "Language", "LanguageVersion");
+        // Every element is always written, empty when there is no value.
+        // FlowElement is written once for each element of the Pipeline, so
+        // not at all here, where the test's Pipeline holds no elements.
         int last = -1;
         for (String name : expected) {
             int index = names.indexOf(name);
-            if (!required.contains(name)) {
-                // Only present when the Pipeline, the request and the
-                // platform give one.
-                if (index < 0) {
-                    continue;
-                }
+            if (index < 0 && name.equals("FlowElement")) {
+                continue;
             }
             assertTrue(index >= 0, name + " missing from " + names);
             assertTrue(index > last, name + " out of order in " + names);
