@@ -96,6 +96,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -421,11 +422,20 @@ public class CompareOnPrem {
                     latitude + "," +
                     longitude + "," +
                     (confidence != null ? confidence : "") + "," +
-                    String.format("%.3f", distanceKms) + "," +
+                    kilometres(distanceKms) + "," +
                     area.getSquareKms() + "," +
                     area.getGeometries() + "," +
                     area.getContains();
         }
+    }
+
+    /**
+     * A distance to three decimal places with a full stop as the separator
+     * whatever the default locale, as a decimal comma would split the CSV
+     * column in two.
+     */
+    static String kilometres(double distanceKms) {
+        return String.format("%.3f", distanceKms);
     }
 
     /**
