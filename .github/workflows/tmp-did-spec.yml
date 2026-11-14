@@ -1,0 +1,29 @@
+name: tmp 51Did specification tests
+on:
+  push:
+    branches:
+      - 'tmp/java-did-spec-red'
+      - 'tmp/java-did-spec-green'
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Fetch the OWID submodule
+        run: git submodule update --init --depth 1 pipeline/owid-java
+      - name: Java and Maven on the runner
+        run: |
+          git log --oneline -3
+          java -version
+      - name: Run the 51Did tests
+        run: >
+          mvn -B --no-transfer-progress -Pdev
+          -pl pipeline/pipeline.did -am test
+          -Dtest='DidClientTests,FodIdParseTests'
+          -Dsurefire.failIfNoSpecifiedTests=false
