@@ -1,0 +1,20 @@
+name: tmp 63 publish tests
+
+on:
+  push:
+    branches:
+      - 'tmp/java-63-pub-red2'
+      - 'tmp/java-63-pub-green2'
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pester
+        shell: pwsh
+        run: Invoke-Pester -Path ./ci/publish-package.Tests.ps1 -CI -Output Detailed
