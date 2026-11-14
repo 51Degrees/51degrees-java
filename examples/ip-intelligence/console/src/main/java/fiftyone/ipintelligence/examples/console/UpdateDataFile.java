@@ -38,6 +38,7 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.nio.file.*;
 import java.text.SimpleDateFormat;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Scanner;
 
@@ -266,7 +267,7 @@ public class UpdateDataFile {
                     "in your licensed allocation.");
             System.out.print("Do you wish to continue with this example (y)? ");
             String input = scanner.nextLine();
-            if ((input.isEmpty() || input.toLowerCase().startsWith("y")) == false) {
+            if ((input.isEmpty() || input.toLowerCase(Locale.ROOT).startsWith("y")) == false) {
                 logger.info("Stopping example without download");
                 return;
             }

@@ -355,7 +355,7 @@ class FlowDataDefault implements FlowData {
                     map.put(
                         element.getElementDataKey() + "." + property.getName(),
                         get(element.getElementDataKey())
-                            .get(property.getName().toLowerCase()).toString());
+                            .get(property.getName().toLowerCase(Locale.ROOT)).toString());
                 }
             }
         }

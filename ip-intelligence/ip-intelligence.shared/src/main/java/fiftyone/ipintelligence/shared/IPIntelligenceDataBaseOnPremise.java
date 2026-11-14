@@ -40,6 +40,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -229,7 +230,7 @@ public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceData
                     final Map<String, ElementPropertyMetaData> keyedProps = allProps.get(key);
                     final java.util.Collection<ElementPropertyMetaData> relevantProps = keyedProps.values();
                     for (ElementPropertyMetaData property : relevantProps) {
-                        map.put(property.getName().toLowerCase(),
+                        map.put(property.getName().toLowerCase(Locale.ROOT),
                             getAs(property.getName(),
                                 AspectPropertyValue.class,
                                 toWeightedListType(property.getType(), false)));

@@ -139,7 +139,7 @@ public class KeyHelper {
     private static String readKey(String name) {
         for (String value : new String[]{
             System.getenv(name),
-            System.getenv(name.toUpperCase()),
+            System.getenv(name.toUpperCase(Locale.ROOT)),
             System.getProperty(name)}) {
             if (KeyUtils.isInvalidKey(value) == false) {
                 return value;

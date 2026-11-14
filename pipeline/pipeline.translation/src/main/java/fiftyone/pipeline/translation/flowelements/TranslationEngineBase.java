@@ -46,6 +46,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -206,7 +207,7 @@ public class TranslationEngineBase<T extends ITranslationData>
             Set<String> seen = new LinkedHashSet<>();
             for (TranslationProperty translation : translationProperties) {
                 String name = translation.getDestinationProperty();
-                if (seen.add(name.toLowerCase())) {
+                if (seen.add(name.toLowerCase(Locale.ROOT))) {
                     result.add(new ElementPropertyMetaDataDefault(
                         name, this, "", Object.class, true));
                 }

@@ -28,6 +28,7 @@ import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -54,12 +55,12 @@ public class JsonLoader<T> implements DataLoader<T> {
 
         Map<String, Object> parameters = new HashMap<>();
         for (String key : jsonObj.keySet()) {
-            parameters.put(key.toLowerCase(), jsonObj. get(key));
+            parameters.put(key.toLowerCase(Locale.ROOT), jsonObj. get(key));
         }
 
         for (Method method : type.getMethods()) {
             if (method.getName().startsWith("set")) {
-                String variableName = method.getName().substring("set".length()).toLowerCase();
+                String variableName = method.getName().substring("set".length()).toLowerCase(Locale.ROOT);
                 Class<?>[] types = method.getParameterTypes();
                 if (types.length == 1 && parameters.containsKey(variableName)) {
                     Object variable = parameters.get(variableName);
