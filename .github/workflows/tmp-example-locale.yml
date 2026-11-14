@@ -1,0 +1,30 @@
+name: tmp example locale tests
+on:
+  push:
+    branches:
+      - 'tmp/java-exlocale-red'
+      - 'tmp/java-exlocale-green'
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - product: device-detection
+            test: RandomIpTest
+          - product: ip-intelligence
+            test: CsvNumbersTest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Run the test against the published packages
+        run: |
+          git log --oneline -3
+          java -version
+          mvn -B --no-transfer-progress -f examples/${{ matrix.product }}/pom.xml -pl console -am test -Dtest=${{ matrix.test }} -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false
