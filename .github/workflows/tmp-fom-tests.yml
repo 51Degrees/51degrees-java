@@ -1,0 +1,39 @@
+name: tmp find out more tests
+
+on:
+  push:
+    branches:
+      - 'tmp/java-fom-red4'
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        product: [device-detection, ip-intelligence]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch cxx and its data repository
+        run: |
+          git submodule update --init cxx
+          git -C cxx submodule update --init data
+      - name: Run the example tests against the published packages
+        shell: pwsh
+        run: |
+          git log --oneline -1
+          java -version
+          mvn -v
+          mvn -B -f examples/${{ matrix.product }}/pom.xml -pl console -am test `
+            '-Dtest=FindOutMoreTest,FindOutMoreCoverageTest,ExamplesWithoutSettingsTest' `
+            '-DfailIfNoTests=false' '-Dsurefire.failIfNoSpecifiedTests=false' `
+            '-Dmaven.test.failure.ignore=true'
+          $code = $LASTEXITCODE
+          Get-ChildItem -Recurse -Filter '*.txt' examples/${{ matrix.product }}/*/target/surefire-reports |
+            ForEach-Object { Get-Content $_ }
+          Get-ChildItem -Recurse -Filter '*-output.txt' examples/${{ matrix.product }}/*/target/surefire-reports |
+            ForEach-Object { Write-Output "::group::$($_.Name)"; Get-Content $_ | Select-Object -Last 40; Write-Output "::endgroup::" }
+          $failures = @(Get-ChildItem -Recurse -Path examples -Filter "*.txt" | Where-Object { $_.FullName -match "surefire-reports" -and $_.Name -notmatch "-output" -and (Get-Content -Raw $_.FullName) -match "FAILURE!" })
+          Write-Output "Maven exit code $code, report files with a failure: $($failures.Count)"
+          if ($code -ne 0 -or $failures.Count -gt 0) { exit 1 }
+          exit 0
