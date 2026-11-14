@@ -40,8 +40,12 @@ import java.util.concurrent.*;
 import static fiftyone.devicedetection.examples.shared.DataFileHelper.getEvidenceFile;
 
 /**
- * Unlike other examples, use of this example requires a 51Degrees Enterprise data file, which can
- * be obtained on a trial basis or purchased from our pricing page <a href="https://51degrees.com/pricing?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-comparison-comparer.java&amp;utm_term=comparer">here</a>.
+ * The 51Degrees solution uses the free Lite data file, downloaded if it is
+ * missing, unless the first argument names another data file. The Lite data
+ * file has only some of the properties the comparison reads, so after the
+ * report the example says what the Enterprise data file adds and where to ask
+ * for a copy. Give the Enterprise data file as the first argument to compare
+ * with every property.
  *<p>
  * This class provides a framework and runner for comparing different device detection solutions.
  * It is provided in a basic form to compare detection time. Different solutions may be compared
@@ -71,7 +75,13 @@ public class Comparer {
 
     public static void main(String[] args) throws Exception {
         LogbackHelper.configureLogback(FileFinder.getFilePath("logback.xml"));
-        new Comparer().compare(Arrays.asList(DEFAULT_SOLUTIONS),
+        @SuppressWarnings("resource")
+        List<Solution> solutions = args.length > 0 ?
+                Arrays.asList(
+                        new DetectionImplFiftyOneDegrees.FiftyOneSolution(args[0]),
+                        new DetectionImplBrowsCap.BrowsCapSolution()) :
+                Arrays.asList(DEFAULT_SOLUTIONS);
+        new Comparer().compare(solutions,
                 DEFAULT_NUMBER_OF_THREADS,
                 DEFAULT_NUMBER_OF_RESULTS,
                 new Reporting.Minimal(),
@@ -124,6 +134,9 @@ public class Comparer {
         }
         logger.info("Preparing reports");
         reportingModel.report(executionResults, writer);
+        for (Solution solution : solutions) {
+            solution.writeNote(writer);
+        }
         logger.info("Comparison done");
     }
 
