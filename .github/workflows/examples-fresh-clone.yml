@@ -16,6 +16,8 @@ on:
     branches:
       - main
       - rc
+      - 'tmp/java-fresh-red'
+      - 'tmp/java-fresh-green'
   schedule:
     - cron: '30 4 * * *'
   workflow_dispatch:
