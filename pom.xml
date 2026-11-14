@@ -9,13 +9,13 @@
          nothing here reaches Maven Central and the published poms are the
          same shape as before the packages shared a repository.
 
-         Every module carries the same version. CI sets it on all of them
-         before a release with versions:set and processAllModules. The
+         Every module carries the same development version, and the
          libraries reference each other through ${project.version}, so a
-         change in pipeline-java is seen by device-detection-java in the same
-         build. The examples reference the packages published to Maven Central
-         unless the dev profile is active, which points them at the libraries
-         here instead. -->
+         change to the Pipeline API is seen by Device Detection in the same
+         build. A release gives each published module its own version, which
+         ci/build-package.ps1 writes into the poms. The examples reference the
+         packages published to Maven Central unless the dev profile is
+         active, which points them at the libraries here instead. -->
     <groupId>com.51degrees</groupId>
     <artifactId>51degrees-java</artifactId>
     <version>4.5.127-SNAPSHOT</version>

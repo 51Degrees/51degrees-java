@@ -136,9 +136,12 @@ does the same.
 
 ## Versions
 
-The repository has one version, and every package is released with it. CI
-sets the version on each package tree before a release and tags the commit
-with the plain version, such as `4.5.127`.
+Each package has its own version, and a release publishes only the packages
+that changed since their last release and the packages that depend on them.
+A change only to documentation, tests, examples or the descriptive parts of a
+`pom.xml`, such as its links, releases nothing.
+Each is tagged with its name and version, such as `pipeline.core/4.5.131`.
+[ci/README.md](ci/README.md) describes how CI works out what to release.
 
 ## History
 

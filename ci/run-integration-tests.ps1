@@ -1,8 +1,9 @@
 param(
     [Parameter(Mandatory)][string]$RepoName,
     [string]$Name,
-    # Set by the publish workflow to the version it built and installed. Not
-    # set when a pull request is tested, which builds the reactor itself.
+    # Set by the publish workflow, which built and installed the packages, to
+    # its label for the run. Not set when a pull request is tested, which
+    # builds the reactor itself.
     [string]$Version,
     [string]$TestResourceKey,
     [string]$DeviceDetection,
@@ -23,13 +24,15 @@ $results = "$RepoName/test-results/integration"
 $failed = @()
 
 # The examples take the libraries from Maven Central unless told otherwise.
-# Pointing them at the version the publish workflow installed tests the
-# packages as a project of your own would use them. For a pull request the
-# dev profile points them at the reactor build-project.ps1 installed.
-[string[]]$versionArgs = if ($Version) {
-    "-Ddevice-detection.version=$Version", "-Dip-intelligence.version=$Version"
+# Pointing them at the versions the publish workflow built and installed, each
+# package's own, tests the packages as a project of your own would use them.
+# For a pull request the dev profile points them at the reactor
+# build-project.ps1 installed.
+if ($Version) {
+    . "$PSScriptRoot/release.ps1"
+    [string[]]$versionArgs = Get-ExampleVersionArguments $RepoName
 } else {
-    , '-Pdev'
+    [string[]]$versionArgs = '-Pdev'
 }
 
 # The Pipeline API developer examples, as the pipeline repository ran them.
@@ -61,7 +64,7 @@ if ($Version) {
             Write-Host "::warning title=Examples skipped::Skipping '$($example.Path)', as IpIntelligenceUrl was not provided."
             continue
         }
-        Write-Host "::group::$($example.Path) against $Version"
+        Write-Host "::group::$($example.Path) against $($versionArgs -join ' ')"
         Push-Location "$RepoName/$($example.Path)"
         try {
             mvn clean test @MavenOptions @versionArgs `
