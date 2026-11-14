@@ -223,7 +223,8 @@ example. The IP Intelligence cloud examples read their key from
   when CI has them. Publish tests them against the packages it has just
   built (`ci/run-integration-tests.ps1`).
   [examples-fresh-clone.yml](.github/workflows/examples-fresh-clone.yml)
-  does what this section says, with the JDK and Maven each runner has. It
+  does what [Run the examples](#run-the-examples) says, with the JDK and
+  Maven each runner has. It
   builds the console examples against the published packages and runs each
   product's `GettingStartedOnPrem` jar from the repository root with no
   settings, so the free data file is downloaded. It runs on each push to
