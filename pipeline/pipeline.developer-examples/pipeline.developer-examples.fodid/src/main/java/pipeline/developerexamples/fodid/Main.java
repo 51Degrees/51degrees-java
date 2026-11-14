@@ -26,6 +26,7 @@ import com.swancommunity.owid.Creator;
 import com.swancommunity.owid.Crypto;
 import fiftyone.pipeline.did.FodId;
 
+import java.io.PrintStream;
 import java.util.Arrays;
 
 /**
@@ -140,7 +141,31 @@ public class Main {
         }
     }
 
+    /**
+     * The rule above and below the "Find out more" section.
+     */
+    private static final String RULE =
+        "----------------------------------------------------------------";
+
+    /**
+     * Ends the output with the pages and repositories that say more about
+     * what this example shows.
+     * @param output where to write
+     */
+    static void writeFindOutMore(PrintStream output) {
+        output.println();
+        output.println(RULE);
+        output.println("Find out more");
+        output.println("\t51Did: https://51degrees.com/documentation/_identifiers__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=pipeline.developer-examples.fodid-main.java&utm_term=find-out-more");
+        output.println("\tAsk about 51Did: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=pipeline.developer-examples.fodid-main.java&utm_term=find-out-more");
+        output.println("\thttps://github.com/51Degrees/51degrees-java");
+        output.println("\thttps://github.com/51Degrees/specifications");
+        output.println(RULE);
+        output.flush();
+    }
+
     public static void main(String[] args) throws Exception {
         new Example().run();
+        writeFindOutMore(System.out);
     }
 }
