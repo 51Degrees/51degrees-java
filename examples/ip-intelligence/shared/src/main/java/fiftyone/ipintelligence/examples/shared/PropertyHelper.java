@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -60,6 +61,8 @@ public class PropertyHelper {
      * List&lt;IWeightedValue&lt;T&gt;&gt; even when the declared type is T).
      * For single-element lists, returns just the value.
      * For multi-element lists, returns values joined with ", ".
+     * A weighted value is followed by its weighting, as in
+     * "Japan (weighting 1.00)".
      * @param value the raw value from AspectPropertyValue.getValue()
      * @return the unwrapped string representation
      */
@@ -73,8 +76,16 @@ public class PropertyHelper {
             return list.stream()
                     .map(item -> {
                         if (item instanceof IWeightedValue) {
-                            Object inner = ((IWeightedValue<?>) item).getValue();
-                            return inner != null ? inner.toString() : "Unknown";
+                            // An IP Intelligence value comes with the
+                            // weighting the data gives it, which is 1 for
+                            // a property with one answer.
+                            IWeightedValue<?> weighted = (IWeightedValue<?>) item;
+                            Object inner = weighted.getValue();
+                            return String.format(
+                                    Locale.ROOT,
+                                    "%s (weighting %.2f)",
+                                    inner != null ? inner.toString() : "Unknown",
+                                    weighted.getWeighting());
                         }
                         return item != null ? item.toString() : "Unknown";
                     })
