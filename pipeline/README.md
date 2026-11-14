@@ -28,6 +28,7 @@ but additional caution should be applied.
 - pipeline.engines - Shared functionality that is available to all 'engines' (specialized 'flow elements')
 - pipeline.engines.fiftyone - Functionality that is specific to 51Degrees engines.
 - pipeline.cloudrequestengine - An engine that is used to retrieve data from 51Degrees' cloud API.
+- pipeline.derivedproperty - The Derived Property Element, which produces new properties from the properties other elements produce, following rules written in a script.
 
 ## Installation
 

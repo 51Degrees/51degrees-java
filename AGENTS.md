@@ -294,6 +294,14 @@ The Windows pre-build scripts take a toolset and SDK version from the pom.
 JavaScript templates and the OWID library are submodules inside `pipeline`,
 where the Pipeline API expects them.
 
+`pipeline/derived-properties` is the
+[derived-properties](https://github.com/51Degrees/derived-properties)
+repository. `pipeline.derivedproperty` packages the scripts in its `scripts`
+folder as resources, so a script added there needs a `BuiltInScript`
+constant, which `BuiltInScriptTests` checks. The package's tests run every
+case file and every rejection case in its `tests` folder, so its answers and
+its faults are checked against the other languages'.
+
 ## Releases
 
 Pull requests go to `rc`, not `main`, and stay drafts until they have been
