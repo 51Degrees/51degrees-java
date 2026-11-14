@@ -21,6 +21,7 @@
  * ********************************************************************* */
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
 import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
@@ -45,6 +46,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
 
 public class MetadataOnPrem {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-devicedetection-examples-console-metadataonprem.java";
+
     private static final Logger logger = LoggerFactory.getLogger(GettingStartedOnPrem.class);
 
     /* In this example, by default, the 51degrees "Lite" file is used from the data repository in
@@ -65,6 +72,8 @@ public class MetadataOnPrem {
         configureLogback(getFilePath("logback.xml"));
         String dataFile = args.length > 0 ? args[0] : LITE_V_4_1_HASH;
         run(dataFile, System.out);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
 

@@ -54,6 +54,7 @@
 
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.IPIntelligenceCloudPipelineBuilder;
 import fiftyone.ipintelligence.IPIntelligencePipelineBuilder;
 import fiftyone.ipintelligence.cloud.flowelements.IPIntelligenceCloudEngine;
@@ -85,6 +86,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * Cloud service.
  */
 public class MetadataCloud {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-ipintelligence-examples-console-metadatacloud.java";
+
     private static final Logger logger = LoggerFactory.getLogger(MetadataCloud.class);
 
     public static void main(String[] args) throws Exception {
@@ -99,6 +106,8 @@ public class MetadataCloud {
                 KeyUtils.getNamedKey(GettingStartedCloud.CLOUD_END_POINT_NAME);
 
         run(resourceKey, endPoint, System.out);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.CLOUD_REPOSITORIES);
     }
 
     /**

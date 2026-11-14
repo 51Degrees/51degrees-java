@@ -46,6 +46,7 @@
 
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.IPIntelligenceCloudPipelineBuilder;
 import fiftyone.ipintelligence.IPIntelligencePipelineBuilder;
 import fiftyone.ipintelligence.examples.shared.EvidenceHelper;
@@ -85,6 +86,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * The concepts of "pipeline", "flow data", "evidence" and "results" are illustrated.
  */
 public class GettingStartedCloud {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedcloud.java";
+
     private static final Logger logger = LoggerFactory.getLogger(GettingStartedCloud.class);
 
     /**
@@ -107,6 +114,8 @@ public class GettingStartedCloud {
         // prepare 'evidence' for use in pipeline (see below)
         List<Map<String, String>> evidence = EvidenceHelper.setUpEvidence();
         run(resourceKey, endPoint, evidence, System.out);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.CLOUD_REPOSITORIES);
     }
 
     /**
