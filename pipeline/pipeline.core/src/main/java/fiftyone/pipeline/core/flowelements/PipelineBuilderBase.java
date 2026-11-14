@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.core.flowelements;
 
+import fiftyone.pipeline.core.Constants;
 import fiftyone.pipeline.core.configuration.PipelineOptions;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.factories.FlowDataFactory;
@@ -67,9 +68,11 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
      */
     protected final List<PipelineService> services = new ArrayList<>();
     
-    protected boolean autoCloseElements = false;
+    protected boolean autoCloseElements =
+        Constants.DEFAULT_AUTO_CLOSE_ELEMENTS;
 
-    protected boolean suppressProcessExceptions = false;
+    protected boolean suppressProcessExceptions =
+        Constants.DEFAULT_SUPPRESS_PROCESS_EXCEPTIONS;
 
     /**
      * Construct a new instance using the default {@link ILoggerFactory}

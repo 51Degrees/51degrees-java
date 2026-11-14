@@ -58,6 +58,13 @@ public class Constants {
         fiftyone.pipeline.core.Constants.EVIDENCE_QUERY_PREFIX +
             fiftyone.pipeline.core.Constants.EVIDENCE_SEPERATOR +
             EVIDENCE_SEQUENCE_SUFIX;
+
+    /**
+     * Whether a 51Degrees Pipeline builder adds the Usage Sharing Element,
+     * unless it is told otherwise.
+     */
+    public static final boolean SHARE_USAGE_DEFAULT_ENABLED = true;
+
     public static final int SHARE_USAGE_DEFAULT_REPEAT_EVIDENCE_MINUTES = 20;
     public static final double SHARE_USAGE_DEFAULT_SHARE_PERCENTAGE = 1.0;
 

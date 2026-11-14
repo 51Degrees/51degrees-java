@@ -48,7 +48,9 @@ import java.util.List;
 public class DeviceDetectionOnPremisePipelineBuilder
     extends PrePackagedPipelineBuilderBase<DeviceDetectionOnPremisePipelineBuilder> {
 
-    protected boolean shareUsageEnabled = true;
+    protected boolean shareUsageEnabled =
+        fiftyone.pipeline.engines.fiftyone.flowelements.Constants
+            .SHARE_USAGE_DEFAULT_ENABLED;
     private String filename;
     private boolean createTempDataCopy;
     private byte[] engineData;
