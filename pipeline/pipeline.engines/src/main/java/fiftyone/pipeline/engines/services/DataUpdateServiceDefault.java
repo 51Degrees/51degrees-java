@@ -209,6 +209,10 @@ public class DataUpdateServiceDefault implements DataUpdateService {
      * 2. Checks for an update using the update URL.
      * 3. Refresh engine with new data if available.
      * 4. Schedule the next update check if needed.
+     * 5. Report the check to the update callbacks, a check that failed with
+     *    an error as {@link AutoUpdateStatus#AUTO_UPDATE_UNKNOWN_ERROR}. The
+     *    error then passes to the caller unlogged, as does one a callback
+     *    raises.
      *
      * @param state        the data file meta data
      * @param manualUpdate true if the checkForUpdate was manually called, false
@@ -217,6 +221,51 @@ public class DataUpdateServiceDefault implements DataUpdateService {
      * successfully updated
      */
     private AutoUpdateStatus checkForUpdate(Object state, boolean manualUpdate) {
+        AspectEngineDataFile dataFile =
+                state instanceof AspectEngineDataFileDefault ?
+                        (AspectEngineDataFileDefault) state :
+                        null;
+        AutoUpdateStatus result;
+        try {
+            result = runCheck(state, manualUpdate);
+        } catch (RuntimeException | Error ex) {
+            report(state, AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR, dataFile);
+            throw ex;
+        }
+        report(state, result, dataFile);
+        return result;
+    }
+
+    /**
+     * Run a check started by update polling. A failure of the check is
+     * logged, reported as {@link AutoUpdateStatus#AUTO_UPDATE_UNKNOWN_ERROR},
+     * and the next check is scheduled, so a later data file is still
+     * applied. A failure in an update callback is logged. The timer's task
+     * would otherwise lose either one.
+     *
+     * @param dataFile the data file to check
+     */
+    private void checkForUpdateOnTimer(AspectEngineDataFileDefault dataFile) {
+        AutoUpdateStatus result;
+        try {
+            result = runCheck(dataFile, false);
+        } catch (RuntimeException | Error ex) {
+            logUnhandledError(dataFile, ex);
+            result = AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR;
+            scheduleNextCheck(dataFile);
+        }
+        reportOnTimer(dataFile, result, dataFile);
+    }
+
+    /**
+     * The steps of {@link #checkForUpdate(Object, boolean)}, without the
+     * report to the update callbacks.
+     *
+     * @param state        the data file meta data
+     * @param manualUpdate true if the check was called programmatically
+     * @return the status of the check
+     */
+    private AutoUpdateStatus runCheck(Object state, boolean manualUpdate) {
 
         AutoUpdateStatus result = AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS;
         final AspectEngineDataFileDefault dataFile =
@@ -292,7 +341,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                                     new Runnable() {
                                         @Override
                                         public void run() {
-                                            checkForUpdate(dataFile, false);
+                                            checkForUpdateOnTimer(dataFile);
                                         }
                                     },
                                     getIntervalMillis(dataFile.getConfiguration())));
@@ -312,11 +361,6 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 registerDataFile(dataFile);
             }
 
-        }
-        for (OnUpdateComplete onUpdateComplete : onUpdateCompleteList) {
-            onUpdateComplete.call(state, new DataUpdateCompleteArgs(
-                    result,
-                    dataFile));
         }
         return result;
     }
@@ -384,9 +428,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
      * @param sender the {@link AspectEngineDataFile}
      */
     private void dataFileUpdated(Object sender) {
-        AutoUpdateStatus status = AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS;
         // Get the associated update configuration
-
         AspectEngineDataFile dataFile = null;
         for (AspectEngineDataFile current : configurations) {
             if (current.equals(sender)) {
@@ -395,6 +437,25 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             }
         }
 
+        AutoUpdateStatus status;
+        try {
+            status = applyWatchedFile(dataFile);
+        } catch (RuntimeException | Error ex) {
+            logUnhandledError(dataFile, ex);
+            status = AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR;
+        }
+        reportOnTimer(sender, status, dataFile);
+    }
+
+    /**
+     * Apply the data file the file watcher found changed, once however many
+     * events it raised.
+     *
+     * @param dataFile the registered data file, or null if there is none
+     * @return the status of the check
+     */
+    private AutoUpdateStatus applyWatchedFile(AspectEngineDataFile dataFile) {
+        AutoUpdateStatus status = AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS;
         if (dataFile != null) {
             AspectEngineDataFileDefault aspectDataFile = (AspectEngineDataFileDefault) dataFile;
             // Get the creation time of the new data file
@@ -450,9 +511,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 }
             }
         }
-        for (OnUpdateComplete onUpdateComplete : onUpdateCompleteList) {
-            onUpdateComplete.call(sender, new DataUpdateCompleteArgs(status, dataFile));
-        }
+        return status;
     }
 
     @Override
@@ -541,7 +600,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                                     public void run() {
                                         logger.debug("running checkForUpdate {}",
                                                 aspectDataFile.getDataFilePath());
-                                        checkForUpdate(aspectDataFile, false);
+                                        checkForUpdateOnTimer(aspectDataFile);
                                         logger.debug("Returning from checkForUpdate");
                                     }
                                 },
@@ -951,6 +1010,69 @@ public class DataUpdateServiceDefault implements DataUpdateService {
         logger.error("An error occurred when applying a data update to " +
                 "engine '" + getEngineType(dataFile) + "'" +
                 (tries == null ? "." : " after " + tries + " tries."), ex);
+    }
+
+    /**
+     * Log the Errors table's message for an error in a check started by
+     * update polling or the file watcher that no other row covers, or one
+     * raised by an update callback, with the error attached. A Java Error,
+     * such as one from the native code during a refresh, is a failure of
+     * the check like any other.
+     */
+    private void logUnhandledError(
+        AspectEngineDataFile dataFile,
+        Throwable ex) {
+        logger.error("An unhandled error occurred while checking for " +
+                "automatic updates for engine '" +
+                (dataFile == null ? "No Engine" : getEngineType(dataFile)) +
+                "'", ex);
+    }
+
+    /**
+     * Report a check to each update callback in turn. An error a callback
+     * raises passes to the caller, and the callbacks after it are not
+     * called.
+     */
+    private void report(
+        Object sender,
+        AutoUpdateStatus status,
+        AspectEngineDataFile dataFile) {
+        for (OnUpdateComplete onUpdateComplete : onUpdateCompleteList) {
+            onUpdateComplete.call(sender,
+                    new DataUpdateCompleteArgs(status, dataFile));
+        }
+    }
+
+    /**
+     * Report a check started by update polling or the file watcher, and log
+     * an error a callback raises, as the scheduled task would lose it.
+     */
+    private void reportOnTimer(
+        Object sender,
+        AutoUpdateStatus status,
+        AspectEngineDataFile dataFile) {
+        try {
+            report(sender, status, dataFile);
+        } catch (RuntimeException | Error ex) {
+            logUnhandledError(dataFile, ex);
+        }
+    }
+
+    /**
+     * Clear the timer of a registered data file and register it again,
+     * which sets a new one, so polling goes on after a failed check. The
+     * timer is not interrupted, as the check may be running in it.
+     */
+    private void scheduleNextCheck(AspectEngineDataFileDefault dataFile) {
+        synchronized (futureLock) {
+            if (dataFile.getFuture() != null) {
+                dataFile.getFuture().cancel(false);
+                dataFile.setFuture(null);
+            }
+        }
+        if (dataFile.getIsRegistered()) {
+            registerDataFile(dataFile);
+        }
     }
 
     private String getEngineType(AspectEngineDataFile dataFile) {
