@@ -1,0 +1,35 @@
+name: Temporary dry run publish
+
+on:
+  push:
+    branches:
+      - 'tmp/java-dry-run-publish-63b'
+
+jobs:
+  Publish:
+    name: Publish
+    uses: 51Degrees/common-ci/.github/workflows/nightly-publish.yml@rc
+    with:
+      repo-name: 51degrees-java
+      org-name: 51Degrees
+      dryrun: true
+      common-ci-ref: rc
+      cache-assets: true
+      skip-compare-performance: true
+    secrets:
+      token: ${{ secrets.ACCESS_TOKEN }}
+      DeviceDetection: ${{ secrets.DEVICE_DETECTION_KEY }}
+      DeviceDetectionUrl: ${{ secrets.DEVICE_DETECTION_URL }}
+      IpIntelligence: ${{ secrets.IP_INTELLIGENCE_KEY }}
+      IpIntelligenceUrl: ${{ secrets.IPI_DATA_FILE_URL }}
+      TestResourceKey: ${{ secrets._51DEGREES_RESOURCE_KEY_BESPOKE }}
+      MavenSettings: ${{ secrets.MAVEN_SETTINGS }}
+      JavaGpgKeyPassphrase: ${{ secrets.JAVA_GPG_KEY_PASSPHRASE }}
+      JavaPGP: ${{ secrets.JAVA_KEY_PGP_FILE }}
+      CodeSigningKeyVaultName: ${{ secrets.CODE_SIGNING_KEY_VAULT_NAME }}
+      CodeSigningKeyVaultUrl: ${{ secrets.CODE_SIGNING_KEY_VAULT_URL }}
+      CodeSigningKeyVaultClientId: ${{ secrets.CODE_SIGNING_KEY_VAULT_CLIENT_ID }}
+      CodeSigningKeyVaultTenantId: ${{ secrets.CODE_SIGNING_KEY_VAULT_TENANT_ID }}
+      CodeSigningKeyVaultClientSecret: ${{ secrets.CODE_SIGNING_KEY_VAULT_CLIENT_SECRET }}
+      CodeSigningKeyVaultCertificateName: ${{ secrets.CODE_SIGNING_KEY_VAULT_CERTIFICATE_NAME }}
+      CodeSigningKeyVaultCertificateData: ${{ secrets.CODE_SIGNING_KEY_VAULT_CERTIFICATE_DATA }}
