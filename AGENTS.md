@@ -157,8 +157,9 @@ expected with the Lite file. The exit code is 0.
 The IP Intelligence example looks up `116.154.188.222`, `45.236.48.61` and an
 IPv6 address. For each it prints `Input values:` with `query.client-ip`, then
 `Results:` with a line for each property, from `RegisteredName` to
-`TimeZoneOffset`. The Lite file has RegisteredCountry, RegisteredName and
-RegisteredOwner, so a line for a property it does not have reads
+`TimeZoneOffset`. Each value is followed by its weighting, as in
+`Japan (weighting 1.00)`. The Lite file has RegisteredCountry, RegisteredName
+and RegisteredOwner, so a line for a property it does not have reads
 `Unknown. The property '<name>' is not available in this data file.` followed
 by a link, and the first such line also logs a warning that some properties
 need a paid subscription. It then logs the data file in the same way, and
