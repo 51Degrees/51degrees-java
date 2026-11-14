@@ -1,0 +1,25 @@
+name: tmp examples on the runner's JDK
+on:
+  push:
+    branches:
+      - 'tmp/java-jdk25-red'
+      - 'tmp/java-jdk25-green'
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        product: [device-detection, ip-intelligence]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: The runner's Java and Maven
+        run: |
+          cat /etc/os-release | head -2
+          java -version
+          mvn -v
+      - name: Build the console examples as AGENTS.md says
+        working-directory: examples/${{ matrix.product }}
+        run: mvn -B --no-transfer-progress -pl console -am package -DskipTests
