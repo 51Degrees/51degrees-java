@@ -384,17 +384,19 @@ public class DeviceDetectionHashEngine
             List<String> keys = evidenceKeys;
             for (Map.Entry<String, Object> evidenceItem :
                 flowData.getEvidence().asKeyMap().entrySet()) {
-                boolean containsKey = false;
+                String matchedKey = null;
                 for (String key : keys) {
                     if (key.equalsIgnoreCase(evidenceItem.getKey())) {
-                        containsKey = true;
+                        matchedKey = key;
                         break;
                     }
                 }
-                if (containsKey) {
+                if (matchedKey != null) {
+                    // The native code matches the prefix with case, so it
+                    // is given the key as the native code spells it.
                     relevantEvidence
                         .addFromBytes(
-                        Swig.asBytes(evidenceItem.getKey()),
+                        Swig.asBytes(matchedKey),
                         Swig.asBytes(evidenceItem.getValue().toString()));
                 }
             }
