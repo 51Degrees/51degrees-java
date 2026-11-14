@@ -1,0 +1,44 @@
+name: tmp Evidence key case tests
+on: push
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Java, Maven and CMake on the runner
+        run: |
+          java -version
+          mvn -v
+          cmake --version
+      - name: Download the free data files the tests use
+        run: |
+          sh cxx/data/get-data-files.sh 51Degrees-LiteV4.1.hash
+          sh cxx/data/get-data-files.sh "20000 User Agents.csv"
+          ls -la cxx/data/device-detection
+      - name: Run the Evidence key tests
+        run: >
+          mvn -B --no-transfer-progress
+          -pl pipeline/pipeline.core,device-detection/device-detection.hash.engine.on-premise -am test
+          -Dtest='EvidenceKeyFilter*Tests,TestProcessTests,EvidenceKeysTests'
+          -Dsurefire.failIfNoSpecifiedTests=false
+          -Dmaven.test.failure.ignore=true
+      - name: List the test results
+        run: |
+          for f in $(find . -path '*surefire-reports*' -name 'TEST-*.xml'); do
+            grep -o '<testsuite [^>]*' "$f" | grep -o -E '(name|tests|failures|errors|skipped)="[^"]*"' | tr '\n' ' '; echo
+          done
+          files=$(grep -l -E '<(failure|error)[ >]' -r --include='TEST-*.xml' . || true)
+          if [ -n "$files" ]; then
+            for f in $files; do
+              echo "== $f"
+              grep -B1 -A3 -E '<(failure|error)[ >]' "$f" | cut -c1-400 | head -40
+            done
+            exit 1
+          fi
+          echo "No failing tests"
