@@ -433,21 +433,29 @@ public class JsonBuilderElement
         return javascriptPropertyNames;
     }
 
+    /**
+     * Adds the Flow Data's errors under the top-level key errors as a list
+     * of their messages, in the order the Flow Data holds them. A throwable
+     * with no message is written as its type, so the list holds only text.
+     * An error with no throwable has no message and is left out.
+     */
     private void addErrors(FlowData data, Map<String, Object> allProperties) {
-        // If there are any errors then add them to the Json.
-        if (data.getErrors() != null && data.getErrors().size() > 0) {
-            Map<String, List<String>> errors = new HashMap<>();
-            for (FlowError error : data.getErrors())
-            {
-                if (errors.containsKey(error.getFlowElement().getElementDataKey())) {
-                    errors.get(error.getFlowElement().getElementDataKey()).add(error.getThrowable().getMessage());
-                } else {
-                    errors.put(error.getFlowElement().getElementDataKey(),
-                        Collections.singletonList(
-                            error.getThrowable().getMessage()));
-                }
+        Collection<FlowError> flowErrors = data.getErrors();
+        if (flowErrors == null) {
+            return;
+        }
+        List<String> messages = new ArrayList<>();
+        for (FlowError error : flowErrors) {
+            Throwable throwable = error.getThrowable();
+            if (throwable != null) {
+                String message = throwable.getMessage();
+                messages.add(message != null ?
+                    message :
+                    throwable.getClass().getName());
             }
-            allProperties.put("errors", errors);
+        }
+        if (messages.isEmpty() == false) {
+            allProperties.put("errors", messages);
         }
     }
 

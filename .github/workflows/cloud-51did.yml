@@ -29,7 +29,7 @@ on:
   schedule:
     - cron: '10 5 * * *'
   pull_request:
-    branches: [main]
+    branches: [main, rc]
     paths:
       - 'pipeline/pipeline.did/**'
       - 'pipeline/owid-java/**'
