@@ -47,6 +47,7 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
@@ -468,7 +469,7 @@ public class JsonBuilderElement
 
         for (Map.Entry<String, Object> entry : allProperties.entrySet()) {
             if (entry.getValue() instanceof Map) {
-                Map<String, Object> map = new HashMap<>();
+                JSONObject element = new JSONObject();
                 @SuppressWarnings("unchecked")
                 Map<String, Object> properties = (Map<String, Object>)entry.getValue();
 
@@ -478,15 +479,45 @@ public class JsonBuilderElement
                     if(value instanceof JavaScript)
                         value = value.toString();
 
-                    map.put(resolveName(ent.getKey()), value);
+                    element.put(resolveName(ent.getKey()), toJsonValue(value));
                 }
-                json.put(resolveName(entry.getKey()), map);
+                json.put(resolveName(entry.getKey()), element);
             } else {
 
                 json.put(resolveName(entry.getKey()), entry.getValue());
             }
         }
         return json.toString(2);
+    }
+
+    /**
+     * The value as it is written into the JSON. org.json leaves out a Map
+     * entry whose value is null, so a Map, such as an item of a list of
+     * Element Data, is written here with each null as JSON null, because a
+     * Property assigned no value is written as null with its nullreason.
+     * Every other value is wrapped as org.json wraps it.
+     */
+    private static Object toJsonValue(Object value) {
+        if (value == null) {
+            return JSONObject.NULL;
+        }
+        if (value instanceof Map) {
+            JSONObject object = new JSONObject();
+            for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) {
+                object.put(
+                    String.valueOf(entry.getKey()),
+                    toJsonValue(entry.getValue()));
+            }
+            return object;
+        }
+        if (value instanceof Collection) {
+            JSONArray array = new JSONArray();
+            for (Object item : (Collection<?>) value) {
+                array.put(toJsonValue(item));
+            }
+            return array;
+        }
+        return JSONObject.wrap(value);
     }
 
 
