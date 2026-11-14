@@ -58,6 +58,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.never;
@@ -82,6 +83,14 @@ public class DataUpdateServiceCheckFailureTests {
      * is later than the first on a file system that keeps whole seconds.
      */
     private static final long LATER_FILE_MILLIS = 2000;
+
+    /**
+     * Modified times for a data file that is newer than the copy the
+     * engine uses.
+     */
+    private static final long NEWER_MILLIS = 2000000;
+
+    private static final long OLDER_MILLIS = 1000000;
 
     private static final String MAC_MESSAGE =
         "File watchers are not well implemented in OS X, " +
@@ -256,6 +265,65 @@ public class DataUpdateServiceCheckFailureTests {
             assertEquals("The next check is scheduled", 2, timers.size());
         }
         finally {
+            cleanUp(file, directory, dataFile);
+        }
+    }
+
+    /**
+     * An Error thrown by the engine's refresh during a check by update
+     * polling is caught like any other failure. It is logged, reported as
+     * an unknown error, and the next check is scheduled.
+     */
+    @Test
+    public void PollingCheck_RefreshThrowsError_ReportedAndNextCheckScheduled()
+        throws Exception {
+        Logger logger = mock(Logger.class);
+        List<Runnable> timers = new ArrayList<>();
+        Error failure = new Error("The refresh failed");
+        Path directory = Files.createTempDirectory("polled");
+        Path dataFile = directory.resolve("data.dat");
+        Path tempFile = directory.resolve("data-copy.dat");
+        Files.write(dataFile, "New".getBytes());
+        Files.write(tempFile, "Old".getBytes());
+        FileWrapperFactory fileWrapperFactory = fileWrapperFactory();
+        when(fileWrapperFactory.getLastModified(dataFile.toString()))
+            .thenReturn(NEWER_MILLIS);
+        when(fileWrapperFactory.getLastModified(tempFile.toString()))
+            .thenReturn(OLDER_MILLIS);
+        DataUpdateService dataUpdate = new DataUpdateServiceDefault(
+            logger,
+            mock(HttpClient.class),
+            fileWrapperFactory,
+            timerFactory(timers));
+        List<String> statuses = new ArrayList<>();
+        dataUpdate.onUpdateComplete((sender, args) ->
+            statuses.add(args.getStatus().name()));
+
+        OnPremiseAspectEngine<? extends AspectData,
+            ? extends AspectPropertyMetaData> engine = engine();
+        doThrow(failure).when(engine).refreshData(any());
+        AspectEngineDataFileDefault file = dataFile(engine, dataFile, false);
+        file.setTempDataFilePath(tempFile.toString());
+
+        try {
+            dataUpdate.registerDataFile(file);
+            assertEquals("Registering sets one polling timer",
+                1, timers.size());
+
+            timers.get(0).run();
+
+            verify(logger).error(
+                eq(String.format(UNHANDLED, engineType(engine))),
+                same(failure));
+            assertEquals("The failed check is reported as an unknown error",
+                Collections.singletonList("AUTO_UPDATE_UNKNOWN_ERROR"),
+                statuses);
+            assertEquals("The next check is scheduled", 2, timers.size());
+        }
+        finally {
+            if (tempFile.toFile().delete() == false) {
+                tempFile.toFile().deleteOnExit();
+            }
             cleanUp(file, directory, dataFile);
         }
     }
