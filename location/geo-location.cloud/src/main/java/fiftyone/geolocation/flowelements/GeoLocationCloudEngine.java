@@ -143,7 +143,7 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
             Map<String, Object> methodData = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
             for (AspectPropertyMetaData property : getProperties()) {
-                String key = property.getName().toLowerCase();
+                String key = property.getName().toLowerCase(Locale.ROOT);
                 // A property the response leaves out has no entry, so
                 // reading it throws a PropertyMissingException.
                 if (geoObj.has(key) == false) {

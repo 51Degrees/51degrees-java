@@ -206,7 +206,7 @@ public class PipelineBuilder
         config.setInputsFilter(new Predicate<String>() {
             @Override
             public boolean test(String s) {
-                return s.toLowerCase().contains("flowelements");
+                return s.toLowerCase(Locale.ROOT).contains("flowelements");
             }
         });
         config.setExpandSuperTypes(false);
@@ -676,7 +676,7 @@ public class PipelineBuilder
             if (methods.size() == 0) {
                 // If not then add the parameter to the list of parameters
                 // to pass to the Build method instead.
-                buildParameterList.add(parameter.getKey().toLowerCase());
+                buildParameterList.add(parameter.getKey().toLowerCase(Locale.ROOT));
             } else {
                 boolean methodCalled = false;
                 int counter = 0;
@@ -802,7 +802,7 @@ public class PipelineBuilder
         Method[] methods) {
         int tries = 0;
         List<Method> matchingMethods = new ArrayList<>();
-        String lowerMethodName = methodName.toLowerCase();
+        String lowerMethodName = methodName.toLowerCase(Locale.ROOT);
 
         while (tries < 3 && matchingMethods.size() == 0) {
             List<Method> potentialMethods = null;
@@ -812,7 +812,7 @@ public class PipelineBuilder
                     // First try and find a method that matches the
                     // supplied name exactly.
                     for (Method method : methods) {
-                        if (method.getName().toLowerCase().equals(lowerMethodName)) {
+                        if (method.getName().toLowerCase(Locale.ROOT).equals(lowerMethodName)) {
                             matchingMethods.add(method);
                         }
                     }
@@ -822,7 +822,7 @@ public class PipelineBuilder
                     // supplied name with 'set' added to the start.
                     String tempName = "set" + lowerMethodName;
                     for (Method method : methods) {
-                        if (method.getName().toLowerCase().equals(tempName)) {
+                        if (method.getName().toLowerCase(Locale.ROOT).equals(tempName)) {
                             matchingMethods.add(method);
                         }
                     }
@@ -835,10 +835,10 @@ public class PipelineBuilder
                         try {
                             AlternateName alternateName =
                                 method.getAnnotation(AlternateName.class);
-                            if (alternateName.value().toLowerCase().equals(
+                            if (alternateName.value().toLowerCase(Locale.ROOT).equals(
                                 lowerMethodName)) {
                                 tempMethods.add(method);
-                            } else if (alternateName.value().toLowerCase().equals(
+                            } else if (alternateName.value().toLowerCase(Locale.ROOT).equals(
                                 "set" + lowerMethodName)) {
                                 tempMethods.add(method);
                             }
@@ -880,7 +880,7 @@ public class PipelineBuilder
     private Class<?> getBuilderType(String builderName) {
         int tries = 0;
         Class<?> builderType = null;
-        String lowerBuilderName = builderName.toLowerCase();
+        String lowerBuilderName = builderName.toLowerCase(Locale.ROOT);
 
         while (tries < 3 && builderType == null) {
             List<Class<?>> potentialBuilders = new ArrayList<>();
@@ -890,7 +890,7 @@ public class PipelineBuilder
                     // First try and find a builder that matches the
                     // supplied name exactly.
                     for (Class<?> builder : elementBuilders) {
-                        if (builder.getSimpleName().toLowerCase().equals(lowerBuilderName)) {
+                        if (builder.getSimpleName().toLowerCase(Locale.ROOT).equals(lowerBuilderName)) {
                             potentialBuilders.add(builder);
                         }
                     }
@@ -900,7 +900,7 @@ public class PipelineBuilder
                     // Next, try and find a builder that matches the
                     // supplied name with 'builder' added to the end.
                     for (Class<?> builder : elementBuilders) {
-                        if (builder.getSimpleName().toLowerCase().equals(tempName)) {
+                        if (builder.getSimpleName().toLowerCase(Locale.ROOT).equals(tempName)) {
                             potentialBuilders.add(builder);
                         }
                     }
@@ -912,7 +912,7 @@ public class PipelineBuilder
                     for (Class<?> builder : elementBuilders) {
                         for (Annotation annotation : builder.getAnnotations()) {
                             if (annotation instanceof ElementBuilder &&
-                                ((ElementBuilder) annotation).alternateName().toLowerCase().equals(lowerBuilderName)) {
+                                ((ElementBuilder) annotation).alternateName().toLowerCase(Locale.ROOT).equals(lowerBuilderName)) {
                                 builders.add(builder);
                             }
                         }

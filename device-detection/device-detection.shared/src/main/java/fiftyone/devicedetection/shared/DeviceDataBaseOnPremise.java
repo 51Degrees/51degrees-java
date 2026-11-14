@@ -34,6 +34,7 @@ import fiftyone.pipeline.engines.services.MissingPropertyService;
 import org.slf4j.Logger;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -147,7 +148,7 @@ public abstract class DeviceDataBaseOnPremise extends DeviceDataBase {
                     for (ElementPropertyMetaData property : getPipeline()
                         .getElementAvailableProperties()
                         .get(getEngines().get(0).getElementDataKey()).values()) {
-                        map.put(property.getName().toLowerCase(),
+                        map.put(property.getName().toLowerCase(Locale.ROOT),
                             getAs(property.getName(),
                                 AspectPropertyValue.class,
                                 property.getType()));

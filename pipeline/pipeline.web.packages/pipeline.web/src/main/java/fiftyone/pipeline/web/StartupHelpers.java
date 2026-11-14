@@ -32,6 +32,8 @@ import fiftyone.pipeline.engines.fiftyone.flowelements.SetHeadersElement;
 import fiftyone.pipeline.javascriptbuilder.flowelements.JavaScriptBuilderElement;
 import fiftyone.pipeline.jsonbuilder.flowelements.JsonBuilderElement;
 
+import java.util.Locale;
+
 /**
  * Static methods used on server startup to configure and build the Pipeline and
  * services needed.
@@ -50,7 +52,7 @@ public class StartupHelpers {
         String name) {
         int index = 0;
         for (ElementOptions element : options.elements) {
-            if (element.builderName.toLowerCase().contains(name.toLowerCase())) {
+            if (element.builderName.toLowerCase(Locale.ROOT).contains(name.toLowerCase(Locale.ROOT))) {
                 return index;
             }
             index++;

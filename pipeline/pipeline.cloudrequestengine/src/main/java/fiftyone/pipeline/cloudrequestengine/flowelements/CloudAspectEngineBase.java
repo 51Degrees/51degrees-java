@@ -49,6 +49,7 @@ import org.slf4j.Logger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -309,7 +310,7 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
         List<ElementPropertyMetaData> properties) {
         Map<String, ElementPropertyMetaData> result = new HashMap<>();
         for (ElementPropertyMetaData property : properties) {
-            result.put(property.getName().toLowerCase(), property);
+            result.put(property.getName().toLowerCase(Locale.ROOT), property);
         }
         return result;
     }
@@ -346,9 +347,9 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
         for (Map.Entry<String, Object> property : cloudData.entrySet()) {
             if (property.getKey().endsWith("nullreason") == false) {
                 Object outputValue = property.getValue();
-                if (metaDataMap.containsKey(property.getKey().toLowerCase())) {
+                if (metaDataMap.containsKey(property.getKey().toLowerCase(Locale.ROOT))) {
                     ElementPropertyMetaData metaData =
-                        metaDataMap.get(property.getKey().toLowerCase());
+                        metaDataMap.get(property.getKey().toLowerCase(Locale.ROOT));
 
                     // If this property has a type of AspectPropertyValue
                     // then create a new instance and populate it.

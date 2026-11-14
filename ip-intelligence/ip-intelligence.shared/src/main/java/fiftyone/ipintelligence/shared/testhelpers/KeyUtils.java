@@ -23,6 +23,7 @@
 package fiftyone.ipintelligence.shared.testhelpers;
 
 import java.util.Base64;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -90,7 +91,7 @@ public class KeyUtils {
     public static String getNamedKey(String keyName) {
         String resourceKey = System.getenv(keyName);
         if (Objects.isNull(resourceKey)) {
-            resourceKey = System.getenv(keyName.toUpperCase());
+            resourceKey = System.getenv(keyName.toUpperCase(Locale.ROOT));
             if (Objects.isNull(resourceKey)) {
                 resourceKey = System.getProperty(keyName);
             }
