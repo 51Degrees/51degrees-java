@@ -1,0 +1,52 @@
+name: tmp root locale tests
+on:
+  push:
+    branches:
+      - 'tmp/java-locale-red'
+      - 'tmp/java-locale-green'
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch the pipeline submodules
+        run: git submodule update --init --depth 1 pipeline/owid-java pipeline/pipeline.core/configuration-validation pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates
+      - name: Java and Maven on the runner
+        run: |
+          git log --oneline -3
+          java -version
+          mvn -v
+      - name: Test the check
+        if: always()
+        shell: pwsh
+        run: Invoke-Pester -Path ./ci/check-root-locale.Tests.ps1 -CI -Output Detailed
+      - name: Check the case changes
+        if: always()
+        shell: pwsh
+        run: ./ci/check-root-locale.ps1
+      - name: Run the Turkish locale tests
+        if: always()
+        run: >
+          mvn -B --no-transfer-progress -Pdev
+          -pl pipeline/pipeline.jsonbuilder,device-detection/device-detection.cloud
+          -am test
+          -Dtest='JsonBuilderTests,MissingPropertyHandlingTests'
+          -Dsurefire.failIfNoSpecifiedTests=false
+          -Dmaven.test.failure.ignore=true
+      - name: List the test results
+        if: always()
+        run: |
+          for f in $(find . -path '*surefire-reports*' -name 'TEST-*.xml'); do
+            grep -o '<testsuite [^>]*' "$f" | grep -o -E '(name|tests|failures|errors|skipped)="[^"]*"' | tr '\n' ' '; echo
+          done
+          files=$(grep -l -E '<(failure|error)[ >]' -r --include='TEST-*.xml' . || true)
+          if [ -n "$files" ]; then
+            for f in $files; do
+              echo "== $f"
+              grep -B1 -A6 -E '<(failure|error)[ >]' "$f" | cut -c1-300 | head -30
+            done
+            exit 1
+          fi
+          echo "No failing tests"
