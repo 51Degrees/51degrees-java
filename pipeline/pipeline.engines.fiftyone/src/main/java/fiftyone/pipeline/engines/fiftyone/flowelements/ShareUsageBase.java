@@ -219,6 +219,12 @@ public abstract class ShareUsageBase
     private volatile boolean stopping = false;
 
     /**
+     * Set when closing has waited as long as it may for the queue to be
+     * sent. The data left is discarded and a consumer sends nothing more.
+     */
+    private volatile boolean discarding = false;
+
+    /**
      * Keep a count of data lost
      */
     protected long lostData;
@@ -708,6 +714,15 @@ public abstract class ShareUsageBase
     }
 
     /**
+     * Returns true once closing has stopped waiting for the queue to be
+     * sent. A consumer that sees this sends nothing more.
+     * @return true if the data left is being discarded
+     */
+    protected boolean isDiscarding() {
+        return discarding;
+    }
+
+    /**
      * Returns true if there is a thread attempting to send usage data.
      * @return true if data is being sent
      */
@@ -751,7 +766,17 @@ public abstract class ShareUsageBase
         try {
             executor.shutdown();
             if (!executor.awaitTermination(Constants.SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT, TimeUnit.MILLISECONDS)){
-                logger.warn("Could not send final data on close down");
+                // Sending stops rather than hold up the process that closes
+                // the element, and the data left is discarded.
+                discarding = true;
+                int discarded =
+                    evidenceCollection.drainTo(new ArrayList<ShareUsageData>());
+                logger.warn(
+                    "{} usage sharing entries were not sent, as sending had " +
+                        "not finished {} milliseconds after usage sharing " +
+                        "started closing.",
+                    discarded,
+                    Constants.SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT);
                 executor.shutdownNow();
             }
         } catch (InterruptedException interruptedException) {
