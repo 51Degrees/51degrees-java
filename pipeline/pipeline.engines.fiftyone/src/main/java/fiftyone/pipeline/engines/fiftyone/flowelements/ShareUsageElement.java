@@ -332,7 +332,7 @@ public class ShareUsageElement extends ShareUsageBase {
                 SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT,
                 SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT,
                 false,
-                false);
+                SHARE_USAGE_DEFAULT_SHARE_ALL_QUERY_STRING_PARAMETERS);
     }
 
     /**
