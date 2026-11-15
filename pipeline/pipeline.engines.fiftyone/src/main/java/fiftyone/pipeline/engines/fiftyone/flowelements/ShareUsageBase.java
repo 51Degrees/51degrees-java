@@ -789,8 +789,31 @@ public abstract class ShareUsageBase
         return null;
     }
 
+    /**
+     * The time closing may still wait for the data to be sent, so that the
+     * whole of closing, measured from its start, keeps within the close
+     * limit with the reserve left for what follows the wait.
+     * @param closeStartNanos {@link System#nanoTime()} when closing started
+     * @return milliseconds left to wait, never less than 0
+     */
+    private static long closeWaitLeftMillis(long closeStartNanos) {
+        long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(
+            System.nanoTime() - closeStartNanos);
+        return Math.max(0, closeWaitMillis() - elapsedMillis);
+    }
+
+    /**
+     * The longest closing waits for the data to be sent, from its start.
+     * @return milliseconds
+     */
+    private static long closeWaitMillis() {
+        return Constants.SHARE_USAGE_CLOSE_LIMIT_MILLIS -
+            Constants.SHARE_USAGE_CLOSE_RESERVE_MILLIS;
+    }
+
     @Override
     protected void managedResourcesCleanup() {
+        long closeStartNanos = System.nanoTime();
         // Tell any consumer - one that is already running as well as the final
         // one queued below - that the queue has to be drained completely rather
         // than stopping once fewer than minEntriesPerMessage entries are left.
@@ -809,9 +832,12 @@ public abstract class ShareUsageBase
         submitSendData();
         try {
             executor.shutdown();
-            if (!executor.awaitTermination(Constants.SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT, TimeUnit.MILLISECONDS)){
+            if (!executor.awaitTermination(
+                    closeWaitLeftMillis(closeStartNanos),
+                    TimeUnit.MILLISECONDS)) {
                 // Sending stops rather than hold up the process that closes
-                // the element, and the data left is discarded.
+                // the element, and the data left is discarded, all within
+                // the close limit.
                 discarding = true;
                 int discarded =
                     evidenceCollection.drainTo(new ArrayList<ShareUsageData>());
@@ -820,7 +846,7 @@ public abstract class ShareUsageBase
                         "not finished {} milliseconds after usage sharing " +
                         "started closing.",
                     discarded,
-                    Constants.SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT);
+                    closeWaitMillis());
                 executor.shutdownNow();
             }
         } catch (InterruptedException interruptedException) {
