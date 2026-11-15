@@ -55,11 +55,6 @@ public class DetectionImplFiftyOneDegrees {
             "device-detection/51Degrees-LiteV4.1.hash";
 
     /**
-     * The data file with every property this solution reads.
-     */
-    public static final String ENTERPRISE_HASH_DATA_FILE_NAME = "Enterprise-HashV41.hash";
-
-    /**
      * Where to ask for a copy of the Enterprise data file, tagged with this
      * file.
      */
