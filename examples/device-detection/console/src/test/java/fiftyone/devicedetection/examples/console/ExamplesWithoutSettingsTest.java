@@ -183,6 +183,16 @@ public class ExamplesWithoutSettingsTest {
         runWithoutSettings(ShareUsageExample::main);
     }
 
+    /**
+     * The comparison of detection solutions, which needs no Enterprise data
+     * file to run.
+     */
+    @Test
+    public void comparer() throws Exception {
+        runWithoutSettings(
+                fiftyone.devicedetection.examples.console.comparison.Comparer::main);
+    }
+
     @Test
     public void gettingStartedCloud() throws Exception {
         runCloudWithoutSettings(GettingStartedCloud::main);
