@@ -36,13 +36,12 @@ public class EvidenceKeyFilterWhitelist implements EvidenceKeyFilter {
 
     /**
      * Construct a new instance using the list of evidence keys provided.
-     * By default, all keys will have the same order of precedence.
+     * By default, all keys will have the same order of precedence. Keys are
+     * matched without regard to case, as Evidence keys are case-insensitive.
      * @param whitelist evidence keys to add to the whitelist
      */
     public EvidenceKeyFilterWhitelist(List<String> whitelist) {
-        this.whitelist = new TreeMap<>();
-        addValues(whitelist);
-        this.comparator = null;
+        this(whitelist, String.CASE_INSENSITIVE_ORDER);
     }
 
     /**
@@ -65,13 +64,12 @@ public class EvidenceKeyFilterWhitelist implements EvidenceKeyFilter {
      * Construct a new instance using the map of evidence keys and order of
      * precedence provided.
      * The order of precedence of each key is given by the value of the
-     * key/value pair.
+     * key/value pair. Keys are matched without regard to case, as Evidence
+     * keys are case-insensitive.
      * @param whitelist evidence keys to add to the whitelist
      */
     public EvidenceKeyFilterWhitelist(Map<String, Integer> whitelist) {
-        this.whitelist = new TreeMap<>();
-        addValues(whitelist);
-        this.comparator = null;
+        this(whitelist, String.CASE_INSENSITIVE_ORDER);
     }
 
     /**

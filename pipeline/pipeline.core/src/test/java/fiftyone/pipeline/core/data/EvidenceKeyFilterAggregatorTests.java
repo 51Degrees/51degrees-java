@@ -77,14 +77,15 @@ public class EvidenceKeyFilterAggregatorTests {
     
     /**
      * Check that aggregated case-sensitive and case-insensitive filters
-     * still work as expected.
+     * still work as expected. A case-sensitive filter is one given a
+     * comparator that compares case, as the default ignores it.
      */
     @Test
     public void EvidenceKeyFilterAggregator_CaseSensitivity() {
         EvidenceKeyFilter filter1 = new EvidenceKeyFilterWhitelist(
             Arrays.asList("key1"), String.CASE_INSENSITIVE_ORDER);
         EvidenceKeyFilter filter2 = new EvidenceKeyFilterWhitelist(
-            Arrays.asList("key2"));
+            Arrays.asList("key2"), java.util.Comparator.<String>naturalOrder());
 
         EvidenceKeyFilterAggregator filter = new EvidenceKeyFilterAggregator();
         filter.addFilter(filter1);

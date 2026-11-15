@@ -408,8 +408,10 @@ public class JavaScriptBuilderElement
                 .asKeyMap();
 
         for(Map.Entry<String, Object> entry : queryEvidence.entrySet()){
-            if(entry.getKey().startsWith(EVIDENCE_QUERY_PREFIX) &&
-                    EXCLUDED_PARAMETERS.contains(entry.getKey()) == false){
+            // Evidence keys are case-insensitive.
+            String lowerKey = entry.getKey().toLowerCase(Locale.ROOT);
+            if(lowerKey.startsWith(EVIDENCE_QUERY_PREFIX + EVIDENCE_SEPERATOR) &&
+                    EXCLUDED_PARAMETERS.contains(lowerKey) == false){
                 String key = entry.getKey().substring(entry.getKey().indexOf(EVIDENCE_SEPERATOR) + 1);
                 key = URLEncoder.encode(key, "UTF-8");
                 String value = URLEncoder.encode(entry.getValue().toString(), "UTF-8");
