@@ -75,6 +75,12 @@ public class IPIntelligenceDataHashDefault
     private final IPIntelligenceOnPremiseEngine ipiEngine;
 
     /**
+     * Held for every read from {@link #resultsList}, so that only one thread
+     * at a time reads from the native results.
+     */
+    private final Object resultsLock = new Object();
+
+    /**
      * Constructs a new instance.
      * @param logger used for logging
      * @param flowData the {@link FlowData} instance this element data will be
@@ -184,6 +190,13 @@ public class IPIntelligenceDataHashDefault
     public AspectPropertyValue<List<?>> getValues(String propertyName,
                                                   Class<?>[] parametrizedTypes) {
         checkState();
+        synchronized (resultsLock) {
+            return readValues(propertyName, parametrizedTypes);
+        }
+    }
+
+    private AspectPropertyValue<List<?>> readValues(String propertyName,
+                                                    Class<?>[] parametrizedTypes) {
         AspectPropertyValue<List<?>> result =
             new AspectPropertyValueDefault<>();
         ResultsIpiSwig results = getSingleResults(propertyName);
@@ -396,13 +409,19 @@ public class IPIntelligenceDataHashDefault
         return result;
     }
 
+    /**
+     * Holds the results lock for the whole read, as finding whether a
+     * property is available reads the native results too.
+     */
     @Override
     protected <T> TryGetResult<T> tryGetValue(
         String key,
         Class<T> type,
         Class<?>... parameterisedTypes) {
         checkState();
-        return super.tryGetValue(key, type, parameterisedTypes);
+        synchronized (resultsLock) {
+            return super.tryGetValue(key, type, parameterisedTypes);
+        }
     }
 
     private void checkState() {
