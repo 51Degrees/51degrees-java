@@ -976,6 +976,16 @@ public class CloudRequestEngineDefault
                         .map(Object::toString)
                         .collect(Collectors.toList()));
             }
+
+            // Warnings are logged, as errors are thrown, with any license
+            // key the cloud names masked.
+            JSONArray warnings = jObj.optJSONArray("warnings");
+            if (warnings != null) {
+                for (Object warning : warnings) {
+                    logger.warn(LicenseKeyMask.maskIn(
+                        String.valueOf(warning), getLicenseKeys()));
+                }
+            }
         }
 
         // If there were no errors but there was also no other data
