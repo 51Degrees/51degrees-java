@@ -49,6 +49,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -158,6 +159,12 @@ public class IPIntelligenceCloudEngine
                 new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
             for (AspectPropertyMetaData property : getProperties()) {
+                // A property the response leaves out has no entry, so
+                // reading it throws a PropertyMissingException.
+                if (ipiObj.has(
+                    property.getName().toLowerCase(Locale.ROOT)) == false) {
+                    continue;
+                }
                 if (weightedPropertyNames.contains(
                         property.getName().toLowerCase())) {
                     propertyMap.put(
@@ -591,6 +598,12 @@ public class IPIntelligenceCloudEngine
     }
 
     /**
+     * The message for a property with no value when the response gives no
+     * reason.
+     */
+    private static final String UNKNOWN_NULL_REASON = "Unknown";
+
+    /**
      * Get the reason for the value of a property not being present in the cloud
      * engine's JSON response.
      * @param ipiObj to get the null reason from
@@ -599,7 +612,9 @@ public class IPIntelligenceCloudEngine
      */
     private String getNoValueReason(JSONObject ipiObj, String key){
         Object reason = tryToGet(ipiObj, key + "nullreason");
-        return reason == null ? null : reason.toString();
+        return reason == null || reason == JSONObject.NULL ?
+            UNKNOWN_NULL_REASON :
+            reason.toString();
     }
 
     /**
