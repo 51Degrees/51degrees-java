@@ -69,7 +69,7 @@ public class JavaScriptUrlTests {
 
     private String render(String contextRoot) throws Exception {
         JavaScriptBuilderElementBuilder builder =
-            new JavaScriptBuilderElementBuilder(loggerFactory)
+            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false)
                 .setEndpoint("/json")
                 .setHost("example.com")
                 .setProtocol("https");
@@ -149,7 +149,7 @@ public class JavaScriptUrlTests {
     @Test
     public void Parameters_QueryPrefixIsCaseInsensitive() throws Exception {
         JavaScriptBuilderElement jsElement =
-            new JavaScriptBuilderElementBuilder(loggerFactory)
+            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false)
                 .setEndpoint("/json")
                 .setHost("example.com")
                 .setProtocol("https")
@@ -208,7 +208,7 @@ public class JavaScriptUrlTests {
     private List<String> renderWithHosts(String... hosts) throws Exception {
         TestLoggerFactory factory = hostLoggerFactory;
         JavaScriptBuilderElement jsElement =
-            new JavaScriptBuilderElementBuilder(factory)
+            new JavaScriptBuilderElementBuilder(factory).setMinify(false)
                 .setEndpoint("/json")
                 .build();
         List<String> scripts = new ArrayList<>();
@@ -310,7 +310,7 @@ public class JavaScriptUrlTests {
     public void Url_RefusedProtocol_NoCallbackAndLoggedOnce() throws Exception {
         TestLoggerFactory factory = hostLoggerFactory;
         JavaScriptBuilderElement jsElement =
-            new JavaScriptBuilderElementBuilder(factory)
+            new JavaScriptBuilderElementBuilder(factory).setMinify(false)
                 .setEndpoint("/json")
                 .build();
         try (Pipeline pipeline = new PipelineBuilder(factory)
@@ -349,7 +349,7 @@ public class JavaScriptUrlTests {
     public void Protocol_ConfiguredOtherThanHttpOrHttps_IsRefused(
         String protocol) {
         JavaScriptBuilderElementBuilder builder =
-            new JavaScriptBuilderElementBuilder(loggerFactory);
+            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false);
         assertThrows(PipelineConfigurationException.class,
             () -> builder.setProtocol(protocol));
     }
@@ -357,7 +357,7 @@ public class JavaScriptUrlTests {
     @ParameterizedTest
     @ValueSource(strings = {"http", "https", "HTTPS"})
     public void Protocol_ConfiguredHttpOrHttps_IsAccepted(String protocol) {
-        assertNotNull(new JavaScriptBuilderElementBuilder(loggerFactory)
+        assertNotNull(new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false)
             .setProtocol(protocol));
     }
 

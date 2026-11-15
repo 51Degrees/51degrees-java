@@ -333,7 +333,7 @@ public class SessionIdAndSequenceTests {
     private String renderWithSequenceData(Object sessionId, Object sequence)
         throws Exception {
         JavaScriptBuilderElement jsElement =
-            new JavaScriptBuilderElementBuilder(loggerFactory).build();
+            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false).build();
         PipelineBuilder builder = new PipelineBuilder(loggerFactory);
         builder.addFlowElement(new SequenceStandIn(
             loggerFactory.getLogger("sequence"), sessionId, sequence));
@@ -361,7 +361,7 @@ public class SessionIdAndSequenceTests {
         String sessionId,
         Object sequence) throws Exception {
         JavaScriptBuilderElement jsElement =
-            new JavaScriptBuilderElementBuilder(loggerFactory).build();
+            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false).build();
         PipelineBuilder builder = new PipelineBuilder(loggerFactory);
         if (sequenceElement) {
             builder.addFlowElement(

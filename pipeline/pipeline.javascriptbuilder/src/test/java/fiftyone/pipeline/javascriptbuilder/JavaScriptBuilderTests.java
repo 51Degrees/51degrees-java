@@ -256,8 +256,10 @@ public class JavaScriptBuilderTests {
     public void JavaScriptBuilderElement_VerifySession() throws Exception {
         configureMocks();
 
+        // The rendered text is read, so it is not minified.
         javaScriptBuilderElement =
                 new JavaScriptBuilderElementBuilder(loggerFactory)
+                        .setMinify(false)
                         .build();
         javaScriptBuilderElement.process(flowData);
 
@@ -326,8 +328,10 @@ public class JavaScriptBuilderTests {
             throws Exception {
         configureMocks();
 
+        // The rendered text is read, so it is not minified.
         javaScriptBuilderElement =
                 new JavaScriptBuilderElementBuilder(loggerFactory)
+                        .setMinify(false)
                         .build();
         javaScriptBuilderElement.process(flowData);
         String javaScript = result.getJavaScript();
@@ -378,9 +382,11 @@ public class JavaScriptBuilderTests {
         evidence.remove("query.latitude");
         evidence.remove("query.longitude");
 
+        // The rendered text is read, so it is not minified.
         javaScriptBuilderElement =
                 new JavaScriptBuilderElementBuilder(loggerFactory)
                         .setEndpoint("/json")
+                        .setMinify(false)
                         .build();
         javaScriptBuilderElement.process(flowData);
 

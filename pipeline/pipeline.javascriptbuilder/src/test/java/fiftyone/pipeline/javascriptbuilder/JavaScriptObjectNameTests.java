@@ -115,7 +115,7 @@ public class JavaScriptObjectNameTests {
     @Test
     public void ObjectName_FromBuilder_UsedThroughout() {
         JavaScriptBuilderElement element =
-            new JavaScriptBuilderElementBuilder(loggerFactory)
+            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false)
                 .setObjectName("myFod")
                 .build();
 
@@ -128,7 +128,7 @@ public class JavaScriptObjectNameTests {
     @Test
     public void ObjectName_FromEvidence_UsedThroughout() {
         JavaScriptBuilderElement element =
-            new JavaScriptBuilderElementBuilder(loggerFactory).build();
+            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false).build();
         evidence.put(EVIDENCE_OBJECT_NAME, "myFod");
 
         String script = render(element);
@@ -160,7 +160,7 @@ public class JavaScriptObjectNameTests {
         String name,
         String[] absent) {
         JavaScriptBuilderElement element =
-            new JavaScriptBuilderElementBuilder(loggerFactory).build();
+            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false).build();
         evidence.put(EVIDENCE_OBJECT_NAME, name);
 
         String script = render(element);
@@ -181,7 +181,7 @@ public class JavaScriptObjectNameTests {
     @Test
     public void ObjectName_InvalidFromEvidence_ConfiguredNameUsed() {
         JavaScriptBuilderElement element =
-            new JavaScriptBuilderElementBuilder(loggerFactory)
+            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false)
                 .setObjectName("myFod")
                 .build();
         evidence.put(EVIDENCE_OBJECT_NAME, "9bad");
@@ -198,7 +198,7 @@ public class JavaScriptObjectNameTests {
     public void ObjectName_InvalidFromBuilder_Refused(String name) {
         assertThrows(
             PipelineConfigurationException.class,
-            () -> new JavaScriptBuilderElementBuilder(loggerFactory)
+            () -> new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false)
                 .setObjectName(name)
                 .build());
     }
@@ -259,7 +259,7 @@ public class JavaScriptObjectNameTests {
     @MethodSource("refusedNames")
     public void ObjectName_RefusedNameFromEvidence_DefaultUsed(String name) {
         JavaScriptBuilderElement element =
-            new JavaScriptBuilderElementBuilder(loggerFactory).build();
+            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false).build();
         evidence.put(EVIDENCE_OBJECT_NAME, name);
 
         String script = render(element);
@@ -279,7 +279,7 @@ public class JavaScriptObjectNameTests {
     public void ObjectName_RefusedNameFromBuilder_Refused(String name) {
         assertThrows(
             PipelineConfigurationException.class,
-            () -> new JavaScriptBuilderElementBuilder(loggerFactory)
+            () -> new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false)
                 .setObjectName(name)
                 .build());
     }
@@ -310,7 +310,7 @@ public class JavaScriptObjectNameTests {
     public void ObjectName_WindowPropertyVarCanReplace_Allowed(String name) {
         assertTrue(JavaScriptBuilderElement.isValidObjectName(name));
         JavaScriptBuilderElement element =
-            new JavaScriptBuilderElementBuilder(loggerFactory)
+            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false)
                 .setObjectName(name)
                 .build();
 
@@ -334,11 +334,11 @@ public class JavaScriptObjectNameTests {
     @Test
     public void ObjectName_NotConfigured_DefaultUsed() {
         String fromBuilder = render(
-            new JavaScriptBuilderElementBuilder(loggerFactory).build());
+            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false).build());
         assertWorkingObject(fromBuilder, Constants.DEFAULT_OBJECT_NAME);
 
         String fromNull = render(
-            new JavaScriptBuilderElementBuilder(loggerFactory)
+            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false)
                 .setObjectName(null)
                 .build());
         assertWorkingObject(fromNull, Constants.DEFAULT_OBJECT_NAME);

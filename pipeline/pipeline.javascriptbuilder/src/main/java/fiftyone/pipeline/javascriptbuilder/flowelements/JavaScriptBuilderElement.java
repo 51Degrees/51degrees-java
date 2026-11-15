@@ -69,6 +69,10 @@ public class JavaScriptBuilderElement
     protected String contextRoot;
     protected final String objName;
     protected final boolean enableCookies;
+    /**
+     * True if the script is minified before it is returned.
+     */
+    protected final boolean minify;
     private final Mustache mustache;
 
     /**
@@ -205,8 +209,49 @@ public class JavaScriptBuilderElement
             String host,
             String protocol,
             String contextRoot) {
+        this(logger, elementDataFactory, endpoint, objName, enableCookies,
+            host, protocol, contextRoot,
+            JavaScriptBuilderElementBuilder.MINIFY);
+    }
+    //! [constructor]
+
+    //! [constructor]
+    /**
+     * Constructor.
+     * @param logger The logger.
+     * @param elementDataFactory The element data factory.
+     * @param endpoint Set the endpoint which will be queried on the host.
+     *                 e.g /api/v4/json
+     * @param objName The default name of the object instantiated by the client
+     *                JavaScript.
+     * @param enableCookies Set whether the client JavaScript stored results of
+     * client side processing in cookies.
+     * @param host The host that the client JavaScript should query for updates.
+     * If null or blank then the host from the request will be used
+     * @param protocol The protocol (HTTP or HTTPS) that the client JavaScript
+     *                 will use when querying for updates. If null or empty
+     *                 then the protocol from the request will be used
+     * @param contextRoot The &lt;context-root&gt; setting from the web.xml.
+     *                 This is needed when creating the callback URL.
+     * @param minify True if the script is minified before it is returned
+     * @throws PipelineConfigurationException if protocol is not null or empty
+     * and is neither http nor https in any case of its ASCII letters, white
+     * space included, or if objName is not null and is
+     * not a valid JavaScript identifier, see {@link #isValidObjectName}.
+     */
+    public JavaScriptBuilderElement(
+            Logger logger,
+            ElementDataFactory<JavaScriptBuilderData> elementDataFactory,
+            String endpoint,
+            String objName,
+            boolean enableCookies,
+            String host,
+            String protocol,
+            String contextRoot,
+            boolean minify) {
         super(logger, elementDataFactory);
-        
+        this.minify = minify;
+
         MustacheFactory mf = new DefaultMustacheFactory();
         InputStream in = getClass().getResourceAsStream(Constants.TEMPLATE);
         BufferedReader reader = new BufferedReader(new InputStreamReader(in));
@@ -626,6 +671,9 @@ public class JavaScriptBuilderElement
         mustache.execute(stringWriter, javaScriptObj.asMap());
 
         String content = stringWriter.toString();
+        if (minify) {
+            content = JavaScriptMinifier.minify(content);
+        }
 
         elementData.setJavaScript(content);
     }
