@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Proxy;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -45,6 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static fiftyone.pipeline.core.Constants.EVIDENCE_CLIENTIP_KEY;
 import static fiftyone.pipeline.engines.Constants.DEFAULT_SESSION_COOKIE_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -64,6 +66,12 @@ public class ShareUsageCloseTimeoutTests {
      * Entries processed, enough for several messages of at most two.
      */
     private static final int ENTRIES = 10;
+
+    /**
+     * The most closing may take beyond its wait for the data to be sent, to
+     * discard the rest and stop the sending thread.
+     */
+    private static final long CLOSE_MARGIN_MILLIS = 5000;
 
     /**
      * An upload whose first answer does not come until the test releases
@@ -107,23 +115,7 @@ public class ShareUsageCloseTimeoutTests {
         List<String> warnings = new CopyOnWriteArrayList<>();
         StalledUploader uploader = new StalledUploader();
         Pipeline pipeline = new PipelineBuilder().build();
-        ShareUsageElement element = new ShareUsageElement(
-            recordingLogger(warnings),
-            1,
-            1,
-            100,
-            100,
-            100,
-            1,
-            true,
-            "http://localhost/usage",
-            new ArrayList<>(),
-            new ArrayList<>(),
-            new ArrayList<>(),
-            DEFAULT_SESSION_COOKIE_NAME,
-            flowData -> true);
-        element.addPipeline(pipeline);
-        element.dataUploader = uploader;
+        ShareUsageElement element = element(warnings, pipeline, uploader);
         try {
             for (int i = 1; i <= ENTRIES; i++) {
                 process(pipeline, element, "10.0.0." + i);
@@ -156,6 +148,75 @@ public class ShareUsageCloseTimeoutTests {
             }
             pipeline.close();
         }
+    }
+
+    /**
+     * Closing while the remote service has stopped answering does not wait
+     * for the service. It returns within the 5 seconds it waits for the data
+     * to be sent and a margin for discarding the rest, while the upload in
+     * progress is still waiting for its answer.
+     */
+    @Test
+    public void ShareUsageElement_ServiceStopsAnswering_CloseDoesNotWait()
+        throws Exception {
+        StalledUploader uploader = new StalledUploader();
+        Pipeline pipeline = new PipelineBuilder().build();
+        ShareUsageElement element = element(
+            new CopyOnWriteArrayList<>(),
+            pipeline,
+            uploader);
+        try {
+            for (int i = 1; i <= ENTRIES; i++) {
+                process(pipeline, element, "10.0.0." + i);
+            }
+            assertTrue(
+                uploader.sending.await(WAIT_LIMIT_MILLIS, TimeUnit.MILLISECONDS),
+                "No send was started.");
+
+            assertTimeoutPreemptively(
+                Duration.ofMillis(
+                    Constants.SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT +
+                        CLOSE_MARGIN_MILLIS),
+                element::close,
+                "Closing waited for the remote service to answer.");
+            assertEquals(1, uploader.release.getCount(),
+                "The upload in progress was answered before closing ended.");
+        }
+        finally {
+            uploader.release.countDown();
+            if (element.executor.isShutdown() == false) {
+                element.close();
+            }
+            pipeline.close();
+        }
+    }
+
+    /**
+     * An element that sends each entry on its own, through the uploader
+     * given, logging its warnings to the list given.
+     */
+    private static ShareUsageElement element(
+        List<String> warnings,
+        Pipeline pipeline,
+        DataUploader uploader) {
+        ShareUsageElement element = new ShareUsageElement(
+            recordingLogger(warnings),
+            1,
+            1,
+            100,
+            100,
+            100,
+            1,
+            true,
+            "http://localhost/usage",
+            new ArrayList<>(),
+            new ArrayList<>(),
+            new ArrayList<>(),
+            DEFAULT_SESSION_COOKIE_NAME,
+            flowData -> true);
+        element.addPipeline(pipeline);
+        element.dataUploader = uploader;
+        return element;
     }
 
     private static void process(
