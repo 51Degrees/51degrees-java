@@ -65,7 +65,8 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     protected double maxRecoveryDelaySeconds = Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT;
     protected double recoveryMultiplier = Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT;
     protected boolean shareAllEvidence;
-    protected boolean shareAllQueryStringParameters;
+    // On by default, as the specification's configuration options give it.
+    protected boolean shareAllQueryStringParameters = true;
 
     /**
      * Constructor
@@ -90,8 +91,9 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     }
 
     /**
-     * By default, only query string parameters that start with 51D_ are
-     * shared.
+     * By default every query string parameter is shared. When share all
+     * query string parameters is turned off, only those that start with 51D_
+     * and those named here are shared.
      * <p>
      * This setter replaces the current list, if any
      * <p>
@@ -103,7 +105,7 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      * @return this builder
      */
 
-    @DefaultValue("No sharing unless the parameter starts with 51D_")
+    @DefaultValue("Every parameter is shared, unless share all query string parameters is off")
     public ShareUsageBuilderBase<T> setIncludedQueryStringParameters(
         List<String> queryStringParameterNames) {
         includedQueryStringParameters.clear();
@@ -112,8 +114,9 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     }
 
     /**
-     * By default, only query string parameters that start with 51D_ are
-     * shared.
+     * By default every query string parameter is shared. When share all
+     * query string parameters is turned off, only those that start with 51D_
+     * and those named here are shared.
      * <p>
      * This setter replaces the current list, if any
      * <p>
@@ -124,7 +127,7 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      *                                  query string parameters to include
      * @return this builder
      */
-    @DefaultValue("No sharing unless the parameter starts with 51D_")
+    @DefaultValue("Every parameter is shared, unless share all query string parameters is off")
     public ShareUsageBuilderBase<T> setIncludedQueryStringParameters(
             String queryStringParameterNames) {
         includedQueryStringParameters.clear();
@@ -134,8 +137,9 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     }
 
     /**
-     * By default, only query string parameters that start with 51D_ are
-     * shared.
+     * By default every query string parameter is shared. When share all
+     * query string parameters is turned off, only those that start with 51D_
+     * and those named here are shared.
      * <p>
      * This setting adds the name of a parameter to share with 51Degrees
      * if needed.
@@ -143,7 +147,7 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      *                                 query string parameter to include
      * @return this builder
      */
-    @DefaultValue("No sharing unless the parameter starts with 51D_")
+    @DefaultValue("Every parameter is shared, unless share all query string parameters is off")
     public ShareUsageBuilderBase<T> setIncludedQueryStringParameter(
         String queryStringParameterName) {
         includedQueryStringParameters.add(queryStringParameterName.trim());
@@ -156,11 +160,12 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      * included parameters. The whole query string and the parameters that are
      * never shared are still not shared.
      * <p>
-     * Default value is false
+     * Default value is true. Set it to false to share only the parameters
+     * that start with 51D_ or are named in the included parameters.
      * @param shareAll true to share all query string parameters
      * @return this builder
      */
-    @DefaultValue(booleanValue = false)
+    @DefaultValue(booleanValue = true)
     public ShareUsageBuilderBase<T> setShareAllQueryStringParameters(
         boolean shareAll) {
         this.shareAllQueryStringParameters = shareAll;

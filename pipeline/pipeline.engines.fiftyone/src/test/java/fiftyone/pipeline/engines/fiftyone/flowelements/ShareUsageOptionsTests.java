@@ -179,7 +179,8 @@ public class ShareUsageOptionsTests {
         assertFalse(shared(sent, "header", "x-blocked"));
         assertFalse(shared(sent, "cookie", "plain"));
         assertFalse(shared(sent, "session", "plain"));
-        assertFalse(shared(sent, "query", "plain"));
+        // Share all query string parameters is on by default.
+        assertTrue(shared(sent, "query", "plain"));
     }
 
     /**
@@ -226,7 +227,11 @@ public class ShareUsageOptionsTests {
     @Test
     public void shareAllEvidence_False_FromConfiguration_KeepsTheRules()
         throws Exception {
-        Document sent = send(options("ShareAllEvidence", "false"), evidence());
+        Document sent = send(
+            options(
+                "ShareAllEvidence", "false",
+                "ShareAllQueryStringParameters", "false"),
+            evidence());
 
         assertFalse(shared(sent, "header", "x-blocked"));
         assertFalse(shared(sent, "cookie", "plain"));
@@ -261,12 +266,12 @@ public class ShareUsageOptionsTests {
     }
 
     @Test
-    public void builder_ShareOptionsDefaultToFalse() {
+    public void builder_ShareAllEvidenceOffAndShareAllQueryStringParametersOn() {
         ShareUsageBuilder builder = new ShareUsageBuilder(
             LoggerFactory.getILoggerFactory());
 
         assertFalse(builder.isShareAllEvidence());
-        assertFalse(builder.isShareAllQueryStringParameters());
+        assertTrue(builder.isShareAllQueryStringParameters());
     }
 
     @Test
