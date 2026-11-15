@@ -514,7 +514,7 @@ public class ShareUsageElementTests {
         request.put("header.X-Blocked", "blocked");
         request.put("cookie.51D_Profile", "123456");
         request.put("cookie.other", "not-shared");
-        request.put("query.secret", "not-shared");
+        request.put("query.campaign", "shared-query");
         request.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
         request.put("server.request-method", "GET");
         request.put("server.request-path", "/a%2Fb/c");
@@ -554,9 +554,13 @@ public class ShareUsageElementTests {
                 "//cookie[@Name='51D_Profile']", doc),
                 "A 51D_ cookie from the web request was not shared.");
             assertEquals(0, ((NodeList) xpath.evaluate(
-                "//cookie[@Name='other'] | //query[@Name='secret']", doc,
+                "//cookie[@Name='other']", doc,
                 XPathConstants.NODESET)).getLength(),
-                "A cookie or query string parameter the rules leave out was shared.");
+                "A cookie the rules leave out was shared.");
+            assertEquals("shared-query", xpath.evaluate(
+                "//query[@Name='campaign']", doc),
+                "A query string parameter from the web request was not " +
+                "shared by default.");
             assertEquals("1.2.3.4", xpath.evaluate("//ClientIP", doc),
                 "The client IP from the web request was not shared.");
             assertEquals("GET", xpath.evaluate(
@@ -1260,10 +1264,10 @@ public class ShareUsageElementTests {
     }
 
     /**
-     * Default settings share headers other than Cookie, the 51Degrees cookies
-     * and query string parameters, and other evidence, and leave out ordinary
-     * cookies, other parameters, session values and the evidence that is
-     * never shared.
+     * Default settings share headers other than Cookie, the 51Degrees cookies,
+     * every query string parameter but those never shared, and other
+     * evidence, and leave out ordinary cookies, session values and the
+     * evidence that is never shared.
      */
     @Test
     public void ShareUsageElement_DefaultSharesOnlyAcceptedEvidence() throws Exception {
@@ -1304,11 +1308,12 @@ public class ShareUsageElementTests {
         String output = new String(
             connector.getBaos().toByteArray(), StandardCharsets.UTF_8);
         for (String shared : Arrays.asList(
-            "some user agent", "screen width", "fiftyone parameter")) {
+            "some user agent", "screen width", "fiftyone parameter",
+            "password parameter")) {
             assertTrue(output.contains(shared), shared);
         }
         for (String withheld : Arrays.asList(
-            "sessionid cookie", "cookie header", "password parameter",
+            "sessionid cookie", "cookie header",
             "email parameter", "email header", "salt value",
             "whole query string", "request path", "session attribute")) {
             assertFalse(output.contains(withheld), withheld);
