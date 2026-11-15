@@ -658,9 +658,9 @@ public class CloudRequestEngineLicenseKeyTests {
     @Test
     public void Process_WarningNamingTheLicenseKey_LoggedMasked()
         throws Exception {
+        String warning = "License key " + LICENSE_KEY + " expires soon";
         cloud.dataResponse = "{\"device\":{\"ismobile\":true," +
-            "\"iscrawler\":false},\"warnings\":[\"License key " +
-            LICENSE_KEY + " expires soon\"]}";
+            "\"iscrawler\":false},\"warnings\":[\"" + warning + "\"]}";
         CloudRequestEngine engine = build(builder()
             .setLicenseKey(LICENSE_KEY)
             .setRequestedProperties(PROPERTY_LIST));
