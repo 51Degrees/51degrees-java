@@ -33,5 +33,10 @@ public enum MissingPropertyReason {
     PropertyExcludedFromEngineConfiguration,
     PropertyNotAccessibleWithResourceKey,
     ProductNotAccessibleWithResourceKey,
+    /**
+     * A request to the cloud service failed, so no data was available to
+     * populate the property.
+     */
+    CloudRequestFailed,
     Unknown
 }

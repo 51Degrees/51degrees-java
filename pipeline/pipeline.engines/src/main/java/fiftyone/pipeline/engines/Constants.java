@@ -102,6 +102,14 @@ public class Constants {
          * The separator of the names in a list in a message.
          */
         public static final String LIST_SEPARATOR = ",";
+        public static final String CLOUD_REQUEST_FAILED =
+            "This is because an upstream cloud request failed, so no data " +
+            "was available to populate the property.";
+        /**
+         * The Data Key a CloudRequestFailed message names when no engine
+         * populates the Element Data.
+         */
+        public static final String UNKNOWN_DATA_KEY = "Unknown";
         public static final String UNKNOWN =
             "The reason for this is unknown. Please check that the aspect " +
             "and property name are correct.";
