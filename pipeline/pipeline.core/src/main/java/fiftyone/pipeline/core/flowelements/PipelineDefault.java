@@ -213,6 +213,11 @@ class PipelineDefault implements PipelineInternal {
     }
 
     @Override
+    public boolean isSuppressProcessExceptions() {
+        return suppressProcessExceptions;
+    }
+
+    @Override
     public boolean isClosed() {
         return isClosed;
     }
