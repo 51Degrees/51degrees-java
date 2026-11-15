@@ -193,6 +193,16 @@ public class DeviceDetectionCloudEngine
                 }
             }
 
+            // With no metadata, as before discovery has completed, every
+            // value is kept with the type its JSON value has.
+            if (getProperties().isEmpty()) {
+                for (String key : deviceObj.keySet()) {
+                    if (key.endsWith("nullreason") == false) {
+                        deviceMap.put(key, inferredValue(deviceObj, key));
+                    }
+                }
+            }
+
             // Add no value messages for any properties which have not yet been
             // populated.
             for (String key : deviceObj.keySet()) {
@@ -394,6 +404,39 @@ public class DeviceDetectionCloudEngine
             stringValue.setValue(deviceObj.getString(key));
         }
         return stringValue;
+    }
+
+    /**
+     * The value of a property that has no metadata, with the type its JSON
+     * value has, being a boolean, a number read as an int as an Integer,
+     * any other number as a Double, a list as a list of strings and
+     * anything else as a string. A null has the reason the response gives.
+     */
+    private AspectPropertyValue<Object> inferredValue(
+        JSONObject deviceObj,
+        String key) {
+        AspectPropertyValue<Object> value = new AspectPropertyValueDefault<>();
+        if (deviceObj.isNull(key)) {
+            value.setNoValueMessage(getNoValueReason(deviceObj, key));
+            return value;
+        }
+        Object raw = deviceObj.get(key);
+        if (raw instanceof Boolean) {
+            value.setValue(raw);
+        } else if (raw instanceof Integer) {
+            value.setValue(raw);
+        } else if (raw instanceof Number) {
+            value.setValue(((Number) raw).doubleValue());
+        } else if (raw instanceof JSONArray) {
+            List<String> items = new ArrayList<>();
+            for (Object item : (JSONArray) raw) {
+                items.add(String.valueOf(item));
+            }
+            value.setValue(items);
+        } else {
+            value.setValue(String.valueOf(raw));
+        }
+        return value;
     }
 
     /**
