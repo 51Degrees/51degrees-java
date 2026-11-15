@@ -61,6 +61,54 @@ public class ExampleTests {
         return output;
     }
 
+    /**
+     * The part of the output after a heading, up to the next numbered
+     * heading or the Find out more section.
+     */
+    private static String part(String output, String heading) {
+        int start = output.indexOf(heading);
+        assertTrue(start >= 0, "The output has no part headed '" + heading +
+            "':\n" + output);
+        int end = output.length();
+        for (String next : new String[]{"\n1. ", "\n2. ", "\n3. ", "\n4. ",
+            "\n" + RULE}) {
+            int at = output.indexOf(next, start + heading.length());
+            if (at > 0 && at < end) {
+                end = at;
+            }
+        }
+        return output.substring(start, end);
+    }
+
+    /**
+     * The example shows the first three of the four things the
+     * specification lists (pipeline-specification/required-examples.md,
+     * "The example MUST show all four of the following"). The fourth,
+     * a source property that is not available, has its own test.
+     */
+    @Test
+    public void Main_ShowsScriptInCode() throws Exception {
+        String part = part(runMain(), "1. A script in the code");
+        assertTrue(part.contains("derived.Comfort = Comfortable"), part);
+    }
+
+    @Test
+    public void Main_ShowsScriptFromFile() throws Exception {
+        String part = part(runMain(), "2. A script read from a file");
+        assertTrue(part.contains("FrostRisk.yaml"),
+            "The part should name the file beside the example:\n" + part);
+        assertTrue(part.contains("derived.FrostRisk = true"), part);
+    }
+
+    @Test
+    public void Main_ShowsConfigurationFile() throws Exception {
+        String part = part(runMain(),
+            "3. The same pipeline built from a configuration file");
+        assertTrue(part.contains("derivedProperty.xml"),
+            "The part should name the configuration file:\n" + part);
+        assertTrue(part.contains("derived.FrostRisk = "), part);
+    }
+
     @Test
     public void Main_Runs() throws Exception {
         String output = runMain();
