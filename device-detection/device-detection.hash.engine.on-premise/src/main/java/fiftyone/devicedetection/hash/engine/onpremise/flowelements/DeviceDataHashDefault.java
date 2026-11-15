@@ -259,33 +259,45 @@ public class DeviceDataHashDefault
     @Override
     protected boolean propertyIsAvailable(String propertyName) {
         checkState();
-        for (ResultsHashSwig results : resultsList) {
-            if (results.containsProperty(Swig.asBytes(propertyName))) {
-                return true;
+        synchronized (getResultsLock()) {
+            for (ResultsHashSwig results : resultsList) {
+                if (results.containsProperty(Swig.asBytes(propertyName))) {
+                    return true;
+                }
             }
+            return false;
         }
-        return false;
     }
 
+    /**
+     * Get the values of a property as a list. This is public, so it holds
+     * the results lock itself, as every read from the native results does.
+     * See the
+     * <a href="https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/features/thread-safety.md#L61">thread safety specification</a>.
+     * @param propertyName name of the property to get values for
+     * @return values as a list
+     */
     @Override
     public AspectPropertyValue<List<String>> getValues(String propertyName) {
         checkState();
         AspectPropertyValue<List<String>> result =
             new AspectPropertyValueDefault<>();
-        ResultsHashSwig results = getSingleResults(propertyName);
-        if (results != null) {
-            Integer index = indexOf(propertyName);
-            try (VectorStringValuesSwig value = index == null ?
-                results.getValues(Swig.asBytes(propertyName)) :
-                results.getValues(index)) {
-                if (value.hasValue()) {
-                    try (VectorStringSwig vector = value.getValue()) {
-                        result.setValue(Collections.unmodifiableList(
-                            Swig.asList(vector)));
+        synchronized (getResultsLock()) {
+            ResultsHashSwig results = getSingleResults(propertyName);
+            if (results != null) {
+                Integer index = indexOf(propertyName);
+                try (VectorStringValuesSwig value = index == null ?
+                    results.getValues(Swig.asBytes(propertyName)) :
+                    results.getValues(index)) {
+                    if (value.hasValue()) {
+                        try (VectorStringSwig vector = value.getValue()) {
+                            result.setValue(Collections.unmodifiableList(
+                                Swig.asList(vector)));
+                        }
                     }
-                }
-                else {
-                    result.setNoValueMessage(value.getNoValueMessage());
+                    else {
+                        result.setNoValueMessage(value.getNoValueMessage());
+                    }
                 }
             }
         }
@@ -407,29 +419,33 @@ public class DeviceDataHashDefault
         if (result.hasValue() == false) {
             boolean objSet = false;
             Object obj = null;
-            if (key.equalsIgnoreCase("DeviceId")) {
-                obj = getDeviceIdInternal();
-                objSet = true;
-            } else if (key.equalsIgnoreCase("Difference")) {
-                obj = getDifferenceInternal();
-                objSet = true;
-            } else if (key.equalsIgnoreCase("UserAgents")) {
-                obj = getUserAgentsInternal();
-                objSet = true;
-            } else if (key.equalsIgnoreCase("Drift")) {
-                obj = getDriftInternal();
-                objSet = true;
-            } else if (key.equalsIgnoreCase("Iterations")) {
-                obj = getIterationsInternal();
-                objSet = true;
-            }
-            else if (key.equalsIgnoreCase("MatchedNodes")) {
-                obj = getMatchedNodesInternal();
-                objSet = true;
-            }
-            else if (key.equalsIgnoreCase("Method")){
-                obj = getMethodInternal();
-                objSet = true;
+            // The match metrics read the native results, so they hold the
+            // results lock as every other read does.
+            synchronized (getResultsLock()) {
+                if (key.equalsIgnoreCase("DeviceId")) {
+                    obj = getDeviceIdInternal();
+                    objSet = true;
+                } else if (key.equalsIgnoreCase("Difference")) {
+                    obj = getDifferenceInternal();
+                    objSet = true;
+                } else if (key.equalsIgnoreCase("UserAgents")) {
+                    obj = getUserAgentsInternal();
+                    objSet = true;
+                } else if (key.equalsIgnoreCase("Drift")) {
+                    obj = getDriftInternal();
+                    objSet = true;
+                } else if (key.equalsIgnoreCase("Iterations")) {
+                    obj = getIterationsInternal();
+                    objSet = true;
+                }
+                else if (key.equalsIgnoreCase("MatchedNodes")) {
+                    obj = getMatchedNodesInternal();
+                    objSet = true;
+                }
+                else if (key.equalsIgnoreCase("Method")){
+                    obj = getMethodInternal();
+                    objSet = true;
+                }
             }
             if (objSet == true) {
                 try {
