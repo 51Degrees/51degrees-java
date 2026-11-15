@@ -128,12 +128,16 @@ public class MissingPropertyServiceDefault implements MissingPropertyService {
             engine.getElementDataKey()));
         switch (reason) {
             case DataFileUpgradeRequired:
-                message.append(String.format(
-                    MissingPropertyMessages.DATA_UPGRADE_REQUIRED,
-                    stringJoin(
-                        property.getDataTiersWherePresent(),
-                        ","),
-                    engine.getClass().getSimpleName()));
+                List<String> tiers = property.getDataTiersWherePresent();
+                if (tiers == null || tiers.isEmpty()) {
+                    message.append(
+                        MissingPropertyMessages.DATA_UPGRADE_REQUIRED_TIERS_UNKNOWN);
+                } else {
+                    message.append(String.format(
+                        MissingPropertyMessages.DATA_UPGRADE_REQUIRED,
+                        stringJoin(tiers, ","),
+                        engine.getClass().getSimpleName()));
+                }
                 break;
             case PropertyExcludedFromEngineConfiguration:
                 message.append(MissingPropertyMessages.PROPERTY_EXCLUDED);
@@ -151,7 +155,7 @@ public class MissingPropertyServiceDefault implements MissingPropertyService {
                 message.append(String.format(
                     MissingPropertyMessages.PROPERTY_NOT_IN_CLOUD_RESOURCE,
                     engine.getElementDataKey(),
-                    stringJoin(available, ", ")));
+                    stringJoin(available, ",")));
                 break;
             case Unknown:
                 message.append(MissingPropertyMessages.UNKNOWN);
