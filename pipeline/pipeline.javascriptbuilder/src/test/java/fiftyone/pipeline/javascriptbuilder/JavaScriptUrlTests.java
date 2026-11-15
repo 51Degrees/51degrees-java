@@ -140,6 +140,48 @@ public class JavaScriptUrlTests {
     }
 
     /**
+     * "Keys MUST be case-insensitive and will usually be split into
+     * &lt;prefix&gt;.&lt;field&gt;." (pipeline-specification/features/evidence.md
+     * line 10) Query evidence whose prefix is not in lower case still
+     * reaches the parameters object, and the session id and sequence are
+     * still left out whatever their case.
+     */
+    @Test
+    public void Parameters_QueryPrefixIsCaseInsensitive() throws Exception {
+        JavaScriptBuilderElement jsElement =
+            new JavaScriptBuilderElementBuilder(loggerFactory)
+                .setEndpoint("/json")
+                .setHost("example.com")
+                .setProtocol("https")
+                .build();
+        String javaScript;
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+            .addFlowElement(new SequenceElementBuilder(loggerFactory).build())
+            .addFlowElement(new JsonBuilderElementBuilder(loggerFactory).build())
+            .addFlowElement(jsElement)
+            .build();
+             FlowData flowData = pipeline.createFlowData()) {
+            flowData.addEvidence("Query.Upper", "kept");
+            flowData.addEvidence("QUERY.SESSION-ID", "left-out");
+            flowData.process();
+            javaScript = flowData.getFromElement(jsElement).getJavaScript();
+        }
+        String parameters = null;
+        for (String line : javaScript.split("\\r?\\n")) {
+            if (line.toLowerCase().contains("parameters =")
+                    && line.contains("{")) {
+                parameters = line;
+                break;
+            }
+        }
+        assertNotNull(parameters, "No parameters object in the script.");
+        assertTrue(parameters.contains("\"Upper\":\"kept\""),
+            "Query evidence with prefix 'Query.' was dropped: " + parameters);
+        assertFalse(parameters.contains("left-out"),
+            "The session id was sent as a parameter: " + parameters);
+    }
+
+    /**
      * A context root still sits between the host and the endpoint, and the
      * URL still carries no query string.
      */
