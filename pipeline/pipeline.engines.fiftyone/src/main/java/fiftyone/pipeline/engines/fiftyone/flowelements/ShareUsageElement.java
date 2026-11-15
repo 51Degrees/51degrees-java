@@ -553,6 +553,13 @@ public class ShareUsageElement extends ShareUsageBase {
         for (String element : getFlowElements()) {
             writeXmlElement(writer, "FlowElement", element);
         }
+        // The version of every 51Degrees package in use
+        for (Map.Entry<String, String> entry : getPackages().entrySet()) {
+            writer.writeStartElement("Package");
+            writer.writeAttribute("Name", entry.getKey());
+            writer.writeCharacters(entry.getValue());
+            writer.writeEndElement();
+        }
         writeXmlElement(writer, "Language", "java");
         // The software language version
         writeXmlElement(writer, "LanguageVersion", languageVersion);

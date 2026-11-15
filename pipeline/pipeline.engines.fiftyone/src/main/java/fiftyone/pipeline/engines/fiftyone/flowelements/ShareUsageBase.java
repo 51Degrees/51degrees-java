@@ -45,6 +45,7 @@ import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.Function;
 
 import static fiftyone.pipeline.core.Constants.EVIDENCE_SEPERATOR;
 import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.LOST_DATA_RESET_DEFAULT;
@@ -182,6 +183,20 @@ public abstract class ShareUsageBase
      * {@link #getFlowElements()} is called.
      */
     private List<String> flowElements = null;
+
+    /**
+     * The packages the pipeline uses, each with its version. This is
+     * populated when {@link #getPackages()} is called.
+     */
+    private SortedMap<String, String> packages = null;
+
+    /**
+     * Finds the packages that hold the classes given and the packages they
+     * depend on. Tests replace it, as the classes they run are not loaded
+     * from published jars.
+     */
+    Function<Collection<Class<?>>, SortedMap<String, String>> packageFinder =
+        classes -> PackageVersions.of(classes, PackageVersions.GROUP_ID);
 
     /**
      * Version of the OS the pipeline is being run on, as reported by
@@ -605,6 +620,32 @@ public abstract class ShareUsageBase
             }
         }
         return flowElements;
+    }
+
+    /**
+     * The 51Degrees packages in use, each named by its Maven group and
+     * artifact id and given its version, in name order. They are the
+     * package that holds the pipeline, the package that holds each of its
+     * flow elements and this element, and every 51Degrees package those
+     * depend on. The flow elements inside a parallel group are not listed
+     * by the pipeline, so their packages are found only as dependencies.
+     * @return the packages and their versions
+     */
+    @SuppressWarnings("rawtypes")
+    protected Map<String, String> getPackages() {
+        if (packages == null) {
+            List<Class<?>> classes = new ArrayList<>();
+            classes.add(getClass());
+            if (getPipelines().size() == 1) {
+                Pipeline pipeline = getPipelines().get(0);
+                classes.add(pipeline.getClass());
+                for (FlowElement element : pipeline.getFlowElements()) {
+                    classes.add(element.getClass());
+                }
+            }
+            packages = packageFinder.apply(classes);
+        }
+        return packages;
     }
 
     @Override
