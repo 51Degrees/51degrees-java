@@ -266,9 +266,12 @@ public class DeviceDetectionHashEngine
 
     @Override
     public CloseableIterable<ComponentMetaData> getComponents() {
+        // The Metrics component holds the match metrics, which the data file
+        // does not have, so it is given after the data file's components.
         return new ComponentIterable(
             this,
-            engine.getMetaData().getComponents());
+            engine.getMetaData().getComponents(),
+            getMetricsComponent());
     }
 
     @Override
