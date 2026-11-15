@@ -227,8 +227,10 @@ example. The IP Intelligence cloud examples read their key from
   Maven each runner has. It
   builds the console examples against the published packages and runs each
   product's `GettingStartedOnPrem` jar from the repository root with no
-  settings, so the free data file is downloaded. It runs on each push to
-  `main` and `rc`, daily, and on a pull request that changes the examples.
+  settings. On Ubuntu the free data file is downloaded, as from a fresh
+  clone, and the Windows and macOS jobs take that file from the run's cache,
+  so each file is downloaded once a run. It runs on each push to `main` and
+  `rc`, daily, and on a pull request that changes the examples.
 
 ## Environment variable names
 

@@ -4,7 +4,9 @@ name: Examples from a fresh clone
 # with its submodules, against the packages published on Maven Central, with
 # the JDK and Maven the runner has. Then runs the getting started example
 # from the repository root with no settings. A fresh clone holds only a link
-# for each free data file, so the example downloads its file first.
+# for each free data file. On Ubuntu the example downloads its file, which
+# tests the download, and the job keeps the file in the cache. The other
+# systems take it from there, so each file is downloaded once a run.
 
 on:
   pull_request:
@@ -12,6 +14,7 @@ on:
       - 'examples/**'
       - 'cxx'
       - '.github/workflows/examples-fresh-clone.yml'
+      - 'ci/run-fresh-clone-example.ps1'
   push:
     branches:
       - main
@@ -24,21 +27,19 @@ permissions:
   contents: read
 
 jobs:
-  fresh-clone:
-    name: ${{ matrix.product }} on ${{ matrix.os }}
+  download:
+    name: ${{ matrix.product }} on ubuntu-latest, downloading its data file
     strategy:
       fail-fast: false
       matrix:
-        # macOS runners are shared by the whole organisation, so pull
-        # requests leave them out and the pushes and the daily run use them.
-        os: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu-latest", "windows-latest"]' || '["ubuntu-latest", "windows-latest", "macos-latest"]') }}
-        product: [device-detection, ip-intelligence]
         include:
           - product: device-detection
             example: fiftyone.devicedetection.examples.console.GettingStartedOnPrem
+            file: cxx/data/device-detection/51Degrees-LiteV4.1.hash
           - product: ip-intelligence
             example: fiftyone.ipintelligence.examples.console.GettingStartedOnPrem
-    runs-on: ${{ matrix.os }}
+            file: cxx/data/ip-intelligence/51Degrees-LiteV41.ipi
+    runs-on: ubuntu-latest
     steps:
       - name: Clone the repository with its submodules
         uses: actions/checkout@v4
@@ -59,31 +60,65 @@ jobs:
 
       - name: Run the getting started example from the repository root
         shell: pwsh
+        run: >-
+          ./ci/run-fresh-clone-example.ps1 -Product '${{ matrix.product }}'
+          -Example '${{ matrix.example }}' -ExpectDownload $true
+
+      # The key follows the link, so a new free file gets a new entry, and
+      # the same file is kept once rather than once a run.
+      - name: Keep the data file for the other systems
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ matrix.file }}
+          key: fresh-clone-${{ matrix.product }}-${{ hashFiles(format('{0}.link', matrix.file)) }}
+          enableCrossOsArchive: true
+
+  other-systems:
+    name: ${{ matrix.product }} on ${{ matrix.os }}
+    needs: download
+    strategy:
+      fail-fast: false
+      matrix:
+        # macOS runners are shared by the whole organisation, so pull
+        # requests leave them out and the pushes and the daily run use them.
+        os: ${{ fromJSON(github.event_name == 'pull_request' && '["windows-latest"]' || '["windows-latest", "macos-latest"]') }}
+        product: [device-detection, ip-intelligence]
+        include:
+          - product: device-detection
+            example: fiftyone.devicedetection.examples.console.GettingStartedOnPrem
+            file: cxx/data/device-detection/51Degrees-LiteV4.1.hash
+          - product: ip-intelligence
+            example: fiftyone.ipintelligence.examples.console.GettingStartedOnPrem
+            file: cxx/data/ip-intelligence/51Degrees-LiteV41.ipi
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Clone the repository with its submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Take the data file the Ubuntu job downloaded
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ matrix.file }}
+          key: fresh-clone-${{ matrix.product }}-${{ hashFiles(format('{0}.link', matrix.file)) }}
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+
+      - name: The runner's Java and Maven
+        shell: pwsh
         run: |
-          $jar = Get-ChildItem 'examples/${{ matrix.product }}/console/target' `
-              -Filter '*-jar-with-dependencies.jar' | Select-Object -First 1
-          if ($null -eq $jar) {
-              Write-Output '::error::The build made no jar with dependencies.'
-              exit 1
-          }
-          $output = & java -cp $jar.FullName '${{ matrix.example }}' 2>&1 |
-              ForEach-Object { "$_" }
-          $code = $LASTEXITCODE
-          $output
-          $text = $output -join "`n"
-          $failed = $false
-          if ($code -ne 0) {
-              Write-Output "::error::The example exited with $code."
-              $failed = $true
-          }
-          if ($text -notmatch 'is missing, so it is being downloaded') {
-              Write-Output '::error::The example did not download its free data file.'
-              $failed = $true
-          }
-          if ($text -notmatch 'Results:') {
-              Write-Output '::error::The example printed no results.'
-              $failed = $true
-          }
-          if ($failed) {
-              exit 1
-          }
+          java -version
+          mvn -v
+
+      - name: Build the console examples against the published packages
+        working-directory: examples/${{ matrix.product }}
+        shell: pwsh
+        run: mvn -B --no-transfer-progress -pl console -am package -DskipTests
+
+      - name: Run the getting started example from the repository root
+        shell: pwsh
+        run: >-
+          ./ci/run-fresh-clone-example.ps1 -Product '${{ matrix.product }}'
+          -Example '${{ matrix.example }}' -ExpectDownload $false
