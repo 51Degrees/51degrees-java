@@ -95,8 +95,15 @@ public class GetAllPropertiesCloud {
 
         // Use the resource key from the command line, environment variable or
         // system property.
-        String resourceKey = args.length > 0 ? args[0] :
-                KeyHelper.getOrSetTestResourceKey();
+        // With no resource key, the helper says which variable to set and
+        // where to create a key, and the example ends without an error.
+        String resourceKey = KeyHelper.getOrSetTestResourceKey(
+                args.length > 0 ? args[0] : null, EXAMPLE_TAG);
+        if (KeyHelper.hasResourceKey(resourceKey) == false) {
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES);
+            return;
+        }
         // An optional custom endpoint for a self-hosted Cloud service.
         String endPoint = args.length > 1 ? args[1] :
                 KeyUtils.getNamedKey(GettingStartedCloud.CLOUD_END_POINT_NAME);

@@ -104,7 +104,14 @@ public class GettingStartedWebCloudMixed extends HttpServlet {
         // Get the resource key from the command line, environment variable or
         // system property. This sets the "TestResourceKey" system property
         // which is interpolated in the pipeline configuration file.
-        KeyHelper.getOrSetTestResourceKey(args.length > 0 ? args[0] : null, true);
+        // With no resource key, the helper says which variable to set and
+        // where to create a key, and the example ends without an error.
+        String resourceKey = KeyHelper.getOrSetTestResourceKey(
+                args.length > 0 ? args[0] : null,
+                "web-getting-started.cloud.mixed-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedwebcloudmixed.java");
+        if (KeyHelper.hasResourceKey(resourceKey) == false) {
+            return;
+        }
 
         // Start Jetty with this WebApp
         EmbedJetty.runWebApp(getResourceBase(), 8084);

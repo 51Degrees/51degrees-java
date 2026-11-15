@@ -68,7 +68,7 @@ public class NativeModelCloud {
         // With no resource key, the helper has said how to set one, and the
         // example ends without an error.
         resourceKey = getOrSetSuperResourceKey(resourceKey,
-                NATIVE_MODEL_EXAMPLE_RESOURCE_KEY_NAME, false);
+                NATIVE_MODEL_EXAMPLE_RESOURCE_KEY_NAME, EXAMPLE_TAG);
         if (KeyHelper.hasResourceKey(resourceKey) == false) {
             FindOutMore.write(os, EXAMPLE_TAG, FindOutMore.CLOUD_REPOSITORIES);
             return;

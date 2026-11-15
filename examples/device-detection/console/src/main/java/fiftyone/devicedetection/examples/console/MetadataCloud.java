@@ -65,7 +65,8 @@ public class MetadataCloud {
 
         // With no resource key, the helper has said how to set one, and the
         // example ends without an error.
-        resourceKey = KeyHelper.getOrSetTestResourceKey(resourceKey, false);
+        resourceKey = KeyHelper.getOrSetTestResourceKey(resourceKey,
+                EXAMPLE_TAG);
         if (KeyHelper.hasResourceKey(resourceKey) == false) {
             return;
         }
