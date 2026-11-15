@@ -41,6 +41,7 @@ import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -190,6 +191,18 @@ public class DeviceDetectionCloudEngine
                             property.getName(),
                             getStringAspectPropertyValue(deviceObj, property));
                             break;
+                }
+            }
+
+            // A value the metadata does not describe, as when the metadata
+            // is empty before discovery has completed, takes its type from
+            // the value itself.
+            for (String key : deviceObj.keySet()) {
+                if (key.endsWith("nullreason") == false &&
+                    deviceMap.containsKey(key) == false) {
+                    deviceMap.put(
+                        key,
+                        getInferredAspectPropertyValue(deviceObj, key));
                 }
             }
 
@@ -394,6 +407,47 @@ public class DeviceDetectionCloudEngine
             stringValue.setValue(deviceObj.getString(key));
         }
         return stringValue;
+    }
+
+    /**
+     * Get a value from the cloud engine's JSON response that the metadata
+     * does not describe, with its type taken from the value: a string, a
+     * boolean, an integer, a double, or a list of strings. A null is no
+     * value, with the reason the response gives.
+     * @param deviceObj to get the value from
+     * @param key to get the value of
+     * @return {@link AspectPropertyValue} with the value, or the reason for
+     * the value not being present
+     */
+    private AspectPropertyValue<?> getInferredAspectPropertyValue(
+        JSONObject deviceObj,
+        String key) {
+        Object value = deviceObj.opt(key);
+        if (value == null || value == JSONObject.NULL) {
+            AspectPropertyValue<Object> noValue =
+                new AspectPropertyValueDefault<>();
+            noValue.setNoValueMessage(getNoValueReason(deviceObj, key));
+            return noValue;
+        }
+        if (value instanceof JSONArray) {
+            JSONArray jsonArray = (JSONArray) value;
+            List<String> strings = new ArrayList<>(jsonArray.length());
+            for (Object item : jsonArray.toList()) {
+                strings.add(Objects.toString(item, null));
+            }
+            return new AspectPropertyValueDefault<>(strings);
+        }
+        if (value instanceof JSONObject) {
+            return new AspectPropertyValueDefault<>(
+                ((JSONObject) value).toMap());
+        }
+        if (value instanceof BigDecimal ||
+            value instanceof Double ||
+            value instanceof Float) {
+            return new AspectPropertyValueDefault<>(
+                ((Number) value).doubleValue());
+        }
+        return new AspectPropertyValueDefault<>(value);
     }
 
     /**
