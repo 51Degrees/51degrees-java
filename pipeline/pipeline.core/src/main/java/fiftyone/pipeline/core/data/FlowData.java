@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.core.data;
 
+import fiftyone.pipeline.core.exceptions.PipelineDataException;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.typed.TypedKey;
@@ -40,8 +41,10 @@ public interface FlowData extends AutoCloseable {
     /**
      * Process this FlowData via the owning Pipeline. Once this method returns
      * the FlowData will not be changed further and cannot be processed again.
+     * @throws IllegalStateException if this FlowData has already been
+     * processed, or its Pipeline has been closed
      */
-    void process();
+    void process() throws IllegalStateException;
 
     /**
      * If this flag is set to true, future FlowElements will not process this
@@ -129,15 +132,19 @@ public interface FlowData extends AutoCloseable {
      * @param key the aspect to get
      * @param <T> type type of the aspect
      * @return aspect's {@link ElementData} or null if not present
+     * @throws IllegalStateException if this FlowData has not been processed
+     * @throws IllegalArgumentException if the key is null
      */
-    <T extends ElementData> T get(TypedKey<T> key);
+    <T extends ElementData> T get(TypedKey<T> key)
+        throws IllegalStateException, IllegalArgumentException;
 
     /**
      * Get the {@link ElementData} for the requested data key.
      * @param key to the aspect to get
      * @return aspect's {@link ElementData} or null if not present
+     * @throws IllegalStateException if this FlowData has not been processed
      */
-    ElementData get(String key);
+    ElementData get(String key) throws IllegalStateException;
 
     /**
      * Get the {@link ElementData} for the requested {@link ElementData}
@@ -157,8 +164,11 @@ public interface FlowData extends AutoCloseable {
      * @param element {@link FlowElement} to get the data for
      * @param <T>     {@link ElementData} stored by the element
      * @return element data stored by the element
+     * @throws IllegalStateException if this FlowData has not been processed
+     * @throws IllegalArgumentException if the element is null
      */
-    <T extends ElementData> T getFromElement(FlowElement<T, ?> element);
+    <T extends ElementData> T getFromElement(FlowElement<T, ?> element)
+        throws IllegalStateException, IllegalArgumentException;
 
     /**
      * Get the specified property as the specified type.
@@ -166,8 +176,11 @@ public interface FlowData extends AutoCloseable {
      * @param key the name of the property to get
      * @param type the type to return the property value as
      * @return the property value
+     * @throws PipelineDataException if this FlowData has not been processed
+     * @throws ClassCastException if the value is not of the type asked for
      */
-    <T> T getAs(String key, Class<T> type);
+    <T> T getAs(String key, Class<T> type)
+        throws PipelineDataException, ClassCastException;
 
     /**
      * Check if the flow data contains an item with the specified key name and
@@ -183,43 +196,61 @@ public interface FlowData extends AutoCloseable {
      * Get the specified property as a string.
      * @param propertyName the name of the property to get
      * @return the property value
+     * @throws PipelineDataException if this FlowData has not been processed
+     * @throws ClassCastException if the value is not a string
      */
-    String getAsString(String propertyName);
+    String getAsString(String propertyName)
+        throws PipelineDataException, ClassCastException;
 
     /**
      * Get the specified property as a boolean.
      * @param propertyName the name of the property to get
      * @return the property value
+     * @throws PipelineDataException if this FlowData has not been processed
+     * @throws ClassCastException if the value is not a boolean
      */
-    Boolean getAsBool(String propertyName);
+    Boolean getAsBool(String propertyName)
+        throws PipelineDataException, ClassCastException;
 
     /**
      * Get the specified property as an integer.
      * @param propertyName the name of the property to get
      * @return the property value
+     * @throws PipelineDataException if this FlowData has not been processed
+     * @throws ClassCastException if the value is not an integer
      */
-    Integer getAsInt(String propertyName);
+    Integer getAsInt(String propertyName)
+        throws PipelineDataException, ClassCastException;
 
     /**
      * Get the specified property as a long.
      * @param propertyName the name of the property to get
      * @return the property value
+     * @throws PipelineDataException if this FlowData has not been processed
+     * @throws ClassCastException if the value is not a long
      */
-    Long getAsLong(String propertyName);
+    Long getAsLong(String propertyName)
+        throws PipelineDataException, ClassCastException;
 
     /**
      * Get the specified property as a float.
      * @param propertyName the name of the property to get
      * @return the property value
+     * @throws PipelineDataException if this FlowData has not been processed
+     * @throws ClassCastException if the value is not a float
      */
-    Float getAsFloat(String propertyName);
+    Float getAsFloat(String propertyName)
+        throws PipelineDataException, ClassCastException;
 
     /**
      * Get the specified property as a double.
      * @param propertyName the name of the property to get
      * @return the property value
+     * @throws PipelineDataException if this FlowData has not been processed
+     * @throws ClassCastException if the value is not a double
      */
-    Double getAsDouble(String propertyName);
+    Double getAsDouble(String propertyName)
+        throws PipelineDataException, ClassCastException;
 
     /**
      * Get or add the specified element data to the internal map.
