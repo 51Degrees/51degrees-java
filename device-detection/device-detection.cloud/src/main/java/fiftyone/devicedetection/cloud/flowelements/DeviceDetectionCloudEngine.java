@@ -23,7 +23,6 @@
 package fiftyone.devicedetection.cloud.flowelements;
 
 import fiftyone.devicedetection.cloud.data.DeviceDataCloud;
-import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudAspectEngineBase;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
 import fiftyone.pipeline.core.data.AccessiblePropertyMetaData;
@@ -32,7 +31,6 @@ import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.data.types.JavaScript;
-import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaDataDefault;
@@ -124,95 +122,94 @@ public class DeviceDetectionCloudEngine
         return new EvidenceKeyFilterWhitelist(new ArrayList<String>());
     }
 
+    /**
+     * Parse this engine's part of the cloud response into the device data.
+     * The shared processing of {@link CloudAspectEngineBase} finds the
+     * response, refuses a Pipeline where the Cloud Request Engine has not
+     * run, and passes over an empty response before calling this.
+     * @see <a href="https://github.com/51Degrees/specifications/blob/main/device-detection-specification/pipeline-elements/device-detection-cloud.md#process">Specification</a>
+     * @param data the flow data being processed
+     * @param aspectData the device data to populate
+     * @param json the whole response from the Cloud Request Engine
+     */
     @Override
-    protected void processEngine(FlowData data, DeviceDataCloud aspectData) {
-        if (cloudRequestEngine == null) {
-            throw new PipelineConfigurationException(
-                "The '" + getClass().getName() + "' requires a " +
-                    "'CloudRequestEngine' before it in the Pipeline. This " +
-                    "engine will be unable to produce results until this is " +
-                    "corrected.");
+    protected void processCloudEngine(
+        FlowData data,
+        DeviceDataCloud aspectData,
+        String json) {
+        // Extract data from json to the aspectData instance.
+        JSONObject jsonObj = new JSONObject(json);
+        JSONObject deviceObj = getElementJson(jsonObj);
+
+        Map<String, Object> deviceMap =
+            new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+
+        for (AspectPropertyMetaData property : getProperties()) {
+            // A property the response leaves out has no entry, so
+            // reading it throws a PropertyMissingException.
+            if (deviceObj.has(
+                property.getName().toLowerCase(Locale.ROOT)) == false) {
+                continue;
+            }
+            String type = property.getType().getSimpleName();
+            switch(type) {
+                case ("List"):
+                    deviceMap.put(
+                        property.getName(),
+                        getListAspectPropertyValue(deviceObj, property));
+                    break;
+                case ("JavaScript"):
+                    deviceMap.put(
+                        property.getName(),
+                        getJavaScriptAspectPropertyValue(deviceObj, property));
+                    break;
+                case ("String"):
+                    deviceMap.put(
+                        property.getName(),
+                        getStringAspectPropertyValue(deviceObj, property));
+                        break;
+                case ("boolean"):
+                    deviceMap.put(
+                        property.getName(),
+                        getBooleanAspectPropertyValue(deviceObj, property));
+                    break;
+                case ("int"):
+                    deviceMap.put(
+                        property.getName(),
+                        getIntegerAspectPropertyValue(deviceObj, property));
+                    break;
+                case ("double"):
+                    deviceMap.put(
+                        property.getName(),
+                        getDoubleAspectPropertyValue(deviceObj, property));
+                    break;
+                default:
+                    deviceMap.put(
+                        property.getName(),
+                        getStringAspectPropertyValue(deviceObj, property));
+                        break;
+            }
         }
-        else {
-            CloudRequestData requestData =
-                data.getFromElement(cloudRequestEngine);
-            String json = "";
-            json = requestData.getJsonResponse();
 
-            // Extract data from json to the aspectData instance.
-            JSONObject jsonObj = new JSONObject(json);
-            JSONObject deviceObj = getElementJson(jsonObj);
-
-            Map<String, Object> deviceMap =
-                new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-
-            for (AspectPropertyMetaData property : getProperties()) {
-                // A property the response leaves out has no entry, so
-                // reading it throws a PropertyMissingException.
-                if (deviceObj.has(
-                    property.getName().toLowerCase(Locale.ROOT)) == false) {
-                    continue;
-                }
-                String type = property.getType().getSimpleName();
-                switch(type) {
-                    case ("List"):
-                        deviceMap.put(
-                            property.getName(),
-                            getListAspectPropertyValue(deviceObj, property));
-                        break;
-                    case ("JavaScript"):
-                        deviceMap.put(
-                            property.getName(),
-                            getJavaScriptAspectPropertyValue(deviceObj, property));
-                        break;
-                    case ("String"):
-                        deviceMap.put(
-                            property.getName(),
-                            getStringAspectPropertyValue(deviceObj, property));
-                            break;
-                    case ("boolean"):
-                        deviceMap.put(
-                            property.getName(),
-                            getBooleanAspectPropertyValue(deviceObj, property));
-                        break;
-                    case ("int"):
-                        deviceMap.put(
-                            property.getName(),
-                            getIntegerAspectPropertyValue(deviceObj, property));
-                        break;
-                    case ("double"):
-                        deviceMap.put(
-                            property.getName(),
-                            getDoubleAspectPropertyValue(deviceObj, property));
-                        break;
-                    default:
-                        deviceMap.put(
-                            property.getName(),
-                            getStringAspectPropertyValue(deviceObj, property));
-                            break;
+        // Add no value messages for any properties which have not yet been
+        // populated.
+        for (String key : deviceObj.keySet()) {
+            if (key.endsWith("nullreason")) {
+                String actualKey = key
+                    .replace("nullreason", "");
+                if (deviceMap.containsKey(actualKey) == false) {
+                    AspectPropertyValue<?> nullValue =
+                        new AspectPropertyValueDefault<Object>();
+                    nullValue.setNoValueMessage(
+                        deviceObj.optString(key, "Unknown"));
+                    deviceMap.put(
+                        actualKey,
+                        nullValue);
                 }
             }
-
-            // Add no value messages for any properties which have not yet been
-            // populated.
-            for (String key : deviceObj.keySet()) {
-                if (key.endsWith("nullreason")) {
-                    String actualKey = key
-                        .replace("nullreason", "");
-                    if (deviceMap.containsKey(actualKey) == false) {
-                        AspectPropertyValue<?> nullValue =
-                            new AspectPropertyValueDefault<Object>();
-                        nullValue.setNoValueMessage(
-                            deviceObj.optString(key, "Unknown"));
-                        deviceMap.put(
-                            actualKey,
-                            nullValue);
-                    }
-                }
-            }
-
-            aspectData.populateFromMap(deviceMap);
         }
+
+        aspectData.populateFromMap(deviceMap);
     }
 
     @Override

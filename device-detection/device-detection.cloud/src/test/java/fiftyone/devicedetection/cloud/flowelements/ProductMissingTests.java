@@ -250,6 +250,7 @@ public class ProductMissingTests {
         String response) {
         CloudRequestData cloudData = mock(CloudRequestData.class);
         when(cloudData.getJsonResponse()).thenReturn(response);
+        when(cloudData.getProcessStarted()).thenReturn(true);
 
         FlowData flowData = mock(FlowData.class);
         when(flowData.getFromElement(any(CloudRequestEngine.class)))
@@ -260,7 +261,8 @@ public class ProductMissingTests {
             flowData,
             engine,
             MissingPropertyServiceDefault.getInstance());
-        engine.processEngine(flowData, device);
+        SharedCloudProcessingTests.processThroughTheEngine(
+            engine, flowData, device);
         return device;
     }
 
