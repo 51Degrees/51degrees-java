@@ -48,28 +48,51 @@ public class OnPremiseEngineNamesTests {
 
     @Test
     public void NoNames_NativeEngineCreatedWithNoNames() throws Exception {
+        assertEquals(
+            "A pipeline configured with no names should have its " +
+                "engine create the native engine with no names.",
+            Collections.emptyList(),
+            namesCreatedWith(Collections.<String>emptyList()));
+    }
+
+    @Test
+    public void Names_NativeEngineCreatedWithOnlyThoseNames()
+        throws Exception {
+        List<String> names = Collections.singletonList("RegisteredName");
+        assertEquals(
+            "A pipeline configured with names should have its engine " +
+                "create the native engine with those names and no others.",
+            names,
+            namesCreatedWith(names));
+    }
+
+    /**
+     * Build an on-premise pipeline with the names given, and give the names
+     * its engine creates the native engine with.
+     */
+    private static List<String> namesCreatedWith(List<String> names)
+        throws Exception {
         File file;
         try {
             file = getFilePath(LITE_IPI_DATA_FILE_NAME);
         }
         catch (IllegalArgumentException e) {
             assumeTrue(e.getMessage(), false);
-            return;
+            return null;
         }
-        try (Pipeline pipeline = new IPIntelligencePipelineBuilder(
+        IPIntelligenceOnPremisePipelineBuilder builder =
+            new IPIntelligencePipelineBuilder(
                 LoggerFactory.getILoggerFactory())
-            .useOnPremise(file.getAbsolutePath(), false)
-            .setShareUsage(false)
-            .setAutoUpdate(false)
-            .setDataFileSystemWatcher(false)
-            .build()) {
-            IPIntelligenceOnPremiseEngine engine =
-                pipeline.getElement(IPIntelligenceOnPremiseEngine.class);
-            assertEquals(
-                "A pipeline configured with no names should have its " +
-                    "engine create the native engine with no names.",
-                Collections.emptyList(),
-                namesCreatedWith(engine));
+                .useOnPremise(file.getAbsolutePath(), false)
+                .setShareUsage(false)
+                .setAutoUpdate(false)
+                .setDataFileSystemWatcher(false);
+        for (String name : names) {
+            builder.setProperty(name);
+        }
+        try (Pipeline pipeline = builder.build()) {
+            return namesCreatedWith(
+                pipeline.getElement(IPIntelligenceOnPremiseEngine.class));
         }
     }
 

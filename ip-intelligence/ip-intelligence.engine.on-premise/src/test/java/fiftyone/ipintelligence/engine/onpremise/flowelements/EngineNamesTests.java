@@ -22,6 +22,7 @@
 
 package fiftyone.ipintelligence.engine.onpremise.flowelements;
 
+import fiftyone.ipintelligence.engine.onpremise.interop.swig.EngineIpiSwig;
 import fiftyone.ipintelligence.engine.onpremise.interop.swig.RequiredPropertiesConfigSwig;
 import fiftyone.ipintelligence.engine.onpremise.interop.swig.VectorStringSwig;
 import fiftyone.pipeline.engines.Constants;
@@ -42,7 +43,7 @@ import static org.junit.Assume.assumeTrue;
 
 /**
  * The names the native engine is created with, read from the configuration
- * the engine passes to it.
+ * the engine passes to it, and the names the native engine then holds.
  */
 public class EngineNamesTests {
 
@@ -57,6 +58,23 @@ public class EngineNamesTests {
                     "native engine with no names.",
                 Collections.emptyList(),
                 namesCreatedWith(engine));
+        }
+    }
+
+    @Test
+    public void Names_NativeEngineCreatedWithOnlyThoseNames()
+        throws Exception {
+        List<String> names = Collections.singletonList("RegisteredName");
+        try (IPIntelligenceOnPremiseEngine engine = build(names)) {
+            assertEquals(
+                "An engine configured with names should create the native " +
+                    "engine with those names and no others.",
+                names,
+                namesCreatedWith(engine));
+            assertEquals(
+                "The native engine should hold only the names configured.",
+                names,
+                nativeNames(engine));
         }
     }
 
@@ -94,6 +112,20 @@ public class EngineNamesTests {
         RequiredPropertiesConfigSwig config =
             (RequiredPropertiesConfigSwig) field.get(engine);
         try (VectorStringSwig names = config.getProperties()) {
+            return new ArrayList<>(names);
+        }
+    }
+
+    /**
+     * The names the native engine reports it was created with.
+     */
+    static List<String> nativeNames(IPIntelligenceOnPremiseEngine engine)
+        throws Exception {
+        Field field = IPIntelligenceOnPremiseEngine.class
+            .getDeclaredField("engine");
+        field.setAccessible(true);
+        EngineIpiSwig nativeEngine = (EngineIpiSwig) field.get(engine);
+        try (VectorStringSwig names = nativeEngine.getRequiredProperties()) {
             return new ArrayList<>(names);
         }
     }
