@@ -55,7 +55,9 @@ import static org.mockito.Mockito.when;
 
 /**
  * Checks the callback URL the rendered script is given. These tests render
- * the script only and need no browser.
+ * the script only and need no browser. The script is not minified, so it is
+ * read as the template writes it. {@link JavaScriptMinifyTests} checks that
+ * the minified script carries the same values.
  */
 public class JavaScriptUrlTests {
     private final TestLoggerFactory loggerFactory;
@@ -72,7 +74,8 @@ public class JavaScriptUrlTests {
             new JavaScriptBuilderElementBuilder(loggerFactory)
                 .setEndpoint("/json")
                 .setHost("example.com")
-                .setProtocol("https");
+                .setProtocol("https")
+                .setMinify(false);
         if (contextRoot != null) {
             builder.setContextRoot(contextRoot);
         }
@@ -168,6 +171,7 @@ public class JavaScriptUrlTests {
         JavaScriptBuilderElement jsElement =
             new JavaScriptBuilderElementBuilder(factory)
                 .setEndpoint("/json")
+                .setMinify(false)
                 .build();
         List<String> scripts = new ArrayList<>();
         try (Pipeline pipeline = new PipelineBuilder(factory)
@@ -270,6 +274,7 @@ public class JavaScriptUrlTests {
         JavaScriptBuilderElement jsElement =
             new JavaScriptBuilderElementBuilder(factory)
                 .setEndpoint("/json")
+                .setMinify(false)
                 .build();
         try (Pipeline pipeline = new PipelineBuilder(factory)
             .addFlowElement(new SequenceElementBuilder(factory).build())

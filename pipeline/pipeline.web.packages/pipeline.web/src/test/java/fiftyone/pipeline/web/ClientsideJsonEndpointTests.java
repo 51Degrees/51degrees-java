@@ -51,6 +51,8 @@ import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -69,9 +71,11 @@ public class ClientsideJsonEndpointTests {
         LoggerFactory.getILoggerFactory();
 
     /**
-     * The text that the template puts before the JSON in the script.
+     * The text that the template puts before the JSON in the script, with
+     * or without the white space that minifying takes out.
      */
-    private static final String JSON_IN_SCRIPT = "var json = ";
+    private static final Pattern JSON_IN_SCRIPT =
+        Pattern.compile("var json\\s*=\\s*");
 
     /**
      * The JSON served by the JSON endpoint and the JSON the script served by
@@ -125,10 +129,10 @@ public class ClientsideJsonEndpointTests {
      * The JSON object the script assigns to its json variable.
      */
     private static JSONObject jsonInScript(String javaScript) {
-        int start = javaScript.indexOf(JSON_IN_SCRIPT);
-        assertTrue("The script holds no JSON: " + javaScript, start >= 0);
+        Matcher matcher = JSON_IN_SCRIPT.matcher(javaScript);
+        assertTrue("The script holds no JSON: " + javaScript, matcher.find());
         return (JSONObject) new JSONTokener(
-            javaScript.substring(start + JSON_IN_SCRIPT.length()))
+            javaScript.substring(matcher.end()))
             .nextValue();
     }
 

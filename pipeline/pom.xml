@@ -80,6 +80,7 @@
         <jaxb-impl.version>3.0.2</jaxb-impl.version>
 
         <mustache-compiler.version>0.9.14</mustache-compiler.version>
+        <minifier.version>1.0</minifier.version>
         <graal-js-scriptengine.version>22.0.0.2</graal-js-scriptengine.version>
         <graal-js.version>22.0.0.2</graal-js.version>
 

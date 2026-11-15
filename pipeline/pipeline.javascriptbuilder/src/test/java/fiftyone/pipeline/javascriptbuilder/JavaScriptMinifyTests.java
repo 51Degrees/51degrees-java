@@ -127,6 +127,10 @@ public class JavaScriptMinifyTests {
             .build();
              FlowData flowData = pipeline.createFlowData()) {
             flowData.addEvidence("query.some-value", "x y");
+            // The same session for every render, so two renders differ only
+            // in whether they are minified.
+            flowData.addEvidence("query.session-id", "abc-123");
+            flowData.addEvidence("query.sequence", "1");
             flowData.process();
             return flowData.getFromElement(jsElement).getJavaScript();
         }
