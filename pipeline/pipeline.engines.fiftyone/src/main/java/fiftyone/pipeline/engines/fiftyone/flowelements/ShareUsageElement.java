@@ -378,7 +378,9 @@ public class ShareUsageElement extends ShareUsageBase {
      * @param recoveryMultiplier            what the pause is multiplied by each time the send
      *                                      tried when a pause ends fails
      * @param shareAllEvidence              if true then all Evidence is shared, apart from
-     *                                      the keys that are never shared
+     *                                      the keys that are never shared and
+     *                                      the cookies other than the
+     *                                      51Degrees ones
      * @param shareAllQueryStringParameters if true then all query string
      *                                      parameters are shared
      */
