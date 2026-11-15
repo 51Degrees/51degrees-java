@@ -25,7 +25,7 @@ package fiftyone.devicedetection.examples.console;
 import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.devicedetection.DeviceDetectionPipelineBuilder;
 import fiftyone.devicedetection.examples.shared.DataFileHelper;
-import fiftyone.devicedetection.shared.testhelpers.KeyUtils;
+import fiftyone.devicedetection.examples.shared.KeyHelper;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.services.DataUpdateService;
 import fiftyone.pipeline.engines.services.DataUpdateServiceDefault;
@@ -43,8 +43,8 @@ import java.util.Scanner;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
 import static fiftyone.devicedetection.examples.shared.DataFileHelper.getDatafileMetaData;
-import static fiftyone.devicedetection.shared.testhelpers.FileUtils.ENTERPRISE_HASH_DATA_FILE_NAME;
-import static fiftyone.devicedetection.shared.testhelpers.FileUtils.LITE_HASH_DATA_FILE_PATH;
+import static fiftyone.devicedetection.examples.shared.DataFileHelper.ENTERPRISE_HASH_DATA_FILE_NAME;
+import static fiftyone.devicedetection.examples.shared.DataFileHelper.LITE_HASH_DATA_FILE_PATH;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
 /*!
@@ -236,9 +236,9 @@ public class UpdateDataFile {
 
         // try to find a license key
         if (Objects.isNull(licenseKey)) {
-            licenseKey = KeyUtils.getNamedKey(UPDATE_EXAMPLE_LICENSE_KEY_NAME);
+            licenseKey = KeyHelper.getNamedKey(UPDATE_EXAMPLE_LICENSE_KEY_NAME);
         }
-        if (Objects.isNull(licenseKey) || KeyUtils.isInvalidKey(licenseKey)) {
+        if (Objects.isNull(licenseKey) || KeyHelper.isInvalidKey(licenseKey)) {
             explainLicenseKey(dataFilename, new PrintWriter(System.out, true));
             return;
         }
