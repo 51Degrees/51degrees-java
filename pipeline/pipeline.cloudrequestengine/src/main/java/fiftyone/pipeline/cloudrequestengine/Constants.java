@@ -32,7 +32,7 @@ public class Constants {
             + "to authenticate with, as the cloud service answers 401 to a "
             + "request that carries neither. Use setResourceKey(String) with "
             + "a resource key created for free at "
-            + "https://configure.51degrees.com?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=pipeline.cloudrequestengine-src-main-java-fiftyone-pipeline-cloudrequestengine-constants.java&utm_term=no-credential";
+            + "https://51degrees.com/configure?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=pipeline.cloudrequestengine-src-main-java-fiftyone-pipeline-cloudrequestengine-constants.java&utm_term=no-credential";
 
         public static final String LicenseKeyNeedsProperties =
             "The Cloud Request Engine has a license key and no requested "

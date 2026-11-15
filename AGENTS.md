@@ -170,10 +170,10 @@ describes.
 
 ### Cloud examples
 
-The cloud examples need a resource key, which a person creates in the
-configurator, so ask for one if none is set. A key with the properties most of
-the Device Detection examples use can be made
-[here](https://configure.51degrees.com/jqz435Nc?utm_source=github&utm_medium=docs&utm_campaign=51degrees-java&utm_content=agents.md&utm_term=cloud-examples).
+The cloud examples need a resource key, which a person creates on the
+configuration page, so ask for one if none is set. A key with the properties
+most of the Device Detection examples use can be made
+[here](https://51degrees.com/configure/jqz435Nc?utm_source=github&utm_medium=docs&utm_campaign=51degrees-java&utm_content=agents.md&utm_term=cloud-examples).
 The Device Detection cloud example takes the key as its first argument, or
 from a `TestResourceKey` environment variable or system property.
 
@@ -239,14 +239,20 @@ follow.
 
 The root `pom.xml` lists the six package trees as modules but is not their
 parent, so nothing from it reaches the published poms. Each tree keeps its own
-parent pom. They all carry the same version, and the libraries reference each
-other through `${project.version}`, so Maven resolves those dependencies from
-the reactor. The examples reference published versions unless the `dev`
-profile is active. Keep it that way: a reader of the examples should see the
-package versions a project of their own would use.
+parent pom. In the repository they all carry the same development version,
+and the libraries reference each other through `${project.version}`, so Maven
+resolves those dependencies from the reactor. The examples reference published
+versions unless the `dev` profile is active. Keep it that way, so that a
+reader of the examples sees the package versions a project of their own would
+use.
 
-Because the root is not a parent, `versions:set` has to run in each tree. CI
-does that. When changing versions by hand, run it in each of the six folders.
+Each published module is released at its own version, tagged
+`<package>/<version>`. The publish writes that version into the module's
+`pom.xml`, with the versions of its parent and of the packages it depends on,
+so leave the versions in the poms as they are. When a module is added, or one
+module starts to depend on another, add it to `ci/packages.json` as well, or
+the pull request build fails. `ci/README.md` describes how a release is
+planned.
 
 ## Data files and `project.root`
 

@@ -28,7 +28,7 @@
                 <EndPoint>${TestCloudEndpoint:-http://cloud.51degrees.com/api/v4}</EndPoint>
                 <!-- A free resource key configured with the
                 properties required by this example may be obtained from
-                https://configure.51degrees.com/jqz435Nc?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=web-getting-started.cloud-src-main-webapp-web-inf-51degrees-cloud.xml&amp;utm_term=buildparameters
+                https://51degrees.com/configure/jqz435Nc?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=web-getting-started.cloud-src-main-webapp-web-inf-51degrees-cloud.xml&amp;utm_term=buildparameters
 
                 You can paste the resource key here, or set an environment
                 variable or System property called "TestResourceKey"

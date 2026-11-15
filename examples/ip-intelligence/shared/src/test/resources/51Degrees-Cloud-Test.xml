@@ -27,7 +27,7 @@
             <BuildParameters>
                 <EndPoint>http://cloud.51degrees.com/api/v4</EndPoint>
                 <!-- Obtain a resource key for free at
-                https://configure.51degrees.com
+                https://51degrees.com/configure
                 Make sure to include the 'RegisteredName','RegisteredOwner',
                 'RegisteredCountry','Country','CountryCode','Region','Town',
                 'Latitude','Longitude' properties as they are used by this

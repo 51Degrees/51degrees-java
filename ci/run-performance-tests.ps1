@@ -1,8 +1,9 @@
 param(
     [Parameter(Mandatory)][string]$RepoName,
     [Parameter(Mandatory)][string]$Name,
-    # Set by the publish workflow to the version it built and installed. Not
-    # set when a pull request is tested, which builds the reactor itself.
+    # Set by the publish workflow, which built and installed the packages, to
+    # its label for the run. Not set when a pull request is tested, which
+    # builds the reactor itself.
     [string]$Version,
     [string]$IpIntelligenceUrl
 )
@@ -21,10 +22,12 @@ $summary = @{ HigherIsBetter = [ordered]@{}; LowerIsBetter = [ordered]@{} }
 $results = "$RepoName/test-results/performance"
 $failed = @()
 
-[string[]]$versionArgs = if ($Version) {
-    "-Ddevice-detection.version=$Version", "-Dip-intelligence.version=$Version"
+# A publish measures the versions it built, each package's own.
+if ($Version) {
+    . "$PSScriptRoot/release.ps1"
+    [string[]]$versionArgs = Get-ExampleVersionArguments $RepoName
 } else {
-    , '-Pdev'
+    [string[]]$versionArgs = '-Pdev'
 }
 
 # Pipeline API. The test writes its figures as JSON itself.

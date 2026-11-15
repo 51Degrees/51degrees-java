@@ -47,7 +47,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * <p>
  * In order to use the cloud service you will need to obtain a "Resource Key". A free resource key
  * configured with the properties required by this example may be obtained from
- * <a href="https://configure.51degrees.com/jqz435Nc?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-gettingstartedcloud.java&amp;utm_term=gettingstartedcloud">https://configure.51degrees.com/jqz435Nc?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-gettingstartedcloud.java&utm_term=gettingstartedcloud-2</a>
+ * <a href="https://51degrees.com/configure/jqz435Nc?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-gettingstartedcloud.java&amp;utm_term=gettingstartedcloud">https://51degrees.com/configure/jqz435Nc?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-gettingstartedcloud.java&utm_term=gettingstartedcloud-2</a>
  * <p>
  * The concepts of "pipeline", "flow data", "evidence" and "results" are illustrated.
  */
