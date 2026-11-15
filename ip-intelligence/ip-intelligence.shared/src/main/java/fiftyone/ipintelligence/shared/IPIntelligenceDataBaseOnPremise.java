@@ -32,6 +32,7 @@ import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
+import fiftyone.pipeline.engines.data.ProvidesValuesAsString;
 import fiftyone.pipeline.engines.flowelements.AspectEngine;
 import fiftyone.pipeline.engines.services.MissingPropertyService;
 import org.slf4j.Logger;
@@ -48,7 +49,8 @@ import static fiftyone.pipeline.util.Types.getPrimitiveTypeMap;
 /**
  * Base class used for all 51Degrees on-premise IP Intelligence results classes.
  */
-public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceDataBase {
+public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceDataBase
+    implements ProvidesValuesAsString {
 
     protected final Map<Class<?>, Class<?>> primitiveTypes;
     private final Object dataLock = new Object();
@@ -98,6 +100,22 @@ public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceData
      */
     protected abstract AspectPropertyValue<String> getValueAsString(
         String propertyName);
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The Property is first read as {@link #get(String)} reads it, so a
+     * Property that is not in the results throws, and a lazy loaded result
+     * is waited for, exactly as for that accessor.
+     */
+    @Override
+    public AspectPropertyValue<String> getStoredValueAsString(
+        String propertyName) {
+        get(propertyName);
+        synchronized (getLock) {
+            return getValueAsString(propertyName);
+        }
+    }
 
     /**
      * Get the value for the specified property as an {@link Integer}. If the
