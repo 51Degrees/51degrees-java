@@ -182,10 +182,11 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
 
     /**
      * If set to true, all Evidence is shared, which overrides the blocked
-     * HTTP headers and the rules for cookies, session values and query string
+     * HTTP headers and the rules for session values and query string
      * parameters. The keys that are never shared (an email address, the salt
      * for hashed email identifiers, the whole query string, the path and the
-     * Cookie header) are still not shared.
+     * Cookie header) are still not shared, and nor is any cookie whose name
+     * does not start with 51D_, the session cookie among them.
      * <p>
      * Default value is false
      * @param shareAll true to share all Evidence

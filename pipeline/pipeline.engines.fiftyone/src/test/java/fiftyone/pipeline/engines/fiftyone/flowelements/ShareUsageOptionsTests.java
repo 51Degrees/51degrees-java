@@ -213,7 +213,8 @@ public class ShareUsageOptionsTests {
 
         assertTrue(shared(sent, "header", "user-agent"));
         assertTrue(shared(sent, "header", "x-blocked"));
-        assertTrue(shared(sent, "cookie", "plain"));
+        // A cookie whose name does not start 51D_ is never shared.
+        assertFalse(shared(sent, "cookie", "plain"));
         assertTrue(shared(sent, "session", "plain"));
         assertTrue(shared(sent, "query", "plain"));
         assertFalse(shared(sent, "query", "id.email"));

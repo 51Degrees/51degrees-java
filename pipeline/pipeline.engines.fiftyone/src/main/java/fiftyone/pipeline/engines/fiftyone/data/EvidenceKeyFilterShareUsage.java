@@ -48,8 +48,10 @@ import static fiftyone.pipeline.core.Constants.*;
  *     {@link Constants#FIFTYONE_COOKIE_PREFIX} or has been configured to be
  *     shared using the constructor parameter.
  * 5) Not a header, cookie, session value or query string parameter.
- * When all Evidence is shared, everything is included. When all query string
- * parameters are shared, every query string parameter is included.
+ * When all Evidence is shared, everything is included apart from cookies that
+ * do not start with {@link Constants#FIFTYONE_COOKIE_PREFIX}, which are never
+ * shared. When all query string parameters are shared, every query string
+ * parameter is included.
  * The prefix of a key is everything before its first '.', and the field
  * everything after it. An email address, the salt for hashed email
  * identifiers, the query string, the path and the Cookie header are never
@@ -197,12 +199,24 @@ public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
             }
         }
 
+        int separator = lowerKey.indexOf(EVIDENCE_SEPERATOR);
+
+        // Only cookies that start with the 51Degrees cookie prefix are
+        // shared, whatever the configuration and even when all Evidence is
+        // shared. The session cookie is included only for the tracker, which
+        // compares it and never sends it.
+        if (separator > 0 &&
+            EVIDENCE_COOKIE_PREFIX.equals(lowerKey.substring(0, separator))) {
+            String field = lowerKey.substring(separator + 1);
+            return field.startsWith(Constants.FIFTYONE_COOKIE_PREFIX) ||
+                (includeSession && field.equals(sessionCookieName));
+        }
+
         if (shareAllEvidence) {
             return true;
         }
 
         boolean result;
-        int separator = lowerKey.indexOf(EVIDENCE_SEPERATOR);
         if (separator > 0) {
             String prefix = lowerKey.substring(0, separator);
             String field = lowerKey.substring(separator + 1);
@@ -211,12 +225,6 @@ public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
                     // Add the header to the list if the header name does not
                     // appear in the list of blocked headers.
                     result = blockedHttpHeaders.contains(field) == false;
-                    break;
-                case EVIDENCE_COOKIE_PREFIX:
-                    // Only add cookies that start with the 51Degrees cookie
-                    // prefix.
-                    result = field.startsWith(Constants.FIFTYONE_COOKIE_PREFIX) ||
-                        (includeSession && field.equals(sessionCookieName));
                     break;
                 case EVIDENCE_SESSION_PREFIX:
                     // Only add session values that start with the 51Degrees cookie
