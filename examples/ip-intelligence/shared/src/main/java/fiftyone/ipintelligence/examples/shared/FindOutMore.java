@@ -173,13 +173,28 @@ public final class FindOutMore {
      * @throws IllegalArgumentException if the tag is not a lower case slug
      */
     public static String link(String page, String example) {
-        if (example == null || SLUG.matcher(example).matches() == false) {
-            throw new IllegalArgumentException(
-                    "'" + example + "' is not a lower case slug.");
+        return link(page, example, "find-out-more");
+    }
+
+    /**
+     * The address of a page on 51degrees.com, tagged with the example and
+     * the part of its output that gives the link.
+     * @param page the path of the page
+     * @param example the example's tag
+     * @param term the part of the output, a lower case slug
+     * @return the address
+     * @throws IllegalArgumentException if a tag is not a lower case slug
+     */
+    public static String link(String page, String example, String term) {
+        for (String tag : new String[]{example, term}) {
+            if (tag == null || SLUG.matcher(tag).matches() == false) {
+                throw new IllegalArgumentException(
+                        "'" + tag + "' is not a lower case slug.");
+            }
         }
         return "https://51degrees.com/" +
                 page + "?utm_source=code&utm_medium=example" +
                 "&utm_campaign=51degrees-java&utm_content=" + example +
-                "&utm_term=find-out-more";
+                "&utm_term=" + term;
     }
 }
