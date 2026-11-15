@@ -129,6 +129,17 @@ public class Main {
                 .setAutoCloseElements(true)
                 .buildFromConfiguration(options)) {
                 show(pipeline, output, "10", "85", "FrostRisk");
+
+                // What the caller sees when a source property a script
+                // names is not available on the request. Here the reading
+                // has no humidity, so the sensor element does not supply
+                // Humidity. FrostRisk then has no value, and its message
+                // names the property that was missing and why, rather than
+                // the script guessing. Reading getValue() on it would throw,
+                // so check hasValue() first.
+                output.println();
+                output.println("4. A source property that is not available");
+                show(pipeline, output, "1", null, "FrostRisk");
             }
         }
     }
