@@ -136,6 +136,23 @@ public abstract class AspectEngineBase<
     }
 
     /**
+     * Whether a result may be stored in the cache, and served when it is
+     * found there. A result that holds a value created for the one request
+     * that asked for it, such as a 51Did, must be neither. See the
+     * <a href="https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/features/caching.md#L144">caching specification</a>:
+     * "A cache MUST NOT store a result that holds such a value, and MUST NOT
+     * serve one that it finds."
+     * <p>
+     * With lazy loading the result is checked before it has been processed.
+     * @param data the result to check
+     * @return true, unless an engine overrides this to keep a result out of
+     * the cache
+     */
+    protected boolean isCacheable(TData data) {
+        return true;
+    }
+
+    /**
      * Private method that checks if the result is already in the cache or not.
      * If it is then the result is added to 'data', if not then
      * {@link #processEngine(FlowData, AspectData)}is called to do so.
@@ -151,7 +168,8 @@ public abstract class AspectEngineBase<
             Object cacheResultsObject = cache.get(flowData);
             if (cacheResultsObject != null &&
                 getTypedDataKey().getType().isAssignableFrom(
-                    cacheResultsObject.getClass())) {
+                    cacheResultsObject.getClass()) &&
+                isCacheable((TData)cacheResultsObject)) {
                 // This is checked.
                 //noinspection unchecked
                 cacheResult = (TData)cacheResultsObject;
@@ -190,7 +208,7 @@ public abstract class AspectEngineBase<
             }
             // If there is a cache then add the result
             // of processing to the cache.
-            if (cache != null) {
+            if (cache != null && isCacheable(aspectData)) {
                 cache.put(flowData, flowData.getFromElement(this));
             }
         } else {
