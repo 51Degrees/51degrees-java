@@ -115,6 +115,24 @@ public class EmptyMetadataTests {
         }
     }
 
+    /**
+     * A whole number for a property whose typed accessor gives a Double is
+     * read as a Double, as the cloud service can give 3 for a pixel ratio
+     * of 3.0.
+     */
+    @Test
+    public void EmptyMetadata_WholeNumberDeclaredDouble_IsDouble()
+        throws Exception {
+        try (DeviceDetectionCloudEngine engine = buildEngine()) {
+            DeviceDataCloud data = process(engine,
+                "{ 'device': { 'pixelratio': 3 }, " +
+                    "'javascriptProperties': [] }");
+            Object value = data.getPixelRatio().getValue();
+            assertEquals(Double.class, value.getClass());
+            assertEquals(3.0, (Double) value, 0);
+        }
+    }
+
     @Test
     public void EmptyMetadata_ListIsRead() throws Exception {
         try (DeviceDetectionCloudEngine engine = buildEngine()) {
@@ -165,8 +183,14 @@ public class EmptyMetadataTests {
     }
 
     private DeviceDataCloud process(DeviceDetectionCloudEngine engine) {
+        return process(engine, RESPONSE);
+    }
+
+    private DeviceDataCloud process(
+        DeviceDetectionCloudEngine engine,
+        String response) {
         CloudRequestData cloudData = mock(CloudRequestData.class);
-        when(cloudData.getJsonResponse()).thenReturn(RESPONSE);
+        when(cloudData.getJsonResponse()).thenReturn(response);
 
         FlowData flowData = mock(FlowData.class);
         when(flowData.getFromElement(any(CloudRequestEngine.class)))
