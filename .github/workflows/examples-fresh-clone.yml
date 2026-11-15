@@ -1,27 +1,13 @@
 name: Examples from a fresh clone
 
-# Builds each product's console examples as AGENTS.md says, from a clone
-# with its submodules, against the packages published on Maven Central, with
-# the JDK and Maven the runner has. Then runs the getting started example
-# from the repository root with no settings. A fresh clone holds only a link
-# for each free data file. On Ubuntu the example downloads its file, which
-# tests the download, and the job keeps the file in the cache. The other
-# systems take it from there, so each file is downloaded once a run.
+# Temporary red: the other systems' job without the step that restores the
+# data file, so its example downloads the file again and the run step's
+# check fails. Device Detection only, as its file is the small one.
 
 on:
-  pull_request:
-    paths:
-      - 'examples/**'
-      - 'cxx'
-      - '.github/workflows/examples-fresh-clone.yml'
-      - 'ci/run-fresh-clone-example.ps1'
   push:
     branches:
-      - main
-      - rc
-  schedule:
-    - cron: '30 4 * * *'
-  workflow_dispatch:
+      - 'tmp/java-fresh-once-red'
 
 permissions:
   contents: read
@@ -36,9 +22,6 @@ jobs:
           - product: device-detection
             example: fiftyone.devicedetection.examples.console.GettingStartedOnPrem
             file: cxx/data/device-detection/51Degrees-LiteV4.1.hash
-          - product: ip-intelligence
-            example: fiftyone.ipintelligence.examples.console.GettingStartedOnPrem
-            file: cxx/data/ip-intelligence/51Degrees-LiteV41.ipi
     runs-on: ubuntu-latest
     steps:
       - name: Clone the repository with its submodules
@@ -46,12 +29,6 @@ jobs:
         with:
           submodules: recursive
           persist-credentials: false
-
-      - name: The runner's Java and Maven
-        shell: pwsh
-        run: |
-          java -version
-          mvn -v
 
       - name: Build the console examples against the published packages
         working-directory: examples/${{ matrix.product }}
@@ -64,32 +41,17 @@ jobs:
           ./ci/run-fresh-clone-example.ps1 -Product '${{ matrix.product }}'
           -Example '${{ matrix.example }}' -ExpectDownload $true
 
-      # The key follows the link, so a new free file gets a new entry, and
-      # the same file is kept once rather than once a run.
-      - name: Keep the data file for the other systems
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ matrix.file }}
-          key: fresh-clone-${{ matrix.product }}-${{ hashFiles(format('{0}.link', matrix.file)) }}
-          enableCrossOsArchive: true
-
   other-systems:
     name: ${{ matrix.product }} on ${{ matrix.os }}
     needs: download
     strategy:
       fail-fast: false
       matrix:
-        # macOS runners are shared by the whole organisation, so pull
-        # requests leave them out and the pushes and the daily run use them.
-        os: ${{ fromJSON(github.event_name == 'pull_request' && '["windows-latest"]' || '["windows-latest", "macos-latest"]') }}
-        product: [device-detection, ip-intelligence]
+        os: [windows-latest]
+        product: [device-detection]
         include:
           - product: device-detection
             example: fiftyone.devicedetection.examples.console.GettingStartedOnPrem
-            file: cxx/data/device-detection/51Degrees-LiteV4.1.hash
-          - product: ip-intelligence
-            example: fiftyone.ipintelligence.examples.console.GettingStartedOnPrem
-            file: cxx/data/ip-intelligence/51Degrees-LiteV41.ipi
     runs-on: ${{ matrix.os }}
     steps:
       - name: Clone the repository with its submodules
@@ -97,20 +59,6 @@ jobs:
         with:
           submodules: recursive
           persist-credentials: false
-
-      - name: Take the data file the Ubuntu job downloaded
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ matrix.file }}
-          key: fresh-clone-${{ matrix.product }}-${{ hashFiles(format('{0}.link', matrix.file)) }}
-          enableCrossOsArchive: true
-          fail-on-cache-miss: true
-
-      - name: The runner's Java and Maven
-        shell: pwsh
-        run: |
-          java -version
-          mvn -v
 
       - name: Build the console examples against the published packages
         working-directory: examples/${{ matrix.product }}
