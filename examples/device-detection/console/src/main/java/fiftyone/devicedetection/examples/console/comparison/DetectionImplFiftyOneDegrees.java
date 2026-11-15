@@ -25,16 +25,22 @@ package fiftyone.devicedetection.examples.console.comparison;
 import fiftyone.devicedetection.DeviceDetectionPipelineBuilder;
 import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import fiftyone.devicedetection.examples.shared.PropertyHelper;
+import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
 import fiftyone.devicedetection.shared.DeviceData;
 import fiftyone.devicedetection.shared.testhelpers.FileUtils;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.Constants;
+import fiftyone.pipeline.engines.data.AspectPropertyValue;
+import fiftyone.pipeline.engines.exceptions.PropertyMissingException;
 import fiftyone.pipeline.util.FileFinder;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * Implementation of {@link Detection} for 51Degrees.
@@ -66,18 +72,37 @@ public class DetectionImplFiftyOneDegrees {
 
     public static class FiftyOneProperties extends Detection.Properties.Base {
 
-        FiftyOneProperties(Detection.Request request, FlowData flowData) {
+        FiftyOneProperties(Detection.Request request, FlowData flowData,
+                           Set<String> lacking) {
             super(request);
             // transcribe properties so flowData can be freed
             DeviceData device = flowData.get(DeviceData.class);
-            // The free Lite data file does not have every property, so a
-            // property it lacks is read without stopping the comparison
-            isMobile = PropertyHelper.asString(PropertyHelper.tryGet(device::getIsMobile));
-            hardwareVendor = PropertyHelper.asString(PropertyHelper.tryGet(device::getHardwareVendor));
-            hardwareModel = PropertyHelper.asString(PropertyHelper.tryGet(device::getHardwareModel));
-            browserVendor = PropertyHelper.asString(PropertyHelper.tryGet(device::getBrowserVendor));
-            browserVersion = PropertyHelper.asString(PropertyHelper.tryGet(device::getBrowserVersion));
-            deviceType = PropertyHelper.asString(PropertyHelper.tryGet(device::getDeviceType));
+            // The free Lite data file does not have every property. A
+            // property it lacks reads as needing the Enterprise data file,
+            // rather than stopping the comparison or showing nothing.
+            isMobile = enterprise(lacking, "IsMobile", device::getIsMobile);
+            hardwareVendor = enterprise(lacking, "HardwareVendor", device::getHardwareVendor);
+            hardwareModel = enterprise(lacking, "HardwareModel", device::getHardwareModel);
+            browserVendor = enterprise(lacking, "BrowserVendor", device::getBrowserVendor);
+            browserVersion = enterprise(lacking, "BrowserVersion", device::getBrowserVersion);
+            deviceType = enterprise(lacking, "DeviceType", device::getDeviceType);
+        }
+
+        /**
+         * The value of a property as a string, or
+         * {@link DataFileHelper#NEEDS_ENTERPRISE} when the data file in use
+         * does not have the property.
+         */
+        private static <T> String enterprise(Set<String> lacking, String name,
+                                             Supplier<AspectPropertyValue<T>> getter) {
+            if (lacking.contains(name)) {
+                return DataFileHelper.NEEDS_ENTERPRISE;
+            }
+            try {
+                return PropertyHelper.asString(getter.get());
+            } catch (PropertyMissingException missing) {
+                return DataFileHelper.NEEDS_ENTERPRISE;
+            }
         }
 
         @Override
@@ -87,8 +112,12 @@ public class DetectionImplFiftyOneDegrees {
     }
 
     public static class FiftyOneSolution implements Detection.Solution {
+        private static final String[] PROPERTIES = {
+                "IsMobile", "HardwareVendor", "HardwareModel",
+                "BrowserVendor", "BrowserVersion", "DeviceType"};
         Pipeline pipeline;
         FiftyOneConfig config;
+        Set<String> lacking = new HashSet<>();
 
 
         @Override
@@ -118,13 +147,24 @@ public class DetectionImplFiftyOneDegrees {
                     .setProperty("isMobile")
                     .setProperty("deviceType")
                     .build();
+
+            // The properties the data file in use does not have, which only
+            // the Enterprise data file has
+            DeviceDetectionHashEngine engine =
+                    pipeline.getElement(DeviceDetectionHashEngine.class);
+            lacking = new HashSet<>();
+            for (String name : PROPERTIES) {
+                if (DataFileHelper.hasProperty(engine, name) == false) {
+                    lacking.add(name);
+                }
+            }
         }
 
         @Override
         public Detection.Properties detect(Detection.Request request) throws Exception {
             try (FlowData flowData = pipeline.createFlowData()){
                 flowData.addEvidence(request.getEvidence()).process();
-                return new FiftyOneProperties(request, flowData);
+                return new FiftyOneProperties(request, flowData, lacking);
             }
         }
 
