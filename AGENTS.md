@@ -176,17 +176,25 @@ The cloud examples need a resource key, which a person creates on the
 configuration page, so ask for one if none is set. A key with the properties
 most of the Device Detection examples use can be made
 [here](https://51degrees.com/configure/jqz435Nc?utm_source=github&utm_medium=docs&utm_campaign=51degrees-java&utm_content=agents.md&utm_term=cloud-examples).
-The Device Detection cloud example takes the key as its first argument, or
-from a `TestResourceKey` environment variable or system property.
+The Device Detection, IP Intelligence and Location cloud examples take the
+key as their first argument, or from the `_51DEGREES_RESOURCE_KEY`
+environment variable or system property. The Device Detection and IP
+Intelligence examples read the older `TestResourceKey` after it. The TAC and
+native model examples need a key with paid properties and read it from a
+variable of their own, which each names when it has no key.
 
 ```
 java -cp examples/device-detection/console/target/device-detection-java-examples.console-4.5.127-SNAPSHOT-jar-with-dependencies.jar fiftyone.devicedetection.examples.console.GettingStartedCloud <key>
 ```
 
 It prints the same `Input values:` and `Results:` blocks as the on-premise
-example. The IP Intelligence cloud examples read their key from
-`_51DEGREES_RESOURCE_KEY` first and `TestResourceKey` second, and
-`examples/ip-intelligence/README.md` gives the keys to create for them.
+example. `examples/ip-intelligence/README.md` gives the keys to create for
+the IP Intelligence examples.
+
+With no key, a cloud example does not fail. It says that it needs a resource
+key, names the variable to set, gives the page where a key is created, ends
+with its "Find out more" section and exits with code 0. The tests named
+`WithoutKey` run each one that way.
 
 ### Pitfalls
 
