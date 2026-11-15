@@ -24,7 +24,6 @@ package fiftyone.devicedetection.examples.shared;
 
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngineBuilder;
-import fiftyone.devicedetection.shared.testhelpers.FileUtils;
 import fiftyone.pipeline.engines.data.AspectEngineDataFile;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneDataFile;
@@ -74,6 +73,51 @@ public class DataFileHelper {
      * Enterprise data file.
      */
     public static final String NEEDS_ENTERPRISE = "needs the Enterprise data file";
+
+    /**
+     * Name of the paid Enterprise data file.
+     */
+    public static final String ENTERPRISE_HASH_DATA_FILE_NAME =
+        "Enterprise-HashV41.hash";
+
+    /**
+     * Name of the paid TAC data file.
+     */
+    public static final String TAC_HASH_DATA_FILE_NAME = "TAC-HashV41.hash";
+
+    /**
+     * Where the free Lite data file is in the data repository. A search for
+     * the path rather than the name does not stop at another file of the
+     * same name, such as a Git LFS pointer in an old device-detection-data
+     * folder.
+     */
+    public static final String LITE_HASH_DATA_FILE_PATH =
+        "device-detection/51Degrees-LiteV4.1.hash";
+
+    /**
+     * Where the free evidence file is in the data repository.
+     */
+    public static final String EVIDENCE_FILE_PATH =
+        "device-detection/20000 Evidence Records.yml";
+
+    /**
+     * Find the best data file there is below the project root: the TAC file,
+     * then the Enterprise file, then the free Lite file.
+     * @return the path of the file, or null when there is none
+     */
+    public static String getHashFileName() {
+        for (String name : new String[] {
+            TAC_HASH_DATA_FILE_NAME,
+            ENTERPRISE_HASH_DATA_FILE_NAME,
+            LITE_HASH_DATA_FILE_PATH}) {
+            try {
+                return getFilePath(name).getPath();
+            } catch (Exception e) {
+                // Not there, so try the next.
+            }
+        }
+        return null;
+    }
 
 public static class DatafileInfo {
         FiftyOneDataFile fileInfo;
@@ -210,7 +254,7 @@ public static class DatafileInfo {
     @SuppressWarnings("RedundantThrows")
     public static File getEvidenceFile(String evidenceFilename) throws Exception {
         if (Objects.isNull(evidenceFilename)) {
-            evidenceFilename = FileUtils.EVIDENCE_FILE_PATH;
+            evidenceFilename = EVIDENCE_FILE_PATH;
         }
 
         File evidenceFile;
@@ -233,10 +277,10 @@ public static class DatafileInfo {
     @SuppressWarnings("RedundantThrows")
     public static String getDataFileLocation(String dataFilename) throws Exception {
         if (Objects.isNull(dataFilename)) {
-            dataFilename = FileUtils.getHashFileName();
+            dataFilename = getHashFileName();
         }
         if (Objects.isNull(dataFilename)) {
-            dataFilename = FileUtils.LITE_HASH_DATA_FILE_PATH;
+            dataFilename = LITE_HASH_DATA_FILE_PATH;
         }
         String dataFileLocation;
         try {

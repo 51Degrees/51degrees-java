@@ -22,7 +22,6 @@
 
 package fiftyone.devicedetection.examples.shared;
 
-import fiftyone.devicedetection.shared.testhelpers.KeyUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +40,40 @@ public class KeyHelper {
         Collections.unmodifiableList(Arrays.asList(
             "_51DEGREES_RESOURCE_KEY",
             "_51DEGREES_RESOURCE_KEY_BESPOKE"));
+
+    /**
+     * Read a key from an environment variable of the name given, then of the
+     * name in upper case, then from a system property of the name given.
+     * @param keyName name of the key
+     * @return the key, or null when none of them is set
+     */
+    public static String getNamedKey(String keyName) {
+        String resourceKey = System.getenv(keyName);
+        if (Objects.isNull(resourceKey)) {
+            resourceKey = System.getenv(keyName.toUpperCase());
+            if (Objects.isNull(resourceKey)) {
+                resourceKey = System.getProperty(keyName);
+            }
+        }
+        return resourceKey;
+    }
+
+    /**
+     * Whether a key cannot be valid, being missing, too short, or not URL
+     * safe Base64 of enough bytes.
+     * @param keyValue value to check
+     * @return true when the key cannot be valid
+     */
+    public static boolean isInvalidKey(String keyValue) {
+        Base64.Decoder decoder = Base64.getUrlDecoder();
+        try {
+            return Objects.isNull(keyValue) ||
+                keyValue.trim().length() < 19 ||
+                decoder.decode(keyValue).length < 14;
+        } catch (IllegalArgumentException e) {
+            return true;
+        }
+    }
 
     static final String CREATE_KEY_URL =
         "https://51degrees.com/configure/?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-devicedetection-examples-shared-keyhelper.java&utm_term=no-resource-key";
@@ -84,7 +117,7 @@ public class KeyHelper {
         names.addAll(exampleNames);
         for (String name : names) {
             String value = read.apply(name);
-            if (KeyUtils.isInvalidKey(value) == false) {
+            if (isInvalidKey(value) == false) {
                 return value.trim();
             }
         }
@@ -141,7 +174,7 @@ public class KeyHelper {
             System.getenv(name),
             System.getenv(name.toUpperCase()),
             System.getProperty(name)}) {
-            if (KeyUtils.isInvalidKey(value) == false) {
+            if (isInvalidKey(value) == false) {
                 return value;
             }
         }
@@ -178,10 +211,10 @@ public class KeyHelper {
                                              String errorMessage,
                                              boolean shouldThrow) {
         if (Objects.isNull(value)) {
-            value = KeyUtils.getNamedKey(variableName);
+            value = getNamedKey(variableName);
 
         }
-        if (KeyUtils.isInvalidKey(value)) {
+        if (isInvalidKey(value)) {
             logger.error("\nTo access Cloud Services you must supply a " +
                     "\"ResourceKey\" in one of the following ways: \n - in the " +
                     "configuration file of an example,\n - as a command line parameter of a " +
@@ -196,7 +229,7 @@ public class KeyHelper {
 
         // Keep a valid key for next time. System.setProperty throws on null,
         // and an invalid key is not worth keeping.
-        if (KeyUtils.isInvalidKey(value) == false) {
+        if (isInvalidKey(value) == false) {
             System.setProperty(variableName, value);
         }
         return value;

@@ -23,16 +23,16 @@
 package fiftyone.devicedetection.examples.console;
 
 import fiftyone.devicedetection.examples.shared.EvidenceHelper;
-import fiftyone.devicedetection.shared.testhelpers.FileUtils;
+import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import org.junit.Test;
 
 public class GettingStartedOnPremTest {
 
     @Test
     public void gettingStartedOnPremTest() throws Exception {
-        GettingStartedOnPrem.run(FileUtils.getHashFileName() == null
-                        ? FileUtils.LITE_HASH_DATA_FILE_PATH
-                        : FileUtils.getHashFileName(),
+        GettingStartedOnPrem.run(DataFileHelper.getHashFileName() == null
+                        ? DataFileHelper.LITE_HASH_DATA_FILE_PATH
+                        : DataFileHelper.getHashFileName(),
                 EvidenceHelper.setUpEvidence(), System.out);
     }
 }

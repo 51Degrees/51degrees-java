@@ -22,14 +22,14 @@
 
 package fiftyone.devicedetection.examples.console;
 
-import fiftyone.devicedetection.shared.testhelpers.FileUtils;
+import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import org.junit.Test;
 
 public class MetadataOnPremTest {
     @Test
     public void gettingMetaDataOnPremTest() throws Exception {
-        MetadataOnPrem.run(FileUtils.getHashFileName() == null
-                ? FileUtils.LITE_HASH_DATA_FILE_PATH
-                : FileUtils.getHashFileName(), System.out);
+        MetadataOnPrem.run(DataFileHelper.getHashFileName() == null
+                ? DataFileHelper.LITE_HASH_DATA_FILE_PATH
+                : DataFileHelper.getHashFileName(), System.out);
     }
 }
