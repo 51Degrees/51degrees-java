@@ -84,6 +84,11 @@ public class DeviceDetectionHashEngine
     private volatile boolean propertyIndexesFixed;
 
     /**
+     * The Metrics component, made the first time it is needed.
+     */
+    private volatile MetricsComponentMetaData metricsComponent;
+
+    /**
      * Construct a new instance of the {@link DeviceDetectionHashEngine}.
      * @param logger logger instance to use for logging
      * @param dataFile data file to read the data set from
@@ -447,6 +452,32 @@ public class DeviceDetectionHashEngine
      * @return meta data for metric properties
      */
     private List<FiftyOneAspectPropertyMetaData> getMetricProperties() {
+        return getMetricsComponent().getPropertyList();
+    }
+
+    /**
+     * Get the Metrics component, which holds the match metric properties. It
+     * does not depend on the data file, so it is made once. Two threads that
+     * both find it missing each make one the same as the other.
+     * @return the Metrics component
+     */
+    private MetricsComponentMetaData getMetricsComponent() {
+        MetricsComponentMetaData component = metricsComponent;
+        if (component == null) {
+            component = newMetricsComponent();
+            metricsComponent = component;
+        }
+        return component;
+    }
+
+    /**
+     * Make the Metrics component and the match metric properties in it, which
+     * the native code does not include in its metadata, as the table of match
+     * metric properties gives them.
+     * @return new Metrics component
+     */
+    private MetricsComponentMetaData newMetricsComponent() {
+        MetricsComponentMetaData component = new MetricsComponentMetaData();
         List<String> dataFileList = Arrays.asList(
             "Lite", "Premium", "Enterprise", "TAC");
         FiftyOneAspectPropertyMetaData[] metricProperties =
@@ -467,7 +498,7 @@ public class DeviceDetectionHashEngine
                 false,
                 false,
                 Constants.MatchMetrics.MATCHED_NODES_DESCRIPTION,
-                null,
+                component,
                 Arrays.asList(),
                 new ValueMetaDataDefault("0")),
             new FiftyOneAspectPropertyMetaDataDefault(
@@ -485,7 +516,7 @@ public class DeviceDetectionHashEngine
                 false,
                 false,
                 Constants.MatchMetrics.DIFFERENCE_DESCRIPTION,
-                null,
+                component,
                 Arrays.asList(),
                 new ValueMetaDataDefault("0")),
             new FiftyOneAspectPropertyMetaDataDefault(
@@ -503,7 +534,7 @@ public class DeviceDetectionHashEngine
                 false,
                 false,
                 Constants.MatchMetrics.DRIFT_DESCRIPTION,
-                null,
+                component,
                 Arrays.asList(),
                 new ValueMetaDataDefault("0")),
             new FiftyOneAspectPropertyMetaDataDefault(
@@ -521,7 +552,7 @@ public class DeviceDetectionHashEngine
                 false,
                 false,
                 Constants.MatchMetrics.DEVICE_ID_DESCRIPTION,
-                null,
+                component,
                 Arrays.asList(),
                 new ValueMetaDataDefault("0-0-0-0")),
             new FiftyOneAspectPropertyMetaDataDefault(
@@ -539,7 +570,7 @@ public class DeviceDetectionHashEngine
                 false,
                 false,
                 Constants.MatchMetrics.USER_AGENTS_DESCRIPTION,
-                null,
+                component,
                 Arrays.asList(),
                 new ValueMetaDataDefault("n/a")),
             new FiftyOneAspectPropertyMetaDataDefault(
@@ -557,7 +588,7 @@ public class DeviceDetectionHashEngine
                 false,
                 false,
                 Constants.MatchMetrics.ITERATIONS_DESCRIPTION,
-                null,
+                component,
                 Arrays.asList(),
                 new ValueMetaDataDefault("0")),
             new FiftyOneAspectPropertyMetaDataDefault(
@@ -570,12 +601,12 @@ public class DeviceDetectionHashEngine
                 null,
                 (byte) 0,
                 true,
-                true,
+                false,
                 false,
                 false,
                 false,
                 Constants.MatchMetrics.METHOD_DESCRIPTION,
-                null,
+                component,
                 Arrays.asList(
                     new ValueMetaDataDefault("NONE"),
                     new ValueMetaDataDefault("PERFORMANCE"),
@@ -583,7 +614,10 @@ public class DeviceDetectionHashEngine
                     new ValueMetaDataDefault( "PREDICTIVE")),
                 new ValueMetaDataDefault("NONE"))
         };
-        return Arrays.asList(metricProperties);
+        for (FiftyOneAspectPropertyMetaData property : metricProperties) {
+            component.addProperty(property);
+        }
+        return component;
     }
 
     @Override
