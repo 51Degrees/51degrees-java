@@ -284,6 +284,7 @@ public class DataUpdateServiceTests {
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(true);
         config.setPollingIntervalSeconds(0);
+        config.setMaxRandomisationSeconds(1);
 
         AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
         file.setEngine(engine);
@@ -294,6 +295,7 @@ public class DataUpdateServiceTests {
 
         // Assert
         // Make sure the time interval is as expected
+        try { Thread.sleep(2000); } catch (InterruptedException e) { }
         verify(futureFactory).schedule(
             any(Runnable.class),
             longThat(new LessOrEqual<>(
