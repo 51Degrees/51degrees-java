@@ -47,6 +47,7 @@
 
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
 import fiftyone.devicedetection.shared.DeviceData;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
@@ -85,6 +86,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * The configuration file is <code>src/main/resources/gettingStartedMixed.xml</code>.
  */
 public class GettingStartedMixed {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedmixed.java";
+
     private static final Logger logger = LoggerFactory.getLogger(GettingStartedMixed.class);
 
     public static final String DD_DATA_FILE_DEFAULT = "device-detection/51Degrees-LiteV4.1.hash";
@@ -105,6 +112,8 @@ public class GettingStartedMixed {
 
         List<Map<String, String>> evidence = setUpCombinedEvidence();
         run(ddDataFile, ipiDataFile, evidence, System.out);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     /**

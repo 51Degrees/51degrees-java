@@ -22,6 +22,7 @@
 
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.common.testhelpers.LogbackHelper;
 import fiftyone.devicedetection.DeviceDetectionOnPremisePipelineBuilder;
 import fiftyone.devicedetection.DeviceDetectionPipelineBuilder;
@@ -58,6 +59,12 @@ import static fiftyone.pipeline.engines.Constants.PerformanceProfiles.*;
  * for more information about adjusting performance.
  */
 public class PerformanceBenchmark {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-devicedetection-examples-console-performancebenchmark.java";
+
     // the default number of threads if one is not provided.
     public static final int DEFAULT_NUMBER_OF_THREADS = 4;
     // the number of tests to execute.
@@ -106,6 +113,8 @@ public class PerformanceBenchmark {
                 evidenceFilename,
                 numberOfThreads,
                 new PrintWriter(System.out,true));
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     /**

@@ -22,6 +22,7 @@
 
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.IPIntelligencePipelineBuilder;
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
 import fiftyone.ipintelligence.shared.testhelpers.KeyUtils;
@@ -178,6 +179,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  */
 public class UpdateDataFile {
 
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-ipintelligence-examples-console-updatedatafile.java";
+
     public static final String UPDATE_EXAMPLE_LICENSE_KEY_NAME = "LicenseKey";
     public static final String DEFAULT_DATA_FILENAME =
             System.getProperty("user.dir") + File.separator +  ENTERPRISE_DATA_FILE_REL_PATH;
@@ -198,6 +205,8 @@ public class UpdateDataFile {
         String licenseKey = args.length > 0 ? args[0] : null;
         String dataFilename = args.length > 1 ? args[1] : null;
         run(dataFilename, licenseKey, true);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     /**

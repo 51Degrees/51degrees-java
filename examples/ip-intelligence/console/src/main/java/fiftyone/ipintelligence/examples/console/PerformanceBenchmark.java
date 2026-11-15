@@ -46,6 +46,7 @@
 
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.common.testhelpers.LogbackHelper;
 import fiftyone.ipintelligence.IPIntelligenceOnPremisePipelineBuilder;
 import fiftyone.ipintelligence.IPIntelligencePipelineBuilder;
@@ -81,6 +82,12 @@ import static fiftyone.pipeline.engines.Constants.PerformanceProfiles.*;
  * <p>
  */
 public class PerformanceBenchmark {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-ipintelligence-examples-console-performancebenchmark.java";
+
     // the default number of threads if one is not provided.
     public static final int DEFAULT_NUMBER_OF_THREADS = 4;
     // the number of tests to execute.
@@ -132,6 +139,8 @@ public class PerformanceBenchmark {
                 evidenceFilename,
                 numberOfThreads,
                 new PrintWriter(System.out,true));
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     /**
