@@ -41,8 +41,13 @@ import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -57,6 +62,13 @@ import org.json.JSONArray;
  */
 public class DeviceDetectionCloudEngine
     extends CloudAspectEngineBase<DeviceDataCloud> {
+    /**
+     * The type of value each typed accessor of the device data gives, keyed
+     * by the property name in lower case, so that a value the metadata does
+     * not describe can be given as the type its accessor declares.
+     */
+    private static final Map<String, Type> DECLARED_TYPES = declaredTypes();
+
     volatile List<AspectPropertyMetaData> aspectProperties;
     private String dataSourceTier;
     CloudRequestEngine cloudRequestEngine;
@@ -443,11 +455,36 @@ public class DeviceDetectionCloudEngine
         }
         if (value instanceof BigDecimal ||
             value instanceof Double ||
-            value instanceof Float) {
+            value instanceof Float ||
+            (value instanceof Number &&
+                Double.class.equals(DECLARED_TYPES.get(
+                    key.toLowerCase(Locale.ROOT))))) {
             return new AspectPropertyValueDefault<>(
                 ((Number) value).doubleValue());
         }
         return new AspectPropertyValueDefault<>(value);
+    }
+
+    /**
+     * The type of value each typed accessor of {@link DeviceDataCloud}
+     * gives, being the type argument of the {@link AspectPropertyValue} it
+     * returns, keyed by the property name in lower case.
+     * @return the declared types
+     */
+    private static Map<String, Type> declaredTypes() {
+        Map<String, Type> types = new HashMap<>();
+        for (Method method : DeviceDataCloud.class.getMethods()) {
+            Type returned = method.getGenericReturnType();
+            if (method.getParameterCount() == 0 &&
+                method.getName().startsWith("get") &&
+                AspectPropertyValue.class.equals(method.getReturnType()) &&
+                returned instanceof ParameterizedType) {
+                types.put(
+                    method.getName().substring(3).toLowerCase(Locale.ROOT),
+                    ((ParameterizedType) returned).getActualTypeArguments()[0]);
+            }
+        }
+        return Collections.unmodifiableMap(types);
     }
 
     /**
