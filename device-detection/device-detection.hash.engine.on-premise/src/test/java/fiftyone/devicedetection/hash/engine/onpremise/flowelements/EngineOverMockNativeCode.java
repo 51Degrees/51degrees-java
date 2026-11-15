@@ -26,12 +26,16 @@ import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.ComponentMeta
 import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.EngineHashSwig;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.MetaDataSwig;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.PropertyMetaDataCollectionSwig;
+import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.VectorStringSwig;
 import org.slf4j.Logger;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collections;
 
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
@@ -68,6 +72,28 @@ class EngineOverMockNativeCode {
         set("engine", nativeEngine);
         set("properties", new ArrayList<>());
         set("logger", mock(Logger.class));
+        // No data file, so a refresh from memory updates no file metadata.
+        set("dataFiles", new ArrayList<>());
+        // The property indexes are fixed, as they are after the first load.
+        set("propertyIndexes", Collections.emptyMap());
+        set("propertyIndexesFixed", true);
+        setKeys();
+    }
+
+    /**
+     * Set the evidence keys the native engine gives from now on.
+     * @param keys the keys
+     */
+    void setKeys(String... keys) {
+        VectorStringSwig vector = mock(
+            VectorStringSwig.class,
+            withSettings().defaultAnswer(CALLS_REAL_METHODS));
+        doReturn(keys.length).when(vector).size();
+        for (int i = 0; i < keys.length; i++) {
+            doReturn(keys[i]).when(vector).get(i);
+        }
+        doNothing().when(vector).delete();
+        when(nativeEngine.getKeys()).thenReturn(vector);
     }
 
     private void set(String name, Object value) throws Exception {
