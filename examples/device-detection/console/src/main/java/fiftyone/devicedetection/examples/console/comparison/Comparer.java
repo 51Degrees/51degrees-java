@@ -40,8 +40,9 @@ import java.util.concurrent.*;
 import static fiftyone.devicedetection.examples.shared.DataFileHelper.getEvidenceFile;
 
 /**
- * Unlike other examples, use of this example requires a 51Degrees Enterprise data file, which can
- * be obtained on a trial basis or purchased from our pricing page <a href="https://51degrees.com/pricing?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-comparison-comparer.java&amp;utm_term=comparer">here</a>.
+ * This example uses a 51Degrees Enterprise data file when there is one, and otherwise the free
+ * Lite data file, which has fewer properties. The Enterprise data file can be obtained on a
+ * trial basis or purchased from our pricing page <a href="https://51degrees.com/pricing?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-comparison-comparer.java&amp;utm_term=comparer">here</a>.
  *<p>
  * This class provides a framework and runner for comparing different device detection solutions.
  * It is provided in a basic form to compare detection time. Different solutions may be compared

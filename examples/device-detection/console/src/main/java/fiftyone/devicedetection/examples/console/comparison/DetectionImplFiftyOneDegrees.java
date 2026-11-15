@@ -23,13 +23,16 @@
 package fiftyone.devicedetection.examples.console.comparison;
 
 import fiftyone.devicedetection.DeviceDetectionPipelineBuilder;
+import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import fiftyone.devicedetection.examples.shared.PropertyHelper;
 import fiftyone.devicedetection.shared.DeviceData;
+import fiftyone.devicedetection.shared.testhelpers.FileUtils;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.Constants;
 import fiftyone.pipeline.util.FileFinder;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Objects;
 
@@ -42,8 +45,22 @@ public class DetectionImplFiftyOneDegrees {
     public static class FiftyOneConfig {
         String dataFile;
 
+        /**
+         * Uses the Enterprise data file when there is one, and otherwise
+         * the free Lite data file, which is downloaded if it is missing,
+         * so that the comparison runs from a fresh clone.
+         * @throws IllegalArgumentException if neither file can be found
+         */
         public FiftyOneConfig() throws IllegalArgumentException {
-            dataFile = FileFinder.getFilePath(ENTERPRISE_HASH_DATA_FILE_NAME).getAbsolutePath();
+            File enterprise;
+            try {
+                enterprise = FileFinder.getFilePath(ENTERPRISE_HASH_DATA_FILE_NAME);
+            } catch (IllegalArgumentException notFound) {
+                enterprise = null;
+            }
+            dataFile = (enterprise != null ? enterprise :
+                    DataFileHelper.findDataFile(FileUtils.LITE_HASH_DATA_FILE_PATH))
+                    .getAbsolutePath();
         }
     }
 
@@ -53,12 +70,14 @@ public class DetectionImplFiftyOneDegrees {
             super(request);
             // transcribe properties so flowData can be freed
             DeviceData device = flowData.get(DeviceData.class);
-            isMobile = PropertyHelper.asString(device.getIsMobile());
-            hardwareVendor = PropertyHelper.asString(device.getHardwareVendor());
-            hardwareModel = PropertyHelper.asString(device.getHardwareModel());
-            browserVendor = PropertyHelper.asString(device.getBrowserVendor());
-            browserVersion = PropertyHelper.asString(device.getBrowserVersion());
-            deviceType = PropertyHelper.asString(device.getDeviceType());
+            // The free Lite data file does not have every property, so a
+            // property it lacks is read without stopping the comparison
+            isMobile = PropertyHelper.asString(PropertyHelper.tryGet(device::getIsMobile));
+            hardwareVendor = PropertyHelper.asString(PropertyHelper.tryGet(device::getHardwareVendor));
+            hardwareModel = PropertyHelper.asString(PropertyHelper.tryGet(device::getHardwareModel));
+            browserVendor = PropertyHelper.asString(PropertyHelper.tryGet(device::getBrowserVendor));
+            browserVersion = PropertyHelper.asString(PropertyHelper.tryGet(device::getBrowserVersion));
+            deviceType = PropertyHelper.asString(PropertyHelper.tryGet(device::getDeviceType));
         }
 
         @Override
@@ -77,7 +96,11 @@ public class DetectionImplFiftyOneDegrees {
             try {
                 this.config = new FiftyOneConfig();
             } catch (IllegalArgumentException e) {
-                throw new FileNotFoundException("Enterprise data file not found");
+                FileNotFoundException notFound = new FileNotFoundException(
+                        "Neither the Enterprise data file nor the free Lite " +
+                        "data file was found");
+                notFound.initCause(e);
+                throw notFound;
             }
 
             pipeline = new DeviceDetectionPipelineBuilder()
