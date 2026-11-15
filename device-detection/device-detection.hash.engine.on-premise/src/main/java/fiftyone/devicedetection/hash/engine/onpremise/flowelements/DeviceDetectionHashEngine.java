@@ -264,6 +264,34 @@ public class DeviceDetectionHashEngine
             null : new ProfileMetaDataHash(this, profile);
     }
 
+    /**
+     * Get the ids of the profiles that hold a value of a property, such as a
+     * TAC or a native model name, from the native engine. The property name
+     * and the value are both matched exactly, as the data file holds them,
+     * so a value in another case does not match. The ids are in ascending
+     * order and each appears once. A property named with
+     * {@link DeviceDetectionHashEngineBuilder#setIndexedProperties(List)} is
+     * found through the native index, and any other by reading every
+     * profile, which gives the same ids more slowly.
+     * @see <a href="https://github.com/51Degrees/specifications/blob/main/device-detection-specification/pipeline-elements/device-detection-on-premise.md#profiles-for-a-property-value">Specification</a>
+     * @param propertyName name of the property, such as TAC or NativeModel
+     * @param valueName the value of the property
+     * @return ids of the profiles holding the value, empty when none do
+     */
+    public List<Long> getProfileIdsForPropertyValue(
+        String propertyName,
+        String valueName) {
+        List<Long> result = new ArrayList<>();
+        try (VectorUInt32Swig ids =
+                 engine.getProfileIdsForPropertyValue(propertyName, valueName)) {
+            int size = ids.size();
+            for (int i = 0; i < size; i++) {
+                result.add(ids.get(i));
+            }
+        }
+        return result;
+    }
+
     @Override
     public CloseableIterable<ComponentMetaData> getComponents() {
         // The Metrics component holds the match metrics, which the data file
