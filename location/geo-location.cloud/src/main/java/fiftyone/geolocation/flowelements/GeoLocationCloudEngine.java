@@ -256,8 +256,10 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
                     new ArrayList<String>(),
                     true,
                     null,
-                    item.delayExecution,
-                    item.evidenceProperties);
+                    item.delayExecution != null ?
+                        item.delayExecution : false,
+                    item.evidenceProperties != null ?
+                        item.evidenceProperties : new ArrayList<String>());
                 
                 loaded.add(property);
             }

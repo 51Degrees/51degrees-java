@@ -164,7 +164,6 @@ public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
         this.shareAllQueryStringParameters = shareAllQueryStringParameters;
         // The Cookie header carries every cookie, including the ones the
         // cookie rule leaves out.
-        this.blockedHttpHeaders.add("cookies");
         this.blockedHttpHeaders.add("cookie");
         this.includeSession = includeSession;
         this.sessionCookieName = sessionCookieName == null ?
