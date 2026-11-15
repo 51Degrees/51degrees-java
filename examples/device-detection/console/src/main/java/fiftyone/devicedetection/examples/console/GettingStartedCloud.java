@@ -88,7 +88,12 @@ public class GettingStartedCloud {
                            OutputStream outputStream) throws Exception {
         logger.info("Running GettingStarted Cloud example");
 
-        resourceKey = KeyHelper.getOrSetTestResourceKey(resourceKey);
+        // With no resource key, the helper has said how to set one, and the
+        // example ends without an error.
+        resourceKey = KeyHelper.getOrSetTestResourceKey(resourceKey, false);
+        if (KeyHelper.hasResourceKey(resourceKey) == false) {
+            return;
+        }
 
         /* In this example, we use the DeviceDetectionPipelineBuilder and configure it in code.
 

@@ -149,6 +149,17 @@ public class KeyHelper {
     }
 
     /**
+     * True when the value can be a resource key. An example given no key
+     * ends there, after saying how to set one, without an error, so that
+     * it can be run with no arguments or settings.
+     * @param value the key, or null
+     * @return true if the value can be a resource key
+     */
+    public static boolean hasResourceKey(String value) {
+        return KeyUtils.isInvalidKey(value) == false;
+    }
+
+    /**
      * Obtain a resource key either from environment variable or from a property.
      */
     public static String getOrSetTestResourceKey() {

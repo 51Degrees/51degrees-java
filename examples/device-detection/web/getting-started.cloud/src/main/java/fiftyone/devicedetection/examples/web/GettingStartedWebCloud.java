@@ -22,6 +22,7 @@
 
 package fiftyone.devicedetection.examples.web;
 
+import fiftyone.devicedetection.examples.shared.KeyHelper;
 import fiftyone.devicedetection.shared.DeviceData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.web.Constants;
@@ -59,7 +60,12 @@ public class GettingStartedWebCloud extends HttpServlet {
         String resourceKey = args.length > 0 ? args[0] : null;
         logger.info("Running Example {}", GettingStartedWebCloud.class);
         // check resource key and set as System Property
-        getOrSetTestResourceKey(resourceKey);
+        // With no resource key, the helper says how to set one, and the
+        // example ends without an error.
+        resourceKey = getOrSetTestResourceKey(resourceKey, false);
+        if (KeyHelper.hasResourceKey(resourceKey) == false) {
+            return;
+        }
 
         String portEnv = System.getenv("PORT");
         if (portEnv != null) {

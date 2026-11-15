@@ -63,7 +63,12 @@ public class MetadataCloud {
     public static void run(String resourceKey, OutputStream output) throws Exception {
         logger.info("Running MetadataCloud example");
 
-        resourceKey = KeyHelper.getOrSetTestResourceKey(resourceKey);
+        // With no resource key, the helper has said how to set one, and the
+        // example ends without an error.
+        resourceKey = KeyHelper.getOrSetTestResourceKey(resourceKey, false);
+        if (KeyHelper.hasResourceKey(resourceKey) == false) {
+            return;
+        }
 
         // Build a new on-premise Hash engine with the low memory performance profile.
         // Note that there is no need to construct a complete pipeline in order to access

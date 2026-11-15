@@ -51,9 +51,23 @@ public class MinimalExample {
     private static final String EXAMPLE_TAG =
             "console-src-main-java-fiftyone-devicedetection-examples-console-minimalexample.java";
 
+    /**
+     * Where to create a resource key with the property this example reads.
+     */
+    private static final String CREATE_KEY_URL =
+            "https://51degrees.com/configure/jqz435Nc?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=" +
+            EXAMPLE_TAG + "&utm_term=no-resource-key";
+
     public static void main(String[] args) throws Exception {
         String resource = args.length > 0 ? args[0] : null;
-        run(resource);
+        if (resource == null) {
+            // With no resource key, say how to get one and end without an
+            // error.
+            System.out.println("This example needs a resource key as its " +
+                    "first argument. Create one at " + CREATE_KEY_URL);
+        } else {
+            run(resource);
+        }
         FindOutMore.write(System.out, EXAMPLE_TAG,
                 FindOutMore.CLOUD_REPOSITORIES);
     }

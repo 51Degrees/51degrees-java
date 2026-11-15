@@ -23,6 +23,7 @@
 package fiftyone.devicedetection.examples.console;
 
 import fiftyone.devicedetection.examples.shared.FindOutMore;
+import fiftyone.devicedetection.examples.shared.KeyHelper;
 import fiftyone.devicedetection.cloud.data.MultiDeviceDataCloud;
 import fiftyone.devicedetection.cloud.flowelements.HardwareProfileCloudEngineBuilder;
 import fiftyone.devicedetection.shared.Constants;
@@ -64,7 +65,14 @@ public class NativeModelCloud {
         // of how to do this using a configuration file instead, see the TacCloud example.
         // For more information about builders in general see the documentation at
         // https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-nativemodelcloud.java&utm_term=run
-        resourceKey = getOrSetSuperResourceKey(resourceKey, NATIVE_MODEL_EXAMPLE_RESOURCE_KEY_NAME);
+        // With no resource key, the helper has said how to set one, and the
+        // example ends without an error.
+        resourceKey = getOrSetSuperResourceKey(resourceKey,
+                NATIVE_MODEL_EXAMPLE_RESOURCE_KEY_NAME, false);
+        if (KeyHelper.hasResourceKey(resourceKey) == false) {
+            FindOutMore.write(os, EXAMPLE_TAG, FindOutMore.CLOUD_REPOSITORIES);
+            return;
+        }
 
         try (PrintWriter output = new PrintWriter(os)) {
             output.println("This example shows the details of devices " +
