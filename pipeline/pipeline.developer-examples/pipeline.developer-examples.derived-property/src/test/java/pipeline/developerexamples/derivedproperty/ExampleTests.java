@@ -109,6 +109,24 @@ public class ExampleTests {
         assertTrue(part.contains("derived.FrostRisk = "), part);
     }
 
+    /**
+     * The example shows, rather than only describes, what the caller sees
+     * when a source property a script names is not available: a property
+     * with no value and a message naming what was missing
+     * (pipeline-specification/required-examples.md, "This case MUST be
+     * shown rather than only described").
+     */
+    @Test
+    public void Main_ShowsAMissingSourceProperty() throws Exception {
+        String part = part(runMain(),
+            "4. A source property that is not available");
+        assertTrue(part.contains("derived.FrostRisk = no value. Derived " +
+            "property 'FrostRisk' has no value because 1 source property " +
+            "was not available. 'sensor.Humidity' (element 'sensor' has no " +
+            "value for 'Humidity': property not present on this request)."),
+            part);
+    }
+
     @Test
     public void Main_Runs() throws Exception {
         String output = runMain();
