@@ -22,24 +22,24 @@
 
 package fiftyone.pipeline.derivedproperty.flowelements;
 
-import org.yaml.snakeyaml.LoaderOptions;
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.error.Mark;
-import org.yaml.snakeyaml.error.MarkedYAMLException;
-import org.yaml.snakeyaml.error.YAMLException;
-import org.yaml.snakeyaml.nodes.MappingNode;
-import org.yaml.snakeyaml.nodes.Node;
-import org.yaml.snakeyaml.nodes.NodeTuple;
-import org.yaml.snakeyaml.nodes.ScalarNode;
-import org.yaml.snakeyaml.nodes.SequenceNode;
+import org.snakeyaml.engine.v2.api.LoadSettings;
+import org.snakeyaml.engine.v2.api.lowlevel.Compose;
+import org.snakeyaml.engine.v2.exceptions.Mark;
+import org.snakeyaml.engine.v2.exceptions.MarkedYamlEngineException;
+import org.snakeyaml.engine.v2.exceptions.YamlEngineException;
+import org.snakeyaml.engine.v2.nodes.MappingNode;
+import org.snakeyaml.engine.v2.nodes.Node;
+import org.snakeyaml.engine.v2.nodes.NodeTuple;
+import org.snakeyaml.engine.v2.nodes.ScalarNode;
+import org.snakeyaml.engine.v2.nodes.SequenceNode;
 
-import java.io.StringReader;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
@@ -61,9 +61,8 @@ import java.util.regex.Pattern;
 final class DerivedScriptParser {
 
     /**
-     * How deep a value may nest, which only aliases that refer to
-     * themselves can reach, because the reader limits nesting written out
-     * in the text to less than this.
+     * How deep a value may nest before the script is refused, which also
+     * stops an alias that refers to itself.
      */
     private static final int MAX_DEPTH = 100;
 
@@ -102,17 +101,18 @@ final class DerivedScriptParser {
         String what = startsLikeJson(text) ? "JSON" : "YAML";
         Node root;
         try {
-            root = new Yaml(new LoaderOptions()).compose(
-                new StringReader(text));
-        } catch (MarkedYAMLException e) {
-            Mark mark = e.getProblemMark() != null ?
+            root = new Compose(LoadSettings.builder().build())
+                .composeString(text)
+                .orElse(null);
+        } catch (MarkedYamlEngineException e) {
+            Optional<Mark> mark = e.getProblemMark().isPresent() ?
                 e.getProblemMark() : e.getContextMark();
             String problem = e.getProblem() != null ?
                 e.getProblem() : e.getMessage();
             throw new ScriptParseException(
                 "the text is not valid " + what + ": " + problem,
-                mark == null ? 0 : mark.getLine() + 1);
-        } catch (YAMLException e) {
+                mark.map(m -> m.getLine() + 1).orElse(0));
+        } catch (YamlEngineException e) {
             throw new ScriptParseException(
                 "the text is not valid " + what + ": " + e.getMessage(), 0);
         }
@@ -149,11 +149,10 @@ final class DerivedScriptParser {
 
     private static ScriptNode convert(Node node, int depth)
         throws ScriptParseException {
-        int line = node.getStartMark() == null ?
-            0 : node.getStartMark().getLine() + 1;
+        int line = node.getStartMark().map(m -> m.getLine() + 1).orElse(0);
         if (depth > MAX_DEPTH) {
             throw new ScriptParseException(
-                "the text is not valid YAML: aliases nest too deeply", line);
+                "the text is not valid YAML: values nest too deeply", line);
         }
         if (node instanceof MappingNode) {
             List<String> keys = new ArrayList<>();
