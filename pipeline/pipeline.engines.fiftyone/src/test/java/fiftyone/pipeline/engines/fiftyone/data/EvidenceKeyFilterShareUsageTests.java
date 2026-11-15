@@ -57,11 +57,6 @@ public class EvidenceKeyFilterShareUsageTests {
     }
 
     /**
-     * By default headers other than Cookie are shared, cookies, session
-     * values and query string parameters only when their names start with
-     * 51D_, and any other evidence.
-     */
-    /**
      * The whole web request is read by the Usage Sharing Element and never
      * shared as a value, so the filter does not include it.
      */
