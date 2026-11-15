@@ -120,8 +120,21 @@ public class ShareUsageExample {
      *
      * @param is an InputStream containing YAML documents with evidence
      */
-    @SuppressWarnings("unchecked")
     public static void run(InputStream is) throws Exception {
+        run(is, null);
+    }
+
+    /**
+     * Process evidence from a YAML input stream and share it via the
+     * ShareUsageElement, sending it to the endpoint given.
+     *
+     * @param is an InputStream containing YAML documents with evidence
+     * @param shareUsageUrl where to send the usage data, or null for the
+     *                      51Degrees endpoint. A test gives an endpoint of
+     *                      its own, so that it shares nothing.
+     */
+    @SuppressWarnings("unchecked")
+    public static void run(InputStream is, String shareUsageUrl) throws Exception {
         logger.info("Starting ShareUsage example");
         logger.info("Settings: minEntriesPerMessage={}, sharePercentage={}%, recordsToProcess={}",
                 MINIMUM_ENTRIES_PER_MESSAGE,
@@ -129,7 +142,12 @@ public class ShareUsageExample {
                 RECORDS_TO_PROCESS);
 
         // Build the ShareUsageElement with custom settings
-        ShareUsageElement shareUsageElement = new ShareUsageBuilder(LoggerFactory.getILoggerFactory())
+        ShareUsageBuilder builder = new ShareUsageBuilder(LoggerFactory.getILoggerFactory());
+        if (shareUsageUrl != null) {
+            // Send to another endpoint than the 51Degrees one
+            builder.setShareUsageUrl(shareUsageUrl);
+        }
+        ShareUsageElement shareUsageElement = builder
                 // Set the minimum number of entries before sending a batch
                 .setMinimumEntriesPerMessage(MINIMUM_ENTRIES_PER_MESSAGE)
                 // Set the maximum queue size (must be > minEntriesPerMessage)
