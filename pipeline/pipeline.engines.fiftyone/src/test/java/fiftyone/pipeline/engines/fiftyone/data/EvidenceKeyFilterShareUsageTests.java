@@ -145,6 +145,58 @@ public class EvidenceKeyFilterShareUsageTests {
     }
 
     /**
+     * "It MUST also return false, whatever the configuration and even when
+     * all Evidence is shared, for any key whose prefix is `cookie.` and whose
+     * field does not start with `51D_`." (usage-sharing-element.md line 65)
+     */
+    @Test
+    public void shareAllEvidence_CookieNotStarting51D_IsNotShared() {
+        EvidenceKeyFilterShareUsage shareAll = new EvidenceKeyFilterShareUsage(
+            Collections.<String>emptyList(),
+            Collections.<String>emptyList(),
+            false,
+            DEFAULT_SESSION_COOKIE_NAME,
+            true,
+            true);
+
+        assertFalse(shareAll.include("cookie.plain"));
+        assertFalse(shareAll.include("Cookie._ga"));
+        assertFalse(shareAll.include("cookie.a.b"));
+        assertTrue(shareAll.include("cookie.51D_ScreenPixelsWidth"));
+        assertTrue(shareAll.include("cookie.51d_screenpixelswidth"));
+        // Everything else is still shared.
+        assertTrue(shareAll.include("header.x-anything"));
+        assertTrue(shareAll.include("session.plain"));
+    }
+
+    /**
+     * "The session cookie MUST NOT be shared unless its name starts with
+     * `51D_`, as no other cookie is." (usage-sharing-element.md line 99)
+     */
+    @Test
+    public void shareAllEvidence_SessionCookieIsNotShared() {
+        EvidenceKeyFilterShareUsage shareAll = new EvidenceKeyFilterShareUsage(
+            Collections.<String>emptyList(),
+            Collections.<String>emptyList(),
+            false,
+            DEFAULT_SESSION_COOKIE_NAME,
+            true,
+            true);
+
+        assertFalse(shareAll.include("cookie." + DEFAULT_SESSION_COOKIE_NAME));
+        assertFalse(shareAll.include("cookie.jsessionid"));
+
+        EvidenceKeyFilterShareUsage named51D = new EvidenceKeyFilterShareUsage(
+            Collections.<String>emptyList(),
+            Collections.<String>emptyList(),
+            false,
+            "51D_Session",
+            true,
+            true);
+        assertTrue(named51D.include("cookie.51D_Session"));
+    }
+
+    /**
      * The email address, the salt for hashed email identifiers, the query
      * string and the path are never shared, whether bare or after a prefix,
      * and without regard to case, even when the rules for their prefixes
