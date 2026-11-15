@@ -47,6 +47,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -177,6 +178,10 @@ public class ShareUsageRecordFormTests {
             tracker);
         uploader = new Uploader();
         element.dataUploader = uploader;
+        // The Package elements depend on whether the build loads the
+        // classes from jars, so these tests find none and
+        // ShareUsageElementTests checks them.
+        element.packageFinder = classes -> new TreeMap<>();
         pipeline = new PipelineBuilder()
             .addFlowElement(sequence)
             .addFlowElement(element)
