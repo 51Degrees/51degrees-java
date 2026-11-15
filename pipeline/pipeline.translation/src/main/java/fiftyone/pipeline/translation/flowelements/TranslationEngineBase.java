@@ -70,8 +70,11 @@ import java.util.regex.Pattern;
  * wrappers); the output type matches the input.
  *
  * @param <T> the type of element data the engine writes
+ * <p>
+ * The class is abstract: a translation engine is a subclass of it, made by
+ * that engine's builder, as every Flow Element is.
  */
-public class TranslationEngineBase<T extends ITranslationData>
+public abstract class TranslationEngineBase<T extends ITranslationData>
     extends FlowElementBase<T, ElementPropertyMetaData> {
 
     /**
