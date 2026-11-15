@@ -26,6 +26,7 @@ import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertTrue;
 
@@ -79,12 +80,15 @@ public class CloudExamplesWithoutKeyTest {
                                                String variable) {
         assertTrue("The output should name the environment variable '" +
             variable + "'", output.contains(variable));
-        assertTrue("The output should link to the configurator",
-            output.contains("https://51degrees.com/configure"));
-        String link = "utm_source=code&utm_medium=example" +
-            "&utm_campaign=51degrees-java&utm_content=" + tag(example) + "&";
-        assertTrue("The link should be tagged with the example's file, '" +
-            link + "'", output.contains(link));
+        // The link to the configurator itself carries the tags, not only
+        // other links the example writes.
+        String link = "https://51degrees.com/configure[^\\s\"]*\\?" +
+            "utm_source=code&utm_medium=example" +
+            "&utm_campaign=51degrees-java&utm_content=" +
+            Pattern.quote(tag(example)) + "&";
+        assertTrue("The output should link to the configurator, tagged " +
+                "with the example's file, as '" + link + "'",
+            Pattern.compile(link).matcher(output).find());
     }
 
     @Test

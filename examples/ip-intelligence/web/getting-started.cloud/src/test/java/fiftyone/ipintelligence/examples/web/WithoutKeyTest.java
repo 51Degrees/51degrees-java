@@ -58,10 +58,12 @@ public class WithoutKeyTest {
         String output = buffer.toString("UTF-8");
         out.println(output);
         assertTrue(output.contains(KeyHelper.RESOURCE_KEY_VARIABLE));
-        assertTrue(output.contains("https://51degrees.com/configure"));
-        String link = "utm_source=code&utm_medium=example" +
-            "&utm_campaign=51degrees-java&utm_content=" + TAG + "&";
-        assertTrue("The link should be tagged with the example's file, '" +
-            link + "'", output.contains(link));
+        String link = "https://51degrees.com/configure[^\\s\"]*\\?" +
+            "utm_source=code&utm_medium=example" +
+            "&utm_campaign=51degrees-java&utm_content=" +
+            java.util.regex.Pattern.quote(TAG) + "&";
+        assertTrue("The output should link to the configurator, tagged " +
+                "with the example's file, as '" + link + "'",
+            java.util.regex.Pattern.compile(link).matcher(output).find());
     }
 }
