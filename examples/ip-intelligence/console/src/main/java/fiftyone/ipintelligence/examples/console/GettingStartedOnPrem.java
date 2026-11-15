@@ -64,11 +64,13 @@ import java.io.File;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Supplier;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
 import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asString;
+import static fiftyone.ipintelligence.examples.shared.PropertyHelper.weightedValues;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 import static fiftyone.ipintelligence.examples.shared.DataFileHelper.LITE_DATA_FILE_REL_PATH;
 
@@ -261,7 +263,25 @@ public class GettingStartedOnPrem {
                                       String property,
                                       Supplier<AspectPropertyValue<?>> value) {
         if (DataFileHelper.hasProperty(engine, property)) {
-            writer.println("\t" + property + ": " + asString(value.get()));
+            AspectPropertyValue<?> result = value.get();
+            if (result.hasValue() == false) {
+                writer.println("\t" + property + ": " + asString(result));
+                return false;
+            }
+            /* IP Intelligence properties return weighted values. Each value
+            comes with a weighting between 0 and 1, which says how much of the
+            IP range the value applies to, and a property with a single answer
+            returns it with a weighting of 1. */
+            StringBuilder line = new StringBuilder();
+            for (IWeightedValue<?> weighted : weightedValues(result)) {
+                if (line.length() > 0) {
+                    line.append(", ");
+                }
+                line.append(weighted.getValue())
+                    .append(String.format(Locale.ROOT, " (weighting %.2f)",
+                        weighted.getWeighting()));
+            }
+            writer.println("\t" + property + ": " + line);
             return false;
         }
         writer.println("\t" + property + ": " + DataFileHelper.NEEDS_ENTERPRISE);

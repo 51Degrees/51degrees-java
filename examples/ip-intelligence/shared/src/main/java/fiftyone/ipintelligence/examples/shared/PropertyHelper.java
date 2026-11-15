@@ -23,6 +23,7 @@
 package fiftyone.ipintelligence.examples.shared;
 
 import fiftyone.pipeline.core.data.IWeightedValue;
+import fiftyone.pipeline.core.data.WeightedValue;
 import fiftyone.pipeline.core.data.WktString;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
@@ -30,8 +31,10 @@ import fiftyone.pipeline.engines.exceptions.PropertyMissingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -191,6 +194,59 @@ public class PropertyHelper {
             return unwrapValue(value.getValue());
         }
         return "Unknown. " + value.getNoValueMessage();
+    }
+
+    /**
+     * Get each value of an IP Intelligence property with its weighting. IP
+     * Intelligence properties return weighted values, and a property with a
+     * single answer returns it with a weighting of 1. Due to Java generics
+     * type erasure, the on-premise engine returns
+     * List&lt;IWeightedValue&lt;T&gt;&gt; even when the declared type is T, so
+     * a value that is not such a list is given here with a weighting of 1.
+     * @param property the property value, may be null
+     * @return the weighted values, or an empty list when there is no value
+     */
+    public static List<IWeightedValue<?>> weightedValues(
+            AspectPropertyValue<?> property) {
+        List<IWeightedValue<?>> result = new ArrayList<>();
+        if (property == null || property.hasValue() == false) {
+            return result;
+        }
+        Object value = property.getValue();
+        if (value instanceof List) {
+            for (Object item : (List<?>) value) {
+                if (item instanceof IWeightedValue) {
+                    result.add((IWeightedValue<?>) item);
+                } else {
+                    result.add(new WeightedValue<>(FULL_WEIGHTING, item));
+                }
+            }
+        } else {
+            result.add(new WeightedValue<>(FULL_WEIGHTING, value));
+        }
+        return result;
+    }
+
+    /**
+     * The raw weighting of a value that is the only answer, which is a
+     * weighting of 1.
+     */
+    private static final int FULL_WEIGHTING = 65535;
+
+    /**
+     * Write each value of an IP Intelligence property with its weighting,
+     * for example "gb (weighting 1.00)", or why there is no value.
+     * @param property the property value, may be null
+     * @return the values with their weightings, joined with ", "
+     */
+    public static String asWeightedString(AspectPropertyValue<?> property) {
+        if (property == null || property.hasValue() == false) {
+            return reportNoValue(property);
+        }
+        return weightedValues(property).stream()
+                .map(weighted -> String.format(Locale.ROOT, "%s (weighting %.2f)",
+                        weighted.getValue(), weighted.getWeighting()))
+                .collect(Collectors.joining(", "));
     }
 
     /**
