@@ -159,7 +159,7 @@ RegisteredCountry, so every other line reads `needs the Enterprise data file`.
 Both then end the same way.
 
 ```
-Some of these properties need the Enterprise data file. Contact us for a copy at https://51degrees.com/contact-us?...
+Some of these properties need the Enterprise data file. Contact us for a copy at <the tagged contact-us link>
 INFO  ... Used a 'Lite' data file, created <date>, <n> days ago, from location '<path>'
 INFO  ... All done
 ```
