@@ -103,14 +103,19 @@ public class TypedKeyMapBuilder {
         private static final Entry[] emptyEntryPair = new Entry[]{null, null};
         private Entry _head = null;
 
+        /**
+         * Find the entry with the key name given, and the entry before it.
+         * Key names are compared without regard to case, as every string
+         * comparison in the Pipeline is.
+         */
         private Entry[] findWithPrevious(String typedKeyName) {
             Entry current = _head;
             if (current != null) {
-                if (current._key.getName().equals(typedKeyName)) {
+                if (current._key.getName().equalsIgnoreCase(typedKeyName)) {
                     return new Entry[]{null, current};
                 }
                 while (current._next != null) {
-                    if (current._next._key.getName().equals(typedKeyName)) {
+                    if (current._next._key.getName().equalsIgnoreCase(typedKeyName)) {
                         return new Entry[]{current, current._next};
                     }
                     current = current._next;
