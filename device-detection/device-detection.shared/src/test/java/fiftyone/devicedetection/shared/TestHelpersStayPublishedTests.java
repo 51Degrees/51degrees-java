@@ -22,8 +22,6 @@
 
 package fiftyone.devicedetection.shared;
 
-import fiftyone.devicedetection.shared.testhelpers.FileUtils;
-import fiftyone.devicedetection.shared.testhelpers.KeyUtils;
 import org.junit.Test;
 
 import static org.junit.Assert.assertFalse;
@@ -32,27 +30,33 @@ import static org.junit.Assert.assertTrue;
 /**
  * FileUtils and KeyUtils, which earlier releases published, stay in the
  * published jar, deprecated, as a patch release removes no public name.
+ * They are found by name, because the build treats the use of a
+ * deprecated class as an error.
  */
 public class TestHelpersStayPublishedTests {
 
+    private static final String PACKAGE =
+        "fiftyone.devicedetection.shared.testhelpers.";
+
     @Test
-    public void FileUtils_InTheMainJar_Deprecated() {
-        assertPublishedAndDeprecated(FileUtils.class);
+    public void FileUtils_InTheMainJar_Deprecated() throws Exception {
+        assertPublishedAndDeprecated(PACKAGE + "FileUtils");
     }
 
     @Test
-    public void KeyUtils_InTheMainJar_Deprecated() {
-        assertPublishedAndDeprecated(KeyUtils.class);
+    public void KeyUtils_InTheMainJar_Deprecated() throws Exception {
+        assertPublishedAndDeprecated(PACKAGE + "KeyUtils");
     }
 
-    @SuppressWarnings("deprecation")
-    private static void assertPublishedAndDeprecated(Class<?> type) {
+    private static void assertPublishedAndDeprecated(String name)
+        throws ClassNotFoundException {
+        Class<?> type = Class.forName(name);
         String location = type.getProtectionDomain()
             .getCodeSource().getLocation().toString();
-        assertFalse(type.getName() + " comes from " + location +
-                ", not the main jar",
-            location.contains("test-classes") || location.endsWith("-tests.jar"));
-        assertTrue(type.getName() + " should be deprecated",
+        assertFalse(name + " comes from " + location + ", not the main jar",
+            location.contains("test-classes") ||
+                location.endsWith("-tests.jar"));
+        assertTrue(name + " should be deprecated",
             type.isAnnotationPresent(Deprecated.class));
     }
 }

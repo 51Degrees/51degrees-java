@@ -28,7 +28,7 @@ import java.util.Objects;
 /**
  * Helpers to obtain keys from the environment
  */
-public class KeyUtils {
+public class TestKeyUtils {
     /**
      * Obtain a key either from environment variable or from a property.
      * <p>

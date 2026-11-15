@@ -36,9 +36,11 @@ import java.util.stream.Stream;
 import static org.junit.Assert.assertTrue;
 
 /**
- * The published Device Detection packages hold no tests or test helpers.
- * Each module's main sources are what its published jar holds, so they are
- * read for a test helper package or a test class.
+ * The published Device Detection packages hold no tests or test helpers,
+ * other than deprecated test helpers that earlier releases published, which
+ * stay because a patch release removes no public name. Each module's main
+ * sources are what its published jar holds, so they are read for a test
+ * helper package or a test class.
  */
 public class PublishedPackageTests {
 
@@ -72,7 +74,8 @@ public class PublishedPackageTests {
                     .collect(Collectors.toList());
             }
             for (String file : files) {
-                if (file.contains("/testhelpers/") ||
+                if ((file.contains("/testhelpers/") &&
+                    isDeprecated(file) == false) ||
                     file.matches(".*Tests?\\.java")) {
                     found.add(module + ": " + file);
                 }
@@ -80,5 +83,19 @@ public class PublishedPackageTests {
         }
         assertTrue("These published sources are tests or test helpers: " +
             found, found.isEmpty());
+    }
+
+    /**
+     * Whether the class a source file holds is deprecated, which is false
+     * for a class this module cannot load.
+     */
+    private static boolean isDeprecated(String file) {
+        String name = file.substring(0, file.length() - ".java".length())
+            .replace('/', '.');
+        try {
+            return Class.forName(name).isAnnotationPresent(Deprecated.class);
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
     }
 }

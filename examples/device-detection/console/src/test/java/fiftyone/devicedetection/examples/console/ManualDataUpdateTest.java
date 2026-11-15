@@ -22,7 +22,7 @@
 
 package fiftyone.devicedetection.examples.console;
 
-import fiftyone.devicedetection.shared.testhelpers.FileUtils;
+import fiftyone.devicedetection.shared.testhelpers.TestFileUtils;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -42,9 +42,9 @@ public class ManualDataUpdateTest {
     @Test
     public void manualDataUpdate_ReloadsTheDataFile() throws Exception {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        ManualDataUpdate.run(FileUtils.getHashFileName() == null
-                        ? FileUtils.LITE_HASH_DATA_FILE_PATH
-                        : FileUtils.getHashFileName(),
+        ManualDataUpdate.run(TestFileUtils.getHashFileName() == null
+                        ? TestFileUtils.LITE_HASH_DATA_FILE_PATH
+                        : TestFileUtils.getHashFileName(),
                 buffer);
         String output = buffer.toString("UTF-8");
         System.out.println(output);

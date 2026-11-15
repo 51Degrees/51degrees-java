@@ -36,8 +36,11 @@ import java.util.Optional;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
+/**
+ * Finds the data and evidence files the tests use.
+ */
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-public class FileUtils {
+public class TestFileUtils {
     public static final String ENTERPRISE_HASH_DATA_FILE_NAME = "Enterprise-HashV41.hash";
 
     public static final String TAC_HASH_DATA_FILE_NAME = "TAC-HashV41.hash";
@@ -129,7 +132,7 @@ public class FileUtils {
      */
     public static File jarFileHelper(String file) {
         // find the resource in the classpath
-        URL resource = Objects.requireNonNull(FileUtils.class.getClassLoader().getResource(file),
+        URL resource = Objects.requireNonNull(TestFileUtils.class.getClassLoader().getResource(file),
                 file + " could not be found on the classpath");
         try {
             return new File(resource.toURI());
@@ -151,7 +154,7 @@ public class FileUtils {
         String extension = index < 0 ? "tmp" : filePath.substring(index);
         try {
             Path temp = Files.createTempFile(TEMP_FILE_PREFIX, extension);
-            try (InputStream is = FileUtils.class.getClassLoader().getResourceAsStream(file)) {
+            try (InputStream is = TestFileUtils.class.getClassLoader().getResourceAsStream(file)) {
                 //noinspection ConstantConditions
                 Files.copy(is, temp, REPLACE_EXISTING);
             }
