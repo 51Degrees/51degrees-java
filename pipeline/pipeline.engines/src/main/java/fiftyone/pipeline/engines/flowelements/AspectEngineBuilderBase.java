@@ -136,14 +136,22 @@ public abstract class AspectEngineBuilderBase<
      * Configure the properties that the engine will populate in the response.
      * <p>
      * By default, all properties will be populated.
-     * @param properties The properties that we want the engine to populate
+     * <p>
+     * This is how a configuration file gives the list, so the names are
+     * separated by commas, with or without white space around them, as in
+     * "IsMobile,BrowserName".
+     * @param properties The properties that we want the engine to populate,
+     *                   separated by commas
      * @return this builder
      */
     @DefaultValue("All properties")
     @SuppressWarnings("unchecked")
     public TBuilder setProperties(String properties) {
-        for (String property : properties.split("\\s,\\s")) {
-            tryAddProperty(property);
+        for (String property : properties.split(",")) {
+            String trimmed = property.trim();
+            if (trimmed.isEmpty() == false) {
+                tryAddProperty(trimmed);
+            }
         }
         return (TBuilder) this;
     }

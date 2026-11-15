@@ -1004,6 +1004,18 @@ public class PipelineBuilder
         Class<?> targetType,
         String value,
         String errorTextPrefix) {
+        // A configuration file gives an enumeration value as the name of the
+        // value, which is matched without regard to case.
+        if (targetType.isEnum()) {
+            for (Object constant : targetType.getEnumConstants()) {
+                if (((Enum<?>) constant).name().equalsIgnoreCase(value.trim())) {
+                    return constant;
+                }
+            }
+            throw new PipelineConfigurationException(
+                errorTextPrefix + ". '" + value + "' is not the name of " +
+                    "one of its values.");
+        }
         // Check for a TryParse method on the type
         Method parse = null;
         Class<?> nonPrimitiveType;
