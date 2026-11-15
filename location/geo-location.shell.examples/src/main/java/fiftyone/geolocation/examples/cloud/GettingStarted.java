@@ -25,6 +25,7 @@ package fiftyone.geolocation.examples.cloud;
 import fiftyone.geolocation.GeoLocationPipelineBuilder;
 import fiftyone.geolocation.core.Enums;
 import fiftyone.geolocation.core.data.GeoData;
+import fiftyone.geolocation.examples.FindOutMore;
 import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
@@ -117,6 +118,10 @@ public class GettingStarted {
                 System.out.println(flowData.get(GeoData.class).getRegion());
             }
         }
+        FindOutMore.write(
+            System.out,
+            "https://51degrees.com/documentation/_reverse_geocoding__examples__getting_started_51_degrees_cloud.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-gettingstarted.java&utm_term=find-out-more",
+            "https://51degrees.com/location?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-gettingstarted.java&utm_term=find-out-more");
     }
 
     private static void outputUntilCancelled(
