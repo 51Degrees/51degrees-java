@@ -467,7 +467,7 @@ public class ShareUsageElement extends ShareUsageBase {
                 // final consumer but the consumer that was already running has
                 // drained everything - and there is no point posting a document
                 // with no entries in it.
-                if (allData.isEmpty() == false) {
+                if (allData.isEmpty() == false && isDiscarding() == false) {
                     boolean accepted = false;
                     try {
                         sendAsXML(allData);
@@ -485,8 +485,9 @@ public class ShareUsageElement extends ShareUsageBase {
                 logger.error("Exception sending usage data", exception);
             }
           // send in minEntries batches unless closing in which case drain the queue
-        } while (evidenceCollection.size() >= minEntriesPerMessage ||
-                isStopping() && evidenceCollection.size() > 0);
+        } while (isDiscarding() == false &&
+                (evidenceCollection.size() >= minEntriesPerMessage ||
+                isStopping() && evidenceCollection.size() > 0));
         logger.debug(threadMarker, "Stopping sending. Queue size is {}", evidenceCollection.size());
     }
 
