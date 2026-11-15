@@ -22,6 +22,9 @@
 
 package fiftyone.pipeline.engines.services;
 
+import fiftyone.common.wrappers.data.BinaryReader;
+import fiftyone.common.wrappers.data.BinaryWriter;
+import fiftyone.common.wrappers.io.FileWrapper;
 import fiftyone.common.wrappers.io.FileWrapperDefault;
 import fiftyone.common.wrappers.io.FileWrapperFactory;
 import fiftyone.pipeline.engines.configuration.DataFileConfigurationDefault;
@@ -35,10 +38,13 @@ import org.junit.Test;
 import org.slf4j.Logger;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -418,11 +424,55 @@ public class DataUpdateServiceCheckFailureTests {
     private static FileWrapperFactory fileWrapperFactory() {
         FileWrapperFactory fileWrapperFactory = mock(FileWrapperFactory.class);
         when(fileWrapperFactory.build(anyString())).then(invocation ->
-            new FileWrapperDefault((String) invocation.getArgument(0)));
+            new InMemoryReadFile((String) invocation.getArgument(0)));
         when(fileWrapperFactory.getLastModified(anyString())).then(
             invocation ->
                 new File((String) invocation.getArgument(0)).lastModified());
         return fileWrapperFactory;
+    }
+
+    /**
+     * A file whose reader holds a copy of its bytes. The default reader maps
+     * the file, and Windows will not let a mapped file be written again
+     * until the mapping is collected, which the watcher tests need to do.
+     */
+    private static final class InMemoryReadFile implements FileWrapper {
+        private final FileWrapperDefault file;
+
+        InMemoryReadFile(String path) {
+            file = new FileWrapperDefault(path);
+        }
+
+        @Override
+        public BinaryReader getReader() throws IOException {
+            return new BinaryReader(ByteBuffer.wrap(
+                Files.readAllBytes(Paths.get(file.getPath()))));
+        }
+
+        @Override
+        public BinaryWriter getWriter() throws IOException {
+            return file.getWriter();
+        }
+
+        @Override
+        public long getLastModified() {
+            return file.getLastModified();
+        }
+
+        @Override
+        public String getPath() {
+            return file.getPath();
+        }
+
+        @Override
+        public boolean exists() {
+            return file.exists();
+        }
+
+        @Override
+        public void delete() {
+            file.delete();
+        }
     }
 
     @SuppressWarnings("unchecked")
