@@ -142,12 +142,14 @@ public class IPIntelligenceDataHashDefault
     @Override
     protected boolean propertyIsAvailable(String propertyName) {
         checkState();
-        for (ResultsIpiSwig results : resultsList) {
-            if (results.containsProperty(propertyName)) {
-                return true;
+        synchronized (getResultsLock()) {
+            for (ResultsIpiSwig results : resultsList) {
+                if (results.containsProperty(propertyName)) {
+                    return true;
+                }
             }
+            return false;
         }
-        return false;
     }
 
     private static <
@@ -180,10 +182,27 @@ public class IPIntelligenceDataHashDefault
         }
     }
 
+    /**
+     * Get the values of a property as a weighted list. This is public, so it
+     * holds the results lock itself, as every read from the native results
+     * does. See the
+     * <a href="https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/features/thread-safety.md#L61">thread safety specification</a>.
+     * @param propertyName name of the property to get values for
+     * @param parametrizedTypes types parametrizing the value, starting with
+     *                          {@link List}
+     * @return values as a list
+     */
     @Override
     public AspectPropertyValue<List<?>> getValues(String propertyName,
                                                   Class<?>[] parametrizedTypes) {
         checkState();
+        synchronized (getResultsLock()) {
+            return readValues(propertyName, parametrizedTypes);
+        }
+    }
+
+    private AspectPropertyValue<List<?>> readValues(String propertyName,
+                                                    Class<?>[] parametrizedTypes) {
         AspectPropertyValue<List<?>> result =
             new AspectPropertyValueDefault<>();
         ResultsIpiSwig results = getSingleResults(propertyName);

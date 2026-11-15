@@ -74,6 +74,21 @@ public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceData
     }
 
     /**
+     * The lock that every read from the underlying results holds, so that
+     * only one thread at a time reads from them. A subclass holds it in each
+     * method that reads the results and can be called without going through
+     * {@link #tryGetValue(String, Class, Class[])}. The lock is reentrant, so
+     * a read that calls another read holds it once more. See the
+     * <a href="https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/features/thread-safety.md#L61">thread safety specification</a>:
+     * "Such Element Data MUST let only one thread at a time read from its
+     * results, for example by holding a lock for each read".
+     * @return the lock for reads from the results
+     */
+    protected final Object getResultsLock() {
+        return getLock;
+    }
+
+    /**
      * Determine whether a property is available to return values from the
      * underlying results.
      * @param propertyName name of the property to check
@@ -281,7 +296,11 @@ public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceData
             // If the complete set of values has not been populated
             // then we don't want to retrieve values for all
             // properties so just get the one we want.
-            if (propertyIsAvailable(key)) {
+            boolean available;
+            synchronized (getLock) {
+                available = propertyIsAvailable(key);
+            }
+            if (available) {
                 if (type.equals(Object.class)) {
                     type = (Class<T>)AspectPropertyValue.class;
                     parameterisedTypes = toWeightedListType(getPropertyType(key), false);
