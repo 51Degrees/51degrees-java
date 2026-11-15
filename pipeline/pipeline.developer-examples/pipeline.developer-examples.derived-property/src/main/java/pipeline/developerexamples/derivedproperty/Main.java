@@ -22,6 +22,8 @@
 
 package pipeline.developerexamples.derivedproperty;
 
+import fiftyone.pipeline.core.configuration.PipelineOptions;
+import fiftyone.pipeline.core.configuration.PipelineOptionsFactory;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
@@ -29,10 +31,12 @@ import fiftyone.pipeline.derived.data.IDerivedPropertyData;
 import fiftyone.pipeline.derived.flowelements.DerivedPropertyElement;
 import fiftyone.pipeline.derived.flowelements.DerivedPropertyElementBuilder;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
+import fiftyone.pipeline.util.FileFinder;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
 import pipeline.developerexamples.derivedproperty.flowelements.SensorElementBuilder;
 
+import java.io.File;
 import java.io.PrintStream;
 
 /**
@@ -93,8 +97,51 @@ public class Main {
                 .build()) {
                 show(pipeline, output, "21", "40", "Comfort");
             }
+
+            // A script read from a file beside the example. The file name
+            // without its extension must equal the script's Name.
+            File scriptFile = FileFinder.getFilePath(FROST_RISK_FILE);
+            output.println();
+            output.println("2. A script read from a file, " +
+                scriptFile.getName());
+            DerivedPropertyElement fromFile =
+                new DerivedPropertyElementBuilder(loggerFactory)
+                    .addScriptFile(scriptFile.getAbsolutePath())
+                    .build();
+            try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+                .addFlowElement(new SensorElementBuilder(loggerFactory).build())
+                .addFlowElement(fromFile)
+                .setAutoCloseElements(true)
+                .build()) {
+                show(pipeline, output, "1", "90", "FrostRisk");
+            }
+
+            // The same pipeline built from a configuration file, which names
+            // each element's builder and passes the script file through the
+            // Derived Property Element's build parameters.
+            File configuration = FileFinder.getFilePath(CONFIGURATION_FILE);
+            output.println();
+            output.println("3. The same pipeline built from a configuration " +
+                "file, " + configuration.getName());
+            PipelineOptions options =
+                PipelineOptionsFactory.getOptionsFromFile(configuration);
+            try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+                .setAutoCloseElements(true)
+                .buildFromConfiguration(options)) {
+                show(pipeline, output, "10", "85", "FrostRisk");
+            }
         }
     }
+
+    /**
+     * The script file beside the example, in its resources folder.
+     */
+    static final String FROST_RISK_FILE = "derived/FrostRisk.yaml";
+
+    /**
+     * The configuration file that builds the pipeline of part 3.
+     */
+    static final String CONFIGURATION_FILE = "derivedProperty.xml";
 
     /**
      * Processes a reading and writes the derived properties named, each as
