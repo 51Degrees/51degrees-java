@@ -68,11 +68,11 @@ import java.util.regex.Pattern;
  * Only string based types are supported for translation (string, list of
  * strings, weighted list of strings and the {@code AspectPropertyValue}
  * wrappers); the output type matches the input.
- *
- * @param <T> the type of element data the engine writes
  * <p>
  * The class is abstract: a translation engine is a subclass of it, made by
  * that engine's builder, as every Flow Element is.
+ *
+ * @param <T> the type of element data the engine writes
  */
 public abstract class TranslationEngineBase<T extends ITranslationData>
     extends FlowElementBase<T, ElementPropertyMetaData> {
