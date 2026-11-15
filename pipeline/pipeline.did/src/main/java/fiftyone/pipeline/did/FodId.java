@@ -125,7 +125,7 @@ public final class FodId {
      * Byte length of the payload header (Flags + License Id) common to every
      * identifier type.
      */
-    static final int HEADER_LENGTH = MATCH_KEY_OFFSET;
+    public static final int HEADER_LENGTH = MATCH_KEY_OFFSET;
 
     /** Byte length of the GUID match key carried by Random identifiers. */
     static final int GUID_LENGTH = 16;
@@ -178,7 +178,7 @@ public final class FodId {
      * 51Did rules, so an instance never exists for a payload that failed
      * them.
      */
-    private FodId(
+    public FodId(
             Owid owid,
             int flags,
             long licenseId,
@@ -497,6 +497,10 @@ public final class FodId {
      * @param flags the Flags byte
      * @return the payload layout version (0 to 3)
      */
+    public int getPayloadVersion() {
+        return payloadVersionOf(flags);
+    }
+
     private static int payloadVersionOf(int flags) {
         return (flags >> 4) & 0b11;
     }
