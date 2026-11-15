@@ -95,13 +95,11 @@ final class PackageVersions {
         if (url == null || "jar".equals(url.getProtocol()) == false) {
             return Collections.emptyList();
         }
-        String text = url.toString();
         String folder = "META-INF/maven/" + groupId + "/";
         List<String> artifacts = new ArrayList<>();
         try {
-            URLConnection connection = new URL(
-                text.substring(0, text.length() - path.length()))
-                .openConnection();
+            // A connection to the class's entry gives the whole jar.
+            URLConnection connection = url.openConnection();
             if (connection instanceof JarURLConnection == false) {
                 return artifacts;
             }
