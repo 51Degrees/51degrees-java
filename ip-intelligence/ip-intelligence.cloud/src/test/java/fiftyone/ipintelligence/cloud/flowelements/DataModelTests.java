@@ -30,6 +30,7 @@ import fiftyone.pipeline.core.data.AccessiblePropertyMetaData.ProductMetaData;
 import fiftyone.pipeline.core.data.AccessiblePropertyMetaData.PropertyMetaData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
+import fiftyone.pipeline.core.typed.TypedKey;
 import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.services.MissingPropertyServiceDefault;
 import org.junit.Test;
@@ -88,7 +89,9 @@ public class DataModelTests {
                 flowData,
                 engine,
                 MissingPropertyServiceDefault.getInstance());
-            engine.processEngine(flowData, data);
+            when(flowData.getOrAdd(any(TypedKey.class), any()))
+                .thenReturn(data);
+            engine.process(flowData);
 
             assertTrue(data instanceof AspectData);
             assertTrue(data instanceof IPIntelligenceData);
