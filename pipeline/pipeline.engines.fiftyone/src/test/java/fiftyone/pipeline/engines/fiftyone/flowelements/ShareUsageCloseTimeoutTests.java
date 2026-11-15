@@ -50,8 +50,8 @@ import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Closing waits up to 5 seconds for the data waiting to be sent. If it has
- * not all been sent by then, sending stops, the rest is discarded and a
+ * Closing finishes within 5 seconds of its start. If the data waiting has
+ * not all been sent in time, sending stops, the rest is discarded and a
  * warning gives the number discarded. See Cleanup in the usage sharing
  * element specification.
  */
@@ -68,10 +68,11 @@ public class ShareUsageCloseTimeoutTests {
     private static final int ENTRIES = 10;
 
     /**
-     * The most closing may take beyond its wait for the data to be sent, to
-     * discard the rest and stop the sending thread.
+     * The most closing may take from its start, as the specification's
+     * Cleanup section sets it, holding the wait for the data to be sent,
+     * discarding the rest, the warning and freeing the resources.
      */
-    private static final long CLOSE_MARGIN_MILLIS = 5000;
+    private static final long CLOSE_LIMIT_MILLIS = 5000;
 
     /**
      * An upload whose first answer does not come until the test releases
@@ -151,13 +152,12 @@ public class ShareUsageCloseTimeoutTests {
     }
 
     /**
-     * Closing while the remote service has stopped answering does not wait
-     * for the service. It returns within the 5 seconds it waits for the data
-     * to be sent and a margin for discarding the rest, while the upload in
-     * progress is still waiting for its answer.
+     * Closing while the remote service has stopped answering finishes within
+     * 5 seconds of its start, the whole of cleanup included, while the
+     * upload in progress is still waiting for its answer.
      */
     @Test
-    public void ShareUsageElement_ServiceStopsAnswering_CloseDoesNotWait()
+    public void ShareUsageElement_ServiceStopsAnswering_CloseWithin5Seconds()
         throws Exception {
         StalledUploader uploader = new StalledUploader();
         Pipeline pipeline = new PipelineBuilder().build();
@@ -173,12 +173,19 @@ public class ShareUsageCloseTimeoutTests {
                 uploader.sending.await(WAIT_LIMIT_MILLIS, TimeUnit.MILLISECONDS),
                 "No send was started.");
 
+            long[] tookMillis = new long[1];
             assertTimeoutPreemptively(
-                Duration.ofMillis(
-                    Constants.SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT +
-                        CLOSE_MARGIN_MILLIS),
-                element::close,
+                Duration.ofMillis(WAIT_LIMIT_MILLIS),
+                () -> {
+                    long start = System.nanoTime();
+                    element.close();
+                    tookMillis[0] = TimeUnit.NANOSECONDS.toMillis(
+                        System.nanoTime() - start);
+                },
                 "Closing waited for the remote service to answer.");
+            assertTrue(tookMillis[0] <= CLOSE_LIMIT_MILLIS,
+                "Closing took " + tookMillis[0] + " ms, more than the " +
+                    CLOSE_LIMIT_MILLIS + " ms cleanup may take.");
             assertEquals(1, uploader.release.getCount(),
                 "The upload in progress was answered before closing ended.");
         }
