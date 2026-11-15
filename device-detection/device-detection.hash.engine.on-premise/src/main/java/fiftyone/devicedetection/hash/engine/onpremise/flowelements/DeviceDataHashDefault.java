@@ -268,6 +268,14 @@ public class DeviceDataHashDefault
     protected boolean propertyIsAvailable(String propertyName) {
         checkState();
         synchronized (resultsLock) {
+            // A property the engine was created with has a position, and the
+            // read goes by it, so there is no need to look the name up in the
+            // results first. A property the data set lacks keeps its position
+            // and reads as having no value. With results from more than one
+            // engine, the name finds the results that hold the property.
+            if (resultsList.size() == 1 && indexOf(propertyName) != null) {
+                return true;
+            }
             for (ResultsHashSwig results : resultsList) {
                 if (results.containsProperty(Swig.asBytes(propertyName))) {
                     return true;
