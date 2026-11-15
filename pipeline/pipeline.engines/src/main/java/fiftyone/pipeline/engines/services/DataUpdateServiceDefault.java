@@ -573,9 +573,11 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 fileWrapperFactory.build(dataFile.getDataFilePath()).getWriter()
                         .writeBytes(data);
             } catch (Exception ex) {
-                logger.error("An error occurred when writing to " +
-                                dataFile.getDataFilePath() +
-                                ". Error detail: " + ex.getMessage(), ex);
+                // The engine is still refreshed from the data in memory.
+                logger.warn("An error occurred when writing to '" +
+                                dataFile.getDataFilePath() + "'. The engine " +
+                                "will be updated to use the new data but the " +
+                                "file on disk will still contain old data.", ex);
             }
         }
 
@@ -962,7 +964,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                         AutoUpdateStatus downloaded;
                         try {
                             downloaded = downloadOkResponse(
-                                    connection, dataFile, tempFile, automatic);
+                                    connection, dataFile, tempFile, loggedUrl);
                         } catch (Exception e) {
                             // A download cut short is the access error, as
                             // a failure to connect is. An HTTP library's
@@ -1027,10 +1029,6 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             return fileWrapperFactory.getLastModified(path);
         }
         return publishedMillis;
-    }
-
-    private static String retryNote(boolean automatic) {
-        return automatic ? " Update will be attempted again later." : "";
     }
 
     /**
@@ -1098,7 +1096,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             HttpURLConnection connection,
             AspectEngineDataFile dataFile,
             FileWrapper tempFile,
-            boolean automatic) throws IOException {
+            String loggedUrl) throws IOException {
         logger.debug("HTTP Status is OK");
         boolean verifyMd5 = dataFile.getConfiguration().getVerifyMd5();
         boolean decompress = dataFile.getConfiguration().getDecompressContent();
@@ -1132,13 +1130,22 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             return AutoUpdateStatus.AUTO_UPDATE_ERR_READING_STREAM;
         }
 
-        if (verifyMd5 && !md5Matches(md, connection)) {
-            logger.warn("An error occurred during the integrity check of new " +
-                    "data file for " + getEngineType(dataFile) + "." +
-                    retryNote(automatic) +
-                    " Error detail: the MD5 hash of the download does not " +
-                    "match the Content-MD5 header");
-            return AutoUpdateStatus.AUTO_UPDATE_ERR_MD5_VALIDATION_FAILED;
+        if (verifyMd5) {
+            String header = connection.getHeaderField("Content-MD5");
+            String computed = DatatypeConverter.printHexBinary(md.digest());
+            if (header == null || header.isEmpty()) {
+                // Nothing to check against, so the check goes on.
+                logger.warn("No MD5 hash included in data update response " +
+                        "for '" + loggedUrl + "'. Unable to verify data " +
+                        "integrity");
+            } else if (header.equalsIgnoreCase(computed) == false) {
+                logCheckFailure("Integrity check failed. MD5 hash in HTTP " +
+                        "response '" + header + "' for '" +
+                        getEngineType(dataFile) + "'data update does not " +
+                        "match calculated hash for the downloaded file '" +
+                        computed + "'.", null);
+                return AutoUpdateStatus.AUTO_UPDATE_ERR_MD5_VALIDATION_FAILED;
+            }
         }
         return AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS;
     }
@@ -1223,12 +1230,6 @@ public class DataUpdateServiceDefault implements DataUpdateService {
         }
     }
 
-    private static boolean md5Matches(MessageDigest md, HttpURLConnection connection) {
-        String header = connection.getHeaderField("Content-MD5");
-        String computed = DatatypeConverter.printHexBinary(md.digest());
-        return header != null && header.equalsIgnoreCase(computed);
-    }
-
     @Override
     public void close() {
         if (closeFutureFactory) {
@@ -1281,7 +1282,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             logger.error("The data file '" + dataFile.getIdentifier() +
                     "' is checking for updates but does not have a temporary " +
                     "file path configured.");
-            return AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED;
+            return AutoUpdateStatus.AUTO_UPDATE_TEMP_PATH_NOT_SET;
         }
         Path uncompressedTempFile = Paths.get(
                 dataFile.getTempDataDirPath(),
@@ -1339,8 +1340,8 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             }
             return result;
         } catch (Throwable e) {
-            logger.error("Exception thrown", e);
-            return AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED;
+            logUnhandled(dataFile, e);
+            return AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR;
         } finally {
             // Make sure the temp files are cleaned up
             try {
