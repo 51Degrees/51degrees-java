@@ -33,6 +33,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -56,6 +57,14 @@ public class DerivedPropertyElementConfigurationTests {
     Path folder;
 
     /**
+     * A file name pattern in the folder, built as text, because Windows
+     * refuses a Path that holds a wildcard.
+     */
+    private String pattern(String fileNamePattern) {
+        return folder.toString() + File.separator + fileNamePattern;
+    }
+
+    /**
      * Writes the Band script into the folder and gives a pattern matching
      * it.
      */
@@ -63,7 +72,7 @@ public class DerivedPropertyElementConfigurationTests {
         Files.write(folder.resolve("Band.yaml"),
             DerivedPropertyElementTests.BAND_YAML.getBytes(
                 StandardCharsets.UTF_8));
-        return folder.resolve("*.yaml").toString();
+        return pattern("*.yaml");
     }
 
     /**
@@ -132,7 +141,7 @@ public class DerivedPropertyElementConfigurationTests {
     @Test
     public void aPatternMatchingNoFileIsRefused() throws Exception {
         PipelineOptions options = options("<ScriptFiles>" +
-            folder.resolve("*.json") + "</ScriptFiles>");
+            pattern("*.json") + "</ScriptFiles>");
         PipelineConfigurationException e = assertThrows(
             PipelineConfigurationException.class,
             () -> new PipelineBuilder().buildFromConfiguration(options));
