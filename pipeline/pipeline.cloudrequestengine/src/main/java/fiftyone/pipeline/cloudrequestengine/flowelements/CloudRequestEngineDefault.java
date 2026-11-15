@@ -466,12 +466,17 @@ public class CloudRequestEngineDefault
      * "A cache MUST NOT store a result that holds such a value, and MUST NOT
      * serve one that it finds." A response that cannot be read as a JSON
      * object is not cached either, as it cannot be checked.
+     * <p>
+     * The response is read without waiting for lazy loading, so the check
+     * never makes process wait for the cloud service. With lazy loading it
+     * is made by the processing task once the response is stored.
      * @param data the result to check
      * @return false if the response has a top-level fodid member
      */
     @Override
     protected boolean isCacheable(CloudRequestData data) {
-        String response = data.getJsonResponse();
+        String response =
+            ((CloudRequestDataInternal)data).getJsonResponseWithoutWaiting();
         if (response == null) {
             return false;
         }

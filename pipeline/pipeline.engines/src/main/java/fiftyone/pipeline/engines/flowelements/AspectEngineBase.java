@@ -143,7 +143,10 @@ public abstract class AspectEngineBase<
      * "A cache MUST NOT store a result that holds such a value, and MUST NOT
      * serve one that it finds."
      * <p>
-     * With lazy loading the result is checked before it has been processed.
+     * It is only asked about a result that has been processed: with lazy
+     * loading, the processing task asks once its work is done, so the check
+     * never makes process wait for a result. A result found in the cache was
+     * processed before it was stored.
      * @param data the result to check
      * @return true, unless an engine overrides this to keep a result out of
      * the cache
@@ -192,11 +195,15 @@ public abstract class AspectEngineBase<
                 // If lazy loading is configured then create a task
                 // to do the processing and assign the task to the
                 // aspect data property.
+                // The result is offered to the cache by the task, once it
+                // has been processed, so that process does not wait for it
+                // to decide whether the result may be cached.
                 ((AspectDataBase) aspectData).addProcessCallable(
                     new ProcessCallable(this) {
                         @Override
                         public Void call() throws Exception {
                             processEngine(flowData, aspectData);
+                            putInCache(flowData, aspectData);
                             return null;
                         }
                     }
@@ -205,16 +212,24 @@ public abstract class AspectEngineBase<
             else {
                 // If not lazy loading, just start processing.
                 processEngine(flowData, aspectData);
-            }
-            // If there is a cache then add the result
-            // of processing to the cache.
-            if (cache != null && isCacheable(aspectData)) {
-                cache.put(flowData, flowData.getFromElement(this));
+                putInCache(flowData, aspectData);
             }
         } else {
             // We have a result from the cache so add it
             // into the flow data.
             flowData.getOrAdd(getTypedDataKey(), new DataFactorySimple<>(cacheResult));
+        }
+    }
+
+    /**
+     * Add a processed result to the cache, if there is one and the result
+     * may be cached.
+     * @param flowData the {@link FlowData} whose Evidence makes the key
+     * @param aspectData the processed result
+     */
+    private void putInCache(FlowData flowData, TData aspectData) {
+        if (cache != null && isCacheable(aspectData)) {
+            cache.put(flowData, aspectData);
         }
     }
 
