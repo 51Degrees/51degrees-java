@@ -170,7 +170,7 @@ public class CloudRequestEngineFodIdCacheTests
             assertEquals(jsonResponse,
                 data.get(CloudRequestData.class).getJsonResponse(),
                 "A result with a 51Did found in the cache was served.");
+            verify(cache, never()).put(any(), same(cached));
         }
-        verify(cache, never()).put(any(), any());
     }
 }
