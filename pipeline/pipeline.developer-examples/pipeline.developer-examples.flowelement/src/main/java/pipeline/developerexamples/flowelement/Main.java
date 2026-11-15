@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import pipeline.developerexamples.flowelement.flowelements.SimpleFlowElement;
 import pipeline.developerexamples.flowelement.flowelements.SimpleFlowElementBuilder;
 
+import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
@@ -69,7 +70,31 @@ public class Main {
         }
     }
 
+    /**
+     * The rule above and below the "Find out more" section.
+     */
+    private static final String RULE =
+        "----------------------------------------------------------------";
+
+    /**
+     * Ends the output with the pages and repositories that say more about
+     * what this example shows.
+     * @param output where to write
+     */
+    static void writeFindOutMore(PrintStream output) {
+        output.println();
+        output.println(RULE);
+        output.println("Find out more");
+        output.println("\tThis example: https://51degrees.com/documentation/_pipeline_api__examples__custom_element__flow_element.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=pipeline.developer-examples.flowelement-main.java&utm_term=find-out-more");
+        output.println("\tCustom flow elements: https://51degrees.com/documentation/_pipeline_api__features__custom_elements.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=pipeline.developer-examples.flowelement-main.java&utm_term=find-out-more");
+        output.println("\thttps://github.com/51Degrees/51degrees-java");
+        output.println("\thttps://github.com/51Degrees/specifications");
+        output.println(RULE);
+        output.flush();
+    }
+
     public static void main(String[] args) throws Exception {
         new Example().run();
+        writeFindOutMore(System.out);
     }
 }

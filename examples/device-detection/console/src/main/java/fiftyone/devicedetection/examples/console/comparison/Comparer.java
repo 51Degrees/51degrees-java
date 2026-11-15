@@ -22,6 +22,7 @@
 
 package fiftyone.devicedetection.examples.console.comparison;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.common.testhelpers.LogbackHelper;
 import fiftyone.devicedetection.examples.console.comparison.Detection.BenchmarkResult;
 import fiftyone.devicedetection.examples.console.comparison.Detection.Request;
@@ -50,6 +51,12 @@ import static fiftyone.devicedetection.examples.shared.DataFileHelper.getEvidenc
  * code has not been tested and it is left to those interested to uncomment and get working.
  */
 public class Comparer {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-devicedetection-examples-console-comparison-comparer.java";
+
     public static final int DEFAULT_NUMBER_OF_THREADS = 4;
     public static final int DEFAULT_NUMBER_OF_RESULTS = 2500;
     @SuppressWarnings("resource")
@@ -69,6 +76,8 @@ public class Comparer {
                 DEFAULT_NUMBER_OF_RESULTS,
                 new Reporting.Minimal(),
                 new PrintWriter(System.out, true));
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     /**

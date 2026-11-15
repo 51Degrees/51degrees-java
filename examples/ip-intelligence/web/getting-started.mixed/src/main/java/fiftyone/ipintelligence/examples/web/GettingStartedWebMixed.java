@@ -47,6 +47,7 @@
 
 package fiftyone.ipintelligence.examples.web;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
 import fiftyone.devicedetection.shared.DeviceData;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
@@ -88,6 +89,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * By default the free Lite data files are used.
  */
 public class GettingStartedWebMixed extends HttpServlet {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "web-getting-started.mixed-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedwebmixed.java";
+
     private static final long serialVersionUID = 1734154705981153541L;
     public static Logger logger = LoggerFactory.getLogger(GettingStartedWebMixed.class);
 
@@ -228,6 +235,8 @@ public class GettingStartedWebMixed extends HttpServlet {
                 escapeForJs(asString(ipiData.getAreas())) : "")
             .replace("${ACCURACY_RADIUS}", value(ipiEngine, "AccuracyRadiusMin", ipiData::getAccuracyRadiusMin))
             .replace("${TIME_ZONE_OFFSET}", value(ipiEngine, "TimeZoneOffset", ipiData::getTimeZoneOffset))
+            .replace("${FIND_OUT_MORE}", FindOutMore.html(EXAMPLE_TAG,
+                    FindOutMore.ON_PREMISE_REPOSITORIES))
             .replace("${EVIDENCE_ROWS}", buildEvidenceRows(flowData))
             .replace("${LocationConfidence}", value(ipiEngine, "LocationConfidence", ipiData::getLocationConfidence))
             .replace("${ConnectionType}", value(ipiEngine, "ConnectionType", ipiData::getConnectionType))
