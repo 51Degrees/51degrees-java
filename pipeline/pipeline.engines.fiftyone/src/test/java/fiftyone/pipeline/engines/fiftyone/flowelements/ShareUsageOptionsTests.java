@@ -182,6 +182,29 @@ public class ShareUsageOptionsTests {
         assertFalse(shared(sent, "query", "plain"));
     }
 
+    /**
+     * "Share all query string parameters is on by default, so every query
+     * string and HTTP form parameter is shared unless a user turns it off."
+     * and "Anything else MUST return true." (usage-sharing-element.md lines
+     * 80 to 83), so a query string parameter that neither starts 51D_ nor is
+     * named is shared when nothing is configured.
+     */
+    @Test
+    public void defaults_ShareEveryQueryStringParameter() throws Exception {
+        Map<String, Object> evidence = evidence();
+        evidence.put("query.campaign", "spring");
+
+        Document sent = send(options(), evidence);
+
+        assertTrue(shared(sent, "query", "campaign"));
+        assertTrue(shared(sent, "query", "plain"));
+        // The keys that are never shared stay out.
+        assertFalse(shared(sent, "query", "id.email"));
+        assertFalse(shared(sent, "server", "request-query"));
+        assertTrue(new ShareUsageBuilder(LoggerFactory.getILoggerFactory())
+            .isShareAllQueryStringParameters());
+    }
+
     @Test
     public void shareAllEvidence_FromConfiguration_SharesEverythingButNeverShared()
         throws Exception {
