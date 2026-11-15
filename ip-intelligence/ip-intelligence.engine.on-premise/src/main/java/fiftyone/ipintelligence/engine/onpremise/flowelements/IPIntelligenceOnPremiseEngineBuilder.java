@@ -159,6 +159,7 @@ public class IPIntelligenceOnPremiseEngineBuilder
         }
     }
 
+    @DefaultValue("Balanced")
     @Override
     public IPIntelligenceOnPremiseEngineBuilder setPerformanceProfile(
         PerformanceProfiles profile) {
@@ -201,6 +202,7 @@ public class IPIntelligenceOnPremiseEngineBuilder
         return this;
     }
     
+    @DefaultValue("No results cache, and none can be set for this engine")
     @Override
     public IPIntelligenceOnPremiseEngineBuilder setCache(
         CacheConfiguration cacheConfiguration) {
