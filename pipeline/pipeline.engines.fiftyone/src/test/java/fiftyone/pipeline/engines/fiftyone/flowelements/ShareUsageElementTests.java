@@ -314,6 +314,80 @@ public class ShareUsageElementTests {
         }
     }
 
+    /**
+     * The record carries a Package element for each 51Degrees package in
+     * use, named by its Maven group and artifact id, with its version, after
+     * the FlowElement elements and before Language, as the specification's
+     * Processing section sets out. The packages are asked for with this
+     * element's class among the classes in use.
+     */
+    @Test
+    public void ShareUsageElement_Packages_EachWithItsVersion() throws Exception {
+        createShareUsage(
+                1,
+                1,
+                1,
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>());
+        shareUsageElement.httpClient = new TestHttpClient();
+        shareUsageElement.dataUploader = null;
+        SortedMap<String, String> packages = new TreeMap<>();
+        packages.put("com.51degrees:pipeline.core", "4.5.131");
+        packages.put("com.51degrees:pipeline.engines.fiftyone", "4.5.132");
+        List<Collection<Class<?>>> asked = new ArrayList<>();
+        shareUsageElement.packageFinder = classes -> {
+            asked.add(classes);
+            return packages;
+        };
+
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
+            shareUsageElement.process(data);
+            assertNotNull(shareUsageElement.getSendDataFuture());
+            shareUsageElement.getSendDataFuture().get();
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte[] zip = ((TestHttpClient)shareUsageElement.httpClient).getBuffer();
+            copy(new GZIPInputStream(new ByteArrayInputStream(zip)), baos);
+            Document doc = docBuilderFactory.newDocumentBuilder().parse(
+                new ByteArrayInputStream(baos.toByteArray()));
+
+            NodeList found = (NodeList) xpath.compile("//Devices/Device/Package")
+                .evaluate(doc, XPathConstants.NODESET);
+            assertEquals(2, found.getLength(), "One Package element for each package");
+            int i = 0;
+            for (Map.Entry<String, String> entry : packages.entrySet()) {
+                org.w3c.dom.Element element = (org.w3c.dom.Element) found.item(i++);
+                assertEquals(entry.getKey(), element.getAttribute("Name"));
+                assertEquals(entry.getValue(), element.getTextContent());
+            }
+            assertEquals("Product", previousElement(found.item(0)).getNodeName(),
+                "With no Flow Elements the Package elements follow Product");
+            assertEquals("Language", nextElement(found.item(1)).getNodeName(),
+                "Language follows the Package elements");
+        }
+        assertEquals(1, asked.size(), "The packages are found once");
+        assertTrue(asked.get(0).contains(ShareUsageElement.class),
+            "This element's own package is among those in use");
+    }
+
+    private static Node previousElement(Node node) {
+        Node sibling = node.getPreviousSibling();
+        while (sibling != null && sibling.getNodeType() != Node.ELEMENT_NODE) {
+            sibling = sibling.getPreviousSibling();
+        }
+        return sibling;
+    }
+
+    private static Node nextElement(Node node) {
+        Node sibling = node.getNextSibling();
+        while (sibling != null && sibling.getNodeType() != Node.ELEMENT_NODE) {
+            sibling = sibling.getNextSibling();
+        }
+        return sibling;
+    }
+
     // duplicate above test, only using legacy HttpClient approach
     @Test
     public void ShareUsageElement_SingleEvent_ClientIPAndHeader_HttpClient() throws Exception {
