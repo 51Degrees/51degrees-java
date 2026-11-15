@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.core.flowelements;
 
+import fiftyone.pipeline.annotations.DefaultValue;
 import fiftyone.pipeline.core.Constants;
 import fiftyone.pipeline.core.configuration.PipelineOptions;
 import fiftyone.pipeline.core.data.FlowData;
@@ -186,6 +187,7 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
      * @return this builder
      */
     @SuppressWarnings("unchecked")
+    @DefaultValue(booleanValue = Constants.DEFAULT_AUTO_CLOSE_ELEMENTS)
     public T setAutoCloseElements(boolean autoClose) {
         this.autoCloseElements = autoClose;
         return (T) this;
@@ -201,6 +203,7 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
      * @return this builder
      */
     @SuppressWarnings("unchecked")
+    @DefaultValue(booleanValue = Constants.DEFAULT_SUPPRESS_PROCESS_EXCEPTIONS)
     public T setSuppressProcessException(boolean suppress) {
         this.suppressProcessExceptions = suppress;
         return (T) this;

@@ -174,6 +174,8 @@ public abstract class OnPremiseAspectEngineBuilderBase<
      * @param profile the performance profile for the engine to use
      * @return this engine builder instance
      */
+    @DefaultValue("Set by each engine's builder, which gives it on its own " +
+        "setPerformanceProfile")
     public abstract TBuilder setPerformanceProfile(Constants.PerformanceProfiles profile);
 
     @Override

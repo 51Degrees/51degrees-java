@@ -22,6 +22,8 @@
 
 package fiftyone.pipeline.engines.configuration;
 
+import fiftyone.pipeline.annotations.DefaultValue;
+import fiftyone.pipeline.engines.Constants;
 import fiftyone.pipeline.engines.data.DataUpdateUrlFormatter;
 import fiftyone.pipeline.engines.services.DataUpdateService;
 
@@ -71,6 +73,7 @@ public abstract class DataFileConfigurationBuilderBase<
      * @param identifier the identifier to use
      * @return this builder instance
      */
+    @DefaultValue("Default")
     @SuppressWarnings("unchecked")
     public TBuilder setDataFileIdentifier(String identifier) {
         this.identifier = identifier;
@@ -83,6 +86,7 @@ public abstract class DataFileConfigurationBuilderBase<
      * @param url the URL to check for a new data file.
      * @return this builder instance.
      */
+    @DefaultValue("51Degrees default, set by the engine's builder")
     @SuppressWarnings("unchecked")
     public TBuilder setDataUpdateUrl(String url) {
         dataUpdateUrlOverride = url;
@@ -95,6 +99,7 @@ public abstract class DataFileConfigurationBuilderBase<
      * @param formatter  the formatter to use
      * @return  this builder instance
      */
+    @DefaultValue("51Degrees default, set by the engine's builder")
     @SuppressWarnings("unchecked")
     public TBuilder setDataUpdateUrlFormatter( DataUpdateUrlFormatter formatter) {
         dataUpdateUrlFormatter = formatter;
@@ -110,6 +115,7 @@ public abstract class DataFileConfigurationBuilderBase<
      *               False otherwise
      * @return this builder instance
      */
+    @DefaultValue(booleanValue = Constants.DEFAULT_VERIFY_MD5)
     @SuppressWarnings("unchecked")
     public TBuilder setDataUpdateVerifyMd5(boolean verify) {
         dataUpdateVerifyMd5 = verify;
@@ -123,6 +129,7 @@ public abstract class DataFileConfigurationBuilderBase<
      *                    be decompressed. False otherwise
      * @return this builder instance
      */
+    @DefaultValue(booleanValue = Constants.DEFAULT_DECOMPRESS)
     @SuppressWarnings("unchecked")
     public TBuilder setDataUpdateDecompress(boolean decompress) {
         dataUpdateDecompress = decompress;
@@ -137,6 +144,7 @@ public abstract class DataFileConfigurationBuilderBase<
      *                called on {@link DataUpdateService}
      * @return this builder instance
      */
+    @DefaultValue(booleanValue = Constants.DEFAULT_AUTOUPDATE_ENABLED)
     @SuppressWarnings("unchecked")
     public TBuilder setAutoUpdate(boolean enabled) {
         autoUpdateEnabled = enabled;
@@ -155,6 +163,7 @@ public abstract class DataFileConfigurationBuilderBase<
      * @param enabled  the cache configuration to use
      * @return this builder instance
      */
+    @DefaultValue(booleanValue = Constants.DEFAULT_WATCHER_ENABLED)
     @SuppressWarnings("unchecked")
     public TBuilder setDataFileSystemWatcher(boolean enabled) {
         dataFileSystemWatcherEnabled = enabled;
@@ -175,6 +184,7 @@ public abstract class DataFileConfigurationBuilderBase<
      * @param pollingIntervalSeconds the number of seconds between checks
      * @return this builder instance
      */
+    @DefaultValue(intValue = Constants.DATA_UPDATE_POLLING_DEFAULT)
     @SuppressWarnings("unchecked")
     public TBuilder setUpdatePollingInterval(int pollingIntervalSeconds) {
         updatePollingIntervalSeconds = pollingIntervalSeconds;
@@ -194,6 +204,7 @@ public abstract class DataFileConfigurationBuilderBase<
      * @param pollingIntervalMillis the time between checks
      * @return this builder instance
      */
+    @DefaultValue(intValue = Constants.DATA_UPDATE_POLLING_DEFAULT * 1000)
     @SuppressWarnings("unchecked")
     public TBuilder setUpdatePollingInterval(long pollingIntervalMillis) {
         if (pollingIntervalMillis / 1000 > Integer.MAX_VALUE) {
@@ -212,6 +223,7 @@ public abstract class DataFileConfigurationBuilderBase<
      *                               polling interval
      * @return this builder instance
      */
+    @DefaultValue(intValue = Constants.DATA_UPDATE_RANDOMISATION_DEFAULT * 1000)
     @SuppressWarnings("unchecked")
     public TBuilder setUpdateRandomisationMax(long maximumDeviationMillis){
         if (maximumDeviationMillis / 1000 > Integer.MAX_VALUE) {
@@ -228,6 +240,7 @@ public abstract class DataFileConfigurationBuilderBase<
      * @param enabled whether to use the If-Modified-Since header
      * @return this builder instance
      */
+    @DefaultValue(booleanValue = Constants.DEFAULT_VERIFY_IF_MODIFIED_SINCE)
     @SuppressWarnings("unchecked")
     public TBuilder setVerifyIfModifiedSince(boolean enabled) {
         dataUpdateVerifyModifiedSince = enabled;
@@ -241,6 +254,7 @@ public abstract class DataFileConfigurationBuilderBase<
      *            this file
      * @return this builder
      * */
+    @DefaultValue("No license keys")
     @SuppressWarnings("unchecked")
     public TBuilder setDataUpdateLicenseKey(String key) {
         if (key == null) {
@@ -265,6 +279,7 @@ public abstract class DataFileConfigurationBuilderBase<
      *                latest copy of the file
      * @return this builder
      */
+    @DefaultValue(booleanValue = Constants.DEFAULT_UPDATE_ON_STARTUP)
     @SuppressWarnings("unchecked")
     public TBuilder setUpdateOnStartup(boolean enabled) {
         updateOnStartup = enabled;
@@ -276,6 +291,7 @@ public abstract class DataFileConfigurationBuilderBase<
      * @param keys 51Degrees license keys
      * @return this builder
      * */
+    @DefaultValue("No license keys")
     @SuppressWarnings("unchecked")
     public TBuilder setDataUpdateLicenseKeys(String[] keys) {
         Collections.addAll(licenseKeys, keys);
