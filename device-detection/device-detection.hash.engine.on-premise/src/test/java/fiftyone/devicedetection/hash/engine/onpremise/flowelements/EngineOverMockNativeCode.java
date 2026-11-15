@@ -32,6 +32,8 @@ import org.slf4j.Logger;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Map;
+import java.util.TreeMap;
 
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doNothing;
@@ -78,6 +80,20 @@ class EngineOverMockNativeCode {
         set("propertyIndexes", Collections.emptyMap());
         set("propertyIndexesFixed", true);
         setKeys();
+    }
+
+    /**
+     * Set the property names the engine was created with, so each name's
+     * position is its place in the list.
+     * @param names the names
+     */
+    void setPropertyNames(String... names) throws Exception {
+        Map<String, Integer> indexes =
+            new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        for (int i = 0; i < names.length; i++) {
+            indexes.putIfAbsent(names[i], i);
+        }
+        set("propertyIndexes", indexes);
     }
 
     /**
