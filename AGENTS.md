@@ -156,11 +156,12 @@ IPv6 address. For each it prints `Input values:` with `query.client-ip`, then
 `TimeZoneOffset`. The Lite file has RegisteredName, RegisteredOwner and
 RegisteredCountry, so every other line reads `needs the Enterprise data file`.
 
-Both then end the same way.
+Both then end the same way, where `<tier>` is `Lite` for Device Detection and
+`IPIV4Lite` for IP Intelligence.
 
 ```
 Some of these properties need the Enterprise data file. Contact us for a copy at <the tagged contact-us link>
-INFO  ... Used a 'Lite' data file, created <date>, <n> days ago, from location '<path>'
+INFO  ... Used a '<tier>' data file, created <date>, <n> days ago, from location '<path>'
 INFO  ... All done
 ```
 
