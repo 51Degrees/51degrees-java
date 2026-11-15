@@ -159,7 +159,7 @@ public class StartupHelpers {
             // The sequence element is not included so add it.
             ElementOptions sequenceElement = new ElementOptions();
             sequenceElement.builderName = SequenceElement.class.getSimpleName();
-            options.elements.add(0, sequenceElement);
+            options.elements.add(sequenceElement);
         }
 
         // TODO - client size option should ideally be added to the same configuration.
@@ -180,8 +180,7 @@ public class StartupHelpers {
                 if (jsIndex >= 0) {
                     // There is already a javascript builder element
                     // so insert the json builder before it.
-                    options.elements.add(jsIndex, jsonBuilderElement);
-                    jsIndex++;
+                    options.elements.add(jsonBuilderElement);
                 }
                 else {
                     options.elements.add(jsonBuilderElement);
