@@ -189,8 +189,10 @@ public class ExamplesWithoutSettingsTest {
      */
     @Test
     public void comparer() throws Exception {
-        runWithoutSettings(
+        String output = runWithoutSettings(
                 fiftyone.devicedetection.examples.console.comparison.Comparer::main);
+        assertContains(output, "Hardware Vendor: " + DataFileHelper.NEEDS_ENTERPRISE);
+        assertContains(output, CONTACT_US);
     }
 
     @Test
