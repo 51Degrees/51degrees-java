@@ -43,6 +43,9 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Function;
@@ -54,7 +57,7 @@ import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.LOST_DAT
 /**
  * Abstract base class for ShareUsage elements. Contains common functionality
  * such as filtering the evidence and building the XML records.
- * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/pipeline-elements/usage-sharing-element.md">Specification</a>
+ * @see <a href="https://github.com/51Degrees/specifications/blob/c8128ca4fa68c6348d76ddb2889bb5087de1aa5f/pipeline-specification/pipeline-elements/usage-sharing-element.md">Specification</a>
  */
 public abstract class ShareUsageBase
     extends FlowElementBase<ElementData, ElementPropertyMetaData> {
@@ -63,8 +66,26 @@ public abstract class ShareUsageBase
      * IP Addresses of local host device.
      */
     private static final InetAddress[] localHosts;
+
+    /** The form of DateSent, which is the time in UTC. */
+    private static final String DATE_SENT_PATTERN = "yyyy-MM-dd'T'HH:mm:ss";
+
+    private static final DateTimeFormatter DATE_SENT_FORMAT =
+        DateTimeFormatter.ofPattern(DATE_SENT_PATTERN, Locale.ROOT)
+            .withZone(ZoneOffset.UTC);
+
+    /**
+     * Formats a date as DateSent, in UTC.
+     * @deprecated the record takes DateSent from {@link #dateSentNow()},
+     * which is safe to call from any thread.
+     */
+    @Deprecated
     protected static final SimpleDateFormat DATE_FMT =
-        new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+        new SimpleDateFormat(DATE_SENT_PATTERN);
+
+    static {
+        DATE_FMT.setTimeZone(TimeZone.getTimeZone("UTC"));
+    }
 
     static {
         InetAddress[] localHosts1;
@@ -199,8 +220,9 @@ public abstract class ShareUsageBase
         classes -> PackageVersions.of(classes, PackageVersions.GROUP_ID);
 
     /**
-     * Version of the OS the pipeline is being run on, as reported by
-     * System.getProperty("os.name").
+     * The name of the operating system the Pipeline runs on, followed by
+     * its version where the JVM gives one, as System.getProperty("os.name")
+     * and System.getProperty("os.version") report them. Written as Platform.
      */
     protected final String osVersion;
 
@@ -232,6 +254,12 @@ public abstract class ShareUsageBase
      * sub-threshold batch is not left unsent.
      */
     private volatile boolean stopping = false;
+
+    /**
+     * Set when closing has waited as long as it may for the queue to be
+     * sent. The data left is discarded and a consumer sends nothing more.
+     */
+    private volatile boolean discarding = false;
 
     /**
      * Keep a count of data lost
@@ -551,7 +579,8 @@ public abstract class ShareUsageBase
         // Some data is going to stay the same on all requests so we can
         // gather that now.
         languageVersion = System.getProperty("java.version");
-        osVersion = System.getProperty("os.name");
+        osVersion = platform(
+            System.getProperty("os.name"), System.getProperty("os.version"));
 
         this.enginesVersion = getClass().getPackage().getImplementationVersion();
         coreVersion = Pipeline.class.getPackage().getImplementationVersion();
@@ -591,7 +620,28 @@ public abstract class ShareUsageBase
     }
 
     /**
-     * Return a list of {@link FlowElement} in the pipeline.
+     * The time now in UTC, in the form DateSent is written in.
+     * @return the text for DateSent
+     */
+    protected static String dateSentNow() {
+        return DATE_SENT_FORMAT.format(Instant.now());
+    }
+
+    /**
+     * The text for Platform, which is the name of the operating system
+     * followed by its version where there is one.
+     */
+    private static String platform(String name, String version) {
+        String platform = name == null ? "" : name.trim();
+        if (version != null && version.trim().isEmpty() == false) {
+            platform = (platform + " " + version.trim()).trim();
+        }
+        return platform;
+    }
+
+    /**
+     * Return the fully qualified class name of each {@link FlowElement} in
+     * the pipeline.
      * If the list is null then populate from the pipeline.
      * If there are multiple or no pipelines then log an error.
      * @return list of flow elements
@@ -604,7 +654,7 @@ public abstract class ShareUsageBase
                 pipeline = getPipelines().get(0);
                 List<String> list = new ArrayList<>();
                 for ( FlowElement element : pipeline.getFlowElements()) {
-                    list.add(element.getClass().getSimpleName());
+                    list.add(element.getClass().getName());
                 }
                 flowElements = list;
             } else {
@@ -749,6 +799,15 @@ public abstract class ShareUsageBase
     }
 
     /**
+     * Returns true once closing has stopped waiting for the queue to be
+     * sent. A consumer that sees this sends nothing more.
+     * @return true if the data left is being discarded
+     */
+    protected boolean isDiscarding() {
+        return discarding;
+    }
+
+    /**
      * Returns true if there is a thread attempting to send usage data.
      * @return true if data is being sent
      */
@@ -792,7 +851,17 @@ public abstract class ShareUsageBase
         try {
             executor.shutdown();
             if (!executor.awaitTermination(Constants.SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT, TimeUnit.MILLISECONDS)){
-                logger.warn("Could not send final data on close down");
+                // Sending stops rather than hold up the process that closes
+                // the element, and the data left is discarded.
+                discarding = true;
+                int discarded =
+                    evidenceCollection.drainTo(new ArrayList<ShareUsageData>());
+                logger.warn(
+                    "{} usage sharing entries were not sent, as sending had " +
+                        "not finished {} milliseconds after usage sharing " +
+                        "started closing.",
+                    discarded,
+                    Constants.SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT);
                 executor.shutdownNow();
             }
         } catch (InterruptedException interruptedException) {
