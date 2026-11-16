@@ -30,7 +30,7 @@ jobs:
       - name: Fetch the submodules the module builds from
         run: >
           git submodule update --init
-          pipeline/pipeline.cloudrequestengine/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates
+          pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates
           pipeline/owid-java pipeline/pipeline.core/configuration-validation
       - uses: actions/setup-java@v4
         with:
