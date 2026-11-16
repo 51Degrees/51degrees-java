@@ -501,12 +501,16 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                             }
                         }
                         if (fileLockable) {
-                            // Complete the update
-                            status = updatedFileAvailable(dataFile);
-                            // The refresh cancelled the polling timer, so
-                            // register the file again to set a new one.
-                            if (dataFile.getIsRegistered()) {
-                                registerDataFile(dataFile);
+                            // Complete the update. The refresh cancels the
+                            // polling timer first, so the file is registered
+                            // again to set a new one however the refresh
+                            // ends, an Error included.
+                            try {
+                                status = updatedFileAvailable(dataFile);
+                            } finally {
+                                if (dataFile.getIsRegistered()) {
+                                    registerDataFile(dataFile);
+                                }
                             }
                         } else if (interrupted == false) {
                             // The polling timer is left as it was.
