@@ -1,0 +1,43 @@
+name: Temporary red and green run, missing Property in plain text
+
+# Throwaway. Runs the new missing Property tests of both example shared
+# modules against the published packages, at the test commit before the
+# fix (expected to fail) and at the fix (expected to pass).
+
+on:
+  push:
+    branches:
+      - 'tmp/red-dx31'
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    name: ${{ matrix.side }}, ${{ matrix.product }}
+    strategy:
+      fail-fast: false
+      matrix:
+        side: [red at effb54fb, green at 3afe55c8]
+        product: [device-detection, ip-intelligence]
+        include:
+          - side: red at effb54fb
+            sha: effb54fbc07f9a0a6e9d54b962b59e44dd06a8d5
+          - side: green at 3afe55c8
+            sha: 3afe55c8da66e880e6a9dc2acf30e55e80cd45c4
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Run the new tests against the published packages
+        run: |
+          git log --oneline -1
+          mvn -B -f examples/${{ matrix.product }}/pom.xml -pl shared test \
+            -Dtest=PropertyHelperMissingPropertyTests \
+            -Dsurefire.failIfNoSpecifiedTests=false -DtrimStackTrace=false
