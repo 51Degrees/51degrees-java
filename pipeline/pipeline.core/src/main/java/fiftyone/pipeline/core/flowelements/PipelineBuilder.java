@@ -1005,8 +1005,10 @@ public class PipelineBuilder
         String value,
         String errorTextPrefix) {
         // A configuration file gives an enumeration value as the name of the
-        // value, which is matched without regard to case.
-        if (targetType.isEnum()) {
+        // value, which is matched without regard to case. An enumeration
+        // with a parse method of its own is left to that method, which may
+        // accept more spellings and give its own message.
+        if (targetType.isEnum() && hasParseMethod(targetType) == false) {
             for (Object constant : targetType.getEnumConstants()) {
                 if (((Enum<?>) constant).name().equalsIgnoreCase(value.trim())) {
                     return constant;
@@ -1054,6 +1056,21 @@ public class PipelineBuilder
                 cause);
         }
         return parsedValue;
+    }
+
+    /**
+     * Whether the type has a method named 'parse...' that takes one string,
+     * as {@link #parseToType} looks for.
+     */
+    private static boolean hasParseMethod(Class<?> type) {
+        for (Method method : type.getMethods()) {
+            if (method.getName().startsWith("parse") &&
+                method.getParameterTypes().length == 1 &&
+                method.getParameterTypes()[0].equals(String.class)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
