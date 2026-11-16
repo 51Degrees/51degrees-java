@@ -243,7 +243,9 @@ public class PerformanceBenchmark {
         builder.setPerformanceProfile(config.profile)
         // set this to false for testing
         .setAutoUpdate(false)
-        // set this to false for testing
+        // Usage sharing is off because this example's evidence is already
+        // known to 51Degrees. In production, leave usage sharing on, which adds
+        // a Usage Sharing Element to the Pipeline and helps improve the service.
         .setShareUsage(false)
         // hint for cache concurrency
         .setConcurrency(numberOfThreads);
