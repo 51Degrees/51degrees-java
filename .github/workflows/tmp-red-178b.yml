@@ -1,0 +1,98 @@
+name: Temporary red run for pull request 178
+
+# Throwaway. The minify job runs the test commit before its fix. The other
+# two jobs each break one thing the pull request's new tests pin, so each
+# test is shown able to fail.
+
+on:
+  push:
+    branches:
+      - 'tmp/red-178b'
+
+permissions:
+  contents: read
+
+jobs:
+  minify:
+    name: the script is not minified, at the test commit before the fix
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+      - name: The test commit before the fix
+        shell: bash
+        run: |
+          git checkout --force 191ae04ac7f6be9c4d9a205fe3c3bd3b93effd44
+          git log --oneline -1
+      - name: The submodules the module needs
+        shell: bash
+        run: git submodule update --init pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates pipeline/owid-java pipeline/pipeline.core/configuration-validation
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Build the module and the modules it needs
+        shell: bash
+        run: mvn -B -q -pl pipeline/pipeline.javascriptbuilder -am install -DskipTests
+      - name: Run the minify tests
+        shell: bash
+        run: mvn -B -pl pipeline/pipeline.javascriptbuilder surefire:test -Dtest=JavaScriptMinifyTests -DtrimStackTrace=false
+
+  minify-cost:
+    name: every request minifies the script again
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: Minify for every request rather than once for each form
+        shell: bash
+        run: |
+          f=pipeline/pipeline.javascriptbuilder/src/main/java/fiftyone/pipeline/javascriptbuilder/flowelements/JavaScriptBuilderElement.java
+          perl -0777 -pi -e 's|        String form = minifiedForms\.computeIfAbsent\(key, k -> minifyForm\(values\)\);|        String form = minifyForm(values);|' "$f"
+          grep -n 'String form = ' "$f"
+      - name: The submodules the module needs
+        shell: bash
+        run: git submodule update --init pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates pipeline/owid-java pipeline/pipeline.core/configuration-validation
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Build the module and the modules it needs
+        shell: bash
+        run: mvn -B -q -pl pipeline/pipeline.javascriptbuilder -am install -DskipTests
+      - name: Run the minify performance tests
+        shell: bash
+        run: mvn -B -pl pipeline/pipeline.javascriptbuilder surefire:test -Dtest=JavaScriptMinifyPerformanceTests -DtrimStackTrace=false
+
+  json-endpoint:
+    name: the JSON endpoint answers in another form
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: Answer the JSON endpoint with an empty object
+        shell: bash
+        run: |
+          f=pipeline/pipeline.web.packages/pipeline.web/src/main/java/fiftyone/pipeline/web/services/ClientsidePropertyServiceCore.java
+          perl -0777 -pi -e 's|                        content = jsonData == null \? null : jsonData\.getJson\(\);|                        content = "\{\}";|' "$f"
+          grep -n 'content = ' "$f" | head -4
+      - name: The submodules the module needs
+        shell: bash
+        run: git submodule update --init pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates pipeline/owid-java pipeline/pipeline.core/configuration-validation
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Build the module and the modules it needs
+        shell: bash
+        run: mvn -B -q -pl pipeline/pipeline.web.packages/pipeline.web -am install -DskipTests
+      - name: Run the JSON endpoint tests
+        shell: bash
+        run: mvn -B -pl pipeline/pipeline.web.packages/pipeline.web surefire:test -Dtest=ClientsideJsonEndpointTests -DtrimStackTrace=false
