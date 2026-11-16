@@ -833,7 +833,7 @@ public abstract class ShareUsageBase
         try {
             executor.shutdown();
             if (!executor.awaitTermination(
-                    closeWaitLeftMillis(closeStartNanos),
+                    Constants.SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT,
                     TimeUnit.MILLISECONDS)) {
                 // Sending stops rather than hold up the process that closes
                 // the element, and the data left is discarded, all within
