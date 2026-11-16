@@ -49,13 +49,14 @@ public class SequenceElementParallelTests {
     private final ILoggerFactory loggerFactory =
         LoggerFactory.getILoggerFactory();
 
-    private FlowElement sequence() {
+    private FlowElement<?, ?> sequence() {
         return new SequenceElementBuilder(loggerFactory).build();
     }
 
     @Test
     public void AddFlowElementsParallel_SequenceElement_IsRefused() {
-        FlowElement[] group = new FlowElement[] {sequence(), sequence()};
+        FlowElement<?, ?>[] group =
+            new FlowElement<?, ?>[] {sequence(), sequence()};
         PipelineConfigurationException refused = assertThrows(
             PipelineConfigurationException.class,
             () -> new PipelineBuilder(loggerFactory)
