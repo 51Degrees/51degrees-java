@@ -1,0 +1,36 @@
+name: Temporary second red run for pull request 178
+
+# Throwaway. The head with the minified render turned off, so the element
+# renders the template as written whilst setMinify still exists and the
+# minify tests still compile. Those tests are expected to fail.
+
+on:
+  push:
+    branches:
+      - 'tmp/red-178c'
+
+permissions:
+  contents: read
+
+jobs:
+  not-minified:
+    name: the script is never minified
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: The submodules the module needs
+        shell: bash
+        run: git submodule update --init pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates pipeline/owid-java pipeline/pipeline.core/configuration-validation
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Build the module and the modules it needs
+        shell: bash
+        run: mvn -B -q -pl pipeline/pipeline.javascriptbuilder -am install -DskipTests
+      - name: Run the minify tests
+        shell: bash
+        run: mvn -B -pl pipeline/pipeline.javascriptbuilder surefire:test -Dtest=JavaScriptMinifyTests -DtrimStackTrace=false

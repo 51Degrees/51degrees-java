@@ -736,7 +736,7 @@ public class JavaScriptBuilderElement
      * @return the minified script, or null if minification failed
      */
     private String renderMinified(Map<String, Object> values) {
-        if (minifyFailed.get()) {
+        if (true) {
             return null;
         }
         // The form depends only on the template's sections, being every
