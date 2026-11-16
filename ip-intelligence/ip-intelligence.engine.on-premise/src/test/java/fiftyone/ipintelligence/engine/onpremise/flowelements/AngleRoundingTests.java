@@ -99,6 +99,46 @@ public class AngleRoundingTests extends TestsBase {
             unrounded, unrounded.isEmpty());
     }
 
+    /**
+     * Read by name, with no type given, Latitude and Longitude are weighted
+     * values of Float, the type the IP Intelligence data model gives them
+     * and the type their typed accessors return, so a caller reading them
+     * either way gets the same number.
+     */
+    @Test
+    public void Angles_ByName_AreWeightedFloats() throws Exception {
+        IPIntelligenceOnPremiseEngine engine = getWrapper().getEngine();
+        assumeTrue("Needs a data file with Latitude and Longitude, being " +
+            "the Enterprise file", hasAngles(engine));
+        List<String> wrong = new ArrayList<>();
+        for (String address : ADDRESSES) {
+            try (FlowData data =
+                     getWrapper().getPipeline().createFlowData()) {
+                data.addEvidence("query.client-ip", address);
+                data.process();
+                IPIntelligenceData ipi = data.get(IPIntelligenceData.class);
+                for (String angle : ANGLES) {
+                    AspectPropertyValue<?> apv =
+                        (AspectPropertyValue<?>) ipi.get(angle.toLowerCase());
+                    if (apv.hasValue() == false) {
+                        continue;
+                    }
+                    for (Object item : (List<?>) apv.getValue()) {
+                        Object value = ((IWeightedValue<?>) item).getValue();
+                        if ((value instanceof Float) == false) {
+                            wrong.add(address + " " + angle + " " +
+                                (value == null ?
+                                    "null" :
+                                    value.getClass().getSimpleName()));
+                        }
+                    }
+                }
+            }
+        }
+        assertTrue("These weighted values are not Float: " + wrong,
+            wrong.isEmpty());
+    }
+
     private static boolean hasAngles(IPIntelligenceOnPremiseEngine engine) {
         int found = 0;
         for (AspectPropertyMetaData property : engine.getProperties()) {
