@@ -1,0 +1,109 @@
+name: Temporary red run for pull request 179
+
+# Throwaway. Each job either runs a test commit before its fix, or breaks
+# one thing a guard test pins, so each test is shown able to fail.
+
+on:
+  push:
+    branches:
+      - 'tmp/red-179'
+
+permissions:
+  contents: read
+
+env:
+  SUBMODULES: pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates pipeline/owid-java pipeline/pipeline.core/configuration-validation
+
+jobs:
+  configuration-values:
+    name: a list and an enumeration in a configuration file, before the fix
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - shell: bash
+        run: |
+          git checkout --force f9eb229e16a24206d2b203dd81433dda812c878c
+          git submodule update --init $SUBMODULES
+          git log --oneline -1
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - shell: bash
+        run: mvn -B -q -pl pipeline/pipeline.engines -am install -DskipTests
+      - shell: bash
+        run: mvn -B -pl pipeline/pipeline.engines surefire:test -Dtest=ConfigurationValueTypesTests -DtrimStackTrace=false
+
+  dotnet-names:
+    name: the names the .NET sample uses, before the fix
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - shell: bash
+        run: |
+          git checkout --force 0dd259f6cf17e74035fca167057e6b60ea4eca5b
+          git submodule update --init $SUBMODULES
+          git log --oneline -1
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - shell: bash
+        run: mvn -B -q -pl pipeline/pipeline.core -am install -DskipTests
+      - shell: bash
+        run: mvn -B -pl pipeline/pipeline.core surefire:test -Dtest=ConfigurationFileLanguagesTest -DtrimStackTrace=false
+
+  stored-string:
+    name: the stored string of a property, before the fix
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - shell: bash
+        run: |
+          git checkout --force 294688b29a0c65db26749152bf42b6df5138d5db
+          git submodule update --init --recursive
+          git log --oneline -1
+      - name: The free data files, from the data repository
+        shell: bash
+        run: bash cxx/data/get-data-files.sh
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - shell: bash
+        run: mvn -B -q -pl device-detection/device-detection -am install -DskipTests
+      - shell: bash
+        run: mvn -B -pl device-detection/device-detection surefire:test -Dtest=StoredValueAsStringTests -DtrimStackTrace=false
+
+  element-data-keys:
+    name: an Element Data key with a capital and an underscore
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Give the JavaScript Builder a key that breaks both rules
+        shell: bash
+        run: |
+          f=pipeline/pipeline.javascriptbuilder/src/main/java/fiftyone/pipeline/javascriptbuilder/flowelements/JavaScriptBuilderElement.java
+          perl -0777 -pi -e 's|        return "javascript-builder";|        return "JavaScript_Builder";|' "$f"
+          grep -n 'JavaScript_Builder' "$f"
+      - shell: bash
+        run: git submodule update --init $SUBMODULES
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - shell: bash
+        run: mvn -B -q -pl pipeline/pipeline.javascriptbuilder -am install -DskipTests
+      - shell: bash
+        run: mvn -B -pl pipeline/pipeline.javascriptbuilder surefire:test -Dtest=ElementDataKeyFormatTests -DtrimStackTrace=false
