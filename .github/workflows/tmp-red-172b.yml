@@ -1,0 +1,46 @@
+name: Temporary red and green run for pull request 172
+
+# Throwaway. Runs the Device Detection cloud engine's empty metadata tests
+# at the test commit before the fix (expected to fail) and at the head
+# (expected to pass).
+
+on:
+  push:
+    branches:
+      - 'tmp/red-172b'
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    name: ${{ matrix.side }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - side: red, test commit 1ae2a66a before the fix
+            sha: 1ae2a66a4e88d86e372ed990abce54fe1d7b0867
+          - side: green, head 0e9a298a with the fix
+            sha: 0e9a298abb5514fe5655490ab3e2f915999e460a
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.sha }}
+          fetch-depth: 20
+      - name: Fetch the submodules the modules build from
+        run: >
+          git submodule update --init
+          pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates
+          pipeline/owid-java pipeline/pipeline.core/configuration-validation
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Run the empty metadata tests
+        run: |
+          git log --oneline -1
+          mvn -B -Pdev -DskipNativeBuild=true -pl device-detection/device-detection.cloud -am test \
+            -Dtest=EmptyMetadataTests -Dsurefire.failIfNoSpecifiedTests=false -DtrimStackTrace=false
