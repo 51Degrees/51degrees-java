@@ -177,8 +177,9 @@ public class OfflineProcessing {
         // that the pipeline is disposed when done
         try (Pipeline pipeline = new IPIntelligencePipelineBuilder()
                 .useOnPremise(dataFileLocation, false)
-                // inhibit sharing usage for this test, usually
-                // this should be set "true"
+                // Usage sharing is off because this example's evidence is already
+                // known to 51Degrees. In production, leave usage sharing on, which adds
+                // a Usage Sharing Element to the Pipeline and helps improve the service.
                 .setShareUsage(false)
                 // inhibit auto-update of the data file for this test
                 .setAutoUpdate(false)

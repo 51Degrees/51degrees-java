@@ -23,11 +23,15 @@
 package fiftyone.pipeline.engines.services;
 
 import fiftyone.pipeline.core.data.ElementPropertyMetaData;
+import fiftyone.pipeline.core.typed.TypedKey;
 import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
+import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.engines.flowelements.AspectEngine;
 import fiftyone.pipeline.engines.flowelements.CloudAspectEngine;
+import fiftyone.pipeline.engines.flowelements.OnPremiseAspectEngine;
 
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -45,6 +49,11 @@ public class MissingPropertyServiceDefault implements MissingPropertyService {
     private static MissingPropertyServiceDefault missingPropertyService = null;
 
     private static final Object lock = new Object();
+
+    /**
+     * The start of the name of a typed accessor for a property.
+     */
+    private static final String ACCESSOR_PREFIX = "get";
 
     /**
      * Private constructor to prevent new copies
@@ -76,48 +85,56 @@ public class MissingPropertyServiceDefault implements MissingPropertyService {
 
         MissingPropertyReason reason = MissingPropertyReason.Unknown;
 
+        boolean cloud = engine instanceof CloudAspectEngine;
+        boolean onPremise = engine instanceof OnPremiseAspectEngine;
+        // An On-premise Engine loads its metadata when it is built.
+        boolean loaded = cloud == false || engine.hasLoadedProperties();
+
         AspectPropertyMetaData property = null;
-
-        // We know the property has extends AspectPropertyMetaData as it
-        // is a constraint of the AspectEngine interface, so don't check this
-        // cast
-        for (Object currentPropertyObject : engine.getProperties()) {
-            AspectPropertyMetaData currentProperty =
-                (AspectPropertyMetaData)currentPropertyObject;
-            if (currentProperty.getName().equalsIgnoreCase(propertyName)) {
-                property = currentProperty;
-                break;
-            }
-        }
-
-        if (property != null) {
-            // Check if the property is available in the data file that is
-            // being used by the engine.
-            boolean containsDataTier = false;
-            for (String tier : property.getDataTiersWherePresent()) {
-                if (tier.equals(engine.getDataSourceTier())) {
-                    containsDataTier = true;
+        if (loaded) {
+            // We know the property has extends AspectPropertyMetaData as it
+            // is a constraint of the AspectEngine interface, so don't check
+            // this cast
+            for (Object currentPropertyObject : engine.getProperties()) {
+                AspectPropertyMetaData currentProperty =
+                    (AspectPropertyMetaData)currentPropertyObject;
+                if (currentProperty.getName().equalsIgnoreCase(propertyName)) {
+                    property = currentProperty;
                     break;
                 }
             }
+        }
 
-            if (containsDataTier == false) {
+        // The metadata lists the property. Only an On-premise Engine has a
+        // data file tier to compare.
+        if (property != null) {
+            if (onPremise && hasDataTier(property, engine) == false) {
                 reason = MissingPropertyReason.DataFileUpgradeRequired;
             }
-            // Check if the property is excluded from the results.
             else if (property.isAvailable() == false) {
                 reason = MissingPropertyReason.PropertyExcludedFromEngineConfiguration;
             }
         }
-        else {
-            if (CloudAspectEngine.class.isAssignableFrom(engine.getClass())) {
-                if (engine.getProperties().size() == 0) {
-                    reason = MissingPropertyReason.ProductNotAccessibleWithResourceKey;
-                }
-                else {
-                    reason = MissingPropertyReason.PropertyNotAccessibleWithResourceKey;
-                }
+
+        if (reason == MissingPropertyReason.Unknown && cloud) {
+            if (loaded) {
+                reason = engine.getProperties().isEmpty() ?
+                    MissingPropertyReason.ProductNotAccessibleWithResourceKey :
+                    MissingPropertyReason.PropertyNotAccessibleWithResourceKey;
             }
+            else if (((CloudAspectEngine<?, ?>) engine)
+                .propertyListRequestFailed()) {
+                reason = MissingPropertyReason.CloudRequestFailed;
+            }
+        }
+
+        // The metadata does not list the property, but the Element Data has
+        // a typed accessor for it, so another data file has it.
+        if (reason == MissingPropertyReason.Unknown &&
+            onPremise &&
+            property == null &&
+            hasTypedAccessor(engine, propertyName)) {
+            reason = MissingPropertyReason.DataFileUpgradeRequired;
         }
 
         // Build the message string to return to the caller.
@@ -128,12 +145,20 @@ public class MissingPropertyServiceDefault implements MissingPropertyService {
             engine.getElementDataKey()));
         switch (reason) {
             case DataFileUpgradeRequired:
-                message.append(String.format(
-                    MissingPropertyMessages.DATA_UPGRADE_REQUIRED,
-                    stringJoin(
-                        property.getDataTiersWherePresent(),
-                        ","),
-                    engine.getClass().getSimpleName()));
+                List<String> tiers = property == null ?
+                    null :
+                    property.getDataTiersWherePresent();
+                if (tiers == null || tiers.isEmpty()) {
+                    message.append(
+                        MissingPropertyMessages.DATA_UPGRADE_REQUIRED_TIERS_NOT_KNOWN);
+                } else {
+                    message.append(String.format(
+                        MissingPropertyMessages.DATA_UPGRADE_REQUIRED,
+                        stringJoin(
+                            tiers,
+                            MissingPropertyMessages.LIST_SEPARATOR),
+                        engine.getClass().getSimpleName()));
+                }
                 break;
             case PropertyExcludedFromEngineConfiguration:
                 message.append(MissingPropertyMessages.PROPERTY_EXCLUDED);
@@ -151,7 +176,12 @@ public class MissingPropertyServiceDefault implements MissingPropertyService {
                 message.append(String.format(
                     MissingPropertyMessages.PROPERTY_NOT_IN_CLOUD_RESOURCE,
                     engine.getElementDataKey(),
-                    stringJoin(available, ", ")));
+                    stringJoin(
+                        available,
+                        MissingPropertyMessages.LIST_SEPARATOR)));
+                break;
+            case CloudRequestFailed:
+                message.append(MissingPropertyMessages.CLOUD_REQUEST_FAILED);
                 break;
             case Unknown:
                 message.append(MissingPropertyMessages.UNKNOWN);
@@ -161,6 +191,43 @@ public class MissingPropertyServiceDefault implements MissingPropertyService {
         }
 
         return new MissingPropertyResult(reason, message.toString());
+    }
+
+    /**
+     * Whether the engine's data file tier is among the tiers the property
+     * is present in.
+     */
+    private static boolean hasDataTier(
+        AspectPropertyMetaData property,
+        AspectEngine<?, ?> engine) {
+        List<String> tiers = property.getDataTiersWherePresent();
+        return tiers != null && tiers.contains(engine.getDataSourceTier());
+    }
+
+    /**
+     * Whether the type of the engine's Element Data, counting the types it
+     * inherits, has a typed accessor for the property, being a public
+     * method with no parameters named 'get' and the property name, compared
+     * ignoring case, that returns an {@link AspectPropertyValue}.
+     */
+    private static boolean hasTypedAccessor(
+        AspectEngine<?, ?> engine,
+        String propertyName) {
+        TypedKey<?> key = engine.getTypedDataKey();
+        Class<?> type = key == null ? null : key.getType();
+        if (type == null) {
+            return false;
+        }
+        String accessor = ACCESSOR_PREFIX + propertyName;
+        for (Method method : type.getMethods()) {
+            if (method.getParameterCount() == 0 &&
+                method.getName().equalsIgnoreCase(accessor) &&
+                AspectPropertyValue.class.isAssignableFrom(
+                    method.getReturnType())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
