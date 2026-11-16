@@ -47,7 +47,7 @@ import java.util.concurrent.*;
 
 import static fiftyone.devicedetection.examples.shared.DataFileHelper.getDataFileLocation;
 import static fiftyone.devicedetection.examples.shared.DataFileHelper.getEvidenceFile;
-import static fiftyone.devicedetection.shared.testhelpers.FileUtils.LITE_HASH_DATA_FILE_PATH;
+import static fiftyone.devicedetection.examples.shared.DataFileHelper.LITE_HASH_DATA_FILE_PATH;
 import static fiftyone.pipeline.engines.Constants.PerformanceProfiles.*;
 
 /**

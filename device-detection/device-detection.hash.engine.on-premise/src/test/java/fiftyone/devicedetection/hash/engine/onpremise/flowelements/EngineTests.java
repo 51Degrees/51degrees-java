@@ -34,11 +34,11 @@ import org.junit.Test;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
 
-import fiftyone.devicedetection.shared.testhelpers.FileUtils;
+import fiftyone.devicedetection.shared.testhelpers.TestFileUtils;
 import fiftyone.pipeline.engines.Constants;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
-import static fiftyone.devicedetection.shared.testhelpers.FileUtils.LITE_HASH_DATA_FILE_PATH;
-import static fiftyone.devicedetection.shared.testhelpers.FileUtils.TAC_HASH_DATA_FILE_NAME;
+import static fiftyone.devicedetection.shared.testhelpers.TestFileUtils.LITE_HASH_DATA_FILE_PATH;
+import static fiftyone.devicedetection.shared.testhelpers.TestFileUtils.TAC_HASH_DATA_FILE_NAME;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
 public class EngineTests {
