@@ -29,9 +29,11 @@ import fiftyone.pipeline.core.data.ElementPropertyMetaDataDefault;
 import fiftyone.pipeline.core.data.EvidenceKeyFilter;
 import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import fiftyone.pipeline.core.data.FlowData;
+import fiftyone.pipeline.core.data.types.JavaScript;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
+import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
 import fiftyone.pipeline.engines.fiftyone.flowelements.SequenceElementBuilder;
 import fiftyone.pipeline.javascriptbuilder.flowelements.JavaScriptBuilderElement;
 import fiftyone.pipeline.javascriptbuilder.flowelements.JavaScriptBuilderElementBuilder;
@@ -44,13 +46,17 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -109,6 +115,25 @@ public class JavaScriptMinifyTests {
      */
     private String render(Boolean minify, String endpoint, boolean cookies)
         throws Exception {
+        return render(minify, endpoint, cookies, false, false);
+    }
+
+    /**
+     * Renders the script for one request, choosing every setting the
+     * minified forms are held by.
+     * @param minify null to leave the builder's default, otherwise the
+     *               value given to setMinify
+     * @param endpoint the endpoint, or an empty string for no callback
+     * @param cookies the value given to setEnableCookies
+     * @param promises true if the request's browser supports promises
+     * @param delayed true if the JSON holds a delayed execution property
+     */
+    private String render(
+        Boolean minify,
+        String endpoint,
+        boolean cookies,
+        boolean promises,
+        boolean delayed) throws Exception {
         JavaScriptBuilderElementBuilder builder =
             new JavaScriptBuilderElementBuilder(loggerFactory)
                 .setEndpoint(endpoint)
@@ -121,7 +146,7 @@ public class JavaScriptMinifyTests {
         JavaScriptBuilderElement jsElement = builder.build();
         try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
             .addFlowElement(new SequenceElementBuilder(loggerFactory).build())
-            .addFlowElement(new ValuesElement())
+            .addFlowElement(new ValuesElement(promises, delayed))
             .addFlowElement(new JsonBuilderElementBuilder(loggerFactory).build())
             .addFlowElement(jsElement)
             .build();
@@ -199,14 +224,55 @@ public class JavaScriptMinifyTests {
     }
 
     /**
-     * Every form of the minified script parses, whether it has a callback
-     * and whether cookies are enabled.
+     * Every choice of the four settings the minified forms are held by,
+     * being whether there is a callback, whether cookies are enabled,
+     * whether the browser supports promises and whether the JSON holds a
+     * delayed execution property.
+     */
+    static Stream<Arguments> everyForm() {
+        List<Arguments> forms = new ArrayList<>();
+        for (String endpoint : new String[] {"/json", ""}) {
+            for (boolean cookies : new boolean[] {true, false}) {
+                for (boolean promises : new boolean[] {true, false}) {
+                    for (boolean delayed : new boolean[] {true, false}) {
+                        forms.add(Arguments.of(
+                            endpoint, cookies, promises, delayed));
+                    }
+                }
+            }
+        }
+        return forms.stream();
+    }
+
+    /**
+     * Each of the four settings changes the script as written, so the
+     * sixteen choices are sixteen different scripts and the forms tested
+     * below are every form the element holds.
+     */
+    @Test
+    public void Minify_EveryForm_IsADifferentScript() throws Exception {
+        Set<String> scripts = new HashSet<>();
+        Iterable<Arguments> forms = everyForm()::iterator;
+        for (Arguments form : forms) {
+            Object[] a = form.get();
+            scripts.add(render(false, (String) a[0], (Boolean) a[1],
+                (Boolean) a[2], (Boolean) a[3]));
+        }
+        assertEquals(16, scripts.size(),
+            "The four settings do not give sixteen different scripts.");
+    }
+
+    /**
+     * Every form of the minified script parses.
      */
     @ParameterizedTest
-    @CsvSource({"/json, true", "/json, false", "'', true", "'', false"})
-    public void Minify_On_EveryFormParses(String endpoint, boolean cookies)
-        throws Exception {
-        String script = render(true, endpoint, cookies);
+    @MethodSource("everyForm")
+    public void Minify_On_EveryFormParses(
+        String endpoint,
+        boolean cookies,
+        boolean promises,
+        boolean delayed) throws Exception {
+        String script = render(true, endpoint, cookies, promises, delayed);
         try (Context context = context()) {
             try {
                 context.parse(Source.create("js", script));
@@ -277,14 +343,33 @@ public class JavaScriptMinifyTests {
     private static class ValuesElement
         extends FlowElementBase<ElementDataBase, ElementPropertyMetaData> {
 
-        ValuesElement() {
+        private final boolean promises;
+
+        private final boolean delayed;
+
+        /**
+         * @param promises true to give Promise as "Full", which the
+         *                 JavaScript Builder reads as the browser
+         *                 supporting promises
+         * @param delayed true to add a delayed execution property
+         */
+        ValuesElement(boolean promises, boolean delayed) {
             super(new TestLoggerFactory(null).getLogger("values"), null);
+            this.promises = promises;
+            this.delayed = delayed;
         }
 
         @Override
         protected void processInternal(FlowData data) {
             ElementDataBase values = new ElementDataBase(logger, data) { };
             values.put("text", VALUE);
+            if (promises) {
+                values.put("Promise",
+                    new AspectPropertyValueDefault<>("Full"));
+            }
+            if (delayed) {
+                values.put("delayed", new JavaScript("var delayed = 1;"));
+            }
             data.getOrAdd(getElementDataKey(), d -> values);
         }
 
@@ -301,9 +386,19 @@ public class JavaScriptMinifyTests {
 
         @Override
         public List<ElementPropertyMetaData> getProperties() {
-            return Arrays.<ElementPropertyMetaData>asList(
-                new ElementPropertyMetaDataDefault(
-                    "text", this, "test", String.class, true));
+            List<ElementPropertyMetaData> properties = new ArrayList<>();
+            properties.add(new ElementPropertyMetaDataDefault(
+                "text", this, "test", String.class, true));
+            if (promises) {
+                properties.add(new ElementPropertyMetaDataDefault(
+                    "Promise", this, "test", String.class, true));
+            }
+            if (delayed) {
+                properties.add(new ElementPropertyMetaDataDefault(
+                    "delayed", this, "test", JavaScript.class, true, null,
+                    true, Collections.<String>emptyList()));
+            }
+            return properties;
         }
 
         @Override
