@@ -24,7 +24,7 @@ jobs:
           - side: red at 7c22ff38
             sha: 7c22ff3861aaca349349f6dd69e3e160850f3610
           - side: green at the head
-            sha: 09558291137b9b8b0cfa630cd9489af02524f7db
+            sha: 0bf566c992474d24fefe41f282100d78a258b940
           - part: device-detection examples
             command: mvn -B -f examples/device-detection/pom.xml -pl console,web/getting-started.cloud -am test -Dtest='CloudExamplesWithoutKeyTest,GettingStartedWebCloudWithoutKeyTest'
           - part: ip-intelligence examples
@@ -51,4 +51,4 @@ jobs:
       - name: Run the tests
         run: |
           git log --oneline -1
-          ${{ matrix.command }} -Dsurefire.failIfNoSpecifiedTests=false -DtrimStackTrace=false
+          ${{ matrix.command }} -fae -Dsurefire.failIfNoSpecifiedTests=false -DtrimStackTrace=false
