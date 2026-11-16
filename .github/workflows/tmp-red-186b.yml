@@ -1,0 +1,132 @@
+name: Temporary red run for pull request 186
+
+# Throwaway. Each job breaks one thing the pull request's new tests pin and
+# runs those tests, so each test is shown able to fail. The logging job runs
+# the test commit before its fix instead.
+
+on:
+  push:
+    branches:
+      - 'tmp/red-186b'
+
+permissions:
+  contents: read
+
+jobs:
+  logging:
+    name: the Errors table rows, at the test commit before the fix
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+      - name: The test commit before the fix
+        shell: bash
+        run: |
+          git checkout --force b8df90e52c4d2d0ba8ab1a3cd4e2a00d82a3b7fa || git log --oneline -5
+          git log --oneline -1
+      - name: The submodules the module needs
+        shell: bash
+        run: git submodule update --init pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates pipeline/owid-java pipeline/pipeline.core/configuration-validation
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Build the module and the modules it needs
+        shell: bash
+        run: mvn -B -q -pl pipeline/pipeline.engines -am install -DskipTests
+      - name: Run the data update service tests
+        shell: bash
+        run: mvn -B -pl pipeline/pipeline.engines surefire:test -Dtest='DataUpdateServiceLoggingTests,DataUpdateServiceTests' -DtrimStackTrace=false
+
+  evidence-declared:
+    name: a Flow Element need not declare its Evidence
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: Give FlowElementBase an Evidence filter of its own
+        shell: bash
+        run: |
+          f=pipeline/pipeline.core/src/main/java/fiftyone/pipeline/core/flowelements/FlowElementBase.java
+          perl -0777 -pi -e 's|    public abstract EvidenceKeyFilter getEvidenceKeyFilter\(\);|    public EvidenceKeyFilter getEvidenceKeyFilter() {\n        return new fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist(\n            new java.util.ArrayList<String>());\n    }|' "$f"
+          grep -n -A4 'getEvidenceKeyFilter' "$f" | head -8
+      - name: The submodules the module needs
+        shell: bash
+        run: git submodule update --init pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates pipeline/owid-java pipeline/pipeline.core/configuration-validation
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Build the module and the modules it needs
+        shell: bash
+        run: mvn -B -q -pl pipeline/pipeline.core -am install -DskipTests
+      - name: Run the accepted Evidence tests
+        shell: bash
+        run: mvn -B -pl pipeline/pipeline.core surefire:test -Dtest=AcceptedEvidenceDeclaredTests -DtrimStackTrace=false
+
+  cloud-default:
+    name: the property keyed cloud engine accepts a header
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: Let the default Evidence filter accept the User-Agent
+        shell: bash
+        run: |
+          f=pipeline/pipeline.cloudrequestengine/src/main/java/fiftyone/pipeline/cloudrequestengine/flowelements/PropertyKeyedCloudEngineBase.java
+          perl -0777 -pi -e 's|        new EvidenceKeyFilterWhitelist\(new ArrayList<String>\(\)\);|        new EvidenceKeyFilterWhitelist(new ArrayList<String>(\n            java.util.Arrays.asList("header.user-agent")));|' "$f"
+          grep -n -B2 -A2 'EvidenceKeyFilterWhitelist' "$f" | head -10
+      - name: The submodules the module needs
+        shell: bash
+        run: git submodule update --init pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates pipeline/owid-java pipeline/pipeline.core/configuration-validation
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Build the module and the modules it needs
+        shell: bash
+        run: mvn -B -q -pl pipeline/pipeline.cloudrequestengine -am install -DskipTests
+      - name: Run the cloud aspect engine base tests
+        shell: bash
+        run: mvn -B -pl pipeline/pipeline.cloudrequestengine surefire:test -Dtest=CloudAspectEngineBaseTests -DtrimStackTrace=false
+
+  refresh:
+    name: a failed refresh is swallowed
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Swallow a failure when refreshing from data in memory
+        shell: bash
+        run: |
+          f=device-detection/device-detection.hash.engine.on-premise/src/main/java/fiftyone/devicedetection/hash/engine/onpremise/flowelements/DeviceDetectionHashEngine.java
+          perl -0777 -pi -e 's|        \} else \{\n            engine\.refreshData\(data\);\n        \}|        } else {\n            try { engine.refreshData(data); } catch (RuntimeException ignored) { }\n        }|' "$f"
+          grep -n -A3 'engine.refreshData(data)' "$f" | head -8
+      - name: The free Lite data file, from the data repository
+        shell: bash
+        run: |
+          ls cxx/data
+          ls cxx/data/device-detection || true
+          if [ -f cxx/data/get-data-files.sh ]; then
+            bash cxx/data/get-data-files.sh || bash cxx/data/get-data-files.sh 51Degrees-LiteV4.1.hash || true
+          fi
+          ls -la cxx/data/device-detection
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Build the module and the modules it needs
+        shell: bash
+        run: mvn -B -q -pl device-detection/device-detection.hash.engine.on-premise -am install -DskipTests
+      - name: Run the data refresh tests
+        shell: bash
+        run: mvn -B -pl device-detection/device-detection.hash.engine.on-premise surefire:test -Dtest=DataRefreshTests -DtrimStackTrace=false
