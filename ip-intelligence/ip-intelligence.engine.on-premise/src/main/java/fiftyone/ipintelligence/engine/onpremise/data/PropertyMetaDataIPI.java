@@ -206,6 +206,11 @@ public class PropertyMetaDataIPI implements FiftyOneAspectPropertyMetaData {
                 return Boolean.class;
             case "double":
                 return Double.class;
+            // A 32 bit floating point number, as Latitude and Longitude
+            // are, which the data model types as float.
+            case "single":
+            case "weightedsingle":
+                return Float.class;
             case "javascript":
                 return JavaScript.class;
             case "string[]":

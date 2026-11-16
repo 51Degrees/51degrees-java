@@ -23,7 +23,6 @@
 package fiftyone.ipintelligence.cloud.flowelements;
 
 import fiftyone.ipintelligence.cloud.data.IPIntelligenceDataCloud;
-import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
 import fiftyone.pipeline.core.data.AccessiblePropertyMetaData.ProductMetaData;
 import fiftyone.pipeline.core.data.AccessiblePropertyMetaData.PropertyMetaData;
@@ -51,7 +50,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -248,20 +246,14 @@ public class ProductMissingTests {
     private IPIntelligenceDataCloud process(
         IPIntelligenceCloudEngine engine,
         String response) {
-        CloudRequestData cloudData = mock(CloudRequestData.class);
-        when(cloudData.getJsonResponse()).thenReturn(response);
-
         FlowData flowData = mock(FlowData.class);
-        when(flowData.getFromElement(any(CloudRequestEngine.class)))
-            .thenReturn(cloudData);
-
         IPIntelligenceDataCloud data = new IPIntelligenceDataCloudInternal(
             loggerFactory.getLogger(
                 IPIntelligenceDataCloud.class.getSimpleName()),
             flowData,
             engine,
             MissingPropertyServiceDefault.getInstance());
-        engine.processEngine(flowData, data);
+        engine.processCloudEngine(flowData, data, response);
         return data;
     }
 
