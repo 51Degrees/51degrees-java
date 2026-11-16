@@ -23,6 +23,7 @@
 package fiftyone.devicedetection.examples.console;
 
 import fiftyone.devicedetection.examples.shared.DataFileHelper;
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -75,12 +76,28 @@ public class ExamplesWithoutSettingsTest {
         }
         String output = buffer.toString("UTF-8");
         out.println(output);
+        assertFindOutMore(output);
         return output;
     }
 
     private static void assertContains(String output, String expected) {
         assertTrue("The output should contain '" + expected + "'",
                 output.contains(expected));
+    }
+
+    /**
+     * Checks that the output has the "Find out more" section after the last
+     * link to the contact page, and that the section closes with its rule.
+     * Log lines may still follow the section.
+     */
+    private static void assertFindOutMore(String output) {
+        int heading = output.lastIndexOf(FindOutMore.HEADING);
+        assertTrue("The output should have the '" + FindOutMore.HEADING +
+                "' section after the link to the contact page",
+                heading > output.lastIndexOf(CONTACT_US));
+        assertTrue("The '" + FindOutMore.HEADING +
+                "' section should end with its rule",
+                output.indexOf(FindOutMore.RULE, heading) > heading);
     }
 
     private static void assertOffer(String output) {
@@ -117,6 +134,14 @@ public class ExamplesWithoutSettingsTest {
     @Test
     public void performance() throws Exception {
         assertOffer(runWithoutSettings(PerformanceBenchmark::main));
+    }
+
+    @Test
+    public void manualDataUpdate() throws Exception {
+        String output = runWithoutSettings(ManualDataUpdate::main);
+        assertContains(output, "Hardware Vendor: " + DataFileHelper.NEEDS_ENTERPRISE);
+        assertContains(output, "The Enterprise data file adds daily automatic updates.");
+        assertContains(output, CONTACT_US);
     }
 
     @Test

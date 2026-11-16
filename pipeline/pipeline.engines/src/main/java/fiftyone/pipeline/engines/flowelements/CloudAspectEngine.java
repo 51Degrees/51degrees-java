@@ -37,4 +37,13 @@ public interface CloudAspectEngine<
     TData extends AspectData,
     TProperty extends AspectPropertyMetaData>
     extends AspectEngine<TData, TProperty> {
+
+    /**
+     * Whether the request for the list of properties the cloud service
+     * offers failed, so that this engine's property metadata is not loaded.
+     * @return true if the request for the property list failed
+     */
+    default boolean propertyListRequestFailed() {
+        return false;
+    }
 }

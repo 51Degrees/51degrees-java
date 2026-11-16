@@ -24,7 +24,9 @@ the native engines from `cxx` and does need them, as the README says.
 ### Prerequisites
 
 - Git.
-- A JDK, 8 or later. CI tests 8, 11, 17 and 21 (`ci/options.json`).
+- A JDK, 8 or later. CI tests 8, 11, 17 and 21 (`ci/options.json`), and
+  builds and runs the examples on the JDK each runner has (see
+  [What CI tests](#pitfalls)).
 - Maven 3.8 or later, or the `mvnw` wrapper at the root.
 - Network access to GitHub, to Maven Central for the packages the examples
   use, and to `distributor.51degrees.com` for the data files.
@@ -215,12 +217,20 @@ example. The IP Intelligence cloud examples read their key from
   for Windows x64 and x86, Linux x64 and aarch64, and macOS x64 and aarch64.
   The `ip-intelligence.engine.on-premise` 4.5.128 jar has the same, without
   Windows x86. On a platform a jar lacks, the example cannot load the engine.
-- **What CI does not test.** On a pull request CI builds and tests the
-  examples with the `dev` profile (`ci/build-project.ps1` and
-  `ci/run-unit-tests.ps1`), and against the published packages only when it
-  publishes (`ci/run-integration-tests.ps1`). It never runs the console
-  example jars as above, and the example tests use the paid data files when
-  CI has them.
+- **What CI tests.** On a pull request CI builds and tests the examples
+  with the `dev` profile (`ci/build-project.ps1` and
+  `ci/run-unit-tests.ps1`), and the example tests use the paid data files
+  when CI has them. Publish tests them against the packages it has just
+  built (`ci/run-integration-tests.ps1`).
+  [examples-fresh-clone.yml](.github/workflows/examples-fresh-clone.yml)
+  does what [Run the examples](#run-the-examples) says, with the JDK and
+  Maven each runner has. It
+  builds the console examples against the published packages and runs each
+  product's `GettingStartedOnPrem` jar from the repository root with no
+  settings. On Ubuntu the free data file is downloaded, as from a fresh
+  clone, and the Windows and macOS jobs take that file from the run's cache,
+  so each file is downloaded once a run. It runs on each push to `main` and
+  `rc`, daily, and on a pull request that changes the examples.
 
 ## Environment variable names
 
@@ -306,3 +316,11 @@ into `main` from any other branch.
 
 Plain words, no em dashes, sentence case headings. Nothing in this public
 repository names a private repository or an issue in one.
+
+## Tests that fail on timing
+
+A test that fails on a time limit, a performance threshold or a timeout is
+fixed, not run again until it passes. Either the limit is set to fit the
+slowest runner the test runs on, with each runner's measurement behind it, or
+the reason it takes too long is found and fixed. A failure that comes and goes
+costs everyone who meets it the time to look into it.

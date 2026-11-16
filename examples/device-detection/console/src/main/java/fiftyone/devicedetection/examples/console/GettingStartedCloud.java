@@ -22,6 +22,7 @@
 
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.devicedetection.DeviceDetectionPipelineBuilder;
 import fiftyone.devicedetection.examples.shared.KeyHelper;
 import fiftyone.devicedetection.examples.shared.EvidenceHelper;
@@ -53,6 +54,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  */
 @SuppressWarnings("DuplicatedCode")
 public class GettingStartedCloud {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-devicedetection-examples-console-gettingstartedcloud.java";
+
     private static final Logger logger = LoggerFactory.getLogger(GettingStartedCloud.class);
 
     /**
@@ -66,6 +73,8 @@ public class GettingStartedCloud {
         // prepare 'evidence' for use in pipeline (see below)
         List<Map<String, String>> evidence = EvidenceHelper.setUpEvidence();
         run(resourceKey, evidence, System.out);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.CLOUD_REPOSITORIES);
     }
 
     /**
