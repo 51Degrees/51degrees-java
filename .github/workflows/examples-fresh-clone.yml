@@ -62,7 +62,7 @@ jobs:
         shell: pwsh
         run: >-
           ./ci/run-fresh-clone-example.ps1 -Product '${{ matrix.product }}'
-          -Example '${{ matrix.example }}' -ExpectDownload $true
+          -Example '${{ matrix.example }}' -ExpectDownload
 
       # The key follows the link, so a new free file gets a new entry, and
       # the same file is kept once rather than once a run.
@@ -121,4 +121,4 @@ jobs:
         shell: pwsh
         run: >-
           ./ci/run-fresh-clone-example.ps1 -Product '${{ matrix.product }}'
-          -Example '${{ matrix.example }}' -ExpectDownload $false
+          -Example '${{ matrix.example }}' -ExpectDownload:$false
