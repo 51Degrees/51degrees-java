@@ -113,6 +113,13 @@ public class Constants {
     static final String SHARE_USAGE_DEFAULT_URL = "https://devices-v4.51degrees.com/new.ashx";
 
     /**
+     * Every query string and HTTP form parameter is shared by default, not
+     * only the 51Degrees ones and those named.
+     */
+    public static final boolean
+        SHARE_USAGE_DEFAULT_SHARE_ALL_QUERY_STRING_PARAMETERS = true;
+
+    /**
      * Constant Added to blocked HTTP Headers so that the cookie header is
      * blocked by default.
      */
