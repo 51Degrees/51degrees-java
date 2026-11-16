@@ -49,6 +49,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Function;
+import java.util.function.LongSupplier;
 
 import static fiftyone.pipeline.core.Constants.EVIDENCE_SEPERATOR;
 import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.LOST_DATA_RESET_DEFAULT;
@@ -57,7 +58,7 @@ import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.LOST_DAT
 /**
  * Abstract base class for ShareUsage elements. Contains common functionality
  * such as filtering the evidence and building the XML records.
- * @see <a href="https://github.com/51Degrees/specifications/blob/c8128ca4fa68c6348d76ddb2889bb5087de1aa5f/pipeline-specification/pipeline-elements/usage-sharing-element.md">Specification</a>
+ * @see <a href="https://github.com/51Degrees/specifications/blob/07e1fcedc2cbd83a60cd245c137747686e58da41/pipeline-specification/pipeline-elements/usage-sharing-element.md">Specification</a>
  */
 public abstract class ShareUsageBase
     extends FlowElementBase<ElementData, ElementPropertyMetaData> {
@@ -218,6 +219,37 @@ public abstract class ShareUsageBase
      */
     Function<Collection<Class<?>>, SortedMap<String, String>> packageFinder =
         classes -> PackageVersions.of(classes, PackageVersions.GROUP_ID);
+
+    /**
+     * How long after the invariant values were last written to a record
+     * they are written again, which is an hour.
+     */
+    private static final long INVARIANT_VALUES_INTERVAL_MILLIS =
+        60L * 60L * 1000L;
+
+    /**
+     * The time in milliseconds, which decides when the invariant values are
+     * written again. Tests replace it, so that the hour passes without
+     * waiting for it.
+     */
+    LongSupplier clock = System::currentTimeMillis;
+
+    /**
+     * The process identifier, a version 4 UUID created when the element is
+     * built. It is never stored, so a process that starts again, or builds
+     * another element, has a new one. Written to every record as
+     * ProcessId.
+     */
+    private final String processId = UUID.randomUUID().toString();
+
+    /**
+     * When the invariant values were last written to a record, by
+     * {@link #clock}, or null if they have not been written yet.
+     */
+    private Long invariantValuesWritten = null;
+
+    /** Guards {@link #invariantValuesWritten}. */
+    private final Object invariantValuesLock = new Object();
 
     /**
      * The name of the operating system the Pipeline runs on, followed by
@@ -625,6 +657,38 @@ public abstract class ShareUsageBase
      */
     protected static String dateSentNow() {
         return DATE_SENT_FORMAT.format(Instant.now());
+    }
+
+    /**
+     * The process identifier, which every record carries as ProcessId. It
+     * is created when the element is built and is the same in every record
+     * the element writes.
+     * @return a version 4 UUID in its string form
+     */
+    protected String getProcessId() {
+        return processId;
+    }
+
+    /**
+     * Decides whether the record about to be written carries the invariant
+     * values: Version, Product, Flow Elements, Packages, Language,
+     * LanguageVersion, ServerIP and Platform. They are written to the first
+     * record and then to the first record written once an hour or more has
+     * passed since they were last written, and to no other record. Call it
+     * once for each record, as it notes the time when it returns true.
+     * @return true if the record is to carry the invariant values
+     */
+    protected boolean writeInvariantValuesNow() {
+        long now = clock.getAsLong();
+        synchronized (invariantValuesLock) {
+            if (invariantValuesWritten == null ||
+                now - invariantValuesWritten >=
+                    INVARIANT_VALUES_INTERVAL_MILLIS) {
+                invariantValuesWritten = now;
+                return true;
+            }
+            return false;
+        }
     }
 
     /**
