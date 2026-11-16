@@ -74,16 +74,9 @@ public class DataFileHelper {
      */
     public static final String NEEDS_ENTERPRISE = "needs the Enterprise data file";
 
-    /**
-     * Name of the paid Enterprise data file.
-     */
-    public static final String ENTERPRISE_HASH_DATA_FILE_NAME =
-        "Enterprise-HashV41.hash";
-
-    /**
-     * Name of the paid TAC data file.
-     */
     public static final String TAC_HASH_DATA_FILE_NAME = "TAC-HashV41.hash";
+
+    public static final String ENTERPRISE_HASH_DATA_FILE_NAME = "Enterprise-HashV41.hash";
 
     /**
      * Where the free Lite data file is in the data repository. A search for
@@ -92,33 +85,13 @@ public class DataFileHelper {
      * folder.
      */
     public static final String LITE_HASH_DATA_FILE_PATH =
-        "device-detection/51Degrees-LiteV4.1.hash";
+            "device-detection/51Degrees-LiteV4.1.hash";
 
     /**
-     * Where the free evidence file is in the data repository.
+     * Where the evidence the examples process is in the data repository.
      */
     public static final String EVIDENCE_FILE_PATH =
-        "device-detection/20000 Evidence Records.yml";
-
-    /**
-     * Find the best data file there is below the project root: the TAC file,
-     * then the Enterprise file, then the free Lite file.
-     * @return the path of the file, or null when there is none
-     */
-    public static String getHashFileName() {
-        for (String name : new String[] {
-            TAC_HASH_DATA_FILE_NAME,
-            ENTERPRISE_HASH_DATA_FILE_NAME,
-            LITE_HASH_DATA_FILE_PATH}) {
-            try {
-                return getFilePath(name).getPath();
-            } catch (Exception e) {
-                // Not there, so try the next.
-            }
-        }
-        return null;
-    }
-
+            "device-detection/20000 Evidence Records.yml";
 public static class DatafileInfo {
         FiftyOneDataFile fileInfo;
         String tier;
@@ -277,7 +250,7 @@ public static class DatafileInfo {
     @SuppressWarnings("RedundantThrows")
     public static String getDataFileLocation(String dataFilename) throws Exception {
         if (Objects.isNull(dataFilename)) {
-            dataFilename = getHashFileName();
+            dataFilename = findHashFileName();
         }
         if (Objects.isNull(dataFilename)) {
             dataFilename = LITE_HASH_DATA_FILE_PATH;
@@ -290,6 +263,25 @@ public static class DatafileInfo {
             throw e;
         }
         return dataFileLocation;
+    }
+
+    /**
+     * The first Hash data file found below the project root, being the TAC
+     * file, then the Enterprise file, then the free Lite file.
+     * @return the path of the file, or null when there is none
+     */
+    private static String findHashFileName() {
+        for (String file : new String[]{
+                TAC_HASH_DATA_FILE_NAME,
+                ENTERPRISE_HASH_DATA_FILE_NAME,
+                LITE_HASH_DATA_FILE_PATH}) {
+            try {
+                return getFilePath(file).getPath();
+            } catch (Exception e) {
+                // Not found, so try the next file.
+            }
+        }
+        return null;
     }
 
     /**

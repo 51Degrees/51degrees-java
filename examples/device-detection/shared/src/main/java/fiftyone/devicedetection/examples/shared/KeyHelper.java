@@ -33,6 +33,47 @@ public class KeyHelper {
     static Logger logger = LoggerFactory.getLogger(KeyHelper.class);
 
     /**
+     * The shortest a key can be, as text and once decoded.
+     */
+    private static final int MIN_KEY_LENGTH = 19;
+
+    private static final int MIN_DECODED_KEY_LENGTH = 14;
+
+    /**
+     * Read a key as an environment variable, then as its upper case name,
+     * then as a system property.
+     * @param keyName the name of the key
+     * @return the key, or null when none is set
+     */
+    public static String getNamedKey(String keyName) {
+        String key = System.getenv(keyName);
+        if (Objects.isNull(key)) {
+            key = System.getenv(keyName.toUpperCase());
+            if (Objects.isNull(key)) {
+                key = System.getProperty(keyName);
+            }
+        }
+        return key;
+    }
+
+    /**
+     * Whether a value cannot be a key, being missing, too short, or not URL
+     * safe base 64 of a long enough key.
+     * @param keyValue the value to check
+     * @return true if the value cannot be a key
+     */
+    public static boolean isInvalidKey(String keyValue) {
+        try {
+            return Objects.isNull(keyValue) ||
+                keyValue.trim().length() < MIN_KEY_LENGTH ||
+                Base64.getUrlDecoder().decode(keyValue).length <
+                    MIN_DECODED_KEY_LENGTH;
+        } catch (IllegalArgumentException e) {
+            return true;
+        }
+    }
+
+    /**
      * The names every cloud test reads a resource key from first, before
      * the names its own example reads.
      */

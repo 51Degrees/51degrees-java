@@ -24,12 +24,12 @@ package fiftyone.devicedetection.examples.web;
 
 import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import fiftyone.devicedetection.examples.shared.FindOutMore;
+import fiftyone.devicedetection.shared.testhelpers.TestFileUtils;
 import org.eclipse.jetty.server.Server;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -47,11 +47,10 @@ public class GettingStartedWebOnPremTest {
     public static void startJetty() throws Exception {
         // With no Enterprise file, the free Lite file is found, or
         // downloaded, as the example finds it, so a fresh clone runs this.
-        String found = DataFileHelper.getHashFileName();
-        System.setProperty("TestDataFile", found == null
+        System.setProperty("TestDataFile", TestFileUtils.getHashFile() == null
                 ? DataFileHelper.findDataFile(
-                        DataFileHelper.LITE_HASH_DATA_FILE_PATH).getAbsolutePath()
-                : new File(found).getAbsolutePath());
+                        TestFileUtils.LITE_HASH_DATA_FILE_PATH).getAbsolutePath()
+                : TestFileUtils.getHashFile().getAbsolutePath());
         SERVER = EmbedJetty.startWebApp(getFilePath(resourceBase).getAbsolutePath(), 8081);
     }
 

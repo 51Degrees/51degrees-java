@@ -22,7 +22,7 @@
 
 package fiftyone.devicedetection.examples.console;
 
-import fiftyone.devicedetection.examples.shared.KeyHelper;
+import fiftyone.devicedetection.shared.testhelpers.TestKeyUtils;
 import org.junit.Test;
 
 import static fiftyone.devicedetection.examples.console.UpdateDataFile.run;
@@ -33,9 +33,9 @@ import static org.junit.Assume.assumeNoException;
 public class UpdateDataFileTest {
     @Test
     public void updateExampleTest () throws Exception {
-        String licenseKey = KeyHelper.getNamedKey(UpdateDataFile.UPDATE_EXAMPLE_LICENSE_KEY_NAME);
+        String licenseKey = TestKeyUtils.getNamedKey(UpdateDataFile.UPDATE_EXAMPLE_LICENSE_KEY_NAME);
         assumeFalse("Skipping test, no license key found",
-                KeyHelper.isInvalidKey(licenseKey));
+                TestKeyUtils.isInvalidKey(licenseKey));
         try {
             run(null, licenseKey, false);
         } catch (IllegalStateException e) {
