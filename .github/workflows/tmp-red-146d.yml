@@ -1,0 +1,45 @@
+name: Temporary red and green run, a watcher refresh that throws an Error
+
+# Throwaway. Runs the new watcher test at its test commit and at the fix
+# (expected to fail) and at the fix (expected to pass).
+
+on:
+  push:
+    branches:
+      - 'tmp/red-146d'
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    name: ${{ matrix.side }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - side: red at the test commit
+            sha: b4d6f500d04f3d86409782ce2c2fa08df62bcdfc
+          - side: green at the fix
+            sha: 115197bff6a17cbe40cc3df2da38bb252ccbaabe
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.sha || github.sha }}
+      - name: Fetch the submodules the module builds from
+        run: >
+          git submodule update --init
+          pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates
+          pipeline/owid-java pipeline/pipeline.core/configuration-validation
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Build the module and what it needs
+        run: mvn -B -q -pl pipeline/pipeline.engines -am install -DskipTests
+      - name: Run the new test in the module alone
+        run: |
+          git log --oneline -1
+          mvn -B -pl pipeline/pipeline.engines surefire:test -Dtest=DataUpdateServiceCheckFailureTests -Dsurefire.failIfNoSpecifiedTests=false -DtrimStackTrace=false
