@@ -90,8 +90,9 @@ The tables below describe the examples available in this repository.
 
 ### Cloud
 
-Cloud examples require a resource key, supplied via the `TestResourceKey`
-environment variable, system property, or command line argument. Resource keys
+Cloud examples require a resource key, supplied via the `_51DEGREES_RESOURCE_KEY`
+environment variable or system property, the legacy `TestResourceKey` name, or a
+command line argument. Resource keys
 for IP Intelligence are not yet generally available, so these examples can also
 be pointed at a custom hosted cloud endpoint using the `TestCloudEndPoint`
 environment variable or system property.
@@ -199,8 +200,10 @@ mvn package
 
 This will produce JARs with dependencies inside `target` subfolders.
 
-Then run examples using the JAR:
+Then run examples using the JAR, from this folder. The version in the name is
+the one in this folder's `pom.xml`, which is not the version of the packages
+the examples use.
 
 ```bash
-java -cp .\console\target\ip-intelligence-java-examples.console-4.4.19-jar-with-dependencies.jar fiftyone.ipintelligence.examples.console.OfflineProcessing
+java -cp ./console/target/ip-intelligence-java-examples.console-4.5.127-SNAPSHOT-jar-with-dependencies.jar fiftyone.ipintelligence.examples.console.OfflineProcessing
 ```

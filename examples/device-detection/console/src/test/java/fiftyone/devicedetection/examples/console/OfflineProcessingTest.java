@@ -22,19 +22,16 @@
 
 package fiftyone.devicedetection.examples.console;
 
-import fiftyone.devicedetection.shared.testhelpers.TestFileUtils;
+import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import org.junit.Test;
 
 import java.io.FileInputStream;
-import java.util.Objects;
 
 public class OfflineProcessingTest {
     @Test
     public void offlineProcessingTest() throws Exception {
-        OfflineProcessing.run(TestFileUtils.getHashFileName() == null
-                        ? TestFileUtils.LITE_HASH_DATA_FILE_PATH
-                        : TestFileUtils.getHashFileName(),
-                new FileInputStream(Objects.requireNonNull(TestFileUtils.getEvidenceFile())),
+        OfflineProcessing.run(DataFileHelper.getDataFileLocation(null),
+                new FileInputStream(DataFileHelper.getEvidenceFile(null)),
                 System.out);
     }
 
