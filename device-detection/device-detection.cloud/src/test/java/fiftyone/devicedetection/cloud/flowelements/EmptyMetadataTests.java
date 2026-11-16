@@ -27,9 +27,12 @@ import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
+import fiftyone.pipeline.core.typed.TypedKey;
+import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.engines.services.MissingPropertyServiceDefault;
 import org.junit.Before;
+import org.mockito.ArgumentMatchers;
 import org.junit.Test;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
@@ -222,13 +225,14 @@ public class EmptyMetadataTests {
         return engine;
     }
 
-    private DeviceDataCloud process(DeviceDetectionCloudEngine engine) {
+    private DeviceDataCloud process(DeviceDetectionCloudEngine engine)
+        throws Exception {
         return process(engine, RESPONSE);
     }
 
     private DeviceDataCloud process(
         DeviceDetectionCloudEngine engine,
-        String response) {
+        String response) throws Exception {
         CloudRequestData cloudData = mock(CloudRequestData.class);
         when(cloudData.getJsonResponse()).thenReturn(response);
 
@@ -241,7 +245,11 @@ public class EmptyMetadataTests {
             flowData,
             engine,
             MissingPropertyServiceDefault.getInstance());
-        engine.processEngine(flowData, device);
+        when(flowData.getOrAdd(
+            ArgumentMatchers.<TypedKey<DeviceDataCloud>>any(),
+            ArgumentMatchers.<FlowElement.DataFactory<DeviceDataCloud>>any()))
+            .thenReturn(device);
+        engine.process(flowData);
         return device;
     }
 }
