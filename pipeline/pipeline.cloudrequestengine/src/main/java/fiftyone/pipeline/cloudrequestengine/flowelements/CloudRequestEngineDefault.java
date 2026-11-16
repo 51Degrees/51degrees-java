@@ -977,11 +977,12 @@ public class CloudRequestEngineDefault
                         .collect(Collectors.toList()));
             }
 
-            // Warnings are logged, as errors are thrown, with any license
-            // key the cloud names masked.
+            // Each warning is logged, whether or not the response also
+            // holds errors. The cloud's warnings can name the license key
+            // it was sent.
             JSONArray warnings = jObj.optJSONArray("warnings");
             if (warnings != null) {
-                for (Object warning : warnings) {
+                for (Object warning : warnings.toList()) {
                     logger.warn(LicenseKeyMask.maskIn(
                         String.valueOf(warning), getLicenseKeys()));
                 }

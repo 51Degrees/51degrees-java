@@ -26,7 +26,6 @@ import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.devicedetection.cloud.data.MultiDeviceDataCloud;
 import fiftyone.devicedetection.shared.Constants;
 import fiftyone.devicedetection.shared.DeviceData;
-import fiftyone.devicedetection.shared.testhelpers.KeyUtils;
 import fiftyone.pipeline.core.configuration.PipelineOptions;
 import fiftyone.pipeline.core.configuration.PipelineOptionsFactory;
 import fiftyone.pipeline.core.data.FlowData;
@@ -87,7 +86,7 @@ public class TacCloud {
         // use the one supplied to this method
         PipelineOptions pipelineOptions = PipelineOptionsFactory.getOptionsFromFile(optionsFile);
         String fileResourceKey = pipelineOptions.find("CloudRequestEngine", "ResourceKey");
-        if (KeyUtils.isInvalidKey(fileResourceKey)) {
+        if (isInvalidKey(fileResourceKey)) {
             getOrSetSuperResourceKey(resourceKey, TAC_EXAMPLE_RESOURCE_KEY_NAME);
         }
         try (PrintWriter writer = new PrintWriter(os)) {

@@ -420,7 +420,9 @@ public class MetricsOnPrem {
                         // configuration options.
                         // https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metricsonprem.java&utm_term=automatic-datafile-updates
                         .setPerformanceProfile(profile)
-                        // inhibit sharing usage for this example
+                        // Usage sharing is off because this example's evidence is already
+                        // known to 51Degrees. In production, leave usage sharing on, which adds
+                        // a Usage Sharing Element to the Pipeline and helps improve the service.
                         .setShareUsage(false)
                         // inhibit auto-update of the data file for this example
                         .setAutoUpdate(false)
