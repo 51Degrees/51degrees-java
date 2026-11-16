@@ -104,12 +104,13 @@ Running
 mvn package
 ```
 
-will produce "fat" JARs inside `target` subfolders.
+will produce "fat" JARs inside `target` subfolders. The version in each name is the one in this folder's `pom.xml`, which is not
+the version of the packages the examples use.
 
 Use them with relevant example class entrypoints like:
 
 ```bash
-java -cp ./console/target/device-detection-java-examples.console-4.4.20-jar-with-dependencies.jar fiftyone.devicedetection.examples.console.OfflineProcessing
+java -cp ./console/target/device-detection-java-examples.console-4.5.127-SNAPSHOT-jar-with-dependencies.jar fiftyone.devicedetection.examples.console.OfflineProcessing
 ```
 
 ### Web examples
@@ -120,7 +121,7 @@ is pressed. Set the `PORT` environment variable to listen on another port, in wh
 case the example runs until the process is stopped:
 
 ```bash
-PORT=8100 java -jar ./web/getting-started.onprem/target/device-detection-java-examples.web.getting-started.onprem-4.4.20-jar-with-dependencies.jar
+PORT=8100 java -jar ./web/getting-started.onprem/target/device-detection-java-examples.web.getting-started.onprem-4.5.127-SNAPSHOT-jar-with-dependencies.jar
 ```
 
 The on-premise web example takes its data file from the `_51DEGREES_DD_PATH`
@@ -138,7 +139,7 @@ The fat JARs above bundle everything into a single jar on the classpath, so the
 permission to use is `ALL-UNNAMED`:
 
 ```bash
-java -cp ./console/target/device-detection-java-examples.console-4.4.20-jar-with-dependencies.jar --enable-native-access=ALL-UNNAMED fiftyone.devicedetection.examples.console.OfflineProcessing
+java -cp ./console/target/device-detection-java-examples.console-4.5.127-SNAPSHOT-jar-with-dependencies.jar --enable-native-access=ALL-UNNAMED fiftyone.devicedetection.examples.console.OfflineProcessing
 ```
 
 With the Maven exec plugin, use the `exec:exec` goal. `exec:java` runs in the Maven JVM
