@@ -1,0 +1,54 @@
+name: Temporary red run for pull request 177
+
+# Throwaway. Each job checks out the test commit before its fix and runs
+# that commit's new test class, which is expected to fail.
+
+on:
+  push:
+    branches:
+      - 'tmp/red-177b'
+
+permissions:
+  contents: read
+
+jobs:
+  red:
+    name: ${{ matrix.test }} at ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: one thread at a time, test commit 4223be94 before the lock
+            test: ResultsReadByOneThreadTests
+            module: ip-intelligence/ip-intelligence.engine.on-premise
+            sha: 4223be94e515be7f84faad4ec4316777cbc5b893
+          - label: single as Float, test commit 595e3cc2 before its fix
+            test: PropertyMetaDataIPITypeTests
+            module: ip-intelligence/ip-intelligence.engine.on-premise
+            sha: 595e3cc2669fdf97f96a9d048e8d16cca9929729
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: Check out the test commit
+        shell: bash
+        run: |
+          git checkout --force ${{ matrix.sha }}
+          git submodule update --init --recursive
+          git log --oneline -1
+      - name: The free data files, from the data repository
+        shell: bash
+        run: bash cxx/data/get-data-files.sh
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Build the module and the modules it needs
+        shell: bash
+        run: mvn -B -q -pl ${{ matrix.module }} -am install -DskipTests
+      - name: Run the new test class
+        shell: bash
+        run: mvn -B -pl ${{ matrix.module }} surefire:test -Dtest=${{ matrix.test }} -DtrimStackTrace=false
