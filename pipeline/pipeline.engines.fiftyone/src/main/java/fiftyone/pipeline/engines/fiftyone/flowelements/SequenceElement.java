@@ -24,6 +24,7 @@ package fiftyone.pipeline.engines.fiftyone.flowelements;
 
 import fiftyone.pipeline.core.data.*;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
+import fiftyone.pipeline.core.flowelements.AddsEvidence;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
 import fiftyone.pipeline.engines.fiftyone.data.SequenceData;
@@ -41,7 +42,8 @@ import org.slf4j.Logger;
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/pipeline-elements/sequence-element.md">Specification</a>
  */
 public class SequenceElement 
-    extends FlowElementBase<ElementData, ElementPropertyMetaData> {
+    extends FlowElementBase<ElementData, ElementPropertyMetaData>
+    implements AddsEvidence {
 
     private static final Pattern DIGITS = Pattern.compile("[0-9]+");
 

@@ -462,9 +462,15 @@ public class PipelineBuilder
         // Now we've created all the elements, create the
         // ParallelElements instance and add it to the pipeline's
         // elements.
-        ParallelElements parallelInstance = new ParallelElements(
-            loggerFactory.getLogger(ParallelElements.class.getName()),
-            parallelElements);
+        ParallelElements parallelInstance;
+        try {
+            parallelInstance = new ParallelElements(
+                loggerFactory.getLogger(ParallelElements.class.getName()),
+                parallelElements);
+        } catch (RuntimeException ex) {
+            closeAfterFailure(parallelElements, ex);
+            throw ex;
+        }
         flowElements.add(parallelInstance);
     }
 
