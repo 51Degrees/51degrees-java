@@ -19,11 +19,9 @@ jobs:
       matrix:
         include:
           - side: red, the head with the refusal taken out
-            sha: ''
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-        with:
       - name: Fetch the submodules the module builds from
         run: >
           git submodule update --init
