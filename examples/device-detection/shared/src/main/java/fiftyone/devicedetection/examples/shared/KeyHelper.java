@@ -22,7 +22,6 @@
 
 package fiftyone.devicedetection.examples.shared;
 
-import fiftyone.devicedetection.shared.testhelpers.KeyUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +32,47 @@ import java.util.function.Function;
 public class KeyHelper {
     public static final String TEST_RESOURCE_KEY = "TestResourceKey";
     static Logger logger = LoggerFactory.getLogger(KeyHelper.class);
+
+    /**
+     * The shortest a key can be, as text and once decoded.
+     */
+    private static final int MIN_KEY_LENGTH = 19;
+
+    private static final int MIN_DECODED_KEY_LENGTH = 14;
+
+    /**
+     * Read a key as an environment variable, then as its upper case name,
+     * then as a system property.
+     * @param keyName the name of the key
+     * @return the key, or null when none is set
+     */
+    public static String getNamedKey(String keyName) {
+        String key = System.getenv(keyName);
+        if (Objects.isNull(key)) {
+            key = System.getenv(keyName.toUpperCase());
+            if (Objects.isNull(key)) {
+                key = System.getProperty(keyName);
+            }
+        }
+        return key;
+    }
+
+    /**
+     * Whether a value cannot be a key, being missing, too short, or not URL
+     * safe base 64 of a long enough key.
+     * @param keyValue the value to check
+     * @return true if the value cannot be a key
+     */
+    public static boolean isInvalidKey(String keyValue) {
+        try {
+            return Objects.isNull(keyValue) ||
+                keyValue.trim().length() < MIN_KEY_LENGTH ||
+                Base64.getUrlDecoder().decode(keyValue).length <
+                    MIN_DECODED_KEY_LENGTH;
+        } catch (IllegalArgumentException e) {
+            return true;
+        }
+    }
 
     /**
      * The names every cloud test reads a resource key from first, before
@@ -157,7 +197,7 @@ public class KeyHelper {
         names.addAll(exampleNames);
         for (String name : names) {
             String value = read.apply(name);
-            if (KeyUtils.isInvalidKey(value) == false) {
+            if (isInvalidKey(value) == false) {
                 return value.trim();
             }
         }
@@ -214,7 +254,7 @@ public class KeyHelper {
             System.getenv(name),
             System.getenv(name.toUpperCase()),
             System.getProperty(name)}) {
-            if (KeyUtils.isInvalidKey(value) == false) {
+            if (isInvalidKey(value) == false) {
                 return value;
             }
         }
@@ -251,10 +291,10 @@ public class KeyHelper {
                                              String errorMessage,
                                              boolean shouldThrow) {
         if (Objects.isNull(value)) {
-            value = KeyUtils.getNamedKey(variableName);
+            value = getNamedKey(variableName);
 
         }
-        if (KeyUtils.isInvalidKey(value)) {
+        if (isInvalidKey(value)) {
             logger.error("\nTo access Cloud Services you must supply a " +
                     "\"ResourceKey\" in one of the following ways: \n - in the " +
                     "configuration file of an example,\n - as a command line parameter of a " +
@@ -269,7 +309,7 @@ public class KeyHelper {
 
         // Keep a valid key for next time. System.setProperty throws on null,
         // and an invalid key is not worth keeping.
-        if (KeyUtils.isInvalidKey(value) == false) {
+        if (isInvalidKey(value) == false) {
             System.setProperty(variableName, value);
         }
         return value;

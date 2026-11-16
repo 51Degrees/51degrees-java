@@ -303,6 +303,10 @@ public class UpdateDataFile {
                     // overwritten the pipeline must be configured to copy the supplied
                     // file to a temporary file (createTempDataCopy parameter == true.
                     .useOnPremise(dataFilename, true)
+                    // Usage sharing is off because this example's evidence is already
+                    // known to 51Degrees. In production, leave usage sharing on, which adds
+                    // a Usage Sharing Element to the Pipeline and helps improve the service.
+                    .setShareUsage(false)
                     // Use the low memory profile, because this example
                     // downloads the Enterprise data file, which is over 6 GB,
                     // and MaxPerformance would load all of it into memory.

@@ -106,29 +106,33 @@ where `<version>` is the `<version>` in that examples folder's `pom.xml`,
 
 ### Run
 
-Run the examples from the repository root. They find `logback.xml`, the data
-file and their options file with `FileFinder`, which searches only below the
-folder Java runs in (`pipeline/pipeline.core/src/main/java/fiftyone/pipeline/util/FileFinder.java`).
-When a free data file is not there, the example finds its `.link` the same way
-and runs the download script for it (`findDataFile` in each examples folder's
-`shared` module, `DataFileHelper.java`), with Windows PowerShell on Windows and
-`sh` on Linux and macOS. The same commands work on Windows, Linux and macOS.
+Run the examples from the repository root, or from a product's examples
+folder as its README does. They look for the data repository, `cxx/data`, in
+the folder Java runs in and then in each folder above it, and find a data file
+or its `.link` there (`findDataFile` in each examples folder's `shared`
+module, `DataFileHelper.java`). When a free data file is not there, the
+example runs the download script for its `.link`, with Windows PowerShell on
+Windows and `sh` on Linux and macOS. They find `logback.xml` with
+`FileFinder`, which searches below the folder Java runs in
+(`pipeline/pipeline.core/src/main/java/fiftyone/pipeline/util/FileFinder.java`),
+and the root and both examples folders have one. The same commands work on
+Windows, Linux and macOS.
 
 ```
 java -cp examples/device-detection/console/target/device-detection-java-examples.console-4.5.127-SNAPSHOT-jar-with-dependencies.jar fiftyone.devicedetection.examples.console.GettingStartedOnPrem
 ```
 
-The IP Intelligence example looks for the paid Enterprise file,
-`ip-intelligence/51Degrees-EnterpriseIpiV41.ipi`, so give it the Lite file as
-its first argument.
+The IP Intelligence example uses the free Lite file,
+`ip-intelligence/51Degrees-LiteV41.ipi`, when it is given no argument, and
+downloads it first when it is not there.
 
 ```
-java -cp examples/ip-intelligence/console/target/ip-intelligence-java-examples.console-4.5.127-SNAPSHOT-jar-with-dependencies.jar fiftyone.ipintelligence.examples.console.GettingStartedOnPrem cxx/data/ip-intelligence/51Degrees-LiteV41.ipi
+java -cp examples/ip-intelligence/console/target/ip-intelligence-java-examples.console-4.5.127-SNAPSHOT-jar-with-dependencies.jar fiftyone.ipintelligence.examples.console.GettingStartedOnPrem
 ```
 
-The example downloads the Lite file first when it is not there. In place of
-the argument, the `_51DEGREES_IPI_PATH` environment variable or system property
-can give the absolute path of a data file that is already there.
+An absolute path as the first argument names another data file. Otherwise the
+`_51DEGREES_IPI_PATH` environment variable or system property, when it names
+a file that is there, comes before the argument or the Lite file.
 
 On Java 24 or later, add `--enable-native-access=ALL-UNNAMED` before the class
 name, as
@@ -143,32 +147,30 @@ and the script's `Downloading` and `Saved` lines follow.
 
 The Device Detection example processes five sets of evidence. For each it
 prints `Input values:` and the evidence, then `Results:` with
-`Mobile Device`, `Platform Name`, `Platform Version`, `Browser Name` and
-`Browser Version`. Logback lines come before and after. The last ones report
-the data file and end the run, with these messages.
-
-```
-Used a 'Lite' data file, created <date>, <n> days ago, from location '<path>'
-This example is using the 'Lite ' data file. This is used for illustration, ...
-All done
-```
-
-A warning that the data file is more than 28 days old may come too, which is
-expected with the Lite file. The exit code is 0.
+`Mobile Device`, `Platform Name`, `Platform Version`, `Browser Name`,
+`Browser Version`, `Hardware Vendor`, `Hardware Name` and `Device Type`. The
+Lite file does not have the last three, so each of them reads
+`needs the Enterprise data file`.
 
 The IP Intelligence example looks up `116.154.188.222`, `45.236.48.61` and an
 IPv6 address. For each it prints `Input values:` with `query.client-ip`, then
 `Results:` with a line for each property, from `RegisteredName` to
-`TimeZoneOffset`. The Lite file has RegisteredCountry, RegisteredName and
-RegisteredOwner, so a line for a property it does not have reads
-`Unknown. The property '<name>' is not available in this data file.` followed
-by a link, and the first such line also logs a warning that some properties
-need a paid subscription. It then logs the data file in the same way, and
-`All done`.
+`TimeZoneOffset`. The Lite file has RegisteredName, RegisteredOwner and
+RegisteredCountry, so every other line reads `needs the Enterprise data file`.
 
-The paid data files have many more properties, as the
-[pricing page](https://51degrees.com/pricing?utm_source=github&utm_medium=docs&utm_campaign=51degrees-java&utm_content=agents.md&utm_term=correct-output)
-describes.
+Both then end the same way, where `<tier>` is `Lite` for Device Detection and
+`IPIV4Lite` for IP Intelligence.
+
+```
+Some of these properties need the Enterprise data file. Contact us for a copy at <the tagged contact-us link>
+INFO  ... Used a '<tier>' data file, created <date>, <n> days ago, from location '<path>'
+INFO  ... All done
+```
+
+Then comes the "Find out more" section, between two rules, with the
+product's pages on 51degrees.com and the repositories. A warning that the
+data file is more than 28 days old may come before `All done`, which is
+expected with the Lite file. The exit code is 0.
 
 ### Cloud examples
 
@@ -206,16 +208,14 @@ with its "Find out more" section and exits with code 0. The tests named
   'device-detection/51Degrees-LiteV4.1.hash' which must be somewhere in the
   project space to be found.` Run `git submodule update --init --recursive`. A
   zip download of the repository has no submodules, so clone with Git.
-- **Running from another folder.** `FileFinder` looks only below the folder
-  Java runs in, so `java` started in `examples/device-detection`, as the
-  examples' README shows, cannot find the data file or its link in `cxx`.
-  Start it from the repository root. The same applies to `mvn exec:java`,
+- **Running from outside the repository.** An example started in a folder
+  outside the repository, such as one the jar was copied to, finds no
+  `cxx/data` above it and no `logback.xml` below it. Start it in the
+  repository root or a folder inside it. The same applies to `mvn exec:java`,
   which runs in the folder Maven starts in.
-- **The version in the jar name.** The examples' READMEs show jar names with
-  `4.4.20` and `4.4.19`, which are out of date. Use the name in `target`.
-- **The IP Intelligence example without an argument.** It searches for the
-  Enterprise file, logs `Failed to find IP Intelligence data file` and stops,
-  even when the Lite file is in place.
+- **The version in the jar name.** A jar carries the examples folder's own
+  `<version>`, `4.5.127-SNAPSHOT` on `rc` today, not the version of the
+  packages the examples use, `4.5.130`. Use the name in `target`.
 - **The `dev` profile.** `-Pdev`, which CI uses, builds the examples against
   the libraries here, which needs `mvn install` at the root first and so the
   native build, with CMake 3.10 or later and a C++ toolchain. It is not needed
@@ -324,3 +324,11 @@ into `main` from any other branch.
 
 Plain words, no em dashes, sentence case headings. Nothing in this public
 repository names a private repository or an issue in one.
+
+## Tests that fail on timing
+
+A test that fails on a time limit, a performance threshold or a timeout is
+fixed, not run again until it passes. Either the limit is set to fit the
+slowest runner the test runs on, with each runner's measurement behind it, or
+the reason it takes too long is found and fixed. A failure that comes and goes
+costs everyone who meets it the time to look into it.
