@@ -27,6 +27,7 @@ import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
+import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.engines.services.MissingPropertyServiceDefault;
 import org.junit.Before;
 import org.junit.Test;
@@ -130,6 +131,45 @@ public class EmptyMetadataTests {
             Object value = data.getPixelRatio().getValue();
             assertEquals(Double.class, value.getClass());
             assertEquals(3.0, (Double) value, 0);
+        }
+    }
+
+    /**
+     * A decimal with no fractional part for a property whose typed
+     * accessor gives an Integer is read as an Integer, so the accessor
+     * works if the cloud service gives 24.0 for a bits per pixel of 24.
+     */
+    @Test
+    public void EmptyMetadata_WholeDecimalDeclaredInteger_IsInteger()
+        throws Exception {
+        try (DeviceDetectionCloudEngine engine = buildEngine()) {
+            DeviceDataCloud data = process(engine,
+                "{ 'device': { 'bitsperpixel': 24.0 }, " +
+                    "'javascriptProperties': [] }");
+            Object value = data.getBitsPerPixel().getValue();
+            assertEquals(Integer.class, value.getClass());
+            assertEquals(24, ((Integer) value).intValue());
+        }
+    }
+
+    /**
+     * A decimal with a fractional part for a property whose typed accessor
+     * gives an Integer is not made a whole number, because that would
+     * change the value the service gave.
+     */
+    @Test
+    public void EmptyMetadata_FractionDeclaredInteger_IsNotRounded()
+        throws Exception {
+        try (DeviceDetectionCloudEngine engine = buildEngine()) {
+            DeviceDataCloud data = process(engine,
+                "{ 'device': { 'bitsperpixel': 24.5 }, " +
+                    "'javascriptProperties': [] }");
+            Object value = data.get("bitsperpixel");
+            assertTrue("The value is not an AspectPropertyValue.",
+                value instanceof AspectPropertyValue);
+            assertEquals(24.5,
+                ((Number) ((AspectPropertyValue<?>) value).getValue())
+                    .doubleValue(), 0);
         }
     }
 
