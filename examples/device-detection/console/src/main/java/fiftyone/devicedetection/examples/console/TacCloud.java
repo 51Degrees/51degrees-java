@@ -23,7 +23,6 @@
 package fiftyone.devicedetection.examples.console;
 
 import fiftyone.devicedetection.examples.shared.FindOutMore;
-import fiftyone.devicedetection.examples.shared.KeyHelper;
 import fiftyone.devicedetection.cloud.data.MultiDeviceDataCloud;
 import fiftyone.devicedetection.shared.Constants;
 import fiftyone.devicedetection.shared.DeviceData;
@@ -88,15 +87,7 @@ public class TacCloud {
         PipelineOptions pipelineOptions = PipelineOptionsFactory.getOptionsFromFile(optionsFile);
         String fileResourceKey = pipelineOptions.find("CloudRequestEngine", "ResourceKey");
         if (isInvalidKey(fileResourceKey)) {
-            // With no resource key, the helper has said how to set one, and
-            // the example ends without an error.
-            resourceKey = getOrSetSuperResourceKey(resourceKey,
-                    TAC_EXAMPLE_RESOURCE_KEY_NAME, EXAMPLE_TAG);
-            if (hasResourceKey(resourceKey) == false) {
-                FindOutMore.write(os, EXAMPLE_TAG,
-                        FindOutMore.CLOUD_REPOSITORIES);
-                return;
-            }
+            getOrSetSuperResourceKey(resourceKey, TAC_EXAMPLE_RESOURCE_KEY_NAME);
         }
         try (PrintWriter writer = new PrintWriter(os)) {
             writer.println("This example shows the details of devices " +

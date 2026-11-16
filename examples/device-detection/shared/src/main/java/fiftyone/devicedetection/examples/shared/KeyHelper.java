@@ -189,17 +189,6 @@ public class KeyHelper {
     }
 
     /**
-     * True when the value can be a resource key. An example given no key
-     * ends there, after saying how to set one, without an error, so that
-     * it can be run with no arguments or settings.
-     * @param value the key, or null
-     * @return true if the value can be a resource key
-     */
-    public static boolean hasResourceKey(String value) {
-        return isInvalidKey(value) == false;
-    }
-
-    /**
      * Obtain a resource key either from environment variable or from a property.
      */
     public static String getOrSetTestResourceKey() {
@@ -219,68 +208,6 @@ public class KeyHelper {
     }
     public static String getOrSetTestResourceKey(String value) {
         return getOrSetTestResourceKey(value, true);
-    }
-
-    /**
-     * A link to a 51Degrees page, tagged as the specification asks for a
-     * link an example writes: utm_source=code, utm_medium=example, the
-     * repository as utm_campaign and the example's file as utm_content.
-     * @param page the page, such as "configure/jqz435Nc"
-     * @param exampleTag the example's file, as its links name it
-     * @param term what the link is for
-     * @return the link
-     */
-    public static String exampleLink(String page, String exampleTag,
-                                     String term) {
-        return "https://51degrees.com/" +
-            page + "?utm_source=code&utm_medium=example" +
-            "&utm_campaign=51degrees-java&utm_content=" + exampleTag +
-            "&utm_term=" + term;
-    }
-
-    /**
-     * The resource key from the value given, or else from the
-     * {@link #TEST_RESOURCE_KEY} environment variable or system property.
-     * With no key, says which variable to set and where to create a key,
-     * with a link tagged with the example's file, and returns a value that
-     * {@link #hasResourceKey(String)} rejects, so that the example can end
-     * without an error.
-     * @param value the key given to the example, or null
-     * @param exampleTag the example's file, as its links name it
-     * @return the key, or a value that is not one
-     */
-    public static String getOrSetTestResourceKey(String value,
-                                                 String exampleTag) {
-        return getOrSetResourceKey(value, TEST_RESOURCE_KEY,
-            "A free resource key configured with the " +
-                "properties required by this example may be obtained from " +
-                exampleLink("configure/jqz435Nc", exampleTag,
-                    "resource-key-required") + " ",
-            false);
-    }
-
-    /**
-     * As {@link #getOrSetTestResourceKey(String, String)}, for an example
-     * that needs a key with the paid TAC or native model properties, read
-     * from the variable named.
-     * @param value the key given to the example, or null
-     * @param variableName the environment variable or system property
-     * @param exampleTag the example's file, as its links name it
-     * @return the key, or a value that is not one
-     */
-    public static String getOrSetSuperResourceKey(String value,
-                                                  String variableName,
-                                                  String exampleTag) {
-        return getOrSetResourceKey(value, variableName,
-            "TAC lookup and Native Model are not available as a free " +
-                "service.\nThis means that you will first need a license " +
-                "key, which can be purchased from our pricing page: " +
-                exampleLink("pricing", exampleTag, "license-key-required") +
-                " \nOnce this is done, a resource key with the properties " +
-                "required by this example can be created at " +
-                exampleLink("configure/QKyYH5XT", exampleTag,
-                    "license-key-required") + " ",
-            false);
     }
     /**
      * Obtain a resource key from the passed argument,

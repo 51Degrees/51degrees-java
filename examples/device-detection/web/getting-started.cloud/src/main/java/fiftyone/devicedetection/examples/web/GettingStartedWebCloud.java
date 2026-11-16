@@ -22,7 +22,6 @@
 
 package fiftyone.devicedetection.examples.web;
 
-import fiftyone.devicedetection.examples.shared.KeyHelper;
 import fiftyone.devicedetection.shared.DeviceData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.web.Constants;
@@ -55,23 +54,12 @@ public class GettingStartedWebCloud extends HttpServlet {
     public static String resourceBase = "examples/device-detection/web/getting-started.cloud/src/main/webapp";
     public static Logger logger = LoggerFactory.getLogger(GettingStartedWebCloud.class);
 
-    /**
-     * This example's file, as the links it writes name it.
-     */
-    private static final String EXAMPLE_TAG =
-            "web-getting-started.cloud-src-main-java-fiftyone-devicedetection-examples-web-gettingstartedwebcloud.java";
-
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
         String resourceKey = args.length > 0 ? args[0] : null;
         logger.info("Running Example {}", GettingStartedWebCloud.class);
         // check resource key and set as System Property
-        // With no resource key, the helper says how to set one, and the
-        // example ends without an error.
-        resourceKey = getOrSetTestResourceKey(resourceKey, EXAMPLE_TAG);
-        if (KeyHelper.hasResourceKey(resourceKey) == false) {
-            return;
-        }
+        getOrSetTestResourceKey(resourceKey);
 
         String portEnv = System.getenv("PORT");
         if (portEnv != null) {
