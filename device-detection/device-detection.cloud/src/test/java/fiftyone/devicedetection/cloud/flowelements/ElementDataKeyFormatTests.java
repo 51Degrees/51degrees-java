@@ -25,6 +25,8 @@ package fiftyone.devicedetection.cloud.flowelements;
 import org.junit.Test;
 import org.slf4j.Logger;
 
+import java.util.Locale;
+
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
@@ -51,6 +53,17 @@ public class ElementDataKeyFormatTests {
     public void keys_OnlyAlphanumericFullStopOrHyphen() {
         for (String key : keys()) {
             assertTrue(key, key.matches("[A-Za-z0-9.-]+"));
+        }
+    }
+
+    /**
+     * Specification: access-to-results.md line 10, "Lower-case SHOULD be
+     * used."
+     */
+    @Test
+    public void keys_LowerCase() {
+        for (String key : keys()) {
+            assertTrue(key, key.equals(key.toLowerCase(Locale.ROOT)));
         }
     }
 }

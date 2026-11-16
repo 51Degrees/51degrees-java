@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -63,6 +64,23 @@ public class ElementDataKeyFormatTests {
             try {
                 String key = element.getElementDataKey();
                 assertTrue(key.matches("[A-Za-z0-9.-]+"),
+                    element.getClass().getSimpleName() + " key '" + key + "'");
+            } finally {
+                element.close();
+            }
+        }
+    }
+
+    /**
+     * Specification: access-to-results.md line 10, "Lower-case SHOULD be
+     * used."
+     */
+    @Test
+    public void keys_LowerCase() throws Exception {
+        for (FlowElement<?, ?> element : elements()) {
+            try {
+                String key = element.getElementDataKey();
+                assertTrue(key.equals(key.toLowerCase(Locale.ROOT)),
                     element.getClass().getSimpleName() + " key '" + key + "'");
             } finally {
                 element.close();

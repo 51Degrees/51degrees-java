@@ -27,6 +27,8 @@ import fiftyone.geolocation.flowelements.GeoLocationCloudEngine;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
+import java.util.Locale;
+
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -55,5 +57,19 @@ public class ElementDataKeyFormatTests {
     public void keys_OnlyAlphanumericFullStopOrHyphen() {
         String key = key(Enums.GeoLocationProvider.FiftyOneDegrees);
         assertTrue(key, key.matches("[A-Za-z0-9.-]+"));
+    }
+
+    /**
+     * Every provider's key, the DigitalElement one included, is lower-case.
+     * Specification: access-to-results.md line 10, "Lower-case SHOULD be
+     * used."
+     */
+    @Test
+    public void keys_LowerCase() {
+        for (Enums.GeoLocationProvider provider :
+            Enums.GeoLocationProvider.values()) {
+            String key = key(provider);
+            assertTrue(key, key.equals(key.toLowerCase(Locale.ROOT)));
+        }
     }
 }
