@@ -232,9 +232,10 @@ public class KeyHelper {
      */
     public static String exampleLink(String page, String exampleTag,
                                      String term) {
-        return "https://51degrees.com/" + page +
-            "?utm_source=code&utm_medium=example&utm_campaign=51degrees-java" +
-            "&utm_content=" + exampleTag + "&utm_term=" + term;
+        return "https://51degrees.com/" +
+            page + "?utm_source=code&utm_medium=example" +
+            "&utm_campaign=51degrees-java&utm_content=" + exampleTag +
+            "&utm_term=" + term;
     }
 
     /**
