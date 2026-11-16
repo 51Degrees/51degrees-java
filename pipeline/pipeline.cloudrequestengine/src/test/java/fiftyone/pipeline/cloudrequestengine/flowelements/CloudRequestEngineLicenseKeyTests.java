@@ -46,6 +46,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -468,6 +469,46 @@ public class CloudRequestEngineLicenseKeyTests {
         assertEquals(1, evidence.size());
         assertEquals("GET", evidence.get(0).method);
         assertNull(evidence.get(0).url.getQuery());
+    }
+
+    /**
+     * The property metadata is the accessibleproperties answer, never one
+     * made from the requested properties. A requested name the answer does
+     * not list has none, a product the answer lists but no name requested
+     * is kept, and each type is the answer's.
+     */
+    @Test
+    public void Discovery_LicenseKeyAlone_MetadataIsTheAnswerNotTheRequest()
+        throws Exception {
+        cloud.propertiesResponse =
+            "{\"Products\":{" +
+            "\"device\":{\"DataTier\":\"t\",\"Properties\":" +
+            "[{\"Name\":\"IsMobile\",\"Type\":\"Boolean\"," +
+            "\"Category\":\"Device\"}]}," +
+            "\"location\":{\"DataTier\":\"t\",\"Properties\":" +
+            "[{\"Name\":\"Town\",\"Type\":\"String\"," +
+            "\"Category\":\"Location\"}]}}}";
+        CloudRequestEngine engine = build(builder()
+            .setLicenseKey(LICENSE_KEY)
+            .setRequestedProperties(Arrays.asList(
+                "device.ismobile",
+                "device.iscrawler",
+                "device.hardwarevendor")));
+
+        Map<String, AccessiblePropertyMetaData.ProductMetaData> products =
+            engine.getPublicProperties();
+        assertEquals(
+            new TreeSet<>(Arrays.asList("device", "location")),
+            new TreeSet<>(products.keySet()));
+        List<AccessiblePropertyMetaData.PropertyMetaData> device =
+            products.get("device").properties;
+        assertEquals(1, device.size());
+        assertEquals("IsMobile", device.get(0).name);
+        assertEquals(boolean.class, device.get(0).getPropertyType());
+        List<AccessiblePropertyMetaData.PropertyMetaData> location =
+            products.get("location").properties;
+        assertEquals(1, location.size());
+        assertEquals("Town", location.get(0).name);
     }
 
     @Test
