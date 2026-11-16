@@ -1,0 +1,69 @@
+name: Temporary measurement run for pull request 180
+
+# Throwaway. Measures how long closing the Usage Sharing Element takes on
+# each kind of runner the release builds on. The test's own limit is set to
+# 1 ms in the checkout, so its assertion always fails and its message prints
+# the time close() took. One commit is the test before the fix, the other is
+# the head with the fix.
+
+on:
+  push:
+    branches:
+      - 'tmp/timing-180b'
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    name: ${{ matrix.image }}, ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [ubuntu-22.04, ubuntu-22.04-arm, windows-latest, macos-15, macos-15-intel]
+        include:
+          - label: with-the-fix
+            sha: bcdb06b38696793e751901c2367ad6b8055dce79
+        label: [with-the-fix, before-the-fix]
+        exclude: []
+    runs-on: ${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check out the commit and its submodules
+        shell: bash
+        env:
+          LABEL: ${{ matrix.label }}
+        run: |
+          if [ "$LABEL" = "with-the-fix" ]; then
+            SHA=bcdb06b38696793e751901c2367ad6b8055dce79
+          else
+            SHA=bbef6e431ff8036b5de128549b8cb07849d5a728
+          fi
+          git checkout --force "$SHA"
+          git submodule update --init pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates pipeline/owid-java pipeline/pipeline.core/configuration-validation
+          git log --oneline -1
+      - name: Set the test limit to 1 ms so the message prints the time taken
+        shell: bash
+        run: |
+          f=pipeline/pipeline.engines.fiftyone/src/test/java/fiftyone/pipeline/engines/fiftyone/flowelements/ShareUsageCloseTimeoutTests.java
+          sed -i.bak 's/CLOSE_LIMIT_MILLIS = 5000;/CLOSE_LIMIT_MILLIS = 1;/' "$f"
+          rm -f "$f.bak"
+          grep -n 'CLOSE_LIMIT_MILLIS = ' "$f"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Build the module and the modules it needs
+        shell: bash
+        run: mvn -B -q -pl pipeline/pipeline.engines.fiftyone -am install -DskipTests
+      - name: Measure the close time over five rounds
+        shell: bash
+        run: |
+          for round in 1 2 3 4 5; do
+            mvn -B -pl pipeline/pipeline.engines.fiftyone surefire:test -Dtest=ShareUsageCloseTimeoutTests#ShareUsageElement_ServiceStopsAnswering_CloseWithin5Seconds -DtrimStackTrace=false > round.log 2>&1 || true
+            printf 'MEASURED %s round %s: ' "${{ matrix.image }}" "$round"
+            grep -ho 'Closing took [0-9]* ms' round.log | head -1 || echo "no measurement"
+          done
