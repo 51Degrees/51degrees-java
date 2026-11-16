@@ -1,0 +1,45 @@
+name: Temporary red and green run, masked cloud warnings
+
+# Throwaway. Runs the masked warning test with the masking taken out
+# (expected to fail) and at the fix (expected to pass).
+
+on:
+  push:
+    branches:
+      - 'tmp/red-165b'
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    name: ${{ matrix.side }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - side: red, the head with the masking taken out
+            sha: ''
+          - side: green, the head
+            sha: 4e0103237f9e6c3d23ac8c925fb0a19237909a3a
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.sha || github.sha }}
+      - name: Fetch the submodules the module builds from
+        run: >
+          git submodule update --init
+          pipeline/pipeline.cloudrequestengine/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates
+          pipeline/owid-java pipeline/pipeline.core/configuration-validation
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Build the module and what it needs
+        run: mvn -B -q -pl pipeline/pipeline.cloudrequestengine -am install -DskipTests
+      - name: Run the new test in the module alone
+        run: |
+          git log --oneline -1
+          mvn -B -pl pipeline/pipeline.cloudrequestengine surefire:test -Dtest=CloudRequestEngineLicenseKeyTests -Dsurefire.failIfNoSpecifiedTests=false -DtrimStackTrace=false
