@@ -349,7 +349,7 @@ public class JavaScriptBuilderElement
             AspectPropertyValue<?> supportsPromisesValue =
                     data.getAs("Promise", AspectPropertyValue.class);
             supportsPromises = supportsPromisesValue.hasValue() &&
-                    supportsPromisesValue.getValue() == "Full";
+                    "Full".equals(supportsPromisesValue.getValue());
         } catch (PipelineDataException | PropertyMissingException e) {
             supportsPromises = false;
         }
