@@ -116,7 +116,7 @@ public class KeyHelper {
      * @return the key, or null when there is none
      */
     public static String findResourceKey(String argument, String... names) {
-        if (KeyUtils.isInvalidKey(argument) == false) {
+        if (isInvalidKey(argument) == false) {
             return argument.trim();
         }
         for (String name : names) {

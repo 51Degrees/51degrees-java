@@ -77,7 +77,7 @@ public class TacCloud {
         String fileResourceKey = PipelineOptionsFactory.getOptionsFromFile(
                 getFilePath("tacCloud.xml"))
                 .find("CloudRequestEngine", "ResourceKey");
-        if (resourceKey == null && KeyUtils.isInvalidKey(fileResourceKey)) {
+        if (resourceKey == null && isInvalidKey(fileResourceKey)) {
             KeyHelper.writeNoResourceKey(System.out, EXAMPLE_TAG,
                     TAC_EXAMPLE_RESOURCE_KEY_NAME,
                     KeyHelper.PAID_PROPERTIES_CONFIGURATION);
