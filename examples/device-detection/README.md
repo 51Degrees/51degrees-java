@@ -94,6 +94,7 @@ The tables below describe the examples available in this repository.
 | OfflineProcessing        | Example showing how to ingest a file containing data from web requests and perform detection against the entries.                                                                                                              |
 | PerformanceBenchmark     | How to configure the various performance options and run some simple performance tests.                                                                                                                                        |
 | UpdateOnStartup          | How to configure the Pipeline to automatically update the device detection data file on startup. Also illustrates 'file watcher'. This will refresh the device detection engine if the specified data file is updated on disk. |
+| ManualDataUpdate         | How to make the device detection engine load a new data file when the application decides to, rather than through an automatic update, with no restart.                                                                     |
 
 ## Running built examples from command line
 
