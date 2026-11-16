@@ -140,6 +140,14 @@ public class ExamplesWithoutSettingsTest {
     }
 
     @Test
+    public void manualDataUpdate() throws Exception {
+        String output = runWithoutSettings(ManualDataUpdate::main);
+        assertContains(output, "Hardware Vendor: " + DataFileHelper.NEEDS_ENTERPRISE);
+        assertContains(output, "The Enterprise data file adds daily automatic updates.");
+        assertContains(output, CONTACT_US);
+    }
+
+    @Test
     public void updateDataFile() throws Exception {
         String output = runWithoutSettings(UpdateDataFile::main);
         assertContains(output, "The data file in use is the 'Lite' file");

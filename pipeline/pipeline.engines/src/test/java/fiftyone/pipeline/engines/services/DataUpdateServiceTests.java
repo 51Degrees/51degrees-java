@@ -289,6 +289,13 @@ public class DataUpdateServiceTests {
         file.setEngine(engine);
         file.setConfiguration(config);
 
+        // With no polling interval the delay is the random number of whole
+        // seconds alone, which can be 0. The check is not run, so a check
+        // that starts at once cannot schedule again before the verify.
+        doReturn(mock(ScheduledFuture.class)).when(futureFactory).schedule(
+            any(Runnable.class),
+            anyLong());
+
         // Act
         dataUpdate.registerDataFile(file);
 
