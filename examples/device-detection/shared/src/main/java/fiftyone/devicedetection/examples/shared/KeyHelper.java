@@ -82,40 +82,6 @@ public class KeyHelper {
             "_51DEGREES_RESOURCE_KEY",
             "_51DEGREES_RESOURCE_KEY_BESPOKE"));
 
-    /**
-     * Read a key from an environment variable of the name given, then of the
-     * name in upper case, then from a system property of the name given.
-     * @param keyName name of the key
-     * @return the key, or null when none of them is set
-     */
-    public static String getNamedKey(String keyName) {
-        String resourceKey = System.getenv(keyName);
-        if (Objects.isNull(resourceKey)) {
-            resourceKey = System.getenv(keyName.toUpperCase());
-            if (Objects.isNull(resourceKey)) {
-                resourceKey = System.getProperty(keyName);
-            }
-        }
-        return resourceKey;
-    }
-
-    /**
-     * Whether a key cannot be valid, being missing, too short, or not URL
-     * safe Base64 of enough bytes.
-     * @param keyValue value to check
-     * @return true when the key cannot be valid
-     */
-    public static boolean isInvalidKey(String keyValue) {
-        Base64.Decoder decoder = Base64.getUrlDecoder();
-        try {
-            return Objects.isNull(keyValue) ||
-                keyValue.trim().length() < 19 ||
-                decoder.decode(keyValue).length < 14;
-        } catch (IllegalArgumentException e) {
-            return true;
-        }
-    }
-
     static final String CREATE_KEY_URL =
         "https://51degrees.com/configure/?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-devicedetection-examples-shared-keyhelper.java&utm_term=no-resource-key";
 
