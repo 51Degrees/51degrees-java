@@ -1,0 +1,67 @@
+name: Temporary red run for pull request 173
+
+# Throwaway. Runs each new test of the draft's own parts at the test commit
+# before its fix, expected to fail. The test step names one module, so no
+# other module's lack of a matching test stops the run.
+
+on:
+  push:
+    branches:
+      - 'tmp/red-173b'
+
+permissions:
+  contents: read
+
+jobs:
+  red:
+    name: ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: every Flow Element is made by its builder, at ffb3dc8b
+            sha: ffb3dc8b45c84c8956fbf653bca3e1230f7a9f8b
+            tree: ''
+            module: pipeline/pipeline.core
+            test: ElementCreationConsistencyTest
+          - label: the console example shares no usage, at 117cf466
+            sha: 117cf466afd2038fd476b41a9e4824188856784a
+            tree: -f examples/device-detection
+            module: console
+            test: GettingStartedOnPremUsageSharingTest
+          - label: the client-side element example, at 07b08749
+            sha: 07b087490176abe58191609403b63b28d77a9430
+            tree: ''
+            module: pipeline/pipeline.developer-examples/pipeline.developer-examples.clientside-element
+            test: ExampleTests
+          - label: high entropy values in the web examples, at 3c61c50b
+            sha: 3c61c50b0b99529873e16f2c062ebf6d662950ff
+            tree: -f examples/device-detection
+            module: web/getting-started.onprem,web/getting-started.cloud
+            test: HighEntropyValuesTest
+          - label: the on-premise web example with no settings, at f234c41b
+            sha: f234c41b094e179fce0be394402837b41d3c84b3
+            tree: -f examples/device-detection
+            module: web/getting-started.onprem
+            test: WebOnPremWithoutSettingsTest
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.sha }}
+      - name: Fetch the submodules the package modules build from
+        run: >
+          git submodule update --init
+          pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates
+          pipeline/owid-java pipeline/pipeline.core/configuration-validation
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Build the module and what it needs
+        run: mvn -B -q ${{ matrix.tree }} -pl ${{ matrix.module }} -am install -DskipTests -DskipNativeBuild=true
+      - name: Run the new test in that module alone
+        run: |
+          git log --oneline -1
+          mvn -B ${{ matrix.tree }} -pl ${{ matrix.module }} surefire:test -Dtest=${{ matrix.test }} -Dsurefire.failIfNoSpecifiedTests=false -DtrimStackTrace=false
