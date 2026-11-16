@@ -50,6 +50,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
@@ -158,6 +159,62 @@ public class DataUpdateServiceCheckFailureTests {
             runWatcherUntilRefreshed(watcher.get(), engine, 2);
             assertEquals("A later data file is still applied",
                 2, refreshCount(engine));
+        }
+        finally {
+            cleanUp(file, directory, dataFile);
+        }
+    }
+
+    /**
+     * A check by the file watcher whose refresh throws an Error still leaves
+     * the data file with a polling timer. The refresh cancels the timer
+     * before it runs, so the file has to be registered again however the
+     * refresh ends, or polling for updates never runs again.
+     */
+    @Test
+    public void WatcherCheck_RefreshThrowsError_PollingTimerSetAgain()
+        throws Exception {
+        assumeFalse(MAC_MESSAGE, isMac());
+        Logger logger = mock(Logger.class);
+        AtomicReference<Runnable> watcher = new AtomicReference<>();
+        AtomicInteger pollingTimers = new AtomicInteger();
+        FutureFactory futureFactory = mock(FutureFactory.class);
+        when(futureFactory.schedule(any(Runnable.class), anyLong()))
+            .then(invocation -> {
+                pollingTimers.incrementAndGet();
+                return mock(ScheduledFuture.class);
+            });
+        when(futureFactory.scheduleRepeating(any(Runnable.class), anyLong()))
+            .then(invocation -> {
+                watcher.set((Runnable) invocation.getArgument(0));
+                return mock(ScheduledFuture.class);
+            });
+        DataUpdateService dataUpdate = new DataUpdateServiceDefault(
+            logger,
+            mock(HttpClient.class),
+            fileWrapperFactory(),
+            futureFactory);
+
+        OnPremiseAspectEngine<? extends AspectData,
+            ? extends AspectPropertyMetaData> engine = engine();
+        doThrow(new Error("The refresh failed"))
+            .when(engine).refreshData(any());
+        Path directory = Files.createTempDirectory("watched");
+        Path dataFile = directory.resolve("data.dat");
+        Files.write(dataFile, "Old".getBytes());
+        AspectEngineDataFileDefault file = dataFile(engine, dataFile, true);
+
+        try {
+            dataUpdate.registerDataFile(file);
+            assertEquals("Registering sets one polling timer",
+                1, pollingTimers.get());
+
+            Files.write(dataFile, "New".getBytes());
+            runWatcherUntilRefreshed(watcher.get(), engine, 1);
+            assertEquals("The watched file was refreshed once",
+                1, refreshCount(engine));
+            assertEquals("A new polling timer is set after the failed refresh",
+                2, pollingTimers.get());
         }
         finally {
             cleanUp(file, directory, dataFile);
