@@ -87,9 +87,11 @@ public class PublishedPackagesHoldNoTestsTests {
 
     /**
      * Test helpers that stay in the published jar, deprecated, because a
-     * patch release removes no public name. A later release removes them.
+     * patch release removes no public name, and the folder a jar lists for
+     * them. A later release removes them.
      */
     private static final List<String> KEPT_DEPRECATED = Arrays.asList(
+        "fiftyone/devicedetection/shared/testhelpers/",
         "fiftyone/devicedetection/shared/testhelpers/FileUtils.class",
         "fiftyone/devicedetection/shared/testhelpers/KeyUtils.class");
 
