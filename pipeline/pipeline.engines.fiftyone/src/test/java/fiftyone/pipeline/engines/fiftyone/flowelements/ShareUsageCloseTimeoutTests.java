@@ -68,11 +68,13 @@ public class ShareUsageCloseTimeoutTests {
     private static final int ENTRIES = 10;
 
     /**
-     * The most closing may take from its start, as the specification's
-     * Cleanup section sets it, holding the wait for the data to be sent,
-     * discarding the rest, the warning and freeing the resources.
+     * The most closing may take from its start, holding the wait for the
+     * data to be sent, discarding the rest, the warning and freeing the
+     * resources. It sits below the 5 seconds the specification bounds
+     * cleanup at, above the longest any runner takes with the wait
+     * bounded, and below the shortest any runner takes without it.
      */
-    private static final long CLOSE_LIMIT_MILLIS = 5000;
+    private static final long CLOSE_LIMIT_MILLIS = 4800;
 
     /**
      * An upload whose first answer does not come until the test releases
@@ -185,7 +187,8 @@ public class ShareUsageCloseTimeoutTests {
                 "Closing waited for the remote service to answer.");
             assertTrue(tookMillis[0] <= CLOSE_LIMIT_MILLIS,
                 "Closing took " + tookMillis[0] + " ms, more than the " +
-                    CLOSE_LIMIT_MILLIS + " ms cleanup may take.");
+                    CLOSE_LIMIT_MILLIS + " ms allowed inside the 5 second " +
+                    "bound the specification puts on cleanup.");
             assertEquals(1, uploader.release.getCount(),
                 "The upload in progress was answered before closing ended.");
         }
