@@ -24,7 +24,7 @@ jobs:
       - name: The test commit before the fix
         shell: bash
         run: |
-          git checkout --force b8df90e52c4d2d0ba8ab1a3cd4e2a00d82a3b7fa || git log --oneline -5
+          git checkout --force b8df90e5271cfe7f085aeb9b8386067845990791 || git log --oneline -5
           git log --oneline -1
       - name: The submodules the module needs
         shell: bash
