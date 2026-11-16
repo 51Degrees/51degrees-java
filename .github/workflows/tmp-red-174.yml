@@ -1,0 +1,70 @@
+name: Temporary red run for pull request 174
+
+# Throwaway. Each job checks out the test commit before its fix and runs
+# that commit's new test class, which is expected to fail.
+
+on:
+  push:
+    branches:
+      - 'tmp/red-174'
+
+permissions:
+  contents: read
+
+jobs:
+  red:
+    name: ${{ matrix.test }} at ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: one thread at a time
+            sha: 2b84a8063a8690e2f9667fa3eafe22ce1f406745
+            test: ResultsOneThreadAtATimeTests
+            module: device-detection/device-detection.hash.engine.on-premise
+          - label: match metric metadata
+            sha: 3e252cad6d559b6ef7ca903f1592be6ecb531277
+            test: MatchMetricMetaDataTests
+            module: device-detection/device-detection.hash.engine.on-premise
+          - label: the Metrics component
+            sha: aa549c4669370eeae2cc413548313bc0ba7751ac
+            test: MetricsComponentTests
+            module: device-detection/device-detection.hash.engine.on-premise
+          - label: profiles for a value
+            sha: 17a34699a5e396d8a43f40c4c78bdb8e82a54185
+            test: ProfilesForPropertyValueTests
+            module: device-detection/device-detection.hash.engine.on-premise
+          - label: reads by position
+            sha: a15e255b0283b47eecd34e740d31c21aa3bc3492
+            test: ReadsByPositionTests
+            module: device-detection/device-detection.hash.engine.on-premise
+          - label: the shared cloud logic
+            sha: 74985cda5822f734da00072360b568f70ab8f9d7
+            test: SharedCloudProcessingTests
+            module: device-detection/device-detection.cloud
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: Check out the test commit
+        shell: bash
+        run: |
+          git checkout --force ${{ matrix.sha }}
+          git submodule update --init --recursive
+          git log --oneline -1
+      - name: The free data files, from the data repository
+        shell: bash
+        run: bash cxx/data/get-data-files.sh
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Build the module and the modules it needs
+        shell: bash
+        run: mvn -B -q -pl ${{ matrix.module }} -am install -DskipTests
+      - name: Run the new test class
+        shell: bash
+        run: mvn -B -pl ${{ matrix.module }} surefire:test -Dtest=${{ matrix.test }} -DtrimStackTrace=false
