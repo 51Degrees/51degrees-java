@@ -22,6 +22,7 @@
 
 package fiftyone.devicedetection.web;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.devicedetection.examples.shared.KeyHelper;
 import fiftyone.devicedetection.examples.web.EmbedJetty;
 import org.eclipse.jetty.server.Server;
@@ -90,6 +91,9 @@ public class GettingStartedWebCloudTest {
             body.contains("<strong>cloud device detection engine</strong>"));
         assertDetected(body, "Browser Name", "BrowserName", "Chrome");
         assertDetected(body, "Platform Name", "PlatformName", "Windows");
+        assertTrue("The page should end with the '" + FindOutMore.HEADING +
+                "' section. " + body, body.contains(
+                        "<h2>" + FindOutMore.HEADING + "</h2>"));
     }
 
     /**

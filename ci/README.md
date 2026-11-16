@@ -48,6 +48,14 @@ repositories used to do for one package tree each.
   of cxx. No test job downloads a data file, so a file added to the data
   repository needs an entry in common-ci's `steps/fetch-assets.ps1` before CI
   can use it.
+- [run-fresh-clone-example.ps1](run-fresh-clone-example.ps1) runs a
+  product's console example jar from the repository root for
+  [examples-fresh-clone.yml](../.github/workflows/examples-fresh-clone.yml).
+  It fails unless the example exits with 0 and prints results, and unless it
+  downloads its free data file exactly when the job expects it to. That
+  workflow's Ubuntu job downloads each product's free data file once a run,
+  as a test of the download, and its other jobs take the file from the cache
+  the Ubuntu job saves.
 - [run-performance-tests.ps1](run-performance-tests.ps1) measures the Pipeline
   API, Device Detection and IP Intelligence and writes one results file per
   configuration. The Device Detection and IP Intelligence metrics are prefixed

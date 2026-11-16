@@ -50,6 +50,7 @@ package fiftyone.ipintelligence.examples.web;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngineBuilder;
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.FlowElement;
@@ -74,6 +75,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
@@ -94,7 +97,10 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * and a JSON builder element which serialises the results.
  * <p>
  * The data file can be supplied as a command line argument. When no argument is given
- * the enterprise data file is looked for in the cxx/data/ip-intelligence directory.
+ * the free Lite data file is used, and downloaded when it is missing.
+ * <p>
+ * The service answers in JSON, so when it starts it writes what the Enterprise data file
+ * adds, when the file in use is a free one, and the "Find out more" section.
  * <p>
  * Note that the .NET version of this example also includes a device detection engine
  * in the same pipeline. This Java version is IP Intelligence only.
@@ -104,6 +110,14 @@ public class GettingStartedApi extends HttpServlet {
     public static final int DEFAULT_PORT = 5225;
     public static final String DATA_FILE_INIT_PARAM = "dataFile";
     public static Logger logger = LoggerFactory.getLogger(GettingStartedApi.class);
+
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "web-getting-started.api-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedapi.java";
+
+    private static final String CONTACT_US = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-getting-started.api-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedapi.java&utm_term=enterprise-data-file";
 
     private Pipeline pipeline;
     private IPIntelligenceOnPremiseEngine engine;
@@ -153,6 +167,25 @@ public class GettingStartedApi extends HttpServlet {
             throw new ServletException("Failed to create pipeline from data file '" +
                     dataFileLocation + "'", e);
         }
+        writeStartupNotes(System.out, engine);
+    }
+
+    /**
+     * Writes what the Enterprise data file adds, with the link to the
+     * contact page, when the engine uses a free data file, then the "Find
+     * out more" section.
+     * @param output where to write
+     * @param engine the engine the service uses
+     */
+    static void writeStartupNotes(
+            PrintStream output,
+            IPIntelligenceOnPremiseEngine engine) {
+        if (DataFileHelper.isFreeDataFile(engine)) {
+            DataFileHelper.writeEnterpriseOffer(
+                    new PrintWriter(output), CONTACT_US);
+        }
+        FindOutMore.write(output, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     @Override

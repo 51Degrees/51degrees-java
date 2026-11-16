@@ -54,6 +54,7 @@
 
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.IPIntelligencePipelineBuilder;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
 import fiftyone.ipintelligence.examples.console.areas.Calculations;
@@ -105,6 +106,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * are output in CSV format.
  */
 public class MetricsOnPrem {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-ipintelligence-examples-console-metricsonprem.java";
+
     private static final Logger logger = LoggerFactory.getLogger(MetricsOnPrem.class);
 
     /**
@@ -325,6 +332,8 @@ public class MetricsOnPrem {
                         args[3], new PrintWriter(System.out)) :
                 DEFAULT_PERFORMANCE_PROFILE;
         if (profile == null) {
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.ON_PREMISE_REPOSITORIES);
             return;
         }
 
@@ -334,6 +343,8 @@ public class MetricsOnPrem {
                 Arrays.asList(PROPERTIES),
                 new PrintWriter(System.out),
                 CONTACT_US)) {
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.ON_PREMISE_REPOSITORIES);
             return;
         }
 
@@ -345,6 +356,8 @@ public class MetricsOnPrem {
             run(dataFile, samplePercentage, 0, condition, profile, writer);
         }
         logger.info("Output written to '{}'", outputFile);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     /**
@@ -407,7 +420,9 @@ public class MetricsOnPrem {
                         // configuration options.
                         // https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metricsonprem.java&utm_term=automatic-datafile-updates
                         .setPerformanceProfile(profile)
-                        // inhibit sharing usage for this example
+                        // Usage sharing is off because this example's evidence is already
+                        // known to 51Degrees. In production, leave usage sharing on, which adds
+                        // a Usage Sharing Element to the Pipeline and helps improve the service.
                         .setShareUsage(false)
                         // inhibit auto-update of the data file for this example
                         .setAutoUpdate(false)

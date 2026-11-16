@@ -27,7 +27,12 @@ import java.util.Objects;
 
 /**
  * Helpers to obtain keys from the environment
+ * @deprecated These are test helpers, which the published package should
+ * not hold. Example code reads and checks keys with
+ * {@code fiftyone.devicedetection.examples.shared.KeyHelper}, in the
+ * device-detection-java-examples.shared module.
  */
+@Deprecated
 public class KeyUtils {
     /**
      * Obtain a key either from environment variable or from a property.
