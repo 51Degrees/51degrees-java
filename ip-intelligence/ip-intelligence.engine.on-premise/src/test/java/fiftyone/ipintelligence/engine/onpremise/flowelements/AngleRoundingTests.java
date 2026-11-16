@@ -24,6 +24,7 @@ package fiftyone.ipintelligence.engine.onpremise.flowelements;
 
 import fiftyone.ipintelligence.engine.onpremise.TestsBase;
 import fiftyone.ipintelligence.shared.IPIntelligenceData;
+import fiftyone.ipintelligence.shared.IPIntelligenceDataBaseOnPremise;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.IWeightedValue;
 import fiftyone.pipeline.engines.Constants;
@@ -86,7 +87,7 @@ public class AngleRoundingTests extends TestsBase {
                 IPIntelligenceData ipi = data.get(IPIntelligenceData.class);
                 for (String angle : ANGLES) {
                     checkWeighted(address, angle,
-                        ipi.get(angle.toLowerCase()), unrounded);
+                        readWeighted(ipi, angle), unrounded);
                 }
                 checkValue(address, "getLatitude",
                     ipi.getLatitude(), unrounded);
@@ -109,6 +110,19 @@ public class AngleRoundingTests extends TestsBase {
             }
         }
         return found == ANGLES.length;
+    }
+
+    /**
+     * Read a property as a list of weighted values of Float, the type the
+     * IP Intelligence data model gives Latitude and Longitude and the type
+     * their typed accessors return. This is the call the element data makes
+     * for a weighted property, and for Float the engine reads the native
+     * weighted double list, which is where the rounding is done.
+     */
+    private static Object readWeighted(IPIntelligenceData ipi, String angle) {
+        return ((IPIntelligenceDataBaseOnPremise) ipi).getValues(
+            angle,
+            new Class<?>[] {List.class, IWeightedValue.class, Float.class});
     }
 
     private static void checkWeighted(String address,
