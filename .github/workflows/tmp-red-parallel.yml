@@ -1,0 +1,45 @@
+name: Temporary red and green run, no Evidence adder in a parallel group
+
+# Throwaway. Runs the new parallel group test at the test commit before the fix
+# (expected to fail) and at the fix (expected to pass).
+
+on:
+  push:
+    branches:
+      - 'tmp/red-parallel'
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    name: ${{ matrix.side }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - side: red at the test commit
+            sha: 55b7aeb20217404a84c9c7a1280472a581f9ad2a
+          - side: green at the fix
+            sha: 25f5e6e73f10869c597e83ea2f7c078dfa0f602f
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.sha }}
+      - name: Fetch the submodules the module builds from
+        run: >
+          git submodule update --init
+          pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates
+          pipeline/owid-java pipeline/pipeline.core/configuration-validation
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Build the module and what it needs
+        run: mvn -B -q -pl pipeline/pipeline.engines.fiftyone -am install -DskipTests
+      - name: Run the new test in the module alone
+        run: |
+          git log --oneline -1
+          mvn -B -pl pipeline/pipeline.engines.fiftyone surefire:test -Dtest=SequenceElementParallelTests -Dsurefire.failIfNoSpecifiedTests=false -DtrimStackTrace=false
