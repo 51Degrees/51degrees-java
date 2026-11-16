@@ -52,7 +52,6 @@ class ParallelElements
      */
     ParallelElements(Logger logger, List<FlowElement> flowElements) {
         super(logger, null);
-        refuseElementsThatAddEvidence(flowElements);
         threadPool = Executors.newCachedThreadPool();
         this.flowElements = flowElements;
     }
