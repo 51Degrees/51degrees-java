@@ -70,12 +70,26 @@ public class MissingPropertyReasonOrderTests {
         AspectPropertyValue<String> getOwnAccessor();
     }
 
-    @SafeVarargs
     private static List<AspectEngine<? extends AspectData,
         ? extends AspectPropertyMetaData>> list(
         AspectEngine<? extends AspectData,
-            ? extends AspectPropertyMetaData>... engines) {
-        return Arrays.asList(engines);
+            ? extends AspectPropertyMetaData> first) {
+        List<AspectEngine<? extends AspectData,
+            ? extends AspectPropertyMetaData>> engines = new ArrayList<>();
+        engines.add(first);
+        return engines;
+    }
+
+    private static List<AspectEngine<? extends AspectData,
+        ? extends AspectPropertyMetaData>> list(
+        AspectEngine<? extends AspectData,
+            ? extends AspectPropertyMetaData> first,
+        AspectEngine<? extends AspectData,
+            ? extends AspectPropertyMetaData> second) {
+        List<AspectEngine<? extends AspectData,
+            ? extends AspectPropertyMetaData>> engines = list(first);
+        engines.add(second);
+        return engines;
     }
 
     @SuppressWarnings("unchecked")

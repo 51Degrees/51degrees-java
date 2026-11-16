@@ -156,6 +156,7 @@ public class MissingPropertyServiceTests {
         // Arrange
         CloudAspectEngine<? extends AspectData, AspectPropertyMetaData> engine = mock(CloudAspectEngine.class);
         when(engine.getElementDataKey()).thenReturn("testElement");
+        when(engine.hasLoadedProperties()).thenReturn(true);
         when(engine.getProperties()).thenReturn(Collections.emptyList());
 
         // Act
@@ -188,6 +189,7 @@ public class MissingPropertyServiceTests {
         // Arrange
         CloudAspectEngine<? extends AspectData, AspectPropertyMetaData> engine = mock(CloudAspectEngine.class);
         when(engine.getElementDataKey()).thenReturn("testElement");
+        when(engine.hasLoadedProperties()).thenReturn(true);
         configureProperty(engine);
 
         // Act

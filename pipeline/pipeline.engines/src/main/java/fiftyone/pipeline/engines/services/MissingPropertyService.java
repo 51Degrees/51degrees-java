@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.engines.services;
 
+import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.services.PipelineService;
 import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
@@ -59,4 +60,21 @@ public interface MissingPropertyService extends PipelineService {
     MissingPropertyResult getMissingPropertyReason(
         String propertyName,
         List<AspectEngine<? extends AspectData,? extends AspectPropertyMetaData>> engines);
+
+    /**
+     * Get the reason for the property not being found in the Element Data of
+     * the Flow Data given. The Flow Data lets a failed cloud request be
+     * reported as the reason. By default the Flow Data is not used.
+     *
+     * @param propertyName name of the {@link AspectPropertyMetaData}
+     * @param engines where the property should be found
+     * @param flowData the Flow Data the property was read from
+     * @return reason the property was not found
+     */
+    default MissingPropertyResult getMissingPropertyReason(
+        String propertyName,
+        List<AspectEngine<? extends AspectData,? extends AspectPropertyMetaData>> engines,
+        FlowData flowData) {
+        return getMissingPropertyReason(propertyName, engines);
+    }
 }

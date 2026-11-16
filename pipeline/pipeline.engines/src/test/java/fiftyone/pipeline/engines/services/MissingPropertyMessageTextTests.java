@@ -88,6 +88,7 @@ public class MissingPropertyMessageTextTests {
         CloudAspectEngine<? extends AspectData, AspectPropertyMetaData> engine =
             mock(CloudAspectEngine.class);
         when(engine.getElementDataKey()).thenReturn("testElement");
+        when(engine.hasLoadedProperties()).thenReturn(true);
         List<AspectPropertyMetaData> properties = new ArrayList<>();
         for (String name : propertyNames) {
             properties.add(new AspectPropertyMetaDataDefault(
