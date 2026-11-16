@@ -335,8 +335,10 @@ public class ShareUsageRecordFormTests {
     }
 
     /**
-     * The whole record, compared as text. DateSent and ServerIP are read
-     * from the record, as they differ from run to run, and the values that
+     * The whole record, compared as text. It is the element's first
+     * record, so it carries the invariant values. ProcessId, DateSent and
+     * ServerIP are read from the record, as they differ from run to run,
+     * and the values that
      * name the runtime are the ones this JVM gives. Version is written
      * even when the classes carry no version, as when the tests run from
      * the build's class folders, and is then empty.
@@ -350,6 +352,9 @@ public class ShareUsageRecordFormTests {
             "<DateSent>(\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2})</DateSent>")
             .matcher(xml);
         assertTrue(date.find(), xml);
+        Matcher process = Pattern.compile(
+            "<ProcessId>([^<]+)</ProcessId>").matcher(xml);
+        assertTrue(process.find(), xml);
         Matcher session = Pattern.compile(
             "<SessionId>([^<]+)</SessionId>").matcher(xml);
         assertTrue(session.find(), xml);
@@ -361,6 +366,8 @@ public class ShareUsageRecordFormTests {
 
         StringBuilder expected = new StringBuilder();
         expected.append("<Devices><Device>")
+            .append("<ProcessId>").append(process.group(1))
+            .append("</ProcessId>")
             .append("<SessionId>").append(session.group(1))
             .append("</SessionId>")
             .append("<Sequence>1</Sequence>")

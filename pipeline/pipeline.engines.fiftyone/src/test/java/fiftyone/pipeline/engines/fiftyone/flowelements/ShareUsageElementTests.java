@@ -935,7 +935,7 @@ public class ShareUsageElementTests {
                 names.add(child.getNodeName());
             }
         }
-        String[] expected = {"SessionId", "Sequence", "DateSent", "Version",
+        String[] expected = {"ProcessId", "SessionId", "Sequence", "DateSent", "Version",
             "Product", "FlowElement", "Language", "LanguageVersion",
             "ClientIP", "ServerIP", "Platform"};
         // Every element is always written, empty when there is no value.
