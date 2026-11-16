@@ -196,7 +196,7 @@ public class KeyHelper {
      * @return true if the value can be a resource key
      */
     public static boolean hasResourceKey(String value) {
-        return KeyUtils.isInvalidKey(value) == false;
+        return isInvalidKey(value) == false;
     }
 
     /**
