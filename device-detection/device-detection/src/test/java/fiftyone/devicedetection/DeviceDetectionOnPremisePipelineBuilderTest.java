@@ -24,7 +24,7 @@ package fiftyone.devicedetection;
 
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.ConfigHashSwig;
-import fiftyone.devicedetection.shared.testhelpers.FileUtils;
+import fiftyone.devicedetection.shared.testhelpers.TestFileUtils;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.configuration.DataFileConfiguration;
@@ -51,7 +51,7 @@ import static org.mockito.Mockito.*;
 @SuppressWarnings({"rawtypes", "deprecation"})
 public class DeviceDetectionOnPremisePipelineBuilderTest {
 
-    private static final String HASH_DATA_FILE_NAME = FileUtils.getHashFileName();
+    private static final String HASH_DATA_FILE_NAME = TestFileUtils.getHashFileName();
     private DeviceDetectionOnPremisePipelineBuilder builder;
     private File datafile = FileFinder.getFilePath(HASH_DATA_FILE_NAME);
     private ILoggerFactory loggerFactory;

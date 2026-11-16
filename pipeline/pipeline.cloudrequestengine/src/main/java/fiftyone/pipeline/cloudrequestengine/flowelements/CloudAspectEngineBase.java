@@ -31,6 +31,7 @@ import fiftyone.pipeline.core.data.AccessiblePropertyMetaData;
 import fiftyone.pipeline.core.data.ElementPropertyMetaData;
 import fiftyone.pipeline.core.data.ElementPropertyMetaDataDefault;
 import fiftyone.pipeline.core.data.FlowData;
+import fiftyone.pipeline.core.data.FlowError;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.data.types.JavaScript;
 import fiftyone.pipeline.core.flowelements.FlowElement;
@@ -397,13 +398,14 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
 	protected void processEngine(FlowData data, TData aspectData) {
 
         CloudRequestData requestData;
-        
+        CloudRequestEngine requestEngine;
+
         // Get requestData from CloudRequestEngine. If requestData does not
         // exist in the element data TypedKeyMap then the CloudRequestEngine either 
         // does not exist in the Pipeline or is not run before this engine.        
         try {
-            requestData = data.getFromElement(
-                    getRequestEngine().getInstance());        	
+            requestEngine = getRequestEngine().getInstance();
+            requestData = data.getFromElement(requestEngine);        	
         } 
         catch(Exception ex) {
             throw new PipelineConfigurationException(
@@ -421,7 +423,9 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
                 "before it in the Pipeline. This engine will be unable " +
                 "to produce results until this is corrected.");
         }
-        
+
+        setCloudRequestFailed(data, aspectData, requestEngine);
+
         String json = requestData == null ? null : requestData.getJsonResponse();
         
         // If the JSON is empty or null then do not Process the CloudAspectEngine.
@@ -440,6 +444,48 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
        }
 	}
 	
+    /**
+     * Where the Cloud Request Engine's request for the Flow Data failed,
+     * which an error it added to the Flow Data shows, record it in the
+     * Element Data, so that a property the Element Data does not hold is
+     * missing with the CloudRequestFailed reason.
+     * @param data the Flow Data being processed
+     * @param aspectData the Element Data this engine populates
+     * @param requestEngine the Cloud Request Engine of the Pipeline
+     */
+    protected void setCloudRequestFailed(
+        FlowData data,
+        TData aspectData,
+        CloudRequestEngine requestEngine) {
+        if (aspectData instanceof AspectDataBase == false ||
+            data.getErrors() == null) {
+            return;
+        }
+        for (FlowError error : data.getErrors()) {
+            if (error.getFlowElement() == requestEngine) {
+                ((AspectDataBase) aspectData).setCloudRequestFailed();
+                return;
+            }
+        }
+    }
+
+    /**
+     * The request for the property list failed where the Cloud Request
+     * Engine still does not know the accessible properties, because it
+     * requests them when it is built and again on first use.
+     * @return true if the request for the property list failed
+     */
+    @Override
+    public boolean propertyListRequestFailed() {
+        CloudRequestEngine requestEngine;
+        try {
+            requestEngine = getRequestEngine().getInstance();
+        } catch (PipelineConfigurationException e) {
+            return false;
+        }
+        return requestEngine.getPublicProperties() == null;
+    }
+
     /**
      * A virtual method to be implemented by the derived class which
      * uses the JsonResponse from the CloudRequestEngine to populate the TData
