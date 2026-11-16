@@ -23,7 +23,7 @@
 package fiftyone.devicedetection.examples.console.comparison;
 
 import fiftyone.common.testhelpers.LogbackHelper;
-import fiftyone.devicedetection.shared.testhelpers.FileUtils;
+import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import fiftyone.pipeline.util.FileFinder;
 import org.junit.Test;
 
@@ -65,6 +65,6 @@ public class ComparerTest {
                 config.dataFile.endsWith(
                         DetectionImplFiftyOneDegrees.ENTERPRISE_HASH_DATA_FILE_NAME) ||
                 config.dataFile.replace('\\', '/').endsWith(
-                        FileUtils.LITE_HASH_DATA_FILE_PATH));
+                        DataFileHelper.LITE_HASH_DATA_FILE_PATH));
     }
 }

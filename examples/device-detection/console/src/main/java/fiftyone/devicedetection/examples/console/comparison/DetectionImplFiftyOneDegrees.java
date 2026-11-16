@@ -27,7 +27,6 @@ import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import fiftyone.devicedetection.examples.shared.PropertyHelper;
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
 import fiftyone.devicedetection.shared.DeviceData;
-import fiftyone.devicedetection.shared.testhelpers.FileUtils;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.Constants;
@@ -65,7 +64,7 @@ public class DetectionImplFiftyOneDegrees {
                 enterprise = null;
             }
             dataFile = (enterprise != null ? enterprise :
-                    DataFileHelper.findDataFile(FileUtils.LITE_HASH_DATA_FILE_PATH))
+                    DataFileHelper.findDataFile(DataFileHelper.LITE_HASH_DATA_FILE_PATH))
                     .getAbsolutePath();
         }
     }
