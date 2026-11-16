@@ -68,11 +68,18 @@ public class ShareUsageCloseTimeoutTests {
     private static final int ENTRIES = 10;
 
     /**
-     * The 5 seconds the specification bounds the whole of cleanup at.
-     * Closing must take less, holding the wait for the data to be sent,
-     * discarding the rest, the warning and freeing the resources. Code that
-     * waits the full 5 seconds before doing the rest always takes at least
-     * this long, so it fails.
+     * The 5 seconds the specification bounds the whole of cleanup at. The
+     * <a href="https://github.com/51Degrees/specifications/blob/6570727d/pipeline-specification/pipeline-elements/usage-sharing-element.md#cleanup">usage
+     * sharing element specification</a> says "Cleanup SHOULD complete within
+     * 5 seconds, so that closing the element does not hold up the process
+     * that closes it."
+     * <p>
+     * The limit is the specification's, not a measurement. Closing must take
+     * less, holding the wait for the data to be sent, discarding the rest,
+     * the warning and freeing the resources. The element waits 4,500 ms, its
+     * 5,000 ms budget less a 500 ms reserve, then does the rest, so it
+     * closes in a little over 4,500 ms. Code that waits the full 5 seconds
+     * before doing the rest always takes at least this long, so it fails.
      */
     private static final long CLOSE_LIMIT_MILLIS = 5000;
 
