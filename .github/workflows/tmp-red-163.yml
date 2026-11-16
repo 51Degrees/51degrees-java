@@ -1,0 +1,54 @@
+name: Temporary red and green run for pull request 163
+
+# Throwaway. Runs the tests of every cloud example with no resource key at
+# the test commit before the fix (expected to fail) and at the head
+# (expected to pass).
+
+on:
+  push:
+    branches:
+      - 'tmp/red-163'
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    name: ${{ matrix.side }}, ${{ matrix.part }}
+    strategy:
+      fail-fast: false
+      matrix:
+        side: [red at 7c22ff38, green at the head]
+        part: [device-detection examples, ip-intelligence examples, location examples, 51Did developer example]
+        include:
+          - side: red at 7c22ff38
+            sha: 7c22ff3861aaca349349f6dd69e3e160850f3610
+          - side: green at the head
+            sha: 09558291137b9b8b0cfa630cd9489af02524f7db
+          - part: device-detection examples
+            command: mvn -B -f examples/device-detection/pom.xml -pl console,web/getting-started.cloud -am test -Dtest='CloudExamplesWithoutKeyTest,GettingStartedWebCloudWithoutKeyTest'
+          - part: ip-intelligence examples
+            command: mvn -B -f examples/ip-intelligence/pom.xml -pl console,web/getting-started.cloud,web/getting-started.cloud.mixed -am test -Dtest='CloudExamplesWithoutKeyTest,GettingStartedWebCloudWithoutKeyTest,GettingStartedWebCloudMixedWithoutKeyTest'
+          - part: location examples
+            command: mvn -B -Pdev -DskipNativeBuild=true -pl location/geo-location.shell.examples -am test -Dtest='CloudExamplesWithoutKeyTests'
+          - part: 51Did developer example
+            command: mvn -B -Pdev -DskipNativeBuild=true -pl pipeline/pipeline.developer-examples/pipeline.developer-examples.fodid -am test -Dtest='CreatorContextDemoServerWithoutKeyTests'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.sha }}
+      - name: Fetch the submodules the package modules build from
+        run: >
+          git submodule update --init
+          pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates
+          pipeline/owid-java pipeline/pipeline.core/configuration-validation
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Run the tests
+        run: |
+          git log --oneline -1
+          ${{ matrix.command }} -Dsurefire.failIfNoSpecifiedTests=false -DtrimStackTrace=false
