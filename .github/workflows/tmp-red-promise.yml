@@ -1,0 +1,45 @@
+name: Temporary red and green run, the Promise comparison
+
+# Throwaway. Runs the new Promise test at the test commit before the fix
+# (expected to fail) and at the fix (expected to pass).
+
+on:
+  push:
+    branches:
+      - 'tmp/red-promise'
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    name: ${{ matrix.side }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - side: red at the test commit
+            sha: 4c7584313322a7e12e817a00ad8fde608b91c33f
+          - side: green at the fix
+            sha: 7fd9ea04f3aa0e6405cf10549043b70324cf621e
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.sha }}
+      - name: Fetch the submodules the module builds from
+        run: >
+          git submodule update --init
+          pipeline/pipeline.javascriptbuilder/src/main/resources/fiftyone/pipeline/javascriptbuilder/templates
+          pipeline/owid-java pipeline/pipeline.core/configuration-validation
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Build the module and what it needs
+        run: mvn -B -q -pl pipeline/pipeline.javascriptbuilder -am install -DskipTests
+      - name: Run the new test in the module alone
+        run: |
+          git log --oneline -1
+          mvn -B -pl pipeline/pipeline.javascriptbuilder surefire:test -Dtest=JavaScriptBuilderPromiseTests -Dsurefire.failIfNoSpecifiedTests=false -DtrimStackTrace=false
