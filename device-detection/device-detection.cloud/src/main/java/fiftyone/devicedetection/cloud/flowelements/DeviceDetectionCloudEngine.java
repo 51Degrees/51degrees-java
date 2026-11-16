@@ -435,8 +435,12 @@ public class DeviceDetectionCloudEngine
     /**
      * Get a value from the cloud engine's JSON response that the metadata
      * does not describe, with its type taken from the value: a string, a
-     * boolean, an integer, a double, or a list of strings. A null is no
-     * value, with the reason the response gives.
+     * boolean, a number, a list of strings, or an object as a map. A
+     * number is an Integer where the typed accessor of
+     * {@link DeviceDataCloud} declares one and the number is a whole
+     * number an Integer can hold, and a Double where the accessor declares
+     * one or the number has a decimal point. A null is no value, with the
+     * reason the response gives.
      * @param deviceObj to get the value from
      * @param key to get the value of
      * @return {@link AspectPropertyValue} with the value, or the reason for
@@ -464,16 +468,34 @@ public class DeviceDetectionCloudEngine
             return new AspectPropertyValueDefault<>(
                 ((JSONObject) value).toMap());
         }
-        if (value instanceof BigDecimal ||
-            value instanceof Double ||
-            value instanceof Float ||
-            (value instanceof Number &&
-                Double.class.equals(DECLARED_TYPES.get(
-                    key.toLowerCase(Locale.ROOT))))) {
-            return new AspectPropertyValueDefault<>(
-                ((Number) value).doubleValue());
+        if (value instanceof Number) {
+            Number number = (Number) value;
+            Type declared = DECLARED_TYPES.get(key.toLowerCase(Locale.ROOT));
+            if (Integer.class.equals(declared) && isWholeInteger(number)) {
+                return new AspectPropertyValueDefault<>(number.intValue());
+            }
+            if (Double.class.equals(declared) ||
+                value instanceof BigDecimal ||
+                value instanceof Double ||
+                value instanceof Float) {
+                return new AspectPropertyValueDefault<>(
+                    number.doubleValue());
+            }
         }
         return new AspectPropertyValueDefault<>(value);
+    }
+
+    /**
+     * True when the number is a whole number an Integer can hold, such as
+     * 24 or 24.0, and false for 24.5 or a number beyond an Integer's range.
+     * @param number the number
+     * @return true if the number can be an Integer without changing it
+     */
+    private static boolean isWholeInteger(Number number) {
+        double value = number.doubleValue();
+        return value == Math.rint(value) &&
+            value >= Integer.MIN_VALUE &&
+            value <= Integer.MAX_VALUE;
     }
 
     /**
