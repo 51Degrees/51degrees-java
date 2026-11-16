@@ -1,0 +1,68 @@
+name: Temporary red run for pull request 173
+
+# Throwaway. Each job checks out the test commit before its fix and runs
+# that commit's new test class, which is expected to fail. The parts of the
+# pull request that repeat #156, #158 and #163 are not here, because those
+# drafts carry their own red runs.
+
+on:
+  push:
+    branches:
+      - 'tmp/red-173'
+
+permissions:
+  contents: read
+
+jobs:
+  red:
+    name: ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: the console example shares no usage
+            sha: 117cf466afd2038fd476b41a9e4824188856784a
+            test: GettingStartedOnPremUsageSharingTest
+            where: -f examples/device-detection -pl console -am
+          - label: every Flow Element is made by its builder
+            sha: ffb3dc8b45c84c8956fbf653bca3e1230f7a9f8b
+            test: ElementCreationConsistencyTest
+            where: -pl pipeline/pipeline.core -am
+          - label: the data update example updates on demand
+            sha: a816cd7e8854dfa1c0637caacf8812aa22152a73
+            test: ProgrammaticUpdateTest
+            where: -f examples/device-detection -pl console -am
+          - label: the client-side element example
+            sha: 07b087490176abe58191609403b63b28d77a9430
+            test: ExampleTests
+            where: -pl pipeline/pipeline.developer-examples/pipeline.developer-examples.clientside-element -am
+          - label: the usage sharing example
+            sha: b627d35daac496647264ae8a8b3c2b6f59b68cee
+            test: ShareUsageExampleTest
+            where: -f examples/device-detection -pl console -am
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: Check out the test commit
+        shell: bash
+        run: |
+          git checkout --force ${{ matrix.sha }}
+          git submodule update --init --recursive
+          git log --oneline -1
+      - name: The free data files, from the data repository
+        shell: bash
+        run: bash cxx/data/get-data-files.sh
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Build what the test needs
+        shell: bash
+        run: mvn -B -q ${{ matrix.where }} install -DskipTests
+      - name: Run the new test class
+        shell: bash
+        run: mvn -B ${{ matrix.where }} surefire:test -Dtest=${{ matrix.test }} -DtrimStackTrace=false
