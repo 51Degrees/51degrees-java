@@ -38,6 +38,15 @@ import java.io.IOException;
 @Service
 public interface ClientsidePropertyService extends ClientsidePropertyServiceCore {
     void setPipeline(Pipeline pipeline);
+
+    /**
+     * Set how many seconds a browser may keep a good response before it
+     * asks again, the max-age of the Cache-Control header. An
+     * implementation that sets no Cache-Control header ignores it.
+     * @param seconds the max-age, 0 or more
+     */
+    default void setCacheMaxAge(int seconds) {
+    }
     void serveJavascript(
         HttpServletRequest request,
         HttpServletResponse response) throws IOException;

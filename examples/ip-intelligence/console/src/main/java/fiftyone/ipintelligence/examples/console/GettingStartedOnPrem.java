@@ -44,6 +44,7 @@
 
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.engine.onpremise.interop.swig.WeightedStringListValueSwig;
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
 import fiftyone.ipintelligence.examples.shared.EvidenceHelper;
@@ -82,6 +83,12 @@ import static fiftyone.ipintelligence.examples.shared.DataFileHelper.LITE_DATA_F
  * The concepts of "pipeline", "flow data", "evidence" and "results" are illustrated.
  */
 public class GettingStartedOnPrem {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedonprem.java";
+
     private static final Logger logger = LoggerFactory.getLogger(GettingStartedOnPrem.class);
 
     /* In this example, by default, the free 51degrees Lite IP Intelligence data file is used from
@@ -104,6 +111,8 @@ public class GettingStartedOnPrem {
         // prepare 'evidence' for use in pipeline (see below)
         List<Map<String, String>> evidence = EvidenceHelper.setUpEvidence();
         run(dataFile, evidence, System.out);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     /**
@@ -147,6 +156,10 @@ public class GettingStartedOnPrem {
         PipelineOptions pipelineOptions = PipelineOptionsFactory.getOptionsFromFile(optionsFile);
         // Build a new Pipeline from the configuration.
         try (Pipeline pipeline = new FiftyOnePipelineBuilder()
+                // Usage sharing is off because this example's evidence is already
+                // known to 51Degrees. In production, leave usage sharing on, which adds
+                // a Usage Sharing Element to the Pipeline and helps improve the service.
+                .setShareUsage(false)
                 .buildFromConfiguration(pipelineOptions)) {
 
 
