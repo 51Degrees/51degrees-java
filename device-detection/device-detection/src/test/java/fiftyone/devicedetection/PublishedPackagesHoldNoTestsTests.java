@@ -33,6 +33,7 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.jar.JarEntry;
@@ -84,7 +85,18 @@ public class PublishedPackagesHoldNoTestsTests {
         return entries;
     }
 
+    /**
+     * Test helpers that stay in the published jar, deprecated, because a
+     * patch release removes no public name. A later release removes them.
+     */
+    private static final List<String> KEPT_DEPRECATED = Arrays.asList(
+        "fiftyone/devicedetection/shared/testhelpers/FileUtils.class",
+        "fiftyone/devicedetection/shared/testhelpers/KeyUtils.class");
+
     private static boolean isTestOrExample(String entry) {
+        if (KEPT_DEPRECATED.contains(entry)) {
+            return false;
+        }
         String lower = entry.toLowerCase();
         return lower.contains("testhelpers/") ||
             lower.contains("/examples/") ||
