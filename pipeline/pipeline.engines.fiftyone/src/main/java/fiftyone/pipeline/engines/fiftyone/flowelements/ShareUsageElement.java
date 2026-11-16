@@ -43,6 +43,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPOutputStream;
 
 import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT;
+import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_DEFAULT_SHARE_ALL_QUERY_STRING_PARAMETERS;
 import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_INITIAL_DELAY_SECONDS_DEFAULT;
 import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT;
 import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT;
@@ -332,7 +333,7 @@ public class ShareUsageElement extends ShareUsageBase {
                 SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT,
                 SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT,
                 false,
-                false);
+                SHARE_USAGE_DEFAULT_SHARE_ALL_QUERY_STRING_PARAMETERS);
     }
 
     /**
@@ -377,7 +378,9 @@ public class ShareUsageElement extends ShareUsageBase {
      * @param recoveryMultiplier            what the pause is multiplied by each time the send
      *                                      tried when a pause ends fails
      * @param shareAllEvidence              if true then all Evidence is shared, apart from
-     *                                      the keys that are never shared
+     *                                      the keys that are never shared and
+     *                                      the cookies other than the
+     *                                      51Degrees ones
      * @param shareAllQueryStringParameters if true then all query string
      *                                      parameters are shared
      */
