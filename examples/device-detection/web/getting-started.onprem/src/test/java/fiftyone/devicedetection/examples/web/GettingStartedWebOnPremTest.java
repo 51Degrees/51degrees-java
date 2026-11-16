@@ -22,7 +22,8 @@
 
 package fiftyone.devicedetection.examples.web;
 
-import fiftyone.devicedetection.shared.testhelpers.FileUtils;
+import fiftyone.devicedetection.examples.shared.DataFileHelper;
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import org.eclipse.jetty.server.Server;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -36,15 +37,17 @@ import java.util.Scanner;
 import static fiftyone.devicedetection.examples.web.GettingStartedWebOnPrem.resourceBase;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class GettingStartedWebOnPremTest {
     private static Server SERVER;
 
     @BeforeClass
     public static void startJetty() throws Exception {
-        System.setProperty("TestDataFile", FileUtils.getHashFile() == null
-                ? FileUtils.LITE_HASH_DATA_FILE_PATH
-                : FileUtils.getHashFile().getAbsolutePath());
+        // With no Enterprise file, the free Lite file is found, or
+        // downloaded, as the example finds it, so a fresh clone runs this.
+        System.setProperty(
+            "TestDataFile", DataFileHelper.getDataFileLocation(null));
         SERVER = EmbedJetty.startWebApp(getFilePath(resourceBase).getAbsolutePath(), 8081);
     }
 
@@ -55,13 +58,17 @@ public class GettingStartedWebOnPremTest {
                 (HttpURLConnection) new URL("http://localhost:8081/").openConnection();
 
         InputStream response = connection.getInputStream();
+        String responseBody;
         try (Scanner scanner = new Scanner(response)) {
-            String responseBody = scanner.useDelimiter("\\A").next();
+            responseBody = scanner.useDelimiter("\\A").next();
             System.out.println(responseBody);
         }
         int code = connection.getResponseCode();
         connection.disconnect();
         assertEquals(200, code);
+        assertTrue("The page should end with the '" + FindOutMore.HEADING +
+                "' section", responseBody.contains(
+                        "<h2>" + FindOutMore.HEADING + "</h2>"));
     }
 
     @AfterClass

@@ -153,8 +153,11 @@ public class JavaScriptBuilderElement
      * @param host The host that the client JavaScript should query for updates.
      * If null or blank then the host from the request will be used
      * @param protocol The protocol (HTTP or HTTPS) that the client JavaScript
-     *                 will use when querying for updates. If null or blank
+     *                 will use when querying for updates. If null or empty
      *                 then the protocol from the request will be used
+     * @throws PipelineConfigurationException if protocol is not null or empty
+     * and is neither http nor https in any case of its ASCII letters, or if
+     * objName is not a valid JavaScript identifier
      */
     public JavaScriptBuilderElement(
             Logger logger,
@@ -182,11 +185,13 @@ public class JavaScriptBuilderElement
      * @param host The host that the client JavaScript should query for updates.
      * If null or blank then the host from the request will be used
      * @param protocol The protocol (HTTP or HTTPS) that the client JavaScript
-     *                 will use when querying for updates. If null or blank
+     *                 will use when querying for updates. If null or empty
      *                 then the protocol from the request will be used
      * @param contextRoot The &lt;context-root&gt; setting from the web.xml.
      *                 This is needed when creating the callback URL.
-     * @throws PipelineConfigurationException if objName is not null and is
+     * @throws PipelineConfigurationException if protocol is not null or empty
+     * and is neither http nor https in any case of its ASCII letters, white
+     * space included, or if objName is not null and is
      * not a valid JavaScript identifier, see {@link #isValidObjectName}.
      * A null name means the default name is used, as no name was
      * configured, and an empty name is refused
@@ -209,6 +214,13 @@ public class JavaScriptBuilderElement
         
         this.host = host;
         this.endpoint = endpoint;
+        if (protocol != null &&
+            protocol.isEmpty() == false &&
+            CallbackUrl.isScheme(protocol) == false) {
+            throw new PipelineConfigurationException(
+                "Invalid protocol in configuration (" + protocol +
+                "), must be 'http' or 'https'");
+        }
         this.protocol = protocol;
         if (objName == null) {
             this.objName = Constants.DEFAULT_OBJECT_NAME;
