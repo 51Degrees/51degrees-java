@@ -175,7 +175,9 @@ public class SuspiciousOnPrem {
                 // https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=automatic-datafile-updates
                 // https://51degrees.com/documentation/_pipeline_api__features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=usage-sharing
                 .setPerformanceProfile(Constants.PerformanceProfiles.LowMemory)
-                // inhibit sharing usage for this example, usually this should be set to "true"
+                // Usage sharing is off because this example's evidence is already
+                // known to 51Degrees. In production, leave usage sharing on, which adds
+                // a Usage Sharing Element to the Pipeline and helps improve the service.
                 .setShareUsage(false)
                 // inhibit auto-update of the data file for this example
                 .setAutoUpdate(false)
