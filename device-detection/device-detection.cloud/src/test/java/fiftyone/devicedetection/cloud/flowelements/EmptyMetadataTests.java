@@ -235,6 +235,7 @@ public class EmptyMetadataTests {
         String response) throws Exception {
         CloudRequestData cloudData = mock(CloudRequestData.class);
         when(cloudData.getJsonResponse()).thenReturn(response);
+        when(cloudData.getProcessStarted()).thenReturn(true);
 
         FlowData flowData = mock(FlowData.class);
         when(flowData.getFromElement(any(CloudRequestEngine.class)))
