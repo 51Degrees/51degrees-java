@@ -22,10 +22,10 @@
 
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.devicedetection.cloud.data.MultiDeviceDataCloud;
 import fiftyone.devicedetection.shared.Constants;
 import fiftyone.devicedetection.shared.DeviceData;
-import fiftyone.devicedetection.shared.testhelpers.KeyUtils;
 import fiftyone.pipeline.core.configuration.PipelineOptions;
 import fiftyone.pipeline.core.configuration.PipelineOptionsFactory;
 import fiftyone.pipeline.core.data.FlowData;
@@ -56,6 +56,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * file tacCloud.xml.
  */
 public class TacCloud {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-devicedetection-examples-console-taccloud.java";
+
     // Example values to use when looking up device details from TACs.
     static final String TAC_1 = "35925406";
     static final String TAC_2 = "86386802";
@@ -80,7 +86,7 @@ public class TacCloud {
         // use the one supplied to this method
         PipelineOptions pipelineOptions = PipelineOptionsFactory.getOptionsFromFile(optionsFile);
         String fileResourceKey = pipelineOptions.find("CloudRequestEngine", "ResourceKey");
-        if (KeyUtils.isInvalidKey(fileResourceKey)) {
+        if (isInvalidKey(fileResourceKey)) {
             getOrSetSuperResourceKey(resourceKey, TAC_EXAMPLE_RESOURCE_KEY_NAME);
         }
         try (PrintWriter writer = new PrintWriter(os)) {
@@ -100,6 +106,10 @@ public class TacCloud {
                 analyseTac(TAC_1, pipeline, writer);
                 analyseTac(TAC_2, pipeline, writer);
             }
+            // The writer closes the stream it was given, so the section is
+            // written before it.
+            FindOutMore.write(writer, EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES);
         }
     }
 

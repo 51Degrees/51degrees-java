@@ -28,6 +28,7 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -196,15 +197,17 @@ public final class RedeemResult {
          * Verified, misconfigured and notrecorded are each read on their own,
          * because none of them is a mismatch. Anything else, including a word
          * this client does not know, is a mismatch, so an unexpected value
-         * never reads as a pass.
+         * never reads as a pass. The comparison ignores case, so the word is
+         * lower-cased in the root locale first.
          *
          * @param value the factor's string from the cloud, or null
          * @return the matching outcome, or {@link #MISMATCH}
          */
         public static Factor fromValue(String value) {
             if (value != null) {
+                String word = value.toLowerCase(Locale.ROOT);
                 for (Factor factor : values()) {
-                    if (factor.value.equals(value)) {
+                    if (factor.value.equals(word)) {
                         return factor;
                     }
                 }

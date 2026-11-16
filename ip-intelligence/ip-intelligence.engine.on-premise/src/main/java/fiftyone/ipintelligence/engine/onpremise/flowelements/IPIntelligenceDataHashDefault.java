@@ -142,6 +142,11 @@ public class IPIntelligenceDataHashDefault
     @Override
     protected boolean propertyIsAvailable(String propertyName) {
         checkState();
+        // A property the engine has a position for is held by its results,
+        // so that needs no lookup of the name in native code.
+        if (indexOf(propertyName) != null) {
+            return resultsList.isEmpty() == false;
+        }
         for (ResultsIpiSwig results : resultsList) {
             if (results.containsProperty(propertyName)) {
                 return true;

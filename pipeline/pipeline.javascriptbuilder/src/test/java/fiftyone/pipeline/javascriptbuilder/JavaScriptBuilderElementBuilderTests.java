@@ -24,12 +24,15 @@ package fiftyone.pipeline.javascriptbuilder;
 
 import fiftyone.common.testhelpers.TestLoggerFactory;
 import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
+import fiftyone.pipeline.javascriptbuilder.flowelements.JavaScriptBuilderElement;
 import fiftyone.pipeline.javascriptbuilder.flowelements.JavaScriptBuilderElementBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.LoggerFactory;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -107,5 +110,48 @@ public class JavaScriptBuilderElementBuilderTests {
 
         loggerFactory.loggers.forEach(testLogger ->
             assertTrue(testLogger.warningsLogged.size() == 0));
+    }
+
+    /**
+     * A protocol given to the element's constructor that is neither http nor
+     * https, including one made only of white space, is refused when the
+     * element is made, as one given to the builder is.
+     * @param protocol
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {"htp", "ftp", " ", "\t", "https:"})
+    public void JavaScriptBuilderElement_Constructor_InvalidProtocol_Refused(
+        String protocol) {
+        assertThrows(
+            PipelineConfigurationException.class,
+            () -> new JavaScriptBuilderElement(
+                loggerFactory.getLogger("test"),
+                null,
+                "",
+                null,
+                false,
+                "",
+                protocol));
+    }
+
+    /**
+     * A null or empty protocol means none is configured, so the protocol
+     * comes from Evidence, and http or https in any case of its ASCII
+     * letters is accepted.
+     * @param protocol
+     */
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"http", "https", "HTTPS", "Http"})
+    public void JavaScriptBuilderElement_Constructor_ValidOrNoProtocol_Accepted(
+        String protocol) {
+        assertDoesNotThrow(() -> new JavaScriptBuilderElement(
+            loggerFactory.getLogger("test"),
+            null,
+            "",
+            null,
+            false,
+            "",
+            protocol));
     }
 }
