@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 
-import static fiftyone.devicedetection.shared.testhelpers.FileUtils.LITE_HASH_DATA_FILE_PATH;
+import static fiftyone.devicedetection.shared.testhelpers.TestFileUtils.LITE_HASH_DATA_FILE_PATH;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
