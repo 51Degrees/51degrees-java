@@ -48,7 +48,6 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -179,58 +178,6 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
     public boolean hasLoadedProperties() {
         getProperties();
         return aspectProperties != null;
-    }
-
-    /**
-     * Whether the Cloud Request Engine has no response for this Flow Data
-     * because its request failed: it started, and either it has no response
-     * or it reported an error for this Flow Data.
-     * @param flowData the Flow Data the property was read from
-     * @return true if the request for this Flow Data failed
-     */
-    @Override
-    public boolean requestFailed(FlowData flowData) {
-        CloudRequestEngine engine;
-        CloudRequestData requestData;
-        try {
-            engine = getRequestEngine().getInstance();
-            requestData = flowData.getFromElement(engine);
-        } catch (RuntimeException e) {
-            return false;
-        }
-        if (requestData == null ||
-            Boolean.TRUE.equals(requestData.getProcessStarted()) == false) {
-            return false;
-        }
-        Collection<FlowError> errors = flowData.getErrors();
-        if (errors != null) {
-            for (FlowError error : errors) {
-                if (error.getFlowElement() == engine) {
-                    return true;
-                }
-            }
-        }
-        String json = requestData.getJsonResponse();
-        return json == null || json.isEmpty();
-    }
-
-    /**
-     * Whether the property metadata is not loaded because the Cloud Request
-     * Engine could not get the property list. The builder asks for the list
-     * when it builds the engine, so a list that is still not known means
-     * that request failed.
-     * @return true if the request for the property list failed
-     */
-    @Override
-    public boolean propertiesRequestFailed() {
-        if (hasLoadedProperties()) {
-            return false;
-        }
-        try {
-            return getRequestEngine().getInstance().getPublicProperties() == null;
-        } catch (RuntimeException e) {
-            return false;
-        }
     }
 
     @Override
