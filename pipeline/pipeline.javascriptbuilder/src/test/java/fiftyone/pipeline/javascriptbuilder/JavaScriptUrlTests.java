@@ -154,6 +154,7 @@ public class JavaScriptUrlTests {
                 .setEndpoint("/json")
                 .setHost("example.com")
                 .setProtocol("https")
+                .setMinify(false)
                 .build();
         String javaScript;
         try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
