@@ -34,7 +34,7 @@ import static org.junit.Assert.*;
 
 public class FileUtilsTest {
 
-    Logger logger = LoggerFactory.getLogger(FileUtils.class);
+    Logger logger = LoggerFactory.getLogger(TestFileUtils.class);
 
     /**
      * location of "." is the same as user.dir
