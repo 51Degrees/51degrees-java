@@ -124,14 +124,14 @@ public interface DataUpdateService extends Closeable, PipelineService {
         AUTO_UPDATE_ERR_READING_STREAM,
         // MD5 validation failed
         AUTO_UPDATE_ERR_MD5_VALIDATION_FAILED,
-        // The data file checking for updates has no temporary file path.
-        AUTO_UPDATE_TEMP_PATH_NOT_SET,
         // The new data file can't be renamed to replace the previous one.
         AUTO_UPDATE_NEW_FILE_CANT_RENAME,
         // Refreshing the engine with the new data caused an error to occur.
         AUTO_UPDATE_REFRESH_FAILED,
         // An operation could not be completed within the expected time.
-        AUTO_UPDATE_TIMEOUT
+        AUTO_UPDATE_TIMEOUT,
+        // The data file checking for updates has no temporary file path.
+        AUTO_UPDATE_TEMP_PATH_NOT_SET
     }
 
     class DataUpdateCompleteArgs {
