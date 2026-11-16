@@ -27,10 +27,12 @@ import fiftyone.pipeline.core.configuration.PipelineOptions;
 import fiftyone.pipeline.core.configuration.PipelineOptionsFactory;
 import org.junit.Test;
 
+import java.io.File;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
-import static fiftyone.pipeline.util.FileFinder.getFilePath;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -46,9 +48,17 @@ import static org.junit.Assert.assertTrue;
  */
 public class ConsoleConfigurationCoverageTest {
 
+    /**
+     * The builders an options file names, reading the file this example
+     * module holds in its resources, so that a file of the same name in
+     * another example cannot be read in its place.
+     */
     private static List<String> builders(String file) throws Exception {
-        PipelineOptions options =
-            PipelineOptionsFactory.getOptionsFromFile(getFilePath(file));
+        URL resource =
+            ConsoleConfigurationCoverageTest.class.getResource("/" + file);
+        assertNotNull("The example's resources hold no " + file, resource);
+        PipelineOptions options = PipelineOptionsFactory.getOptionsFromFile(
+            new File(resource.toURI()));
         List<String> names = new ArrayList<>();
         for (ElementOptions element : options.elements) {
             names.add(element.builderName);
