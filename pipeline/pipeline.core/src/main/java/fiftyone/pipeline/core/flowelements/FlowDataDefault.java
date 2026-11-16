@@ -191,7 +191,7 @@ class FlowDataDefault implements FlowData {
     @Override
     public ElementData get(String key) {
         if (processed.get() == false) {
-            throw new RuntimeException("This instance has not yet been processed");
+            throw new IllegalStateException("This instance has not yet been processed");
         }
 
         return data.get(new TypedKeyDefault<ElementData>(key, ElementData.class));

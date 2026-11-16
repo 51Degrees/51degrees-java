@@ -23,13 +23,13 @@
 package fiftyone.pipeline.engines.services;
 
 import fiftyone.pipeline.core.data.ElementPropertyMetaData;
-import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.typed.TypedKey;
 import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.engines.flowelements.AspectEngine;
 import fiftyone.pipeline.engines.flowelements.CloudAspectEngine;
+import fiftyone.pipeline.engines.flowelements.OnPremiseAspectEngine;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -49,6 +49,11 @@ public class MissingPropertyServiceDefault implements MissingPropertyService {
     private static MissingPropertyServiceDefault missingPropertyService = null;
 
     private static final Object lock = new Object();
+
+    /**
+     * The start of the name of a typed accessor for a property.
+     */
+    private static final String ACCESSOR_PREFIX = "get";
 
     /**
      * Private constructor to prevent new copies
@@ -79,19 +84,20 @@ public class MissingPropertyServiceDefault implements MissingPropertyService {
         AspectEngine engine) {
 
         MissingPropertyReason reason = MissingPropertyReason.Unknown;
+
         boolean cloud = engine instanceof CloudAspectEngine;
+        boolean onPremise = engine instanceof OnPremiseAspectEngine;
+        // An On-premise Engine loads its metadata when it is built.
+        boolean loaded = cloud == false || engine.hasLoadedProperties();
 
         AspectPropertyMetaData property = null;
-
-        // We know the property has extends AspectPropertyMetaData as it
-        // is a constraint of the AspectEngine interface, so don't check this
-        // cast. Names are compared ignoring case, as the Element Data
-        // compares them when a value is read.
-        List<?> properties = engine.getProperties();
-        if (properties != null) {
-            for (Object currentPropertyObject : properties) {
+        if (loaded) {
+            // We know the property has extends AspectPropertyMetaData as it
+            // is a constraint of the AspectEngine interface, so don't check
+            // this cast
+            for (Object currentPropertyObject : engine.getProperties()) {
                 AspectPropertyMetaData currentProperty =
-                    (AspectPropertyMetaData) currentPropertyObject;
+                    (AspectPropertyMetaData)currentPropertyObject;
                 if (currentProperty.getName().equalsIgnoreCase(propertyName)) {
                     property = currentProperty;
                     break;
@@ -99,40 +105,35 @@ public class MissingPropertyServiceDefault implements MissingPropertyService {
             }
         }
 
+        // The metadata lists the property. Only an On-premise Engine has a
+        // data file tier to compare.
         if (property != null) {
-            // Step 3.1. The metadata lists the property. Only an on-premise
-            // engine has a data file whose tier can lack the property.
-            if (cloud == false &&
-                containsIgnoringCase(
-                    property.getDataTiersWherePresent(),
-                    engine.getDataSourceTier()) == false) {
+            if (onPremise && hasDataTier(property, engine) == false) {
                 reason = MissingPropertyReason.DataFileUpgradeRequired;
             }
-            // Check if the property is excluded from the results.
             else if (property.isAvailable() == false) {
                 reason = MissingPropertyReason.PropertyExcludedFromEngineConfiguration;
             }
         }
-        else if (cloud) {
-            // Step 3.2. A cloud engine that has not loaded its metadata
-            // cannot say whether the resource key includes the property.
-            CloudAspectEngine cloudEngine = (CloudAspectEngine) engine;
-            if (cloudEngine.hasLoadedProperties()) {
-                if (properties == null || properties.isEmpty()) {
-                    reason = MissingPropertyReason.ProductNotAccessibleWithResourceKey;
-                }
-                else {
-                    reason = MissingPropertyReason.PropertyNotAccessibleWithResourceKey;
-                }
+
+        if (reason == MissingPropertyReason.Unknown && cloud) {
+            if (loaded) {
+                reason = engine.getProperties().isEmpty() ?
+                    MissingPropertyReason.ProductNotAccessibleWithResourceKey :
+                    MissingPropertyReason.PropertyNotAccessibleWithResourceKey;
             }
-            else if (cloudEngine.propertiesRequestFailed()) {
+            else if (((CloudAspectEngine<?, ?>) engine)
+                .propertyListRequestFailed()) {
                 reason = MissingPropertyReason.CloudRequestFailed;
             }
         }
-        else if (hasTypedAccessor(engine, propertyName)) {
-            // Step 3.3. The Element Data has an accessor for the property, so
-            // it is a property of the product that this data file lacks. The
-            // tiers that hold it are not known.
+
+        // The metadata does not list the property, but the Element Data has
+        // a typed accessor for it, so another data file has it.
+        if (reason == MissingPropertyReason.Unknown &&
+            onPremise &&
+            property == null &&
+            hasTypedAccessor(engine, propertyName)) {
             reason = MissingPropertyReason.DataFileUpgradeRequired;
         }
 
@@ -149,11 +150,13 @@ public class MissingPropertyServiceDefault implements MissingPropertyService {
                     property.getDataTiersWherePresent();
                 if (tiers == null || tiers.isEmpty()) {
                     message.append(
-                        MissingPropertyMessages.DATA_UPGRADE_REQUIRED_TIERS_UNKNOWN);
+                        MissingPropertyMessages.DATA_UPGRADE_REQUIRED_TIERS_NOT_KNOWN);
                 } else {
                     message.append(String.format(
                         MissingPropertyMessages.DATA_UPGRADE_REQUIRED,
-                        stringJoin(tiers, ","),
+                        stringJoin(
+                            tiers,
+                            MissingPropertyMessages.LIST_SEPARATOR),
                         engine.getClass().getSimpleName()));
                 }
                 break;
@@ -173,7 +176,9 @@ public class MissingPropertyServiceDefault implements MissingPropertyService {
                 message.append(String.format(
                     MissingPropertyMessages.PROPERTY_NOT_IN_CLOUD_RESOURCE,
                     engine.getElementDataKey(),
-                    stringJoin(available, ",")));
+                    stringJoin(
+                        available,
+                        MissingPropertyMessages.LIST_SEPARATOR)));
                 break;
             case CloudRequestFailed:
                 message.append(MissingPropertyMessages.CLOUD_REQUEST_FAILED);
@@ -188,12 +193,47 @@ public class MissingPropertyServiceDefault implements MissingPropertyService {
         return new MissingPropertyResult(reason, message.toString());
     }
 
+    /**
+     * Whether the engine's data file tier is among the tiers the property
+     * is present in.
+     */
+    private static boolean hasDataTier(
+        AspectPropertyMetaData property,
+        AspectEngine<?, ?> engine) {
+        List<String> tiers = property.getDataTiersWherePresent();
+        return tiers != null && tiers.contains(engine.getDataSourceTier());
+    }
+
+    /**
+     * Whether the type of the engine's Element Data, counting the types it
+     * inherits, has a typed accessor for the property, being a public
+     * method with no parameters named 'get' and the property name, compared
+     * ignoring case, that returns an {@link AspectPropertyValue}.
+     */
+    private static boolean hasTypedAccessor(
+        AspectEngine<?, ?> engine,
+        String propertyName) {
+        TypedKey<?> key = engine.getTypedDataKey();
+        Class<?> type = key == null ? null : key.getType();
+        if (type == null) {
+            return false;
+        }
+        String accessor = ACCESSOR_PREFIX + propertyName;
+        for (Method method : type.getMethods()) {
+            if (method.getParameterCount() == 0 &&
+                method.getName().equalsIgnoreCase(accessor) &&
+                AspectPropertyValue.class.isAssignableFrom(
+                    method.getReturnType())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public MissingPropertyResult getMissingPropertyReason(
         String propertyName,
         List<AspectEngine<? extends AspectData,? extends AspectPropertyMetaData>> engines) {
-        // Step 2. The first engine to give a reason other than Unknown
-        // decides it. Otherwise the last engine checked is named.
         MissingPropertyResult result = null;
         for (AspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine : engines) {
             result = getMissingPropertyReason(propertyName, engine);
@@ -202,80 +242,5 @@ public class MissingPropertyServiceDefault implements MissingPropertyService {
             }
         }
         return result;
-    }
-
-    @Override
-    public MissingPropertyResult getMissingPropertyReason(
-        String propertyName,
-        List<AspectEngine<? extends AspectData,? extends AspectPropertyMetaData>> engines,
-        FlowData flowData) {
-        // Step 1. A cloud engine whose request for this Flow Data failed has
-        // no data, whatever its metadata says.
-        if (flowData != null) {
-            for (AspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine : engines) {
-                if (engine instanceof CloudAspectEngine &&
-                    ((CloudAspectEngine<?, ?>) engine).requestFailed(flowData)) {
-                    String key = engines.isEmpty() ?
-                        UNKNOWN_KEY :
-                        engines.get(0).getElementDataKey();
-                    return new MissingPropertyResult(
-                        MissingPropertyReason.CloudRequestFailed,
-                        String.format(
-                            MissingPropertyMessages.PREFIX,
-                            propertyName,
-                            key) +
-                            MissingPropertyMessages.CLOUD_REQUEST_FAILED);
-                }
-            }
-        }
-        return getMissingPropertyReason(propertyName, engines);
-    }
-
-    /**
-     * The name given in place of a Data Key when there is no engine.
-     */
-    private static final String UNKNOWN_KEY = "Unknown";
-
-    private static boolean containsIgnoringCase(
-        List<String> values,
-        String value) {
-        if (values == null || value == null) {
-            return false;
-        }
-        for (String candidate : values) {
-            if (value.equalsIgnoreCase(candidate)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Whether the Element Data type the engine creates has a typed accessor
-     * for the property, counting those it inherits. A typed accessor is a
-     * public method with no parameters named 'get' and the property name,
-     * compared ignoring case, that returns an {@link AspectPropertyValue}.
-     */
-    @SuppressWarnings("rawtypes")
-    private static boolean hasTypedAccessor(
-        AspectEngine engine,
-        String propertyName) {
-        if (propertyName == null || propertyName.isEmpty()) {
-            return false;
-        }
-        TypedKey<?> key = engine.getTypedDataKey();
-        if (key == null || key.getType() == null) {
-            return false;
-        }
-        String name = "get" + propertyName;
-        for (Method method : key.getType().getMethods()) {
-            if (method.getParameterTypes().length == 0 &&
-                method.getName().equalsIgnoreCase(name) &&
-                AspectPropertyValue.class.isAssignableFrom(
-                    method.getReturnType())) {
-                return true;
-            }
-        }
-        return false;
     }
 }

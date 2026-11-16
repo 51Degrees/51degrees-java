@@ -72,47 +72,44 @@ public class Constants {
     public static class MissingPropertyMessages {
         public static final String PREFIX =
             "Property '%s' not found in data for element '%s'. ";
-        /**
-         * The data tiers where the property is present, then the type name
-         * of the engine.
-         */
         public static final String DATA_UPGRADE_REQUIRED =
-            "This is because your license or data file " +
-                "does not include this property. It is available " +
-                "with the %s license/data for the %s. To upgrade, see " +
-                "https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=pipeline.engines-src-main-java-fiftyone-pipeline-engines-constants.java&utm_term=data_upgrade_required.";
+            "This is because your license or data file does not include " +
+            "this property. It is available with the %s license/data for " +
+            "the %s. To upgrade, see " +
+            "https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=pipeline.engines-src-main-java-fiftyone-pipeline-engines-constants.java&utm_term=data_upgrade_required.";
         /**
-         * Used in place of {@link #DATA_UPGRADE_REQUIRED} where the data
-         * tiers where the property is present are not known.
+         * The upgrade message where the data tiers the property is present
+         * in are not known.
          */
-        public static final String DATA_UPGRADE_REQUIRED_TIERS_UNKNOWN =
-            "This is because your license or data file " +
-                "does not include this property. To see which licenses " +
-                "include it, see " +
-                "https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=pipeline.engines-src-main-java-fiftyone-pipeline-engines-constants.java&utm_term=data_upgrade_required_tiers_unknown.";
+        public static final String DATA_UPGRADE_REQUIRED_TIERS_NOT_KNOWN =
+            "This is because your license or data file does not include " +
+            "this property. To see which licenses include it, see " +
+            "https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=pipeline.engines-src-main-java-fiftyone-pipeline-engines-constants.java&utm_term=data_upgrade_required_tiers_not_known.";
         public static final String PROPERTY_EXCLUDED =
             "This is because the property has been excluded when configuring " +
             "the engine.";
-        /**
-         * The element data key of the engine.
-         */
         public static final String PRODUCT_NOT_IN_CLOUD_RESOURCE =
             "This is because your resource key does not include access to " +
-            "any properties under '%s'. Check or create a resource key " +
-            "with the properties you need in the configurator at " +
+            "any properties under '%s'. Check or create a resource key with " +
+            "the properties you need in the configurator at " +
             "https://configure.51degrees.com?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=pipeline.engines-src-main-java-fiftyone-pipeline-engines-constants.java&utm_term=product_not_in_cloud_resource.";
-        /**
-         * The element data key of the engine, then the names of the
-         * properties in its metadata, joined with a comma and no space.
-         */
         public static final String PROPERTY_NOT_IN_CLOUD_RESOURCE =
             "This is because your resource key does not include access to " +
             "this property. The properties included for your key under " +
             "'%s' are %s. Check or change your key in the configurator at " +
             "https://configure.51degrees.com?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=pipeline.engines-src-main-java-fiftyone-pipeline-engines-constants.java&utm_term=property_not_in_cloud_resource.";
+        /**
+         * The separator of the names in a list in a message.
+         */
+        public static final String LIST_SEPARATOR = ",";
         public static final String CLOUD_REQUEST_FAILED =
             "This is because an upstream cloud request failed, so no data " +
             "was available to populate the property.";
+        /**
+         * The Data Key a CloudRequestFailed message names when no engine
+         * populates the Element Data.
+         */
+        public static final String UNKNOWN_DATA_KEY = "Unknown";
         public static final String UNKNOWN =
             "The reason for this is unknown. Please check that the aspect " +
             "and property name are correct.";

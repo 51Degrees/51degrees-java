@@ -22,13 +22,14 @@
 
 package fiftyone.pipeline.engines.services;
 
-import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.services.PipelineService;
 import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import fiftyone.pipeline.engines.flowelements.AspectEngine;
 
 import java.util.List;
+
+import static fiftyone.pipeline.engines.Constants.MissingPropertyMessages;
 
 /**
  * Service used by {@link AspectEngine}s to report the reason for a property
@@ -62,19 +63,27 @@ public interface MissingPropertyService extends PipelineService {
         List<AspectEngine<? extends AspectData,? extends AspectPropertyMetaData>> engines);
 
     /**
-     * Get the reason for the property not being found in the Element Data of
-     * the Flow Data given. The Flow Data lets a failed cloud request be
-     * reported as the reason. By default the Flow Data is not used.
+     * Get the reason for the property not being found when the cloud
+     * request for the Flow Data failed, which is CloudRequestFailed. The
+     * message names the Data Key of the first engine, or Unknown when there
+     * is none.
      *
      * @param propertyName name of the {@link AspectPropertyMetaData}
-     * @param engines where the property should be found
-     * @param flowData the Flow Data the property was read from
+     * @param engines that populate the Element Data
      * @return reason the property was not found
      */
-    default MissingPropertyResult getMissingPropertyReason(
+    default MissingPropertyResult getCloudRequestFailedReason(
         String propertyName,
-        List<AspectEngine<? extends AspectData,? extends AspectPropertyMetaData>> engines,
-        FlowData flowData) {
-        return getMissingPropertyReason(propertyName, engines);
+        List<AspectEngine<? extends AspectData,? extends AspectPropertyMetaData>> engines) {
+        String dataKey = engines == null || engines.isEmpty() ?
+            MissingPropertyMessages.UNKNOWN_DATA_KEY :
+            engines.get(0).getElementDataKey();
+        return new MissingPropertyResult(
+            MissingPropertyReason.CloudRequestFailed,
+            String.format(
+                MissingPropertyMessages.PREFIX,
+                propertyName,
+                dataKey) +
+                MissingPropertyMessages.CLOUD_REQUEST_FAILED);
     }
 }

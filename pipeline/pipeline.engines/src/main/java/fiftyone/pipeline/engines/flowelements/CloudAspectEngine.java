@@ -22,7 +22,6 @@
 
 package fiftyone.pipeline.engines.flowelements;
 
-import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 
@@ -40,21 +39,11 @@ public interface CloudAspectEngine<
     extends AspectEngine<TData, TProperty> {
 
     /**
-     * Whether the Cloud Request Engine has no response for this Flow Data
-     * because its request to the remote server failed.
-     * @param flowData the Flow Data the property was read from
-     * @return true if the request for this Flow Data failed
-     */
-    default boolean requestFailed(FlowData flowData) {
-        return false;
-    }
-
-    /**
-     * Whether the property metadata is not loaded because the request for
-     * the property list failed.
+     * Whether the request for the list of properties the cloud service
+     * offers failed, so that this engine's property metadata is not loaded.
      * @return true if the request for the property list failed
      */
-    default boolean propertiesRequestFailed() {
+    default boolean propertyListRequestFailed() {
         return false;
     }
 }

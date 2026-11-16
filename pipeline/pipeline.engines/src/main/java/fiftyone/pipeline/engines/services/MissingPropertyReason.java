@@ -34,7 +34,7 @@ public enum MissingPropertyReason {
     PropertyNotAccessibleWithResourceKey,
     ProductNotAccessibleWithResourceKey,
     /**
-     * The request to the remote server failed, so no data was available to
+     * A request to the cloud service failed, so no data was available to
      * populate the property.
      */
     CloudRequestFailed,

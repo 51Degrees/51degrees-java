@@ -49,15 +49,14 @@ public abstract class AspectDataBase extends ElementDataBase implements AspectDa
 
     private final MissingPropertyService missingPropertyService;
 
-    /**
-     * The Flow Data this instance belongs to, which the missing property
-     * service is given so it can report a failed cloud request.
-     */
-    private final FlowData flowData;
-
     private final List<AspectEngine<? extends AspectData,? extends AspectPropertyMetaData>> engines;
 
     private final Map<AspectEngine<? extends AspectData,? extends AspectPropertyMetaData>, Future<?>> processFutures;
+
+    /**
+     * Whether the cloud request for the Flow Data failed.
+     */
+    private volatile boolean cloudRequestFailed = false;
 
     /**
      * Constructs a new instance with a non-thread-safe, case-insensitive
@@ -90,7 +89,6 @@ public abstract class AspectDataBase extends ElementDataBase implements AspectDa
         AspectEngine<? extends AspectData,? extends AspectPropertyMetaData> engine,
         MissingPropertyService missingPropertyService) {
         super(logger, flowData);
-        this.flowData = flowData;
         this.engines = new ArrayList<>();
         this.engines.add(getNotNull(engine, "Engine must not be null"));
         this.processFutures = new HashMap<>();
@@ -116,7 +114,6 @@ public abstract class AspectDataBase extends ElementDataBase implements AspectDa
         MissingPropertyService missingPropertyService,
         Map<String, Object> map) {
         super(logger, flowData, map);
-        this.flowData = flowData;
         this.engines = new ArrayList<>();
         this.engines.add(getNotNull(engine, "Engine must not be null"));
         this.processFutures = new HashMap<>();
@@ -180,6 +177,15 @@ public abstract class AspectDataBase extends ElementDataBase implements AspectDa
     }
 
     /**
+     * Record that the cloud request for the Flow Data failed, so that a
+     * property this instance does not hold is missing with the
+     * CloudRequestFailed reason.
+     */
+    public void setCloudRequestFailed() {
+        cloudRequestFailed = true;
+    }
+
+    /**
      * Add an engine to the list of engines which have generated the data within
      * this instance.
      * @param engine engine adding data
@@ -236,14 +242,13 @@ public abstract class AspectDataBase extends ElementDataBase implements AspectDa
                 missingPropertyService != null) {
                 // If there was no entry for the key then use the missing
                 // property service to find out why.
-                MissingPropertyResult missingReason = missingPropertyService
-                    .getMissingPropertyReason(key, engines, flowData);
-                if (missingReason == null) {
-                    // A service that only answers without the Flow Data, as
-                    // a mock of the interface does.
-                    missingReason = missingPropertyService
-                        .getMissingPropertyReason(key, engines);
-                }
+                MissingPropertyResult missingReason = cloudRequestFailed ?
+                    missingPropertyService.getCloudRequestFailedReason(
+                        key,
+                        engines) :
+                    missingPropertyService.getMissingPropertyReason(
+                        key,
+                        engines);
                 logger.debug("Property '" + key + "' missing from " +
                     "aspect data '" + getClass().getName() + "'-'" +
                     hashCode() + "'. " + missingReason.getReason());
