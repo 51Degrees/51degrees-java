@@ -143,8 +143,10 @@ public abstract class ElementDataBase extends DataBase implements ElementData {
     /**
      * Whether this instance can be given out again once the Flow Data that
      * held it is closed. An implementation whose only state is its values
-     * returns true. One that keeps anything else of the request, or that a
-     * caller may keep after the Flow Data is closed, keeps the default.
+     * returns true. One that keeps other state of the request, or puts
+     * values in its constructor, also puts that back in {@link #onReuse()}.
+     * One that a caller may keep after the Flow Data is closed keeps the
+     * default.
      * @return false unless an implementation opts in
      */
     protected boolean isPoolable() {
@@ -196,6 +198,15 @@ public abstract class ElementDataBase extends DataBase implements ElementData {
         clearValues();
         finished = false;
         pipeline = flowData.getPipeline();
+        onReuse();
+    }
+
+    /**
+     * Put back, as the constructor left it, any state other than the values
+     * that this instance kept from the request it served before. Called when
+     * a pooled instance is given to the next Flow Data.
+     */
+    protected void onReuse() {
     }
 
     /**
