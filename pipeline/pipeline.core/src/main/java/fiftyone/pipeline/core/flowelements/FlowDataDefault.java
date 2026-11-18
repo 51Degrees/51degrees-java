@@ -60,6 +60,17 @@ class FlowDataDefault implements FlowData {
 
     private final AtomicBoolean processed = new AtomicBoolean(false);
 
+    /**
+     * Set when processing ends, after which the Flow Data is read only. A
+     * write tests it, and nothing waits on it.
+     */
+    private volatile boolean finished = false;
+
+    private static final String FINISHED_MESSAGE =
+        "This Flow Data has finished processing, so it is read only. " +
+        "Add Evidence before processing, and Element Data and errors only " +
+        "while a Flow Element processes.";
+
     FlowDataDefault(Logger logger, Pipeline pipeline, Evidence evidence) {
         this.logger = logger;
         this.pipeline = (PipelineInternal) pipeline;
@@ -86,7 +97,21 @@ class FlowDataDefault implements FlowData {
         } else if (pipeline.isClosed()) {
             throw new IllegalStateException("Pipeline has been closed.");
         } else {
-            pipeline.process(this);
+            try {
+                pipeline.process(this);
+            } finally {
+                finished = true;
+            }
+        }
+    }
+
+    /**
+     * Fail a write once processing has finished.
+     * @throws IllegalStateException if processing has finished
+     */
+    private void checkNotFinished() {
+        if (finished) {
+            throw new IllegalStateException(FINISHED_MESSAGE);
         }
     }
 
@@ -112,6 +137,7 @@ class FlowDataDefault implements FlowData {
 
     @Override
     public void addError(FlowError error) {
+        checkNotFinished();
         errors.add(error);
 
         if (logger.isErrorEnabled()) {
@@ -163,6 +189,7 @@ class FlowDataDefault implements FlowData {
 
     @Override
     public FlowData addEvidence(String key, Object value) {
+        checkNotFinished();
         evidence.put(key, value);
         if (logger.isDebugEnabled()) {
             logger.debug("FlowData '" + hashCode() + "' set evidence " +
@@ -173,6 +200,7 @@ class FlowDataDefault implements FlowData {
 
     @Override
     public FlowData addEvidence(Map<String, ?> values) {
+        checkNotFinished();
         for (Map.Entry<String, ?> entry : values.entrySet()) {
             addEvidence(entry.getKey(), entry.getValue());
         }
@@ -282,6 +310,7 @@ class FlowDataDefault implements FlowData {
             elementDataKey,
             ElementData.class);
         if (data.containsKey(elementDataKey) == false) {
+            checkNotFinished();
             if (pipeline.isConcurrent() == true) {
                 synchronized (this.lock) {
                     if (data.containsKey(elementDataKey) == false) {
@@ -305,6 +334,7 @@ class FlowDataDefault implements FlowData {
             key.getName(),
             Object.class);
         if (data.containsKey(key) == false) {
+            checkNotFinished();
             if (pipeline.isConcurrent() == true) {
                 synchronized (this.lock) {
                     if (data.containsKey(key) == false) {
@@ -328,7 +358,10 @@ class FlowDataDefault implements FlowData {
 
     @Override
     public Map<String, Object> elementDataAsMap() {
-        return data.asStringKeyMap();
+        // Read only once processing has finished.
+        return finished ?
+            Collections.unmodifiableMap(data.asStringKeyMap()) :
+            data.asStringKeyMap();
     }
 
     @Override

@@ -42,6 +42,9 @@ public interface FlowData extends AutoCloseable {
     /**
      * Process this FlowData via the owning Pipeline. Once this method returns
      * the FlowData will not be changed further and cannot be processed again.
+     * It is read only from then on, apart from lazy properties, so adding
+     * Evidence, Element Data or errors throws an
+     * {@link IllegalStateException}.
      * @throws IllegalStateException if this FlowData has already been
      * processed, or its Pipeline has been closed
      * @throws AggregateException if a Flow Element failed and the Pipeline
