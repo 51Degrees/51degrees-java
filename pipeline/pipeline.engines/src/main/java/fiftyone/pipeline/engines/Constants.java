@@ -37,14 +37,14 @@ public class Constants {
     public static final boolean DEFAULT_UPDATE_ON_STARTUP = false;
 
     /**
-     * Whether a pre-packaged Pipeline loads results lazily, unless its builder
-     * is told otherwise.
+     * Deprecated. The default of the lazy loading option, which has no
+     * effect.
      */
     public static final boolean DEFAULT_LAZY_LOADING = false;
 
     /**
-     * How long a lazily loaded value is waited for when lazy loading is used
-     * without a timeout.
+     * Deprecated. The default timeout of the lazy loading option, which has
+     * no effect.
      */
     public static final long DEFAULT_LAZY_LOADING_TIMEOUT_MILLIS = 1000;
 

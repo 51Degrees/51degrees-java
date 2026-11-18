@@ -22,11 +22,11 @@
 
 package fiftyone.pipeline.engines.exceptions;
 
-import fiftyone.pipeline.core.data.ElementData;
 
 /**
- * Timeout exception thrown if the lazy loading of a property value from an
- * {@link ElementData} times out.
+ * Deprecated. Lazy loading has no effect, so nothing waits on a timeout and
+ * this is no longer thrown. It is kept so that code that catches it still
+ * builds.
  */
 public class LazyLoadTimeoutException extends RuntimeException {
 
