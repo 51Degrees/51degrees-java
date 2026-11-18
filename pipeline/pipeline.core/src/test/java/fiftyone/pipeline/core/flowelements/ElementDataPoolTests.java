@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -41,7 +42,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -128,6 +131,74 @@ public class ElementDataPoolTests {
         }
     }
 
+    /**
+     * Element Data that can be pooled and that a lazy task writes, until the
+     * task the test gives it has finished.
+     */
+    public static class TaskData extends ElementDataBase {
+        private volatile CompletableFuture<Void> task = null;
+
+        public TaskData(Logger logger, FlowData flowData) {
+            super(logger, flowData);
+        }
+
+        protected boolean isPoolable() {
+            return true;
+        }
+
+        protected boolean hasLazyTaskRunning() {
+            return task != null && task.isDone() == false;
+        }
+    }
+
+    /**
+     * Gives its Element Data the next task the test sets.
+     */
+    private static class TaskStarter
+        extends FlowElementBase<TaskData, ElementPropertyMetaData> {
+        private volatile CompletableFuture<Void> next = null;
+
+        TaskStarter() {
+            super(LOGGER,
+                (flowData, element) -> new TaskData(LOGGER, flowData));
+        }
+
+        @Override
+        protected void processInternal(FlowData data) {
+            data.getOrAdd(getTypedDataKey(), getDataFactory()).task = next;
+        }
+
+        @Override
+        public String getElementDataKey() {
+            return "task";
+        }
+
+        @Override
+        public EvidenceKeyFilter getEvidenceKeyFilter() {
+            return new EvidenceKeyFilterWhitelist(Collections.emptyList());
+        }
+
+        @Override
+        public List<ElementPropertyMetaData> getProperties() {
+            return Collections.emptyList();
+        }
+
+        @Override
+        protected void managedResourcesCleanup() {
+        }
+
+        @Override
+        protected void unmanagedResourcesCleanup() {
+        }
+    }
+
+    private static TaskData process(Pipeline pipeline) throws Exception {
+        try (FlowData data = pipeline.createFlowData()) {
+            data.process();
+            return (TaskData) data.get("task");
+        }
+    }
+
     private static void request(Pipeline pipeline, int i) throws Exception {
         try (FlowData data = pipeline.createFlowData()) {
             data.addEvidence("query.request", Integer.toString(i));
@@ -189,5 +260,34 @@ public class ElementDataPoolTests {
             "Element Data allocated for " + (THREADS * REQUESTS) +
                 " requests on " + THREADS + " threads: " + allocated.get(),
             allocated.get() <= THREADS);
+    }
+
+    @Test
+    public void runningLazyTask_KeepsTheInstanceFromItsPool() throws Exception {
+        TaskStarter starter = new TaskStarter();
+        CompletableFuture<Void> running = new CompletableFuture<>();
+        try (Pipeline pipeline = new PipelineBuilder(
+                LoggerFactory.getILoggerFactory())
+                .addFlowElement(starter)
+                .setAutoCloseElements(true)
+                .build()) {
+            starter.next = running;
+            TaskData first = process(pipeline);
+
+            starter.next = CompletableFuture.completedFuture(null);
+            TaskData second = process(pipeline);
+            assertNotSame(
+                "An instance went back to its pool while its lazy task ran",
+                first,
+                second);
+
+            TaskData third = process(pipeline);
+            assertSame(
+                "An instance whose lazy task had finished was not pooled",
+                second,
+                third);
+        } finally {
+            running.complete(null);
+        }
     }
 }
