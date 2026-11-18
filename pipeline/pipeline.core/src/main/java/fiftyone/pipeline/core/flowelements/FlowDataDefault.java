@@ -33,6 +33,7 @@ import org.slf4j.Logger;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static fiftyone.pipeline.util.Check.getNotNull;
 
@@ -49,7 +50,18 @@ class FlowDataDefault implements FlowData {
 
     private final PipelineInternal pipeline;
 
+    /**
+     * The errors added. While a parallel group runs, its members add their
+     * errors under the lock on this collection, so they appear in the order
+     * the members add them. At every other time an add takes no lock.
+     */
     private final Collection<FlowError> errors;
+
+    /**
+     * The parallel groups running on this Flow Data, so that errors are
+     * added under the lock only while one runs.
+     */
+    private final AtomicInteger groupsRunning = new AtomicInteger(0);
 
     private final TypedKeyMap data;
 
@@ -99,6 +111,20 @@ class FlowDataDefault implements FlowData {
         stop = true;
     }
 
+    /**
+     * Called by a parallel group before its members start.
+     */
+    void groupStarted() {
+        groupsRunning.incrementAndGet();
+    }
+
+    /**
+     * Called by a parallel group once every member has stopped.
+     */
+    void groupStopped() {
+        groupsRunning.decrementAndGet();
+    }
+
     @Override
     public Pipeline getPipeline() {
         return pipeline;
@@ -111,7 +137,13 @@ class FlowDataDefault implements FlowData {
 
     @Override
     public void addError(FlowError error) {
-        errors.add(error);
+        if (groupsRunning.get() > 0) {
+            synchronized (errors) {
+                errors.add(error);
+            }
+        } else {
+            errors.add(error);
+        }
 
         if (logger.isErrorEnabled()) {
             String message = "Error occurred during processing";
