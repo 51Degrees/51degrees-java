@@ -152,7 +152,7 @@ public abstract class DeviceDataBaseOnPremise extends DeviceDataBase {
                                 AspectPropertyValue.class,
                                 property.getType()));
                     }
-                    populateFromMap(map);
+                    keepValues(map);
                     mapPopulated = true;
                 }
             }
