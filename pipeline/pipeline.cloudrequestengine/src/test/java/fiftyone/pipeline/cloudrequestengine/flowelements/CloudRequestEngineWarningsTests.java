@@ -139,6 +139,13 @@ public class CloudRequestEngineWarningsTests
             data.process();
             data.getErrors().forEach(e ->
                 errors.append(e.getThrowable().getMessage()).append('\n'));
+            // The response is a lazy property, so once processing has
+            // finished its error reaches only the reader.
+            try {
+                data.getFromElement(engine).getJsonResponse();
+            } catch (RuntimeException e) {
+                errors.append(e.getMessage()).append('\n');
+            }
         }
         return errors.toString();
     }

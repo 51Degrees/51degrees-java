@@ -56,6 +56,8 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -147,6 +149,17 @@ public class CloudRequestEngineDefault
      * uses make them once.
      */
     private final Object discoveryLock = new Object();
+
+    /**
+     * Runs the cloud requests started while processing, on daemon threads
+     * so an engine not closed does not keep the process alive.
+     */
+    private final ExecutorService requests =
+        Executors.newCachedThreadPool(runnable -> {
+            Thread thread = new Thread(runnable, "cloud-request");
+            thread.setDaemon(true);
+            return thread;
+        });
 
     public CloudRequestEngineDefault(
         Logger logger,
@@ -471,12 +484,29 @@ public class CloudRequestEngineDefault
         headers.put("Content-Type", "application/x-www-form-urlencoded");
         headers.put("Content-Length", Integer.toString(content.length));
 
-        String response = httpClient.postData(connection, headers, content);
+        // The request is built from the Flow Data above. The task holds only
+        // the request, and readers of the JSON response wait for it.
+        ((CloudRequestDataInternal)aspectData).setJsonResponseTask(
+            CompletableFuture.supplyAsync(
+                () -> send(connection, headers, content), requests));
+    }
 
-        ((CloudRequestDataInternal)aspectData).setJsonResponse(response);
-
-        validateResponse(response, connection);
-        reportPropertiesNotCovered(response);
+    /**
+     * Send a built request and check its response, as the task behind the
+     * JSON response. Never reads the Flow Data.
+     */
+    private String send(
+        HttpURLConnection connection,
+        Map<String, String> headers,
+        byte[] content) {
+        try {
+            String response = httpClient.postData(connection, headers, content);
+            validateResponse(response, connection);
+            reportPropertiesNotCovered(response);
+            return response;
+        } catch (IOException e) {
+            throw new CompletionException(e);
+        }
     }
 
     /**
@@ -794,6 +824,8 @@ public class CloudRequestEngineDefault
 
     @Override
     protected void unmanagedResourcesCleanup() {
+        // Requests already started finish, and their readers get them.
+        requests.shutdown();
     }
 
     private void setCommonHeaders(Map<String, String> headers) {

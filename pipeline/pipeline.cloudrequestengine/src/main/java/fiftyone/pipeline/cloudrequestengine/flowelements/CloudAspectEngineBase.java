@@ -424,10 +424,25 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
                 "to produce results until this is corrected.");
         }
 
+        // Wait for the cloud request. Its failure, met here while the Flow
+        // Data is processed, is recorded once as the request engine's own.
+        String json;
+        try {
+            json = requestData.getJsonResponse();
+        } catch (RuntimeException e) {
+            CloudRequestDataInternal request = requestData;
+            Throwable failure = request.getRequestFailure();
+            if (failure == null) {
+                throw e;
+            }
+            if (request.firstToMeetFailure()) {
+                data.addError(failure, requestEngine);
+            }
+            json = null;
+        }
+
         setCloudRequestFailed(data, aspectData, requestEngine);
 
-        String json = requestData == null ? null : requestData.getJsonResponse();
-        
         // If the JSON is empty or null then do not Process the CloudAspectEngine.
         // Empty or null JSON indicates that an error has occurred in the 
         // CloudRequestEngine. The error will have been reported by the 
