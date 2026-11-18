@@ -37,6 +37,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -126,6 +127,13 @@ public class FinishedFlowDataTests {
         assertFails("Adding a map of Evidence",
             () -> data.addEvidence(
                 Collections.singletonMap("query.after", "value")));
+        assertFails("Putting Evidence into the Evidence it gives",
+            () -> data.getEvidence().put("query.after", "value"));
+        assertFails("Populating the Evidence it gives from a map",
+            () -> data.getEvidence().populateFromMap(
+                Collections.<String, Object>singletonMap(
+                    "query.after",
+                    "value")));
         assertFails("Adding Element Data by name",
             () -> data.getOrAdd("other", flowData ->
                 new TestElementData(LOGGER, flowData)));
@@ -152,6 +160,7 @@ public class FinishedFlowDataTests {
             data.get("writer"),
             data.getOrAdd(writer.getTypedDataKey(), writer.getDataFactory()));
         assertEquals("during", data.getEvidence().get("query.added"));
+        assertNull(data.getEvidence().get("query.after"));
     }
 
     @Test
