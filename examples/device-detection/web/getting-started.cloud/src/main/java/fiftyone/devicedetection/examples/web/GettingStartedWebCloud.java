@@ -84,6 +84,9 @@ public class GettingStartedWebCloud extends HttpServlet {
             throws Exception {
         // the detection has already been carried out by the Filter
         // which is responsible to the lifecycle of the flowData - do NOT dispose
+        // A Flow Data cannot be used by two threads at once. Work handed to
+        // another thread or task gets the values it needs, read here on the
+        // request's thread, not the Flow Data.
         FlowData flowData = flowDataProvider.getFlowData(request);
         // retrieve the device data from the flowdata
         DeviceData device = flowData.get(DeviceData.class);
