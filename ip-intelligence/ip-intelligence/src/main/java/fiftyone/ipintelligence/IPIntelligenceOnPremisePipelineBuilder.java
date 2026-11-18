@@ -25,6 +25,7 @@ package fiftyone.ipintelligence;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngineBuilder;
 import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
+import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.Constants;
 import fiftyone.pipeline.engines.data.AspectData;
@@ -335,14 +336,18 @@ public class IPIntelligenceOnPremisePipelineBuilder
                 new IPIntelligenceOnPremiseEngineBuilder(loggerFactory, dataUpdateService);
         ipIntelligenceEngine = configureAndBuild(engineBuilder);
 
+        List<FlowElement<?, ?>> made = new ArrayList<>();
         if (ipIntelligenceEngine != null) {
             // Add the IP Intelligence engine to the list
+            made.add(ipIntelligenceEngine);
             getFlowElements().add(ipIntelligenceEngine);
             // Usage sharing goes last, so that it shares what every other
             // Flow Element has added to the Evidence.
             if (shareUsageEnabled) {
-                getFlowElements().add(
-                    new ShareUsageBuilder(loggerFactory).build());
+                FlowElement<?, ?> shareUsage =
+                    new ShareUsageBuilder(loggerFactory).build();
+                made.add(shareUsage);
+                getFlowElements().add(shareUsage);
             }
         } else {
             throw new RuntimeException("Unexpected error creating IP Intelligence engine.");
@@ -350,8 +355,14 @@ public class IPIntelligenceOnPremisePipelineBuilder
 
         setAutoCloseElements(true);
 
-        // Create and return the pipeline
-        return super.build();
+        // Create and return the pipeline, closing what this builder made if
+        // the Pipeline is refused.
+        try {
+            return super.build();
+        } catch (Exception e) {
+            closeMadeElements(made, e);
+            throw e;
+        }
     }
 
     /**

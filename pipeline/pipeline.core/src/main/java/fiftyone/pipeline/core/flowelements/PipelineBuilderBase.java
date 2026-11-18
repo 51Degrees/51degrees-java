@@ -118,6 +118,26 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
     }
 
     /**
+     * After a build has failed, close the Flow Elements this builder made
+     * itself and take them out of its list, because no caller holds them to
+     * close. A failure to close one is added to the build's error.
+     * @param made the Flow Elements this builder made
+     * @param error the error the build failed with
+     */
+    protected void closeMadeElements(
+        List<? extends FlowElement<?, ?>> made,
+        Exception error) {
+        for (FlowElement<?, ?> element : made) {
+            getFlowElements().remove(element);
+            try {
+                element.close();
+            } catch (Exception e) {
+                error.addSuppressed(e);
+            }
+        }
+    }
+
+    /**
      * Refuse a Pipeline that puts a Flow Element that must run last, such as
      * the usage sharing element, anywhere but last, or in a parallel group.
      * @param elements the Flow Elements of the Pipeline, in order
