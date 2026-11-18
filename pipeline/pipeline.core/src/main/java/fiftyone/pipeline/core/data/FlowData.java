@@ -35,6 +35,10 @@ import java.util.Map;
 /**
  * A closeable structure to contain the inputs and outputs of {@link Pipeline}
  * processing.
+ * <p>
+ * Closing a Flow Data may return its Element Data to an object pool, from
+ * which another request can take it. Keeping a reference to Element Data
+ * after its Flow Data is closed is not supported.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/conceptual-overview.md#flow-data">Specification</a>
  */
 public interface FlowData extends AutoCloseable {

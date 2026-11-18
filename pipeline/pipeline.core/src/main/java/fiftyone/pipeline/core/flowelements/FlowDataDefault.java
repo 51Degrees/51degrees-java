@@ -389,5 +389,12 @@ class FlowDataDefault implements FlowData {
                 ((AutoCloseable) elementData).close();
             }
         }
+        // Pooled Element Data goes back to its Flow Element's pool. A
+        // reference kept after this point is not supported.
+        for (Object elementData : data.asStringKeyMap().values()) {
+            if (elementData instanceof ElementDataBase) {
+                ((ElementDataBase) elementData).release();
+            }
+        }
     }
 }
