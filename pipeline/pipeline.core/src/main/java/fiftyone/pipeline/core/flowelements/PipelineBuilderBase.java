@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.core.flowelements;
 
+import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.core.Constants;
 import fiftyone.pipeline.core.configuration.PipelineOptions;
 import fiftyone.pipeline.core.data.FlowData;
@@ -105,6 +106,7 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
      */
     public Pipeline build() throws Exception {
         onPreBuild();
+        checkRunsLast(flowElements);
         Pipeline pipeline = new PipelineDefault(
             loggerFactory.getLogger(Pipeline.class.getName()),
             flowElements,
@@ -113,6 +115,38 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
             suppressProcessExceptions);
         addServicesToPipeline(pipeline);
         return pipeline;
+    }
+
+    /**
+     * Refuse a Pipeline that puts a Flow Element that must run last, such as
+     * the usage sharing element, anywhere but last, or in a parallel group.
+     * @param elements the Flow Elements of the Pipeline, in order
+     * @throws PipelineConfigurationException if one is out of place
+     */
+    @SuppressWarnings("rawtypes")
+    private static void checkRunsLast(List<FlowElement> elements) {
+        for (int i = 0; i < elements.size(); i++) {
+            FlowElement element = elements.get(i);
+            if (element instanceof ParallelElements) {
+                for (FlowElement member :
+                    ((ParallelElements) element).getFlowElements()) {
+                    if (member instanceof RunsLast) {
+                        throw runsLastRefused((RunsLast) member);
+                    }
+                }
+            } else if (element instanceof RunsLast &&
+                i != elements.size() - 1) {
+                throw runsLastRefused((RunsLast) element);
+            }
+        }
+    }
+
+    private static PipelineConfigurationException runsLastRefused(
+        RunsLast element) {
+        return new PipelineConfigurationException(
+            element.getRunsLastName() + " must be the last Flow Element " +
+                "and outside any parallel group. Add it after every other " +
+                "Flow Element, and not as a member of a parallel group.");
     }
 
     /**

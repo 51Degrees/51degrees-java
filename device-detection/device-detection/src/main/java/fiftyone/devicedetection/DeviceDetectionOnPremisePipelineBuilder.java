@@ -434,13 +434,14 @@ public class DeviceDetectionOnPremisePipelineBuilder
         deviceDetectionEngine = configureAndBuild(hashBuilder);
 
         if (deviceDetectionEngine != null) {
-            // Add the share usage element to the list if enabled
+            // Add the device detection engine to the list
+            getFlowElements().add(deviceDetectionEngine);
+            // Usage sharing goes last, so that it shares what every other
+            // Flow Element has added to the Evidence.
             if (shareUsageEnabled) {
                 getFlowElements().add(
                     new ShareUsageBuilder(loggerFactory).build());
             }
-            // Add the device detection engine to the list
-            getFlowElements().add(deviceDetectionEngine);
         } else {
             throw new RuntimeException("Unexpected error creating device detection engine.");
         }

@@ -26,6 +26,7 @@ import fiftyone.caching.LruPutCache;
 import fiftyone.pipeline.core.data.*;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
+import fiftyone.pipeline.core.flowelements.RunsLast;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.configuration.CacheConfiguration;
 import fiftyone.pipeline.engines.fiftyone.data.EvidenceKeyFilterShareUsage;
@@ -59,7 +60,8 @@ import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.LOST_DAT
  * @see <a href="https://github.com/51Degrees/specifications/blob/c8128ca4fa68c6348d76ddb2889bb5087de1aa5f/pipeline-specification/pipeline-elements/usage-sharing-element.md">Specification</a>
  */
 public abstract class ShareUsageBase
-    extends FlowElementBase<ElementData, ElementPropertyMetaData> {
+    extends FlowElementBase<ElementData, ElementPropertyMetaData>
+    implements RunsLast {
 
     /**
      * IP Addresses of local host device.
@@ -1099,5 +1101,16 @@ public abstract class ShareUsageBase
             categoryDict.put(field, value.toString());
         }
 
+    }
+
+    /**
+     * Usage sharing reads what every other Flow Element has added to the
+     * Evidence, so it is the last Flow Element of a Pipeline and outside any
+     * parallel group.
+     * @return the name a misplaced usage sharing element is refused with
+     */
+    @Override
+    public String getRunsLastName() {
+        return "The usage sharing element";
     }
 }

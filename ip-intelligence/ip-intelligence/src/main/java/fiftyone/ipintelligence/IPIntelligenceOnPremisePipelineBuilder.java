@@ -336,13 +336,14 @@ public class IPIntelligenceOnPremisePipelineBuilder
         ipIntelligenceEngine = configureAndBuild(engineBuilder);
 
         if (ipIntelligenceEngine != null) {
-            // Add the share usage element to the list if enabled
+            // Add the IP Intelligence engine to the list
+            getFlowElements().add(ipIntelligenceEngine);
+            // Usage sharing goes last, so that it shares what every other
+            // Flow Element has added to the Evidence.
             if (shareUsageEnabled) {
                 getFlowElements().add(
                     new ShareUsageBuilder(loggerFactory).build());
             }
-            // Add the IP Intelligence engine to the list
-            getFlowElements().add(ipIntelligenceEngine);
         } else {
             throw new RuntimeException("Unexpected error creating IP Intelligence engine.");
         }
