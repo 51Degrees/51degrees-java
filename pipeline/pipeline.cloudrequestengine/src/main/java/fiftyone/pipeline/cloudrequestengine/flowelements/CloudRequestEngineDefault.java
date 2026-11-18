@@ -58,6 +58,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -824,8 +825,15 @@ public class CloudRequestEngineDefault
 
     @Override
     protected void unmanagedResourcesCleanup() {
-        // Requests already started finish, and their readers get them.
+        // Wait for the requests already started, which the connection
+        // timeouts bound, so none outlives the engine and every reader
+        // still gets its response.
         requests.shutdown();
+        try {
+            requests.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private void setCommonHeaders(Map<String, String> headers) {
