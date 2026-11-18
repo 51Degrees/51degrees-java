@@ -46,7 +46,6 @@ class FlowDataDefault implements FlowData {
 
     private final Logger logger;
 
-    private final Object lock = new Object();
 
     private final PipelineInternal pipeline;
 
@@ -281,16 +280,11 @@ class FlowDataDefault implements FlowData {
         TypedKey<ElementData> typedKey = new TypedKeyDefault<>(
             elementDataKey,
             ElementData.class);
+        // No lock. Members of a parallel group each add their own Element
+        // Data with one compare and swap, and making an instance never
+        // waits for another member.
         if (data.containsKey(elementDataKey) == false) {
-            if (pipeline.isConcurrent() == true) {
-                synchronized (this.lock) {
-                    if (data.containsKey(elementDataKey) == false) {
-                        data.put(typedKey, dataFactory.create(this));
-                    }
-                }
-            } else {
-                data.put(typedKey, dataFactory.create(this));
-            }
+            data.putIfAbsent(typedKey, dataFactory.create(this));
         }
         return (T) data.get(typedKey);
     }
@@ -304,16 +298,9 @@ class FlowDataDefault implements FlowData {
         TypedKey<Object> untypedKey = new TypedKeyDefault<>(
             key.getName(),
             Object.class);
+        // No lock, as above.
         if (data.containsKey(key) == false) {
-            if (pipeline.isConcurrent() == true) {
-                synchronized (this.lock) {
-                    if (data.containsKey(key) == false) {
-                        data.put(key, dataFactory.create(this));
-                    }
-                }
-            } else {
-                data.put(key, dataFactory.create(this));
-            }
+            data.putIfAbsent(key, dataFactory.create(this));
         }
         try {
             result = data.get(key);
