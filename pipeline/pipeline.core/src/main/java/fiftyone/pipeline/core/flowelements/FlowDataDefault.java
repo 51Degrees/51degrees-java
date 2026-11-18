@@ -31,7 +31,6 @@ import fiftyone.pipeline.core.typed.TypedKeyMapBuilder;
 import org.slf4j.Logger;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static fiftyone.pipeline.util.Check.getNotNull;
@@ -40,17 +39,28 @@ import static fiftyone.pipeline.util.Check.getNotNull;
  * Default implementation of the {@link FlowData} interface. This class is
  * package private, and should only be created by the
  * {@link FlowDataFactoryDefault} class.
+ * <p>
+ * It takes no lock apart from the one on errors that the members of a
+ * parallel group add while the group runs. Its Element Data is kept in a
+ * linked list, which a parallel group's members add to with one compare and
+ * swap each, and which readers follow with no lock. It is not safe to use
+ * from several threads at once, and a caller that does so is responsible
+ * for any locking.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/conceptual-overview.md#flow-data">Specification</a>
  */
 class FlowDataDefault implements FlowData {
 
     private final Logger logger;
 
-    private final Object lock = new Object();
-
     private final PipelineInternal pipeline;
 
-    private final Collection<FlowError> errors;
+    private final List<FlowError> errors = new ArrayList<>();
+
+    /**
+     * True while a parallel group runs, when its members add errors under
+     * the lock on {@link #errors}.
+     */
+    private volatile boolean groupRunning = false;
 
     private final TypedKeyMap data;
 
@@ -64,17 +74,10 @@ class FlowDataDefault implements FlowData {
         this.logger = logger;
         this.pipeline = (PipelineInternal) pipeline;
         this.evidence = evidence;
-        if (pipeline.isConcurrent()) {
-            // There are parallel elements, so the FlowData's
-            // backing map and the errors collection must be thread safe.
-            data = new TypedKeyMapBuilder(true).build();
-            errors = new ConcurrentLinkedQueue<>();
-        } else {
-            // There are no parallel elements, so a non thread safe backing
-            // map and errors collection will suffice.
-            data = new TypedKeyMapBuilder(false).build();
-            errors = new LinkedList<>();
-        }
+        // With a parallel group, its members add Element Data at the same
+        // time, each with one compare and swap. Otherwise a plain write is
+        // enough.
+        data = new TypedKeyMapBuilder(pipeline.isConcurrent()).build();
         logger.debug("FlowData '" + hashCode() + "' created.");
 
     }
@@ -105,14 +108,34 @@ class FlowDataDefault implements FlowData {
         return pipeline;
     }
 
+    /**
+     * Mark the start and end of a parallel group, between which its members
+     * add errors under a lock.
+     * @param running true when the group starts, false when it has finished
+     */
+    void setGroupRunning(boolean running) {
+        groupRunning = running;
+    }
+
     @Override
     public Collection<FlowError> getErrors() {
+        if (groupRunning) {
+            synchronized (errors) {
+                return new ArrayList<>(errors);
+            }
+        }
         return new ArrayList<>(errors);
     }
 
     @Override
     public void addError(FlowError error) {
-        errors.add(error);
+        if (groupRunning) {
+            synchronized (errors) {
+                errors.add(error);
+            }
+        } else {
+            errors.add(error);
+        }
 
         if (logger.isErrorEnabled()) {
             String message = "Error occurred during processing";
@@ -158,7 +181,40 @@ class FlowDataDefault implements FlowData {
 
     @Override
     public List<String> getDataKeys() {
-        return data.getKeys();
+        return keysInPipelineOrder();
+    }
+
+    /**
+     * The keys of the Element Data held, in Pipeline order, being the order
+     * the Flow Elements were added to the Pipeline, with the members of a
+     * parallel group in the group's place. The list holds the newest first,
+     * so it is sorted here. Keys of no Flow Element come last, in the order
+     * they were added.
+     */
+    private List<String> keysInPipelineOrder() {
+        List<String> keys = data.getKeys();
+        Collections.reverse(keys);
+        final Map<String, Integer> rank = new HashMap<>();
+        addRanks(pipeline.getFlowElements(), rank);
+        keys.sort(Comparator.comparingInt(key -> rank.getOrDefault(
+            key.toLowerCase(Locale.ROOT),
+            Integer.MAX_VALUE)));
+        return keys;
+    }
+
+    @SuppressWarnings("rawtypes")
+    private static void addRanks(
+        List<FlowElement> elements,
+        Map<String, Integer> rank) {
+        for (FlowElement element : elements) {
+            if (element instanceof ParallelElements) {
+                addRanks(((ParallelElements) element).getFlowElements(), rank);
+            } else {
+                rank.putIfAbsent(
+                    element.getElementDataKey().toLowerCase(Locale.ROOT),
+                    rank.size());
+            }
+        }
     }
 
     @Override
@@ -282,15 +338,9 @@ class FlowDataDefault implements FlowData {
             elementDataKey,
             ElementData.class);
         if (data.containsKey(elementDataKey) == false) {
-            if (pipeline.isConcurrent() == true) {
-                synchronized (this.lock) {
-                    if (data.containsKey(elementDataKey) == false) {
-                        data.put(typedKey, dataFactory.create(this));
-                    }
-                }
-            } else {
-                data.put(typedKey, dataFactory.create(this));
-            }
+            data.asStringKeyMap().putIfAbsent(
+                elementDataKey,
+                dataFactory.create(this));
         }
         return (T) data.get(typedKey);
     }
@@ -301,19 +351,12 @@ class FlowDataDefault implements FlowData {
         FlowElement.DataFactory<T> dataFactory) {
         T result;
 
-        TypedKey<Object> untypedKey = new TypedKeyDefault<>(
-            key.getName(),
-            Object.class);
         if (data.containsKey(key) == false) {
-            if (pipeline.isConcurrent() == true) {
-                synchronized (this.lock) {
-                    if (data.containsKey(key) == false) {
-                        data.put(key, dataFactory.create(this));
-                    }
-                }
-            } else {
-                data.put(key, dataFactory.create(this));
-            }
+            // One step, so that members of a parallel group adding at the
+            // same time never replace each other's Element Data.
+            data.asStringKeyMap().putIfAbsent(
+                key.getName(),
+                dataFactory.create(this));
         }
         try {
             result = data.get(key);
@@ -334,8 +377,8 @@ class FlowDataDefault implements FlowData {
     @Override
     public Iterable<ElementData> elementDataAsIterable() {
         List<ElementData> result = new ArrayList<>();
-        for (Object elementData : data.asStringKeyMap().values()) {
-            result.add((ElementData) elementData);
+        for (String key : keysInPipelineOrder()) {
+            result.add((ElementData) data.asStringKeyMap().get(key));
         }
         return result;
     }

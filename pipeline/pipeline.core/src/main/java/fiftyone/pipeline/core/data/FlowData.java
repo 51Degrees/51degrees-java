@@ -35,6 +35,13 @@ import java.util.Map;
 /**
  * A closeable structure to contain the inputs and outputs of {@link Pipeline}
  * processing.
+ * <p>
+ * A Flow Data is not safe to use from several threads at once. It may pass
+ * from one thread to another, but a caller that uses one from several
+ * threads at the same time is responsible for any locking, for example by
+ * wrapping its calls in a lock of its own. Only the members of a parallel
+ * group share one while it is processed, and each writes only its own
+ * Element Data.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/conceptual-overview.md#flow-data">Specification</a>
  */
 public interface FlowData extends AutoCloseable {
@@ -109,8 +116,8 @@ public interface FlowData extends AutoCloseable {
     <T> TryGetResult<T> tryGetEvidence(String key, Class<T> type);
 
     /**
-     * Get a list of keys for elements of the Pipeline that have created data.
-     * (so far).
+     * Get a list of keys for elements of the Pipeline that have created data
+     * (so far), in Pipeline order.
      * @return keys added to data
      */
     List<String> getDataKeys();
@@ -293,7 +300,8 @@ public interface FlowData extends AutoCloseable {
     Map<String, Object> elementDataAsMap();
 
     /**
-     * Get the {@link ElementData} for this instance as an {@link Iterable}.
+     * Get the {@link ElementData} for this instance as an {@link Iterable},
+     * in Pipeline order.
      * @return an {@link Iterable} containing the {@link ElementData}
      */
     Iterable<ElementData> elementDataAsIterable();

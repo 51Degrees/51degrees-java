@@ -69,9 +69,25 @@ class ParallelElements
         for (FlowElement element : flowElements) {
             parallelCallers.add(new FlowElementCallable(element, flowData));
         }
+        // Members add the errors they record themselves under the Flow
+        // Data's errors lock while the group runs.
+        FlowDataDefault group = flowData instanceof FlowDataDefault ?
+            (FlowDataDefault) flowData :
+            null;
         try {
-            List<Future<FlowError>> results = threadPool.invokeAll(parallelCallers);
-            // all threads are now done
+            List<Future<FlowError>> results;
+            if (group != null) {
+                group.setGroupRunning(true);
+            }
+            try {
+                results = threadPool.invokeAll(parallelCallers);
+            } finally {
+                if (group != null) {
+                    group.setGroupRunning(false);
+                }
+            }
+            // Every member has stopped, so add the exceptions they threw,
+            // in the order the members were added.
             for (Future<FlowError> future : results) {
                 FlowError error;
                 if ((error = future.get()) != null) {

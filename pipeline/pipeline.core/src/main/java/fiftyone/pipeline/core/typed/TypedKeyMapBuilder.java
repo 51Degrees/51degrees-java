@@ -27,6 +27,7 @@ import fiftyone.pipeline.core.exceptions.PipelineDataException;
 
 import java.io.Closeable;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -43,8 +44,11 @@ public class TypedKeyMapBuilder {
 
     /**
      * Construct a new instance.
-     * @param isConcurrent true if the resulting {@link TypedKeyMap} should be
-     *                     thread-safe to handle concurrent access
+     * @param isConcurrent true if several threads may add to the resulting
+     *                     {@link TypedKeyMap} at the same time, as the
+     *                     members of a parallel group do. Adds then take no
+     *                     lock, as each is one compare and swap. Reads never
+     *                     take a lock.
      */
     public TypedKeyMapBuilder(boolean isConcurrent) {
         if (isConcurrent) {
@@ -75,52 +79,74 @@ public class TypedKeyMapBuilder {
     }
 
     /**
-     * Extends the internal implementation to add thread-safety to the
-     * {@link #get(Object)} and {@link #put(String, Object)} methods.
+     * Puts each new head of the list in place with one compare and swap, so
+     * that several threads can add at the same time with no lock.
      */
     private static class TypedKeyMapConcurrent extends TypedKeyMapInternal {
         @Override
-        public <T> void put(TypedKey<T> typedKey, T value) {
-            synchronized (this) {
-                super.put(typedKey, value);
-            }
-        }
-
-        @Override
-        public <T> T removeIfExists(TypedKey<T> typedKey) {
-            synchronized (this) {
-                return super.removeIfExists(typedKey);
-            }
+        boolean swapHead(Entry expected, Entry replacement) {
+            return HEAD.compareAndSet(this, expected, replacement);
         }
     }
 
     /**
      * Implementation of {@link TypedKeyMap} in which the underlying map is
-     * provided by a singly linked list.
+     * provided by a singly linked list, newest first. A node never changes
+     * once it is in the list. A change makes a new head, copying the nodes
+     * before the one it changes, and puts it in place with
+     * {@link #swapHead}, so a reader follows the links with no lock and
+     * always sees a whole list.
      */
     private static class TypedKeyMapInternal implements TypedKeyMap, Map<String, Object>, Closeable {
 
-        private static final Entry[] emptyEntryPair = new Entry[]{null, null};
-        private Entry _head = null;
+        static final AtomicReferenceFieldUpdater<TypedKeyMapInternal, Entry>
+            HEAD = AtomicReferenceFieldUpdater.newUpdater(
+                TypedKeyMapInternal.class,
+                Entry.class,
+                "_head");
 
-        private Entry[] findWithPrevious(String typedKeyName) {
-            Entry current = _head;
-            if (current != null) {
+        private volatile Entry _head = null;
+
+        /**
+         * Put the replacement in place as the head if the head is still the
+         * one expected. A plain write here, as only one thread adds.
+         * @return true if the replacement is now the head
+         */
+        boolean swapHead(Entry expected, Entry replacement) {
+            _head = replacement;
+            return true;
+        }
+
+        private static Entry find(Entry head, String typedKeyName) {
+            Entry current = head;
+            while (current != null) {
                 if (current._key.getName().equalsIgnoreCase(typedKeyName)) {
-                    return new Entry[]{null, current};
+                    return current;
                 }
-                while (current._next != null) {
-                    if (current._next._key.getName().equalsIgnoreCase(typedKeyName)) {
-                        return new Entry[]{current, current._next};
-                    }
-                    current = current._next;
-                }
+                current = current._next;
             }
-            return emptyEntryPair;
+            return null;
         }
 
         private Entry find(String typedKeyName) {
-            return findWithPrevious(typedKeyName)[1];
+            return find(_head, typedKeyName);
+        }
+
+        /**
+         * Make a new list from the head given, with the target replaced by
+         * the replacement, which may be the target's next node to remove it.
+         */
+        private static Entry replace(Entry head, Entry target, Entry replacement) {
+            List<Entry> before = new ArrayList<>();
+            for (Entry current = head; current != target; current = current._next) {
+                before.add(current);
+            }
+            Entry result = replacement;
+            for (int i = before.size() - 1; i >= 0; i--) {
+                Entry copy = before.get(i);
+                result = new Entry(copy._key, copy._value, result);
+            }
+            return result;
         }
 
         private String getKeyMissingMessage(String key) {
@@ -142,9 +168,9 @@ public class TypedKeyMapBuilder {
 
         @Override
         public <T> T get(Class<T> type) {
-
+            Entry head = _head;
             List<Entry> matches = new ArrayList<>();
-            Entry current = _head;
+            Entry current = head;
             while (current != null) {
                 if (current._value.getClass().equals(type)) {
                     matches.add(current);
@@ -153,7 +179,7 @@ public class TypedKeyMapBuilder {
             }
 
             if (matches.isEmpty()) {
-                current = _head;
+                current = head;
                 while (current != null) {
                     if (type.isAssignableFrom(current._value.getClass())) {
                         matches.add(current);
@@ -195,38 +221,62 @@ public class TypedKeyMapBuilder {
 
         @Override
         public <T> T removeIfExists(TypedKey<T> typedKey) {
-            Entry[] current = findWithPrevious(typedKey.getName());
-            if (current[1] != null) {
-                if (current[0] != null) {
-                    current[0]._next = current[1]._next;
+            while (true) {
+                Entry head = _head;
+                Entry target = find(head, typedKey.getName());
+                if (target == null) {
+                    return null;
                 }
-                if (current[1] == _head) {
-                    _head = current[1]._next;
+                if (swapHead(head, replace(head, target, target._next))) {
+                    T value = (T) target._value;
+                    target.closeValue();
+                    return value;
                 }
-                T value = (T) current[1]._value;
-                current[1].closeValue();
-                current[1]._value = null;
-                return value;
             }
-            return null;
         }
 
         @Override
         public <T> void put(TypedKey<T> typedKey, T value) {
-            Entry current = find(typedKey.getName());
-            if (current != null) {
-                // A key already exists so overwrite the existing value with
-                // the new one.
-                if (current._value != null) {
-                    current.closeValue();
+            while (true) {
+                Entry head = _head;
+                Entry current = find(head, typedKey.getName());
+                Entry newHead = current == null ?
+                    // The key does not exist so add it to the head of the
+                    // linked list.
+                    new Entry<>(typedKey, value, head) :
+                    // A key already exists so replace its node with one that
+                    // holds the new value.
+                    replace(
+                        head,
+                        current,
+                        new Entry(current._key, value, current._next));
+                if (swapHead(head, newHead)) {
+                    if (current != null && current._value != null) {
+                        current.closeValue();
+                    }
+                    return;
                 }
-                current._value = value;
-            } else {
-                // The key does not exist so add it to the head of the linked
-                // list.
-                Entry<T> first = new Entry<>(typedKey, value);
-                first._next = _head;
-                _head = first;
+            }
+        }
+
+        /**
+         * Add the value if the key is not there, as one step that other
+         * threads adding at the same time cannot split.
+         * @return the value already held for the key, or null if this value
+         * was added
+         */
+        @Override
+        public Object putIfAbsent(String key, Object value) {
+            TypedKey<Object> typedKey = new TypedKeyDefault<>(key, Object.class);
+            while (true) {
+                Entry head = _head;
+                Entry current = find(head, key);
+                if (current != null) {
+                    return current._value;
+                }
+                if (swapHead(head, new Entry<>(typedKey, value, head))) {
+                    return null;
+                }
             }
         }
 
@@ -243,7 +293,7 @@ public class TypedKeyMapBuilder {
 
         @Override
         public boolean isEmpty() {
-            return size() == 0;
+            return _head == null;
         }
 
         @Override
@@ -362,14 +412,15 @@ public class TypedKeyMapBuilder {
             }
         }
 
-        private static class Entry<T> {
+        static class Entry<T> {
             final TypedKey<T> _key;
-            T _value;
-            Entry _next = null;
+            final T _value;
+            final Entry _next;
 
-            Entry(TypedKey<T> key, T value) {
+            Entry(TypedKey<T> key, T value, Entry next) {
                 _key = key;
                 _value = value;
+                _next = next;
             }
 
             public void closeValue() {
