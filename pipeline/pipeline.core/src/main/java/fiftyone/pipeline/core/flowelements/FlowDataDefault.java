@@ -66,7 +66,7 @@ class FlowDataDefault implements FlowData {
      */
     private volatile boolean finished = false;
 
-    private static final String FINISHED_MESSAGE =
+    static final String FINISHED_MESSAGE =
         "This Flow Data has finished processing, so it is read only. " +
         "Add Evidence before processing, and Element Data and errors only " +
         "while a Flow Element processes.";
@@ -101,6 +101,11 @@ class FlowDataDefault implements FlowData {
                 pipeline.process(this);
             } finally {
                 finished = true;
+                // Evidence made by this package refuses writes from now on
+                // too, including through getEvidence().
+                if (evidence instanceof EvidenceDefault) {
+                    ((EvidenceDefault) evidence).finish();
+                }
             }
         }
     }
