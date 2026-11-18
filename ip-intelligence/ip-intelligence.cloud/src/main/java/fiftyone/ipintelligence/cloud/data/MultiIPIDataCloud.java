@@ -86,8 +86,12 @@ public final class MultiIPIDataCloud
         return getProfileList();
     }
 
+    /**
+     * @throws IllegalStateException if the Flow Element has finished
+     */
     @Override
     public void addProfile(IPIntelligenceData profile) {
+        checkWriting();
         getProfileList().add(profile);
     }
 

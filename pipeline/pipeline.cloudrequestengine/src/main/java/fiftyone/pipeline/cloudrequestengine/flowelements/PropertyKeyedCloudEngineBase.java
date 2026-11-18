@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.cloudrequestengine.flowelements;
 
+import fiftyone.pipeline.core.data.ElementDataBase;
 import fiftyone.pipeline.core.data.ElementPropertyMetaData;
 import fiftyone.pipeline.core.data.EvidenceKeyFilter;
 import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
@@ -100,6 +101,10 @@ public abstract class PropertyKeyedCloudEngineBase<
 
             profile.populateFromMap(profileData);
             //device.SetNoValueReasons(nullReasons);
+            // A profile is written only here, so it is finished at once.
+            if (profile instanceof ElementDataBase) {
+                ((ElementDataBase) profile).finishWriting();
+            }
             aspectData.addProfile(profile);
         }
     }
