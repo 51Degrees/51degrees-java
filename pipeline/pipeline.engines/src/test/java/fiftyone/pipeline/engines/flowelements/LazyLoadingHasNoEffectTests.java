@@ -52,6 +52,14 @@ public class LazyLoadingHasNoEffectTests {
 
     private static final long PROCESS_COST_MILLIS = 200;
 
+    /**
+     * How much sooner than the process cost process may seem to return. On
+     * Windows, Thread.sleep can wake a millisecond or two early by the
+     * System.nanoTime clock. Processing in the background would return
+     * almost at once, far below this.
+     */
+    private static final long SLEEP_EARLY_TOLERANCE_MILLIS = 20;
+
     private static final int LONG_TIMEOUT_MILLIS = 5000;
 
     private static final int SHORT_TIMEOUT_MILLIS = 10;
@@ -104,7 +112,8 @@ public class LazyLoadingHasNoEffectTests {
             assertTrue(
                 "process should return only once the Engine has processed, " +
                     "but returned after " + elapsedMillis + " ms",
-                elapsedMillis >= PROCESS_COST_MILLIS);
+                elapsedMillis >=
+                    PROCESS_COST_MILLIS - SLEEP_EARLY_TOLERANCE_MILLIS);
             assertEquals(1, result.getValueOne());
             assertEquals(2, result.getValueTwo());
         }
