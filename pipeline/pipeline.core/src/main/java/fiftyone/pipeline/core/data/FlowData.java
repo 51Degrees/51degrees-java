@@ -35,7 +35,12 @@ import java.util.Map;
 /**
  * A closeable structure to contain the inputs and outputs of {@link Pipeline}
  * processing.
+ * <p>
+ * A Flow Data is used by one thread at a time. It is not safe to use from
+ * several threads at once, even once processing has finished, and a caller
+ * that shares one across threads is responsible for any locking.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/conceptual-overview.md#flow-data">Specification</a>
+ * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/thread-safety.md#flow-data">Thread safety</a>
  */
 public interface FlowData extends AutoCloseable {
 
