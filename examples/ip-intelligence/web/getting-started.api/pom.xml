@@ -41,6 +41,19 @@
         <org.json.version>20231013</org.json.version>
     </properties>
 
+    <!-- With -Pdev the IP Intelligence packages come from this repository,
+         so the JSON Builder, and the Pipeline packages it brings, must too.
+         A published JSON Builder would bring a published Pipeline Core that
+         lacks what this repository's IP Intelligence packages call. -->
+    <profiles>
+        <profile>
+            <id>dev</id>
+            <properties>
+                <pipeline.jsonbuilder.version>${project.version}</pipeline.jsonbuilder.version>
+            </properties>
+        </profile>
+    </profiles>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
