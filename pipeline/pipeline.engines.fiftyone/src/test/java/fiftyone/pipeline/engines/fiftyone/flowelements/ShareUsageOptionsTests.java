@@ -127,6 +127,7 @@ public class ShareUsageOptionsTests {
         evidence.put("header.x-blocked", "blocked");
         evidence.put("header.cookie", "a=b");
         evidence.put("cookie.plain", "cookie");
+        evidence.put("cookie.51D_plain", "51d-cookie");
         evidence.put("session.plain", "session");
         evidence.put("query.plain", "query");
         evidence.put("query.id.email", "a@example.com");
@@ -178,8 +179,9 @@ public class ShareUsageOptionsTests {
         assertTrue(shared(sent, "header", "user-agent"));
         assertFalse(shared(sent, "header", "x-blocked"));
         assertFalse(shared(sent, "cookie", "plain"));
+        assertTrue(shared(sent, "cookie", "51D_plain"));
         assertFalse(shared(sent, "session", "plain"));
-        assertFalse(shared(sent, "query", "plain"));
+        assertTrue(shared(sent, "query", "plain"));
     }
 
     @Test
@@ -189,7 +191,8 @@ public class ShareUsageOptionsTests {
 
         assertTrue(shared(sent, "header", "user-agent"));
         assertTrue(shared(sent, "header", "x-blocked"));
-        assertTrue(shared(sent, "cookie", "plain"));
+        assertFalse(shared(sent, "cookie", "plain"));
+        assertTrue(shared(sent, "cookie", "51D_plain"));
         assertTrue(shared(sent, "session", "plain"));
         assertTrue(shared(sent, "query", "plain"));
         assertFalse(shared(sent, "query", "id.email"));
@@ -207,7 +210,7 @@ public class ShareUsageOptionsTests {
 
         assertFalse(shared(sent, "header", "x-blocked"));
         assertFalse(shared(sent, "cookie", "plain"));
-        assertFalse(shared(sent, "query", "plain"));
+        assertTrue(shared(sent, "query", "plain"));
     }
 
     @Test
@@ -237,13 +240,17 @@ public class ShareUsageOptionsTests {
         assertFalse(shared(sent, "query", "plain"));
     }
 
+    /**
+     * Share all Evidence is off by default and share all query string
+     * parameters is on.
+     */
     @Test
-    public void builder_ShareOptionsDefaultToFalse() {
+    public void builder_ShareOptionDefaults() {
         ShareUsageBuilder builder = new ShareUsageBuilder(
             LoggerFactory.getILoggerFactory());
 
         assertFalse(builder.isShareAllEvidence());
-        assertFalse(builder.isShareAllQueryStringParameters());
+        assertTrue(builder.isShareAllQueryStringParameters());
     }
 
     @Test

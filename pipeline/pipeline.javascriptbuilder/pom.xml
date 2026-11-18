@@ -53,6 +53,21 @@
             <artifactId>compiler</artifactId>
             <version>${mustache-compiler.version}</version>
         </dependency>
+        <!-- Minifies the script, as the specification asks of an existing
+             third-party library. It names a log4j binding for SLF4J as a
+             compile dependency, which would take over the logging of every
+             application using this package, so that is left out. -->
+        <dependency>
+            <groupId>net.logicsquad</groupId>
+            <artifactId>minifier</artifactId>
+            <version>${minifier.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>log4j-slf4j-impl</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
         <dependency>
             <groupId>org.graalvm.js</groupId>
             <artifactId>js-scriptengine</artifactId>

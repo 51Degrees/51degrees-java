@@ -142,6 +142,11 @@ public class IPIntelligenceDataHashDefault
     @Override
     protected boolean propertyIsAvailable(String propertyName) {
         checkState();
+        // A property the engine has a position for is held by its results,
+        // so that needs no lookup of the name in native code.
+        if (indexOf(propertyName) != null) {
+            return resultsList.isEmpty() == false;
+        }
         synchronized (getResultsLock()) {
             for (ResultsIpiSwig results : resultsList) {
                 if (results.containsProperty(propertyName)) {
@@ -415,13 +420,19 @@ public class IPIntelligenceDataHashDefault
         return result;
     }
 
+    /**
+     * Holds the results lock for the whole read, as finding whether a
+     * property is available reads the native results too.
+     */
     @Override
     protected <T> TryGetResult<T> tryGetValue(
         String key,
         Class<T> type,
         Class<?>... parameterisedTypes) {
         checkState();
-        return super.tryGetValue(key, type, parameterisedTypes);
+        synchronized (getResultsLock()) {
+            return super.tryGetValue(key, type, parameterisedTypes);
+        }
     }
 
     private void checkState() {

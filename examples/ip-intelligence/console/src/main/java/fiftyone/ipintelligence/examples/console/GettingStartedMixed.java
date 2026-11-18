@@ -156,6 +156,10 @@ public class GettingStartedMixed {
         PipelineOptions pipelineOptions = PipelineOptionsFactory.getOptionsFromFile(optionsFile);
 
         try (Pipeline pipeline = new FiftyOnePipelineBuilder()
+                // Usage sharing is off because this example's evidence is already
+                // known to 51Degrees. In production, leave usage sharing on, which adds
+                // a Usage Sharing Element to the Pipeline and helps improve the service.
+                .setShareUsage(false)
                 .buildFromConfiguration(pipelineOptions)) {
 
             // The engines say which properties their data files have.

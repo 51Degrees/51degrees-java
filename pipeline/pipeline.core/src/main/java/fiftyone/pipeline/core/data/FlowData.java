@@ -26,6 +26,7 @@ import fiftyone.pipeline.core.exceptions.PipelineDataException;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.typed.TypedKey;
+import fiftyone.pipeline.exceptions.AggregateException;
 
 import java.util.Collection;
 import java.util.List;
@@ -43,8 +44,10 @@ public interface FlowData extends AutoCloseable {
      * the FlowData will not be changed further and cannot be processed again.
      * @throws IllegalStateException if this FlowData has already been
      * processed, or its Pipeline has been closed
+     * @throws AggregateException if a Flow Element failed and the Pipeline
+     * does not suppress process exceptions, holding each failure
      */
-    void process() throws IllegalStateException;
+    void process() throws IllegalStateException, AggregateException;
 
     /**
      * If this flag is set to true, future FlowElements will not process this
@@ -183,8 +186,9 @@ public interface FlowData extends AutoCloseable {
      * @param key the name of the property to get
      * @param type the type to return the property value as
      * @return the property value
-     * @throws PipelineDataException if this FlowData has not been processed
-     * @throws ClassCastException if the value is not of the type asked for
+     * @throws PipelineDataException if this FlowData has not been processed,
+     * or no element of the Pipeline has a property of that name
+     * @throws ClassCastException if the value is not of the type given
      */
     <T> T getAs(String key, Class<T> type)
         throws PipelineDataException, ClassCastException;
@@ -203,7 +207,8 @@ public interface FlowData extends AutoCloseable {
      * Get the specified property as a string.
      * @param propertyName the name of the property to get
      * @return the property value
-     * @throws PipelineDataException if this FlowData has not been processed
+     * @throws PipelineDataException if this FlowData has not been processed,
+     * or no element of the Pipeline has a property of that name
      * @throws ClassCastException if the value is not a string
      */
     String getAsString(String propertyName)
@@ -213,7 +218,8 @@ public interface FlowData extends AutoCloseable {
      * Get the specified property as a boolean.
      * @param propertyName the name of the property to get
      * @return the property value
-     * @throws PipelineDataException if this FlowData has not been processed
+     * @throws PipelineDataException if this FlowData has not been processed,
+     * or no element of the Pipeline has a property of that name
      * @throws ClassCastException if the value is not a boolean
      */
     Boolean getAsBool(String propertyName)
@@ -223,7 +229,8 @@ public interface FlowData extends AutoCloseable {
      * Get the specified property as an integer.
      * @param propertyName the name of the property to get
      * @return the property value
-     * @throws PipelineDataException if this FlowData has not been processed
+     * @throws PipelineDataException if this FlowData has not been processed,
+     * or no element of the Pipeline has a property of that name
      * @throws ClassCastException if the value is not an integer
      */
     Integer getAsInt(String propertyName)
@@ -233,7 +240,8 @@ public interface FlowData extends AutoCloseable {
      * Get the specified property as a long.
      * @param propertyName the name of the property to get
      * @return the property value
-     * @throws PipelineDataException if this FlowData has not been processed
+     * @throws PipelineDataException if this FlowData has not been processed,
+     * or no element of the Pipeline has a property of that name
      * @throws ClassCastException if the value is not a long
      */
     Long getAsLong(String propertyName)
@@ -243,7 +251,8 @@ public interface FlowData extends AutoCloseable {
      * Get the specified property as a float.
      * @param propertyName the name of the property to get
      * @return the property value
-     * @throws PipelineDataException if this FlowData has not been processed
+     * @throws PipelineDataException if this FlowData has not been processed,
+     * or no element of the Pipeline has a property of that name
      * @throws ClassCastException if the value is not a float
      */
     Float getAsFloat(String propertyName)
@@ -253,7 +262,8 @@ public interface FlowData extends AutoCloseable {
      * Get the specified property as a double.
      * @param propertyName the name of the property to get
      * @return the property value
-     * @throws PipelineDataException if this FlowData has not been processed
+     * @throws PipelineDataException if this FlowData has not been processed,
+     * or no element of the Pipeline has a property of that name
      * @throws ClassCastException if the value is not a double
      */
     Double getAsDouble(String propertyName)
