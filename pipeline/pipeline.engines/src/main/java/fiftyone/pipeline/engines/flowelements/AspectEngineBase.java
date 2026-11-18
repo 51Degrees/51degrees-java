@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.engines.flowelements;
 
+import fiftyone.pipeline.core.data.ElementDataBase;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
@@ -182,7 +183,13 @@ public abstract class AspectEngineBase<
             // If there is a cache then add the result
             // of processing to the cache.
             if (cache != null) {
-                cache.put(flowData, flowData.getFromElement(this));
+                TData result = flowData.getFromElement(this);
+                // The cache holds it after this Flow Data is closed, so it
+                // never goes back to a pool.
+                if (result instanceof ElementDataBase) {
+                    ((ElementDataBase) result).keepFromPool();
+                }
+                cache.put(flowData, result);
             }
         } else {
             // We have a result from the cache so add it

@@ -48,7 +48,13 @@ import java.util.TreeMap;
  * Values kept once they have been read, with
  * {@link #populateFromMap(Map)}, are not writes. Like the Flow Data that
  * holds it, Element Data is not safe to use from several threads at once.
+ * <p>
+ * Element Data that can be pooled goes back to its Flow Element's pool when
+ * the Flow Data that holds it is closed, and may then be given to another
+ * request. Keeping a reference to Element Data after its Flow Data is closed
+ * is not supported, and reads do not check for it.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/thread-safety.md#element-data">Specification</a>
+ * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/resource-cleanup.md#reusing-element-data">Reusing Element Data</a>
  */
 public abstract class ElementDataBase extends DataBase implements ElementData {
 
@@ -126,6 +132,70 @@ public abstract class ElementDataBase extends DataBase implements ElementData {
      */
     public boolean isFinishedWriting() {
         return finished;
+    }
+
+    /**
+     * Where this instance goes when the Flow Data that holds it is closed, or
+     * null when it is not pooled. Set by the Flow Element that gave it out.
+     */
+    private volatile Runnable onRelease = null;
+
+    /**
+     * Whether this instance can be given out again once the Flow Data that
+     * held it is closed. An implementation whose only state is its values
+     * returns true. One that keeps anything else of the request, or that a
+     * caller may keep after the Flow Data is closed, keeps the default.
+     * @return false unless an implementation opts in
+     */
+    protected boolean isPoolable() {
+        return false;
+    }
+
+    /**
+     * @return true if this instance can be returned to its Flow Element's
+     * pool
+     */
+    public boolean canBePooled() {
+        return isPoolable();
+    }
+
+    /**
+     * Set what happens to this instance when the Flow Data that holds it is
+     * closed. Used by the Flow Element that gave it out.
+     * @param onRelease run once on release, or null for none
+     */
+    public void setOnRelease(Runnable onRelease) {
+        this.onRelease = onRelease;
+    }
+
+    /**
+     * Keep this instance out of its pool, as a cache that holds it does.
+     */
+    public void keepFromPool() {
+        onRelease = null;
+    }
+
+    /**
+     * Called when the Flow Data that holds this instance is closed. A pooled
+     * instance goes back to its Flow Element's pool, once only.
+     */
+    public void release() {
+        Runnable release = onRelease;
+        onRelease = null;
+        if (release != null) {
+            release.run();
+        }
+    }
+
+    /**
+     * Make a pooled instance ready for the next Flow Data, with no values
+     * and open for writing.
+     * @param flowData the Flow Data it is given to
+     */
+    public void reuse(FlowData flowData) {
+        clearValues();
+        finished = false;
+        pipeline = flowData.getPipeline();
     }
 
     /**
