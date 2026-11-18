@@ -178,13 +178,24 @@ public abstract class ElementDataBase extends DataBase implements ElementData {
     }
 
     /**
+     * Whether a lazy task may still write this instance. An implementation
+     * with a lazy task returns true until the task has finished.
+     * @return false unless an implementation has a lazy task running
+     */
+    protected boolean hasLazyTaskRunning() {
+        return false;
+    }
+
+    /**
      * Called when the Flow Data that holds this instance is closed. A pooled
-     * instance goes back to its Flow Element's pool, once only.
+     * instance goes back to its Flow Element's pool, once only. One whose
+     * lazy task is still running is left for the garbage collector instead,
+     * because the task may still write it.
      */
     public void release() {
         Runnable release = onRelease;
         onRelease = null;
-        if (release != null) {
+        if (release != null && hasLazyTaskRunning() == false) {
             release.run();
         }
     }
