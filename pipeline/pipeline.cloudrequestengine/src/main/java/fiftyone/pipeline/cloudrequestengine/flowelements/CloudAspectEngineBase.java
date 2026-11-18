@@ -483,9 +483,12 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
 
     /**
      * Where the Cloud Request Engine's request for the Flow Data failed,
-     * which an error it added to the Flow Data shows, record it in the
-     * Element Data, so that a property the Element Data does not hold is
-     * missing with the CloudRequestFailed reason.
+     * record it in the Element Data, so that a property the Element Data
+     * does not hold is missing with the CloudRequestFailed reason. The
+     * request itself says whether it failed, so the answer does not depend
+     * on whether another member of a parallel group has recorded the failure
+     * in the Flow Data's errors yet. A failure the Cloud Request Engine threw
+     * while it processed, before any request started, is in those errors.
      * @param data the Flow Data being processed
      * @param aspectData the Element Data this engine populates
      * @param requestEngine the Cloud Request Engine of the Pipeline
@@ -494,16 +497,34 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
         FlowData data,
         TData aspectData,
         CloudRequestEngine requestEngine) {
-        if (aspectData instanceof AspectDataBase == false ||
-            data.getErrors() == null) {
+        if (aspectData instanceof AspectDataBase == false) {
             return;
+        }
+        if (requestFailed(data, requestEngine)) {
+            ((AspectDataBase) aspectData).setCloudRequestFailed();
+        }
+    }
+
+    /**
+     * @return true if the Cloud Request Engine's request for the Flow Data
+     * failed, or the engine threw while it processed
+     */
+    private static boolean requestFailed(
+        FlowData data,
+        CloudRequestEngine requestEngine) {
+        CloudRequestDataInternal request = data.getFromElement(requestEngine);
+        if (request != null && request.getRequestFailure() != null) {
+            return true;
+        }
+        if (data.getErrors() == null) {
+            return false;
         }
         for (FlowError error : data.getErrors()) {
             if (error.getFlowElement() == requestEngine) {
-                ((AspectDataBase) aspectData).setCloudRequestFailed();
-                return;
+                return true;
             }
         }
+        return false;
     }
 
     /**
