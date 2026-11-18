@@ -424,9 +424,10 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
                 "to produce results until this is corrected.");
         }
 
+        String json = requestData == null ?
+            null :
+            requestData.getJsonResponse(data);
         setCloudRequestFailed(data, aspectData, requestEngine);
-
-        String json = requestData == null ? null : requestData.getJsonResponse();
         
         // If the JSON is empty or null then do not Process the CloudAspectEngine.
         // Empty or null JSON indicates that an error has occurred in the 

@@ -30,6 +30,7 @@ import fiftyone.pipeline.core.data.AccessiblePropertyMetaData;
 import fiftyone.pipeline.core.data.EvidenceKeyFilter;
 import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import fiftyone.pipeline.core.data.FlowData;
+import fiftyone.pipeline.core.data.LazyTask;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.exceptions.PropertyNotLoadedException;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
@@ -56,6 +57,9 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -147,6 +151,21 @@ public class CloudRequestEngineDefault
      * uses make them once.
      */
     private final Object discoveryLock = new Object();
+
+    /**
+     * How long closing waits for running requests beyond their timeout.
+     */
+    private static final long DEFAULT_CLOSE_WAIT_MILLIS = 5000;
+
+    /**
+     * Runs the data requests that json-response waits on.
+     */
+    private final ExecutorService requestExecutor =
+        Executors.newCachedThreadPool(runnable -> {
+            Thread thread = new Thread(runnable, "cloud-request");
+            thread.setDaemon(true);
+            return thread;
+        });
 
     public CloudRequestEngineDefault(
         Logger logger,
@@ -457,26 +476,46 @@ public class CloudRequestEngineDefault
         }
     }
 
+    /**
+     * Build the request from the Flow Data on this thread, start it, and
+     * return without waiting for the response. json-response is a lazy
+     * property whose task is the request, and every reader waits on it. The
+     * task holds only the request built here, and never reads the Flow Data.
+     * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/pipeline-elements/cloud-request-engine.md#processing">Specification</a>
+     */
     @Override
     protected void processEngine(FlowData data, CloudRequestData aspectData) throws IOException {
-        ((CloudRequestDataInternal)aspectData).setProcessStarted(true);
+        CloudRequestDataInternal requestData =
+            (CloudRequestDataInternal) aspectData;
+        requestData.setProcessStarted(true);
         completeDiscovery();
 
-        byte[] content = getContent(data);
-        HttpURLConnection connection = httpClient.connect(toUrl(endPoint.trim()));
-        setTimeouts(connection);
-
-        Map<String, String> headers = new HashMap<>();
+        final byte[] content = getContent(data);
+        final URL url = toUrl(endPoint.trim());
+        final Map<String, String> headers = new HashMap<>();
         setCommonHeaders(headers);
         headers.put("Content-Type", "application/x-www-form-urlencoded");
         headers.put("Content-Length", Integer.toString(content.length));
 
+        requestData.setJsonResponseTask(
+            new LazyTask<>(() -> send(url, headers, content))
+                .start(requestExecutor));
+    }
+
+    /**
+     * Send one data request and return its response, which has been checked
+     * for errors. Runs as the task of json-response.
+     */
+    private String send(
+        URL url,
+        Map<String, String> headers,
+        byte[] content) throws IOException {
+        HttpURLConnection connection = httpClient.connect(url);
+        setTimeouts(connection);
         String response = httpClient.postData(connection, headers, content);
-
-        ((CloudRequestDataInternal)aspectData).setJsonResponse(response);
-
         validateResponse(response, connection);
         reportPropertiesNotCovered(response);
+        return response;
     }
 
     /**
@@ -794,6 +833,28 @@ public class CloudRequestEngineDefault
 
     @Override
     protected void unmanagedResourcesCleanup() {
+    }
+
+    /**
+     * Wait for the requests already running, up to their timeout, before
+     * the rest is freed.
+     */
+    @Override
+    protected void managedResourcesCleanup() {
+        requestExecutor.shutdown();
+        try {
+            long wait = timeoutMillis == null ?
+                DEFAULT_CLOSE_WAIT_MILLIS :
+                timeoutMillis + DEFAULT_CLOSE_WAIT_MILLIS;
+            if (requestExecutor.awaitTermination(
+                wait,
+                TimeUnit.MILLISECONDS) == false) {
+                logger.warn("Cloud requests still running at close.");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        super.managedResourcesCleanup();
     }
 
     private void setCommonHeaders(Map<String, String> headers) {

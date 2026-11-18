@@ -143,11 +143,13 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
             data.addEvidence("query.User-Agent", "iPhone");
             data.process();
 
-            assertFalse(data.getErrors().isEmpty());
+            // No Flow Element reads the response while the Flow Data is
+            // processed, so the failure reaches the reader.
+            RuntimeException read = assertThrows(
+                    RuntimeException.class,
+                    () -> data.getFromElement(engine).getJsonResponse());
             StringBuilder reported = new StringBuilder();
-            for (FlowError error : data.getErrors()) {
-                reported.append(printed(error.getThrowable()));
-            }
+            reported.append(printed(read));
             for (org.mockito.invocation.Invocation invocation :
                     mockingDetails(logger).getInvocations()) {
                 for (Object argument : invocation.getArguments()) {

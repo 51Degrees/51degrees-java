@@ -104,9 +104,13 @@ public class CloudRequestEngineCloudErrorsTests
              FlowData data = pipeline.createFlowData()) {
             data.addEvidence("query.User-Agent", "iPhone");
             data.process();
+            // No Flow Element reads the response while the Flow Data is
+            // processed, so the failure reaches only the reader.
             Collection<FlowError> errors = data.getErrors();
-            assertEquals(1, errors.size(), errors.toString());
-            return errors.iterator().next().getThrowable();
+            assertEquals(0, errors.size(), errors.toString());
+            return assertThrows(
+                RuntimeException.class,
+                () -> data.getFromElement(engine).getJsonResponse());
         }
     }
 }

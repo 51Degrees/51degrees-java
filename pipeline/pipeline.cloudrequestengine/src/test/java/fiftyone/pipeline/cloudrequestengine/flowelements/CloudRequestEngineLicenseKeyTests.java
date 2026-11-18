@@ -200,6 +200,15 @@ public class CloudRequestEngineLicenseKeyTests {
                     errors.append(t).append('\n');
                 }
             }
+            // A failed request that no Flow Element read while the Flow
+            // Data was processed reaches the reader of the response.
+            try {
+                data.getFromElement(engine).getJsonResponse();
+            } catch (RuntimeException e) {
+                for (Throwable t = e; t != null; t = t.getCause()) {
+                    errors.append(t).append('\n');
+                }
+            }
             return errors.toString();
         }
     }

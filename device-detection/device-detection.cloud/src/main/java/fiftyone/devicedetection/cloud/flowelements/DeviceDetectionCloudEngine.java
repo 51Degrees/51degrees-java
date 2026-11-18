@@ -149,8 +149,8 @@ public class DeviceDetectionCloudEngine
         else {
             CloudRequestData requestData =
                 data.getFromElement(cloudRequestEngine);
+            String json = requestData.getJsonResponse(data);
             setCloudRequestFailed(data, aspectData, cloudRequestEngine);
-            String json = requestData.getJsonResponse();
 
             // A failed request can leave no response, which the Cloud
             // Request Engine has reported.
