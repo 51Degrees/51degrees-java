@@ -35,7 +35,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 /**
@@ -44,7 +44,7 @@ import static org.junit.Assert.fail;
  * Element that writes it has finished, a write through its write methods
  * fails with an error, whether the Flow Element finished normally or threw.
  * A Flow Element that shares the instance opens it for writing again while
- * it processes. Values kept once read are not writes.
+ * it processes. Populating it from a map is a write like any other.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/thread-safety.md#element-data">Specification</a>
  */
 public class FinishedElementDataTests {
@@ -117,6 +117,15 @@ public class FinishedElementDataTests {
         } catch (IllegalStateException e) {
             // Expected.
         }
+        try {
+            data.populateFromMap(Collections.singletonMap(
+                "after",
+                (Object) "value"));
+            fail("Populating from a map succeeded after the Flow Element " +
+                "had finished");
+        } catch (IllegalStateException e) {
+            // Expected.
+        }
     }
 
     private static Pipeline build(Writer... writers) throws Exception {
@@ -186,16 +195,22 @@ public class FinishedElementDataTests {
     }
 
     @Test
-    public void valuesKeptOnceRead_AreNotWrites() throws Exception {
+    public void finished_PopulateFromMapFails() throws Exception {
         try (Pipeline pipeline = build(new Writer("own", "first", false));
              FlowData data = pipeline.createFlowData()) {
             data.process();
 
             TestElementData own = (TestElementData) data.get("own");
-            own.populateFromMap(Collections.singletonMap(
-                "kept",
-                (Object) "value"));
-            assertTrue(own.asKeyMap().containsKey("kept"));
+            try {
+                own.populateFromMap(Collections.singletonMap(
+                    "after",
+                    (Object) "value"));
+                fail("Populating from a map succeeded after the Flow " +
+                    "Element had finished");
+            } catch (IllegalStateException e) {
+                // Expected.
+            }
+            assertFalse(own.asKeyMap().containsKey("after"));
         }
     }
 }
