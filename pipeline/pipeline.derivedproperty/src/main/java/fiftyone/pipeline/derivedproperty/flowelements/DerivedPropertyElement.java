@@ -62,8 +62,12 @@ import java.util.TreeSet;
  * concurrent requests need nothing further, and per request it reads each
  * source property once, then runs each script.
  * <p>
+ * Every Derived Property Element in a Pipeline writes into the same Element
+ * Data, so two of them must not be members of the same parallel group.
+ * Whoever builds the Pipeline keeps them apart, as nothing checks it.
+ * <p>
  * See the
- * <a href="https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/pipeline-elements/derived-property-element.md">Derived
+ * <a href="https://github.com/51Degrees/specifications/blob/52e9b047743db365592f9bd1c737fc7ddb6a2de4/pipeline-specification/pipeline-elements/derived-property-element.md">Derived
  * Property Element specification</a>.
  */
 public final class DerivedPropertyElement
@@ -336,7 +340,7 @@ public final class DerivedPropertyElement
      * first.
      * <p>
      * See the
-     * <a href="https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/pipeline-elements/derived-property-element.md#the-pipeline-check">Pipeline
+     * <a href="https://github.com/51Degrees/specifications/blob/52e9b047743db365592f9bd1c737fc7ddb6a2de4/pipeline-specification/pipeline-elements/derived-property-element.md#the-pipeline-check">Pipeline
      * check</a>.
      * @param pipeline the Pipeline the element is being added to
      * @throws PipelineConfigurationException where the check fails

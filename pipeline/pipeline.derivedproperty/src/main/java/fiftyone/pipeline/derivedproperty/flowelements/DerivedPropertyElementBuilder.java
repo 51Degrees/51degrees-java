@@ -59,6 +59,10 @@ import java.util.Map;
  * {@code DerivedPropertyElement}, with {@code Scripts} naming built-in
  * scripts and {@code ScriptFiles} naming files, each a comma separated
  * list. Script text from code is not available from configuration.
+ * <p>
+ * Every Derived Property Element in a Pipeline writes into the same Element
+ * Data, so two elements this builder makes must not be members of the same
+ * parallel group.
  */
 @ElementBuilder
 public class DerivedPropertyElementBuilder {

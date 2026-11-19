@@ -33,9 +33,14 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 /**
  * The Element Data of the Derived Property Elements. Every Derived Property
- * Element in a Pipeline writes into the one instance on a request, and
- * elements in a parallel group write at the same time, so the values are
- * held in a concurrent map whose keys are matched without regard to case.
+ * Element in a Pipeline writes into the one instance on a request, so two of
+ * them must not be members of the same parallel group. Whoever builds the
+ * Pipeline keeps them apart, as nothing checks it. The values are held in a
+ * map whose keys are matched without regard to case.
+ * <p>
+ * See the
+ * <a href="https://github.com/51Degrees/specifications/blob/52e9b047743db365592f9bd1c737fc7ddb6a2de4/pipeline-specification/pipeline-elements/derived-property-element.md#key-considerations">Derived
+ * Property Element specification</a>.
  */
 public class DerivedPropertyData
     extends ElementDataBase
