@@ -6,7 +6,9 @@ name: Examples from a fresh clone
 # from the repository root with no settings. A fresh clone holds only a link
 # for each free data file. On Ubuntu the example downloads its file, which
 # tests the download, and the job keeps the file in the cache. The other
-# systems take it from there, so each file is downloaded once a run.
+# systems take it from there, so each file is downloaded once a run. The
+# Ubuntu job also builds every example module, with its tests compiled,
+# against the published packages.
 
 on:
   pull_request:
@@ -76,6 +78,17 @@ jobs:
           path: ${{ matrix.file }}
           key: fresh-clone-${{ matrix.product }}-${{ hashFiles(format('{0}.link', matrix.file)) }}
           enableCrossOsArchive: true
+
+      # The console build above compiles the console examples and their
+      # tests. This builds every example module, the web examples too, with
+      # its tests compiled, against the published packages, so a test that
+      # uses a class the published packages lack fails here. It comes after
+      # the cache is saved, so the other systems still get the data file. The
+      # tests are not run here, as the pull request build runs them.
+      - name: Build every example and its tests against the published packages
+        working-directory: examples/${{ matrix.product }}
+        shell: pwsh
+        run: mvn -B --no-transfer-progress package -DskipTests
 
   other-systems:
     name: ${{ matrix.product }} on ${{ matrix.os }}
