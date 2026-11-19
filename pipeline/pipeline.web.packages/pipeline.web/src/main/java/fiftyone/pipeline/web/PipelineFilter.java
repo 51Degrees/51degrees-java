@@ -55,6 +55,11 @@ import static fiftyone.pipeline.web.Constants.INIT_PARAM_SET_HEADERS_ELEMENT_ENA
 /**
  * Servlet filter used to intercept HTTP requests and process them using the
  * 51Degrees Pipeline.
+ * <p>
+ * A Flow Data cannot be used by two threads at once. Application code reads
+ * the values it needs from the Flow Data on the request's thread, and hands
+ * those values, not the Flow Data, to any other thread or task. The Flow
+ * Data is closed when the request ends.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/web-integration.md">Specification</a>
  */
 public class PipelineFilter implements Filter {

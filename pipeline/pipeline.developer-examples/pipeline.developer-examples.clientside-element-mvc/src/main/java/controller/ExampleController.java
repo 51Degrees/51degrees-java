@@ -51,6 +51,9 @@ public class ExampleController {
     @RequestMapping(method = RequestMethod.GET)
     public String get(ModelMap model, HttpServletRequest request) {
     	String message = "";
+        // A Flow Data cannot be used by two threads at once. Work handed to
+        // another thread or task gets the values it needs, read here on the
+        // request's thread, not the Flow Data.
         try (FlowData data = flowDataProvider.getFlowData(request)) {
 	        message = "With a date of birth of " +
 	        	data.getEvidence().get("cookie.date-of-birth") +
