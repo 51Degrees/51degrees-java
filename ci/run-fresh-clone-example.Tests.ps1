@@ -118,6 +118,21 @@ Describe 'run-fresh-clone-example.ps1 called with pwsh -File' {
     }
 }
 
+Describe 'run-fresh-clone-example.ps1 given text the output must hold' {
+
+    It 'passes when the output holds the text' {
+        $run = Invoke-File 'FromCache' @('-Expect', 'Results:')
+        $run.Text | Should -Not -Match '::error::'
+        $run.Code | Should -Be 0
+    }
+
+    It 'fails when the output does not hold the text' {
+        $run = Invoke-File 'FromCache' @('-Expect', '(weighting ')
+        $run.Text | Should -Match "::error::The example's output does not hold '\(weighting '\."
+        $run.Code | Should -Be 1
+    }
+}
+
 Describe 'run-fresh-clone-example.ps1 called as the workflow calls it' {
 
     It 'finds both of the workflow''s calls' -ForEach @(
@@ -134,6 +149,9 @@ Describe 'run-fresh-clone-example.ps1 called as the workflow calls it' {
         $quoted = $script:Script.Replace("'", "''")
         $call = $Command.Replace('./ci/run-fresh-clone-example.ps1', "& '$quoted'")
         $call = $call.Replace('${{ matrix.product }}', 'device-detection')
+        # The stand-in prints no weighting, so the expected text is the one
+        # the device-detection entries give, which is none.
+        $call = $call.Replace('${{ matrix.expect }}', '')
         $call = "`$ErrorActionPreference = 'stop'`n$call`n" +
             "if ((Test-Path -LiteralPath variable:\LASTEXITCODE)) { exit `$LASTEXITCODE }"
         $expected, $other = if ($Job -eq 'download') {
