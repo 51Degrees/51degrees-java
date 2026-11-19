@@ -36,9 +36,12 @@ jobs:
           - product: device-detection
             example: fiftyone.devicedetection.examples.console.GettingStartedOnPrem
             file: cxx/data/device-detection/51Degrees-LiteV4.1.hash
+            expect: ''
           - product: ip-intelligence
             example: fiftyone.ipintelligence.examples.console.GettingStartedOnPrem
             file: cxx/data/ip-intelligence/51Degrees-LiteV41.ipi
+            # Each IP Intelligence value is printed with its weighting.
+            expect: '(weighting '
     runs-on: ubuntu-latest
     steps:
       - name: Clone the repository with its submodules
@@ -63,6 +66,7 @@ jobs:
         run: >-
           ./ci/run-fresh-clone-example.ps1 -Product '${{ matrix.product }}'
           -Example '${{ matrix.example }}' -ExpectDownload $true
+          -Expect '${{ matrix.expect }}'
 
       # The key follows the link, so a new free file gets a new entry, and
       # the same file is kept once rather than once a run.
@@ -87,9 +91,12 @@ jobs:
           - product: device-detection
             example: fiftyone.devicedetection.examples.console.GettingStartedOnPrem
             file: cxx/data/device-detection/51Degrees-LiteV4.1.hash
+            expect: ''
           - product: ip-intelligence
             example: fiftyone.ipintelligence.examples.console.GettingStartedOnPrem
             file: cxx/data/ip-intelligence/51Degrees-LiteV41.ipi
+            # Each IP Intelligence value is printed with its weighting.
+            expect: '(weighting '
     runs-on: ${{ matrix.os }}
     steps:
       - name: Clone the repository with its submodules
@@ -122,3 +129,4 @@ jobs:
         run: >-
           ./ci/run-fresh-clone-example.ps1 -Product '${{ matrix.product }}'
           -Example '${{ matrix.example }}' -ExpectDownload $false
+          -Expect '${{ matrix.expect }}'

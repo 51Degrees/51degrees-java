@@ -3,13 +3,16 @@ param (
     [Parameter(Mandatory)][string]$Example,
     # True where the clone holds only the data file's link, so the example
     # has to download the file. False where the file is already in place.
-    [Parameter(Mandatory)][bool]$ExpectDownload
+    [Parameter(Mandatory)][bool]$ExpectDownload,
+    # Text the output must hold, such as the weighting the IP Intelligence
+    # example prints with each value. Empty when there is none.
+    [string]$Expect = ''
 )
 
 # Runs a product's console example jar from the repository root with no
 # settings, as AGENTS.md's "Run the examples" does, and fails unless it ends
-# with exit code 0, prints results, and downloads its data file exactly when
-# expected.
+# with exit code 0, prints results and any expected text, and downloads its
+# data file exactly when expected.
 
 $jar = Get-ChildItem "examples/$Product/console/target" `
     -Filter '*-jar-with-dependencies.jar' | Select-Object -First 1
@@ -37,6 +40,10 @@ if (-not $ExpectDownload -and $downloaded) {
 }
 if ($text -notmatch 'Results:') {
     Write-Output '::error::The example printed no results.'
+    $failed = $true
+}
+if ($Expect -and -not $text.Contains($Expect)) {
+    Write-Output "::error::The example's output does not hold '$Expect'."
     $failed = $true
 }
 if ($failed) {
