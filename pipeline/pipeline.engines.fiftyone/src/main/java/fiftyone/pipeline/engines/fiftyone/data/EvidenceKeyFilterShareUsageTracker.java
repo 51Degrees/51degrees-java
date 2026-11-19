@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.engines.fiftyone.data;
 
+import fiftyone.pipeline.core.data.EvidenceKeyFilter;
 import fiftyone.pipeline.engines.fiftyone.trackers.ShareUsageTracker;
 
 import java.util.List;
@@ -92,11 +93,20 @@ public class EvidenceKeyFilterShareUsageTracker extends EvidenceKeyFilterShareUs
 
     @Override
     public boolean include(String key) {
+        return include(key, null);
+    }
+
+    /**
+     * As the shared values, but never the session id or sequence, which
+     * change on every request of a session.
+     */
+    @Override
+    public boolean include(String key, EvidenceKeyFilter pipelineUses) {
         if(key.equalsIgnoreCase(EVIDENCE_SESSIONID) ||
             key.equalsIgnoreCase(EVIDENCE_SEQUENCE)) {
             return false;
         }
 
-        return super.include(key);
+        return super.include(key, pipelineUses);
     }
 }
