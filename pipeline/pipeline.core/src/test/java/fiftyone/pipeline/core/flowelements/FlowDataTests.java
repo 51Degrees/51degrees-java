@@ -135,6 +135,31 @@ public class FlowDataTests {
     }
 
     @Test
+    public void FlowData_AddDataString_GetDataStringOtherCase() {
+        flowData.process();
+        ElementData data = flowData.getOrAdd(
+            "device",
+            (FlowElement.DataFactory<ElementData>) flowData -> new TestElementData(mock(Logger.class), flowData));
+
+        assertEquals(data, flowData.get("Device"));
+        assertEquals(data, flowData.get("DEVICE"));
+    }
+
+    @Test
+    public void FlowData_GetOrAddOtherCase_SameData() {
+        flowData.process();
+        ElementData data = flowData.getOrAdd(
+            "device",
+            (FlowElement.DataFactory<ElementData>) flowData -> new TestElementData(mock(Logger.class), flowData));
+
+        ElementData again = flowData.getOrAdd(
+            "Device",
+            (FlowElement.DataFactory<ElementData>) flowData -> new TestElementData(mock(Logger.class), flowData));
+
+        assertSame(data, again);
+    }
+
+    @Test
     public void FlowData_AddDataString_GetDataTypedKey() {
         flowData.process();
         String key = "key";

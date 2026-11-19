@@ -29,6 +29,7 @@ import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
 import fiftyone.pipeline.engines.fiftyone.flowelements.SequenceElement;
 import fiftyone.pipeline.engines.fiftyone.flowelements.SetHeadersElement;
+import fiftyone.pipeline.engines.fiftyone.flowelements.ShareUsageElement;
 import fiftyone.pipeline.javascriptbuilder.flowelements.JavaScriptBuilderElement;
 import fiftyone.pipeline.jsonbuilder.flowelements.JsonBuilderElement;
 import org.junit.Test;
@@ -51,6 +52,11 @@ import static org.junit.Assert.assertTrue;
 public class AddedElementPositionTests {
 
     private static final String MULTIPLY_BY = "MultiplyByElement";
+
+    private static final String SHARE_USAGE_BUILDER = "ShareUsage";
+
+    private static final String SHARE_USAGE =
+        ShareUsageElement.class.getSimpleName();
 
     private static final String JAVASCRIPT_BUILDER =
         JavaScriptBuilderElement.class.getSimpleName();
@@ -131,5 +137,22 @@ public class AddedElementPositionTests {
 
         assertEquals(names.toString(), 5, names.size());
         assertPositions(names);
+    }
+
+    /**
+     * With the usage sharing element configured last, each added element
+     * goes before it, so usage sharing stays the last Flow Element, as it
+     * must be.
+     */
+    @Test
+    public void AddedElements_GoBeforeAConfiguredUsageSharingElement()
+        throws Exception {
+        List<String> names = namesBuiltFrom(
+            multiplyBy(), element(SHARE_USAGE_BUILDER));
+
+        assertEquals(names.toString(), 6, names.size());
+        assertEquals("The usage sharing element should be last. " + names,
+            names.size() - 1, names.indexOf(SHARE_USAGE));
+        assertPositions(names.subList(0, names.size() - 1));
     }
 }

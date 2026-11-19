@@ -762,9 +762,9 @@ public class DataUpdateServiceTests {
             }
         });
 
-        // The invalid MD5 will cause a warning to be logged so we want
-        // to ignore this
-        ignoreWranings = 1;
+        // The invalid MD5 is the Errors table integrity row, logged once
+        // at Error, so it is ignored in cleanup.
+        ignoreErrors = 1;
 
         OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();

@@ -133,9 +133,15 @@ public class CreatorContextDemoServer {
 
     public static void main(String[] args) throws Exception {
         if (RESOURCE == null) {
-            System.err.println(
-                "Set _51DEGREES_RESOURCE_KEY to the resource key of the page.");
-            System.exit(1);
+            System.out.println("This demo calls the 51Degrees cloud " +
+                "service, which needs a resource key, and none is set.");
+            System.out.println("Set the _51DEGREES_RESOURCE_KEY environment " +
+                "variable to the resource key of the page, and run the demo " +
+                "again.");
+            System.out.println("Create a resource key at " +
+                "https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=pipeline.developer-examples.fodid-creatorcontextdemoserver.java&utm_term=no-resource-key");
+            Main.writeFindOutMore(System.out);
+            return;
         }
         if (LICENCE == null) {
             // Only an account that holds licence keys needs one to

@@ -1,9 +1,11 @@
 param (
     [Parameter(Mandatory)][string]$Product,
     [Parameter(Mandatory)][string]$Example,
-    # True where the clone holds only the data file's link, so the example
-    # has to download the file. False where the file is already in place.
-    [Parameter(Mandatory)][bool]$ExpectDownload,
+    # Given where the clone holds only the data file's link, so the example
+    # has to download the file. Left out, or given as -ExpectDownload:$false,
+    # where the file is already in place. A switch, so that it works the same
+    # with pwsh -File, which passes every other value as a string.
+    [switch]$ExpectDownload,
     # Text the output must hold, such as the weighting the IP Intelligence
     # example prints with each value. Empty when there is none.
     [string]$Expect = ''

@@ -33,6 +33,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -290,5 +291,35 @@ public class ShareUsageTrackerTests {
             }
         }
         return result.build();
+    }
+
+    /**
+     * A repeat less than the interval after the entry was shared is not
+     * shared and leaves the entry's time as it was, so the next share comes
+     * one interval after the last one however often the evidence is seen. A
+     * repeat the interval or more after it is shared, and its time is
+     * stored.
+     */
+    @Test
+    public void ShareUsageTracker_Match_TimeChangesOnlyWhenShared() {
+        ShareUsageTracker tracker = new ShareUsageTracker(
+            new CacheConfiguration(new LruPutCache.Builder(), 1000),
+            NO_EXPIRY_INTERVAL_MILLIS,
+            evidenceKeyFilter);
+        long now = System.currentTimeMillis();
+
+        Date recent = new Date(now - NO_EXPIRY_INTERVAL_MILLIS / 2);
+        long sharedAt = recent.getTime();
+        assertFalse(tracker.match(data, recent),
+            "A repeat inside the interval was shared.");
+        assertEquals(sharedAt, recent.getTime(),
+            "A repeat that was not shared changed the entry's time.");
+
+        Date due = new Date(now - NO_EXPIRY_INTERVAL_MILLIS);
+        long before = System.currentTimeMillis();
+        assertTrue(tracker.match(data, due),
+            "A repeat one interval after the entry was shared was not shared.");
+        assertTrue(due.getTime() >= before,
+            "Sharing a repeat did not store the time it was shared.");
     }
 }
