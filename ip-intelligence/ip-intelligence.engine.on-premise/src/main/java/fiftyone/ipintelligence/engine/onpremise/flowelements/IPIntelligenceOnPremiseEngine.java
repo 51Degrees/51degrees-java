@@ -63,6 +63,14 @@ public class IPIntelligenceOnPremiseEngine
     private final Random rand = new Random();
 
     /**
+     * Held across each refresh of the data, so that refreshes of this engine
+     * run one at a time, whichever thread or service starts them. The native
+     * engine does not guard against two refreshes at once. Processing does
+     * not take it.
+     */
+    private final Object refreshLock = new Object();
+
+    /**
      * Case insensitive map from each property name the engine was built with
      * to its required property index, which is the place of the name in that
      * list, the first where a name is given more than once, as the native
@@ -326,45 +334,49 @@ public class IPIntelligenceOnPremiseEngine
 
     @Override
     public void refreshData(String dataFileIdentifier) {
-        AspectEngineDataFile dataFile = getDataFiles().get(0);
+        synchronized (refreshLock) {
+            AspectEngineDataFile dataFile = getDataFiles().get(0);
 
-        if (Objects.isNull(engine)) {
-            if (notFileExists(dataFile.getDataFilePath())) {
-                throw new IllegalStateException("Data file must exist for refresh data " + dataFile.getDataFilePath());
-            }
-            // sometimes the engine can't read data file, but succeeds on retry
-            int tries = 0;
-            String lastMessage = "";
-            while (tries < 10) {
-                try {
-                engine = new EngineIpiSwig(dataFile.getDataFilePath(), config, propertiesConfigSwig);
-                } catch (Throwable t) {
-                    lastMessage = t.getMessage();
-                    logger.warn("Creation of Swig Engine failed: " + lastMessage);
-                    tries++;
+            if (Objects.isNull(engine)) {
+                if (notFileExists(dataFile.getDataFilePath())) {
+                    throw new IllegalStateException("Data file must exist for refresh data " + dataFile.getDataFilePath());
                 }
-                if (Objects.nonNull(engine)){
-                    break;
+                // sometimes the engine can't read data file, but succeeds on retry
+                int tries = 0;
+                String lastMessage = "";
+                while (tries < 10) {
+                    try {
+                    engine = new EngineIpiSwig(dataFile.getDataFilePath(), config, propertiesConfigSwig);
+                    } catch (Throwable t) {
+                        lastMessage = t.getMessage();
+                        logger.warn("Creation of Swig Engine failed: " + lastMessage);
+                        tries++;
+                    }
+                    if (Objects.nonNull(engine)){
+                        break;
+                    }
                 }
+                if (tries >= 10) {
+                    throw new IllegalStateException("Failed to create SwigEngine after " + tries +
+                            " retries, last exception was " + lastMessage);
+                }
+            } else {
+                engine.refreshData();
             }
-            if (tries >= 10) {
-                throw new IllegalStateException("Failed to create SwigEngine after " + tries +
-                        " retries, last exception was " + lastMessage);
-            }
-        } else {
-            engine.refreshData();
+            setEngineMetaData();
         }
-        setEngineMetaData();
     }
 
     @Override
     public void refreshData(String dataFileIdentifier, byte[] data) {
-        if (engine == null) {
-            engine = new EngineIpiSwig(data, config, propertiesConfigSwig);
-        } else {
-            engine.refreshData(data);
+        synchronized (refreshLock) {
+            if (engine == null) {
+                engine = new EngineIpiSwig(data, config, propertiesConfigSwig);
+            } else {
+                engine.refreshData(data);
+            }
+            setEngineMetaData();
         }
-        setEngineMetaData();
     }
 
     @Override
