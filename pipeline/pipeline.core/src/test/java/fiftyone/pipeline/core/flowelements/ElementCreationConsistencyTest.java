@@ -50,8 +50,10 @@ import static org.junit.Assert.assertTrue;
  *
  * The test reads the main source of every module below the repository
  * root. A concrete class that extends one of the Flow Element base classes
- * is a Flow Element. Each must be made by a class whose name ends in
- * "Builder", and no other main code may make one with {@code new}.
+ * is a Flow Element, unless its name ends in "Base", which marks a base
+ * class that released code may still make directly. Each Flow Element must
+ * be made by a class whose name ends in "Builder", and no other main code
+ * may make one with {@code new}.
  */
 public class ElementCreationConsistencyTest {
 
@@ -107,6 +109,7 @@ public class ElementCreationConsistencyTest {
         for (String source : sources.values()) {
             Matcher matcher = CLASS.matcher(source);
             if (matcher.find() && matcher.group(1).contains("abstract") == false &&
+                matcher.group(2).endsWith("Base") == false &&
                 ELEMENT_BASE.matcher(matcher.group(3)).find()) {
                 elements.add(matcher.group(2));
             }
