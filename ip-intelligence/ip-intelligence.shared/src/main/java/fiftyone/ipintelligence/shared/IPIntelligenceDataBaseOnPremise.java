@@ -47,6 +47,12 @@ import static fiftyone.pipeline.util.Types.getPrimitiveTypeMap;
 
 /**
  * Base class used for all 51Degrees on-premise IP Intelligence results classes.
+ * <p>
+ * An instance reads its values from native results, and reading a value
+ * writes into them, so an instance is not safe to use from several threads
+ * at once. The caller is responsible for thread-safe access, for example by
+ * wrapping its calls in a lock of its own. See the
+ * <a href="https://github.com/51Degrees/specifications/blob/d79bbe3b2aef86273570742f6b660f29bfe72816/pipeline-specification/features/thread-safety.md#L196-L221">thread safety specification</a>.
  */
 public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceDataBase {
 
@@ -71,21 +77,6 @@ public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceData
         MissingPropertyService missingPropertyService) {
         super(logger, flowData, engine, missingPropertyService);
         primitiveTypes = getPrimitiveTypeMap();
-    }
-
-    /**
-     * The lock that every read from the underlying results holds, so that
-     * only one thread at a time reads from them. A subclass holds it in each
-     * method that reads the results and can be called without going through
-     * {@link #tryGetValue(String, Class, Class[])}. The lock is reentrant, so
-     * a read that calls another read holds it once more. See the
-     * <a href="https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/features/thread-safety.md#L61">thread safety specification</a>:
-     * "Such Element Data MUST let only one thread at a time read from its
-     * results, for example by holding a lock for each read".
-     * @return the lock for reads from the results
-     */
-    protected final Object getResultsLock() {
-        return getLock;
     }
 
     /**
@@ -296,11 +287,7 @@ public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceData
             // If the complete set of values has not been populated
             // then we don't want to retrieve values for all
             // properties so just get the one we want.
-            boolean available;
-            synchronized (getLock) {
-                available = propertyIsAvailable(key);
-            }
-            if (available) {
+            if (propertyIsAvailable(key)) {
                 if (type.equals(Object.class)) {
                     type = (Class<T>)AspectPropertyValue.class;
                     parameterisedTypes = toWeightedListType(getPropertyType(key), false);

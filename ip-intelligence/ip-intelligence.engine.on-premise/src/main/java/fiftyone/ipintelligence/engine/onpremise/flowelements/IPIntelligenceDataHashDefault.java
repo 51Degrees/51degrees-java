@@ -75,6 +75,12 @@ public class IPIntelligenceDataHashDefault
     private final IPIntelligenceOnPremiseEngine ipiEngine;
 
     /**
+     * Held for every read from {@link #resultsList}, so that only one thread
+     * at a time reads from the native results.
+     */
+    private final Object resultsLock = new Object();
+
+    /**
      * Constructs a new instance.
      * @param logger used for logging
      * @param flowData the {@link FlowData} instance this element data will be
@@ -147,14 +153,12 @@ public class IPIntelligenceDataHashDefault
         if (indexOf(propertyName) != null) {
             return resultsList.isEmpty() == false;
         }
-        synchronized (getResultsLock()) {
-            for (ResultsIpiSwig results : resultsList) {
-                if (results.containsProperty(propertyName)) {
-                    return true;
-                }
+        for (ResultsIpiSwig results : resultsList) {
+            if (results.containsProperty(propertyName)) {
+                return true;
             }
-            return false;
         }
+        return false;
     }
 
     private static <
@@ -187,21 +191,11 @@ public class IPIntelligenceDataHashDefault
         }
     }
 
-    /**
-     * Get the values of a property as a weighted list. This is public, so it
-     * holds the results lock itself, as every read from the native results
-     * does. See the
-     * <a href="https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/features/thread-safety.md#L61">thread safety specification</a>.
-     * @param propertyName name of the property to get values for
-     * @param parametrizedTypes types parametrizing the value, starting with
-     *                          {@link List}
-     * @return values as a list
-     */
     @Override
     public AspectPropertyValue<List<?>> getValues(String propertyName,
                                                   Class<?>[] parametrizedTypes) {
         checkState();
-        synchronized (getResultsLock()) {
+        synchronized (resultsLock) {
             return readValues(propertyName, parametrizedTypes);
         }
     }
@@ -430,7 +424,7 @@ public class IPIntelligenceDataHashDefault
         Class<T> type,
         Class<?>... parameterisedTypes) {
         checkState();
-        synchronized (getResultsLock()) {
+        synchronized (resultsLock) {
             return super.tryGetValue(key, type, parameterisedTypes);
         }
     }
