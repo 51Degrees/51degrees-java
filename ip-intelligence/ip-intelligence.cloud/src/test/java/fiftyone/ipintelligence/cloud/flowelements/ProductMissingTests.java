@@ -23,7 +23,6 @@
 package fiftyone.ipintelligence.cloud.flowelements;
 
 import fiftyone.ipintelligence.cloud.data.IPIntelligenceDataCloud;
-import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
 import fiftyone.pipeline.core.data.AccessiblePropertyMetaData.ProductMetaData;
 import fiftyone.pipeline.core.data.AccessiblePropertyMetaData.PropertyMetaData;
@@ -51,7 +50,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -99,19 +97,64 @@ public class ProductMissingTests {
 
     /**
      * With the IP Intelligence product included, a response that holds no
-     * part for it leaves the element data without values and throws
-     * nothing, as the Processing section of the cloud aspect engine
-     * specification says.
+     * part for it raises nothing while processing, and reading a property
+     * throws PropertyMissingException, as for any property the response
+     * leaves out.
      */
     @Test
-    public void ProductPresent_ResponseWithoutPart_NoValues()
+    public void ProductPresent_ResponseWithoutPart_PropertyIsMissing()
         throws Exception {
-        try (IPIntelligenceCloudEngine engine = buildEngine("ip", "registeredname")) {
+        try (IPIntelligenceCloudEngine engine =
+            buildEngine("ip", "registeredname")) {
             IPIntelligenceDataCloud data = process(
                 engine,
                 "{ 'device': { 'hardwarevendor': 'Example' }, " +
                     "'javascriptProperties': [] }");
+            try {
+                data.getRegisteredName();
+                fail("A PropertyMissingException should have been thrown");
+            } catch (PropertyMissingException e) {
+                // The response held nothing for the product.
+            }
+        }
+    }
+
+    /**
+     * A property the response's part leaves out has no entry, so reading it
+     * throws PropertyMissingException rather than giving no value.
+     */
+    @Test
+    public void ProductPresent_PropertyLeftOut_PropertyIsMissing()
+        throws Exception {
+        try (IPIntelligenceCloudEngine engine =
+            buildEngine("ip", "registeredname")) {
+            IPIntelligenceDataCloud data = process(
+                engine,
+                "{ 'ip': { 'another': 'Example' }, " +
+                    "'javascriptProperties': [] }");
+            try {
+                data.getRegisteredName();
+                fail("A PropertyMissingException should have been thrown");
+            } catch (PropertyMissingException e) {
+                // The response's part did not hold the property.
+            }
+        }
+    }
+
+    /**
+     * A null with no reason beside it is no value with the message Unknown.
+     */
+    @Test
+    public void NullWithoutReason_MessageIsUnknown() throws Exception {
+        try (IPIntelligenceCloudEngine engine =
+            buildEngine("ip", "registeredname")) {
+            IPIntelligenceDataCloud data = process(
+                engine,
+                "{ 'ip': { 'registeredname': null }, " +
+                    "'javascriptProperties': [] }");
             assertFalse(data.getRegisteredName().hasValue());
+            assertEquals("Unknown",
+                data.getRegisteredName().getNoValueMessage());
         }
     }
 
@@ -203,20 +246,14 @@ public class ProductMissingTests {
     private IPIntelligenceDataCloud process(
         IPIntelligenceCloudEngine engine,
         String response) {
-        CloudRequestData cloudData = mock(CloudRequestData.class);
-        when(cloudData.getJsonResponse()).thenReturn(response);
-
         FlowData flowData = mock(FlowData.class);
-        when(flowData.getFromElement(any(CloudRequestEngine.class)))
-            .thenReturn(cloudData);
-
         IPIntelligenceDataCloud data = new IPIntelligenceDataCloudInternal(
             loggerFactory.getLogger(
                 IPIntelligenceDataCloud.class.getSimpleName()),
             flowData,
             engine,
             MissingPropertyServiceDefault.getInstance());
-        engine.processEngine(flowData, data);
+        engine.processCloudEngine(flowData, data, response);
         return data;
     }
 

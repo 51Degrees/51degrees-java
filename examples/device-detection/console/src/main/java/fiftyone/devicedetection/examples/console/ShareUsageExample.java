@@ -22,6 +22,7 @@
 
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
@@ -75,6 +76,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * identifier before running this example.</p>
  */
 public class ShareUsageExample {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-devicedetection-examples-console-shareusageexample.java";
+
     static final Logger logger = LoggerFactory.getLogger(ShareUsageExample.class);
 
     // Evidence file with 20,000 examples, from the data repository in
@@ -105,6 +112,8 @@ public class ShareUsageExample {
 
         File evidenceFile = DataFileHelper.findDataFile(HEADER_EVIDENCE_YML);
         run(Files.newInputStream(evidenceFile.toPath()));
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.CLOUD_REPOSITORIES);
     }
 
     /**

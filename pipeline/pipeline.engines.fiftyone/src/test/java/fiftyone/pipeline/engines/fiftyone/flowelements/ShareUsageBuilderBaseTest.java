@@ -22,19 +22,19 @@
 
 package fiftyone.pipeline.engines.fiftyone.flowelements;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ShareUsageBuilderBaseTest {
 
     ShareUsageBuilderBase<ShareUsageBase> base;
 
-    @Before
+    @BeforeEach
     public void setUp(){
         base = new ShareUsageBuilderBase<ShareUsageBase>(null, null) {
             @Override
@@ -78,9 +78,14 @@ public class ShareUsageBuilderBaseTest {
 
     @Test
     public void setBlockedHttpHeaders() {
+        // The text setter adds to the list, as its Javadoc says, where the
+        // list setter replaces it.
         base.setBlockedHttpHeaders("g, h, i");
         base.setBlockedHttpHeaders("a, b, c");
-        assertEquals(3, base.blockedHttpHeaders.size());
+        assertEquals(6, base.blockedHttpHeaders.size());
+        assertTrue(base.blockedHttpHeaders.contains("g"));
+        assertTrue(base.blockedHttpHeaders.contains("h"));
+        assertTrue(base.blockedHttpHeaders.contains("i"));
         assertTrue(base.blockedHttpHeaders.contains("a"));
         assertTrue(base.blockedHttpHeaders.contains("b"));
         assertTrue(base.blockedHttpHeaders.contains("c"));
@@ -111,22 +116,30 @@ public class ShareUsageBuilderBaseTest {
 
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void setIgnoreFlowDataEvidenceFilter1() {
-        base.setIgnoreFlowDataEvidenceFilter("");
+        assertThrows(IllegalArgumentException.class, () -> {
+            base.setIgnoreFlowDataEvidenceFilter("");
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void setIgnoreFlowDataEvidenceFilter2() {
-        base.setIgnoreFlowDataEvidenceFilter("hello");
+        assertThrows(IllegalArgumentException.class, () -> {
+            base.setIgnoreFlowDataEvidenceFilter("hello");
+        });
     }
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void setIgnoreFlowDataEvidenceFilter2a() {
-        base.setIgnoreFlowDataEvidenceFilter("hello, one: two");
+        assertThrows(IllegalArgumentException.class, () -> {
+            base.setIgnoreFlowDataEvidenceFilter("hello, one: two");
+        });
     }
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void setIgnoreFlowDataEvidenceFilter2b() {
-        base.setIgnoreFlowDataEvidenceFilter("hello : world, one");
+        assertThrows(IllegalArgumentException.class, () -> {
+            base.setIgnoreFlowDataEvidenceFilter("hello : world, one");
+        });
     }
     @Test
     public void setIgnoreFlowDataEvidenceFilter3() {
@@ -143,13 +156,17 @@ public class ShareUsageBuilderBaseTest {
         base.setSharePercentage(0.1);
         assertEquals(0.1, base.sharePercentage, 0.00001);
     }
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void setSharePercentage2() {
-        base.setSharePercentage(-0.1);
+        assertThrows(IllegalArgumentException.class, () -> {
+            base.setSharePercentage(-0.1);
+        });
     }
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void setSharePercentage3() {
-        base.setSharePercentage(1.1);
+        assertThrows(IllegalArgumentException.class, () -> {
+            base.setSharePercentage(1.1);
+        });
     }
 
     @Test
@@ -157,26 +174,34 @@ public class ShareUsageBuilderBaseTest {
         base.setMinimumEntriesPerMessage(50);
         assertEquals(50, base.minimumEntriesPerMessage);
     }
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void setMinimumEntriesPerMessage2() {
-        base.setMinimumEntriesPerMessage(0);
+        assertThrows(IllegalArgumentException.class, () -> {
+            base.setMinimumEntriesPerMessage(0);
+        });
     }
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void setMinimumEntriesPerMessage3() {
-        base.setMinimumEntriesPerMessage(-1);
+        assertThrows(IllegalArgumentException.class, () -> {
+            base.setMinimumEntriesPerMessage(-1);
+        });
     }
     @Test
     public void setMaximumQueueSize() {
         base.setMaximumQueueSize(200);
         assertEquals(200, base.maximumQueueSize);
     }
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void setMaximumQueueSize1() {
-        base.setMaximumQueueSize(0);
+        assertThrows(IllegalArgumentException.class, () -> {
+            base.setMaximumQueueSize(0);
+        });
     }
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void setMaximumQueueSize2() {
-        base.setMaximumQueueSize(-1);
+        assertThrows(IllegalArgumentException.class, () -> {
+            base.setMaximumQueueSize(-1);
+        });
     }
 
     @Test
@@ -190,9 +215,11 @@ public class ShareUsageBuilderBaseTest {
         base.setAddTimeoutMillis(1000);
         assertEquals(1000, base.addTimeout);
     }
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void setAddTimeoutMillis2() {
-        base.setAddTimeoutMillis(-1);
+        assertThrows(IllegalArgumentException.class, () -> {
+            base.setAddTimeoutMillis(-1);
+        });
     }
 
     @Test
@@ -200,20 +227,24 @@ public class ShareUsageBuilderBaseTest {
         base.setTakeTimeoutMillis(1000);
         assertEquals(1000, base.takeTimeout);
     }
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void setTakeTimeoutMillis2() {
-        base.setTakeTimeoutMillis(-1);
+        assertThrows(IllegalArgumentException.class, () -> {
+            base.setTakeTimeoutMillis(-1);
+        });
     }
 
     @Test
     public void setShareUsageUrl() {
         base.setShareUsageUrl("https://dog-food.com");
-        assertEquals(base.shareUsageUrl, "https://dog-food.com");
+        assertEquals("https://dog-food.com", base.shareUsageUrl);
 
     }
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void setShareUsageUrl1() {
-        base.setShareUsageUrl("dog food");
+        assertThrows(IllegalArgumentException.class, () -> {
+            base.setShareUsageUrl("dog food");
+        });
     }
 
     @Test
@@ -221,11 +252,12 @@ public class ShareUsageBuilderBaseTest {
         base.setSessionCookieName("test");
         assertEquals("test", base.sessionCookieName);
     }
-    @Test (expected = IllegalArgumentException.class)
+    @Test
     public void setSessionCookieName1() {
-        // illegal name
-        base.setSessionCookieName("te st");
-        assertEquals("test", base.sessionCookieName);
+        assertThrows(IllegalArgumentException.class, () -> {
+            // illegal name
+            base.setSessionCookieName("te st");
+        });
     }
 
     @Test
@@ -233,9 +265,12 @@ public class ShareUsageBuilderBaseTest {
         base.setRepeatEvidenceIntervalMinutes(1);
         assertEquals(1, base.repeatEvidenceInterval);
     }
-    @Test (expected = IllegalArgumentException.class)
-    public void setRepeatEvidenceIntervalMinutes1() {
+    @Test
+    public void setRepeatEvidenceIntervalMinutes_Negative_Kept() {
+        // A negative interval is not refused. It shares every repeat, as 0
+        // does.
         base.setRepeatEvidenceIntervalMinutes(-1);
+        assertEquals(-1, base.repeatEvidenceInterval);
     }
 
     @Test

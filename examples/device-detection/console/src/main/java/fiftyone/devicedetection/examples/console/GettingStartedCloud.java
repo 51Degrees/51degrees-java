@@ -22,6 +22,7 @@
 
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.devicedetection.DeviceDetectionPipelineBuilder;
 import fiftyone.devicedetection.examples.shared.KeyHelper;
 import fiftyone.devicedetection.examples.shared.EvidenceHelper;
@@ -53,19 +54,40 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  */
 @SuppressWarnings("DuplicatedCode")
 public class GettingStartedCloud {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-devicedetection-examples-console-gettingstartedcloud.java";
+
     private static final Logger logger = LoggerFactory.getLogger(GettingStartedCloud.class);
 
     /**
-     * The resource key can be supplied as an argument to this program or as an environment
-     * variable or as a Java system property called "TestResourceKey".
+     * The resource key can be supplied as an argument to this program, or
+     * as an environment variable or Java system property called
+     * "_51DEGREES_RESOURCE_KEY", or the older "TestResourceKey". With none,
+     * the example says how to get one and ends.
      */
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
-        String resourceKey = args.length > 0 ? args[0]: null;
+        String resourceKey = KeyHelper.findResourceKey(
+                args.length > 0 ? args[0] : null,
+                KeyHelper.RESOURCE_KEY_VARIABLE,
+                KeyHelper.TEST_RESOURCE_KEY);
+        if (resourceKey == null) {
+            KeyHelper.writeNoResourceKey(System.out, EXAMPLE_TAG,
+                    KeyHelper.RESOURCE_KEY_VARIABLE,
+                    KeyHelper.FREE_PROPERTIES_CONFIGURATION);
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES);
+            return;
+        }
 
         // prepare 'evidence' for use in pipeline (see below)
         List<Map<String, String>> evidence = EvidenceHelper.setUpEvidence();
         run(resourceKey, evidence, System.out);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.CLOUD_REPOSITORIES);
     }
 
     /**

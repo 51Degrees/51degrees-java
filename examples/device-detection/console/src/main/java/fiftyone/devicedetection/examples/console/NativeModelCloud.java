@@ -22,6 +22,8 @@
 
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
+import fiftyone.devicedetection.examples.shared.KeyHelper;
 import fiftyone.devicedetection.cloud.data.MultiDeviceDataCloud;
 import fiftyone.devicedetection.cloud.flowelements.HardwareProfileCloudEngineBuilder;
 import fiftyone.devicedetection.shared.Constants;
@@ -41,6 +43,12 @@ import static fiftyone.devicedetection.examples.shared.KeyHelper.getOrSetSuperRe
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
 public class NativeModelCloud {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-devicedetection-examples-console-nativemodelcloud.java";
+
     // Example values to use when looking up device details from native model names.
     private static final String NATIVE_MODEL_1 = "SC-03L";
     private static final String NATIVE_MODEL_2 = "iPhone11,8";
@@ -48,7 +56,17 @@ public class NativeModelCloud {
 
     public static void main (String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
-        String resourceKey = args.length > 0 ? args[0] : null;
+        String resourceKey = KeyHelper.findResourceKey(
+                args.length > 0 ? args[0] : null,
+                NATIVE_MODEL_EXAMPLE_RESOURCE_KEY_NAME);
+        if (resourceKey == null) {
+            KeyHelper.writeNoResourceKey(System.out, EXAMPLE_TAG,
+                    NATIVE_MODEL_EXAMPLE_RESOURCE_KEY_NAME,
+                    KeyHelper.PAID_PROPERTIES_CONFIGURATION);
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES);
+            return;
+        }
         run(resourceKey, System.out);
     }
 
@@ -90,6 +108,10 @@ public class NativeModelCloud {
                     // Repeat for an alternative native model name.
                     analyseNativeModel(NATIVE_MODEL_2, pipeline, output);
             }
+            // The writer closes the stream it was given, so the section is
+            // written before it.
+            FindOutMore.write(output, EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES);
         }
     }
 
