@@ -131,7 +131,9 @@ public interface DataUpdateService extends Closeable, PipelineService {
         // An operation could not be completed within the expected time.
         AUTO_UPDATE_TIMEOUT,
         // The data file checking for updates has no temporary file path.
-        AUTO_UPDATE_TEMP_PATH_NOT_SET
+        AUTO_UPDATE_TEMP_PATH_NOT_SET,
+        // A check failed with an error that no other status covers.
+        AUTO_UPDATE_UNKNOWN_ERROR
     }
 
     class DataUpdateCompleteArgs {
