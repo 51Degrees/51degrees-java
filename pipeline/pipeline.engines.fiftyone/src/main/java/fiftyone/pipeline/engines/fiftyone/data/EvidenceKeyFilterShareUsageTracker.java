@@ -69,7 +69,8 @@ public class EvidenceKeyFilterShareUsageTracker extends EvidenceKeyFilterShareUs
      * @param sessionCookieName the name of the cookie that contains the session
      *                          id
      * @param shareAllEvidence if true then all Evidence is included, apart from
-     *                         the keys that are never shared
+     *                         the keys that are never shared and the cookies
+     *                         other than the 51Degrees ones
      * @param shareAllQueryStringParameters if true then all query string
      *                                      parameters are included
      */

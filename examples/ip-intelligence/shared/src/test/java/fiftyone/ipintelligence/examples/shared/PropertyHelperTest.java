@@ -22,11 +22,15 @@
 
 package fiftyone.ipintelligence.examples.shared;
 
+import fiftyone.pipeline.core.data.IWeightedValue;
+import fiftyone.pipeline.core.data.WeightedValue;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.*;
@@ -59,5 +63,26 @@ public class PropertyHelperTest {
     public void testAsNoValue() {
         AspectPropertyValue<List<Boolean>> test = new AspectPropertyValueDefault<>();
         assertTrue(PropertyHelper.asString(test).startsWith("Unknown"));
+    }
+
+    /**
+     * Each weighted value is shown with its weighting, as the IP
+     * Intelligence examples must show both. A raw weighting of 65535 is a
+     * weighting of 1.
+     */
+    @Test
+    public void testWeightedValuesShowTheirWeighting() {
+        AspectPropertyValue<List<IWeightedValue<String>>> one =
+            new AspectPropertyValueDefault<>(Collections.singletonList(
+                new WeightedValue<>(65535, "Japan")));
+        assertEquals("Japan (weighting 1.00)", PropertyHelper.asString(one));
+
+        AspectPropertyValue<List<IWeightedValue<String>>> two =
+            new AspectPropertyValueDefault<>(Arrays.asList(
+                new WeightedValue<>(49151, "Tokyo"),
+                new WeightedValue<>(16384, "Osaka")));
+        assertEquals(
+            "Tokyo (weighting 0.75), Osaka (weighting 0.25)",
+            PropertyHelper.asString(two));
     }
 }

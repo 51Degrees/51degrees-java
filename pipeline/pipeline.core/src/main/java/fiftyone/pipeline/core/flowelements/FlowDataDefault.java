@@ -33,6 +33,7 @@ import org.slf4j.Logger;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static fiftyone.pipeline.util.Check.getNotNull;
 
@@ -46,11 +47,21 @@ class FlowDataDefault implements FlowData {
 
     private final Logger logger;
 
-    private final Object lock = new Object();
 
     private final PipelineInternal pipeline;
 
+    /**
+     * The errors added. While a parallel group runs, its members add their
+     * errors under the lock on this collection, so they appear in the order
+     * the members add them. At every other time an add takes no lock.
+     */
     private final Collection<FlowError> errors;
+
+    /**
+     * The parallel groups running on this Flow Data, so that errors are
+     * added under the lock only while one runs.
+     */
+    private final AtomicInteger groupsRunning = new AtomicInteger(0);
 
     private final TypedKeyMap data;
 
@@ -100,6 +111,20 @@ class FlowDataDefault implements FlowData {
         stop = true;
     }
 
+    /**
+     * Called by a parallel group before its members start.
+     */
+    void groupStarted() {
+        groupsRunning.incrementAndGet();
+    }
+
+    /**
+     * Called by a parallel group once every member has stopped.
+     */
+    void groupStopped() {
+        groupsRunning.decrementAndGet();
+    }
+
     @Override
     public Pipeline getPipeline() {
         return pipeline;
@@ -112,7 +137,13 @@ class FlowDataDefault implements FlowData {
 
     @Override
     public void addError(FlowError error) {
-        errors.add(error);
+        if (groupsRunning.get() > 0) {
+            synchronized (errors) {
+                errors.add(error);
+            }
+        } else {
+            errors.add(error);
+        }
 
         if (logger.isErrorEnabled()) {
             String message = "Error occurred during processing";
@@ -281,16 +312,11 @@ class FlowDataDefault implements FlowData {
         TypedKey<ElementData> typedKey = new TypedKeyDefault<>(
             elementDataKey,
             ElementData.class);
+        // No lock. Members of a parallel group each add their own Element
+        // Data with one compare and swap, and making an instance never
+        // waits for another member.
         if (data.containsKey(elementDataKey) == false) {
-            if (pipeline.isConcurrent() == true) {
-                synchronized (this.lock) {
-                    if (data.containsKey(elementDataKey) == false) {
-                        data.put(typedKey, dataFactory.create(this));
-                    }
-                }
-            } else {
-                data.put(typedKey, dataFactory.create(this));
-            }
+            data.putIfAbsent(typedKey, dataFactory.create(this));
         }
         return (T) data.get(typedKey);
     }
@@ -304,16 +330,9 @@ class FlowDataDefault implements FlowData {
         TypedKey<Object> untypedKey = new TypedKeyDefault<>(
             key.getName(),
             Object.class);
+        // No lock, as above.
         if (data.containsKey(key) == false) {
-            if (pipeline.isConcurrent() == true) {
-                synchronized (this.lock) {
-                    if (data.containsKey(key) == false) {
-                        data.put(key, dataFactory.create(this));
-                    }
-                }
-            } else {
-                data.put(key, dataFactory.create(this));
-            }
+            data.putIfAbsent(key, dataFactory.create(this));
         }
         try {
             result = data.get(key);
@@ -355,7 +374,7 @@ class FlowDataDefault implements FlowData {
                     map.put(
                         element.getElementDataKey() + "." + property.getName(),
                         get(element.getElementDataKey())
-                            .get(property.getName().toLowerCase()).toString());
+                            .get(property.getName().toLowerCase(Locale.ROOT)).toString());
                 }
             }
         }

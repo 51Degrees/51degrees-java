@@ -94,24 +94,44 @@ public class GettingStartedWebOnPrem extends HttpServlet {
         logger.info("Running Example {}", GettingStartedWebOnPrem.class);
         warnOfOldDataFileName();
 
-        // If the data file the configuration names is not at that path, it
-        // is searched for, and the free Lite file is downloaded if missing.
+        String portEnv = System.getenv("PORT");
+        if (portEnv != null) {
+            // Automated runs (e.g. the unified Selenium suite) inject a port and have no
+            // interactive stdin, so keep the server alive by joining it instead of waiting on Enter.
+            start(Integer.parseInt(portEnv)).join();
+        } else {
+            // start Jetty with this WebApp
+            findDataFile();
+            EmbedJetty.runWebApp(getFilePath(resourceBase).getAbsolutePath(), 8081);
+        }
+    }
+
+    /**
+     * Finds the data file and starts the server with this WebApp, as main
+     * does, and returns the server, which runs until it is stopped. A test
+     * starts the example this way, with nothing set, to run it as it runs
+     * from a fresh clone.
+     * @param port the port to listen on
+     * @return the server
+     * @throws Exception if the data file cannot be found or the server
+     * cannot start
+     */
+    public static org.eclipse.jetty.server.Server start(int port) throws Exception {
+        findDataFile();
+        return EmbedJetty.startWebApp(getFilePath(resourceBase).getAbsolutePath(), port);
+    }
+
+    /**
+     * If the data file the configuration names is not at that path, it is
+     * searched for, and the free Lite file is downloaded if missing.
+     */
+    private static void findDataFile() throws Exception {
         String dataFile = PipelineOptionsFactory.getOptionsFromFile(
                 getFilePath(resourceBase) + "/WEB-INF/51Degrees-OnPrem.xml")
                 .findAndSubstitute("DeviceDetectionHashEngine", "DataFile");
         if (!new File(dataFile).exists()) {
             System.setProperty("TestDataFile",
                     DataFileHelper.getDataFileLocation(dataFile));
-        }
-
-        String portEnv = System.getenv("PORT");
-        if (portEnv != null) {
-            // Automated runs (e.g. the unified Selenium suite) inject a port and have no
-            // interactive stdin, so keep the server alive by joining it instead of waiting on Enter.
-            EmbedJetty.startWebApp(getFilePath(resourceBase).getAbsolutePath(), Integer.parseInt(portEnv)).join();
-        } else {
-            // start Jetty with this WebApp
-            EmbedJetty.runWebApp(getFilePath(resourceBase).getAbsolutePath(), 8081);
         }
     }
 
@@ -127,6 +147,9 @@ public class GettingStartedWebOnPrem extends HttpServlet {
             throws Exception {
         // the detection has already been carried out by the Filter
         // which is responsible to the lifecycle of the flowData - do NOT dispose
+        // A Flow Data cannot be used by two threads at once. Work handed to
+        // another thread or task gets the values it needs, read here on the
+        // request's thread, not the Flow Data.
         FlowData flowData = flowDataProvider.getFlowData(request);
         // retrieve the device data from the flowdata
         DeviceData device = flowData.get(DeviceData.class);

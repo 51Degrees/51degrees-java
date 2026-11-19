@@ -27,6 +27,7 @@ import fiftyone.pipeline.core.data.*;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
 import fiftyone.pipeline.core.flowelements.ParallelElements;
+import fiftyone.pipeline.core.flowelements.RunsLast;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.configuration.CacheConfiguration;
 import fiftyone.pipeline.engines.fiftyone.data.EvidenceKeyFilterShareUsage;
@@ -62,7 +63,8 @@ import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.LOST_DAT
  * @see <a href="https://github.com/51Degrees/specifications/blob/07e1fcedc2cbd83a60cd245c137747686e58da41/pipeline-specification/pipeline-elements/usage-sharing-element.md">Specification</a>
  */
 public abstract class ShareUsageBase
-    extends FlowElementBase<ElementData, ElementPropertyMetaData> {
+    extends FlowElementBase<ElementData, ElementPropertyMetaData>
+    implements RunsLast {
 
     /**
      * IP Addresses of local host device.
@@ -510,7 +512,7 @@ public abstract class ShareUsageBase
             Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT,
             Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT,
             false,
-            false);
+            Constants.SHARE_USAGE_DEFAULT_SHARE_ALL_QUERY_STRING_PARAMETERS);
     }
 
     /**
@@ -555,7 +557,8 @@ public abstract class ShareUsageBase
      * @param recoveryMultiplier what the pause is multiplied by each time the
      *                           send tried when a pause ends fails
      * @param shareAllEvidence if true then all Evidence is shared, apart from
-     *                         the keys that are never shared
+     *                         the keys that are never shared and the cookies
+     *                         other than the 51Degrees ones
      * @param shareAllQueryStringParameters if true then all query string
      *                                      parameters are shared
      */
@@ -912,8 +915,31 @@ public abstract class ShareUsageBase
         return null;
     }
 
+    /**
+     * The time closing may still wait for the data to be sent, so that the
+     * whole of closing, measured from its start, keeps within the close
+     * limit with the reserve left for what follows the wait.
+     * @param closeStartNanos {@link System#nanoTime()} when closing started
+     * @return milliseconds left to wait, never less than 0
+     */
+    private static long closeWaitLeftMillis(long closeStartNanos) {
+        long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(
+            System.nanoTime() - closeStartNanos);
+        return Math.max(0, closeWaitMillis() - elapsedMillis);
+    }
+
+    /**
+     * The longest closing waits for the data to be sent, from its start.
+     * @return milliseconds
+     */
+    private static long closeWaitMillis() {
+        return Constants.SHARE_USAGE_CLOSE_LIMIT_MILLIS -
+            Constants.SHARE_USAGE_CLOSE_RESERVE_MILLIS;
+    }
+
     @Override
     protected void managedResourcesCleanup() {
+        long closeStartNanos = System.nanoTime();
         // Tell any consumer - one that is already running as well as the final
         // one queued below - that the queue has to be drained completely rather
         // than stopping once fewer than minEntriesPerMessage entries are left.
@@ -932,9 +958,12 @@ public abstract class ShareUsageBase
         submitSendData();
         try {
             executor.shutdown();
-            if (!executor.awaitTermination(Constants.SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT, TimeUnit.MILLISECONDS)){
+            if (!executor.awaitTermination(
+                    closeWaitLeftMillis(closeStartNanos),
+                    TimeUnit.MILLISECONDS)) {
                 // Sending stops rather than hold up the process that closes
-                // the element, and the data left is discarded.
+                // the element, and the data left is discarded, all within
+                // the close limit.
                 discarding = true;
                 int discarded =
                     evidenceCollection.drainTo(new ArrayList<ShareUsageData>());
@@ -943,7 +972,7 @@ public abstract class ShareUsageBase
                         "not finished {} milliseconds after usage sharing " +
                         "started closing.",
                     discarded,
-                    Constants.SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT);
+                    closeWaitMillis());
                 executor.shutdownNow();
             }
         } catch (InterruptedException interruptedException) {
@@ -1221,5 +1250,16 @@ public abstract class ShareUsageBase
             categoryDict.put(field, value.toString());
         }
 
+    }
+
+    /**
+     * Usage sharing reads what every other Flow Element has added to the
+     * Evidence, so it is the last Flow Element of a Pipeline and outside any
+     * parallel group.
+     * @return the name a misplaced usage sharing element is refused with
+     */
+    @Override
+    public String getRunsLastName() {
+        return "The usage sharing element";
     }
 }

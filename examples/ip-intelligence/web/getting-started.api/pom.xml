@@ -41,6 +41,18 @@
         <org.json.version>20231013</org.json.version>
     </properties>
 
+    <!-- With -Pdev the example uses this repository's JSON Builder, as it
+         does the other packages, so that every pipeline package it loads
+         comes from the same build. -->
+    <profiles>
+        <profile>
+            <id>dev</id>
+            <properties>
+                <pipeline.jsonbuilder.version>${project.version}</pipeline.jsonbuilder.version>
+            </properties>
+        </profile>
+    </profiles>
+
     <dependencyManagement>
         <dependencies>
             <dependency>

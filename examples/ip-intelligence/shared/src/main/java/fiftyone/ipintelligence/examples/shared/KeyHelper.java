@@ -26,6 +26,7 @@ import fiftyone.ipintelligence.shared.testhelpers.KeyUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.PrintStream;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
@@ -64,6 +65,57 @@ public class KeyHelper {
 
     static final String CREATE_KEY_URL =
         "https://51degrees.com/configure/?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-keyhelper.java&utm_term=no-resource-key";
+
+    /**
+     * The configuration page that creates a key with the free properties
+     * the cloud examples use.
+     */
+    public static final String FREE_PROPERTIES_CONFIGURATION =
+        "configure/Wkqxf3Bs";
+
+    /**
+     * The resource key a cloud example runs with, being the key given as
+     * its argument, or else the key in {@link #RESOURCE_KEY_VARIABLE}, its
+     * deprecated name {@link #RESOURCE_KEY_ENV_VAR}, or
+     * {@link #TEST_RESOURCE_KEY}, each read as an environment variable,
+     * under its upper case name and as a system property.
+     * @param argument the key given on the command line, or null
+     * @return the key, or null when there is none
+     */
+    public static String findResourceKey(String argument) {
+        if (KeyUtils.isInvalidKey(argument) == false) {
+            return argument.trim();
+        }
+        String value = readKey(RESOURCE_KEY_VARIABLE);
+        if (value == null) {
+            value = oldNameResourceKey(KeyHelper::readKey);
+        }
+        if (value == null) {
+            value = readKey(TEST_RESOURCE_KEY);
+        }
+        return value == null ? null : value.trim();
+    }
+
+    /**
+     * Writes what a cloud example needs when it has no resource key, being
+     * the variable to set and the page where a key is created, so that the
+     * example can end without an error.
+     * @param output where to write
+     * @param example the example's tag, as its Find out more section has it
+     */
+    public static void writeNoResourceKey(PrintStream output,
+                                          String example) {
+        output.println();
+        output.println("This example calls the 51Degrees cloud service, " +
+            "which needs a resource key, and none is set.");
+        output.println("Set the " + RESOURCE_KEY_VARIABLE + " environment " +
+            "variable to a resource key, or give the key as the first " +
+            "argument, and run the example again.");
+        output.println("Create a resource key with the properties this " +
+            "example uses at " + FindOutMore.link(
+                FREE_PROPERTIES_CONFIGURATION, example, "no-resource-key"));
+        output.flush();
+    }
 
     /**
      * The resource key for a test that calls the live cloud service, from
@@ -154,7 +206,7 @@ public class KeyHelper {
     private static String readKey(String name) {
         for (String value : new String[]{
             System.getenv(name),
-            System.getenv(name.toUpperCase()),
+            System.getenv(name.toUpperCase(Locale.ROOT)),
             System.getProperty(name)}) {
             if (KeyUtils.isInvalidKey(value) == false) {
                 return value;
