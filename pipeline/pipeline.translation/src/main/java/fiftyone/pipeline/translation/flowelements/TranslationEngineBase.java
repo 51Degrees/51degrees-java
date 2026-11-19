@@ -69,12 +69,13 @@ import java.util.regex.Pattern;
  * strings, weighted list of strings and the {@code AspectPropertyValue}
  * wrappers); the output type matches the input.
  * <p>
- * The class is abstract: a translation engine is a subclass of it, made by
- * that engine's builder, as every Flow Element is.
+ * Make a translation engine through its builder, as every Flow Element is
+ * made. The class stays concrete with a public constructor because released
+ * code may make one directly.
  *
  * @param <T> the type of element data the engine writes
  */
-public abstract class TranslationEngineBase<T extends ITranslationData>
+public class TranslationEngineBase<T extends ITranslationData>
     extends FlowElementBase<T, ElementPropertyMetaData> {
 
     /**
