@@ -26,7 +26,11 @@ import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.devicedetection.DeviceDetectionPipelineBuilder;
 import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import fiftyone.devicedetection.examples.shared.KeyHelper;
+import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
 import fiftyone.pipeline.core.flowelements.Pipeline;
+import fiftyone.pipeline.engines.data.AspectData;
+import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
+import fiftyone.pipeline.engines.flowelements.OnPremiseAspectEngine;
 import fiftyone.pipeline.engines.services.DataUpdateService;
 import fiftyone.pipeline.engines.services.DataUpdateServiceDefault;
 import fiftyone.pipeline.engines.services.OnUpdateComplete;
@@ -38,6 +42,7 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.nio.file.*;
 import java.text.SimpleDateFormat;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Scanner;
 
@@ -53,11 +58,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * device detection engine, and controls when a new data file is sought and when it is loaded by
  * the device detection software.
  * <p>
- * Three main aspects are demonstrated:
+ * Four main aspects are demonstrated:
  * <ol>
  *     <li>Update on Start-Up</li>
  *     <li>Filesystem Watcher</li>
  *     <li>Daily auto-update</li>
+ *     <li>Programmatic update</li>
  * </ol>
  * ## License Key
  * Updating the data file needs a 51Degrees licence key for the Enterprise data file. Without
@@ -165,6 +171,16 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * ``` {java}
             			.setUpdateRandomisationMax(10*60)
  * ```
+ * ## Programmatic update
+ * Your own code can ask for an update at a time it chooses, for example from a scheduled job
+ * with automatic updates turned off. The data update service checks for a newer data file,
+ * downloads it and refreshes the engine.
+ * ``` {java}
+ *      DataUpdateService.AutoUpdateStatus status = dataUpdateService.checkForUpdate(
+ *              pipeline.getElement(DeviceDetectionHashEngine.class));
+ * ```
+ * To load a data file that your own process has put in place, call the engine's
+ * `refreshData(null)` instead.
  * # Location
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/device-detection/console/src/main/java/fiftyone/devicedetection/examples/console/UpdateDataFile.java).
  *
@@ -176,11 +192,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * device detection engine, and controls when a new data file is sought and when it is loaded by
  * the device detection software.
  * <p>
- * Three main aspects are demonstrated:
+ * Four main aspects are demonstrated:
  * <ol>
  *     <li>Update on Start-Up</li>
  *     <li>Filesystem Watcher</li>
  *     <li>Daily auto-update</li>
+ *     <li>Programmatic update</li>
  * </ol>
  * <p>
  * To update the data file you need a licence key, which you can ask for on our
@@ -286,7 +303,7 @@ public class UpdateDataFile {
                     "in your licensed allocation.");
             System.out.print("Do you wish to continue with this example (y)? ");
             String input = scanner.nextLine();
-            if ((input.isEmpty() || input.toLowerCase().startsWith("y")) == false) {
+            if ((input.isEmpty() || input.toLowerCase(Locale.ROOT).startsWith("y")) == false) {
                 logger.info("Stopping example without download");
                 return;
             }
@@ -368,9 +385,38 @@ public class UpdateDataFile {
                             completionListener.args.getStatus());
                 }
 
+                // Programmatic (non-automatic) update: ask for an update now,
+                // rather than wait for the next scheduled check. The file
+                // just loaded is the newest, so the status is normally
+                // AUTO_UPDATE_NOT_NEEDED.
+                DeviceDetectionHashEngine engine =
+                        pipeline.getElement(DeviceDetectionHashEngine.class);
+                logger.info("Programmatic update complete, status: {}",
+                        updateNow(dataUpdateService, engine));
+
                 logger.info("Finished Example");
             }
         }
+    }
+
+    /**
+     * A programmatic (non-automatic) update. The data update service checks
+     * now for a newer data file for the engine, downloads it if there is
+     * one, and refreshes the engine with it, as an automatic update does.
+     * Call this when your own code decides it is time to update, for
+     * example from a scheduled job, with automatic updates turned off.
+     * To load a file that your own process has put in place, call the
+     * engine's {@code refreshData(null)} instead.
+     * @param dataUpdateService the service the pipeline was built with
+     * @param engine the on-premise engine to update
+     * @return the status of the update, such as AUTO_UPDATE_SUCCESS, or
+     * AUTO_UPDATE_NOT_NEEDED when the file in use is the newest
+     */
+    static DataUpdateService.AutoUpdateStatus updateNow(
+            DataUpdateService dataUpdateService,
+            OnPremiseAspectEngine<? extends AspectData,
+                    ? extends AspectPropertyMetaData> engine) {
+        return dataUpdateService.checkForUpdate(engine);
     }
 
     /**
