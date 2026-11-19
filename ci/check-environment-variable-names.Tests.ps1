@@ -90,7 +90,7 @@ Describe 'the check over a repository' {
         }
     }
 
-    It 'passes an old name in a file that reads it as a deprecated fallback' {
+    It 'passes an old name in a file that keeps a deprecated constant holding it' {
         $repo = Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid())
         New-Item -ItemType Directory $repo | Out-Null
         try {
@@ -124,14 +124,13 @@ Describe 'the check over a repository' {
 
 Describe 'Test-DeprecatedFallback' {
 
-    # An old name is allowed only in a file that reads it as a deprecated
-    # fallback or tests that read, and only the names listed for that file.
+    # An old name is allowed only in a file that keeps a deprecated constant
+    # holding it or tests that constant, and only the names listed for that
+    # file.
     It 'allows <Value> in <Path>' -ForEach @(
         @{ Path = 'pipeline/pipeline.did/src/main/java/fiftyone/pipeline/did/DidClient.java'; Value = '"FOD_CLOUD_API_URL' }
-        @{ Path = 'pipeline/pipeline.did/src/test/java/fiftyone/pipeline/did/LiveCloudKeys.java'; Value = '"RESOURCE_KEY' }
-        @{ Path = 'pipeline/pipeline.did/src/test/java/fiftyone/pipeline/did/LiveCloudKeys.java'; Value = '"LICENSE_KEY' }
         @{ Path = 'ip-intelligence/ip-intelligence.shared/src/main/java/fiftyone/ipintelligence/shared/testhelpers/FileUtils.java'; Value = '51DEGREES_IPI_PATH' }
-        @{ Path = 'examples/device-detection/web/getting-started.onprem/src/main/webapp/WEB-INF/51Degrees-OnPrem.xml'; Value = '51DEGREES_DD_PATH' }
+        @{ Path = 'examples/ip-intelligence/shared/src/main/java/fiftyone/ipintelligence/examples/shared/KeyHelper.java'; Value = '51DEGREES_RESOURCE_KEY' }
     ) {
         Test-DeprecatedFallback $Path $Value | Should -BeTrue
     }
@@ -144,7 +143,8 @@ Describe 'Test-DeprecatedFallback' {
         @{ Path = 'pipeline/pipeline.did/src/test/java/fiftyone/pipeline/did/LiveCloudKeys.java'; Value = '"FOD_CLOUD_API_URL' }
         @{ Path = 'ip-intelligence/ip-intelligence.shared/src/main/java/fiftyone/ipintelligence/shared/testhelpers/FileUtils.java'; Value = '51DEGREES_DD_PATH' }
         @{ Path = 'ip-intelligence/ip-intelligence.shared/src/main/java/fiftyone/ipintelligence/shared/testhelpers/FileUtils.java'; Value = '51degrees_ipi_path' }
-        @{ Path = 'examples/device-detection/web/getting-started.onprem/src/main/webapp/WEB-INF/51Degrees-OnPrem.xml'; Value = '51DEGREES_IPI_PATH' }
+        @{ Path = 'examples/device-detection/web/getting-started.onprem/src/main/webapp/WEB-INF/51Degrees-OnPrem.xml'; Value = '51DEGREES_DD_PATH' }
+        @{ Path = 'pipeline/pipeline.did/src/test/java/fiftyone/pipeline/did/LiveCloudKeys.java'; Value = '"RESOURCE_KEY' }
     ) {
         Test-DeprecatedFallback $Path $Value | Should -BeFalse
     }
