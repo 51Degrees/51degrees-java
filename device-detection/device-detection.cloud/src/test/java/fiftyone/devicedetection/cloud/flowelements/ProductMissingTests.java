@@ -98,6 +98,26 @@ public class ProductMissingTests {
     }
 
     /**
+     * A failed cloud request leaves no response. The engine processes
+     * nothing, throws nothing and logs one warning, as the Cloud Request
+     * Engine's error says why.
+     */
+    @Test
+    public void NoResponse_ProcessesNothing() throws Exception {
+        try (DeviceDetectionCloudEngine engine = buildEngine("device", "hardwarevendor")) {
+            for (String response : new String[] { null, "" }) {
+                DeviceDataCloud data = process(engine, response);
+                assertFalse(data.asKeyMap().containsKey("hardwarevendor"));
+            }
+            List<String> logged = warningsAndErrors();
+            assertEquals(logged.toString(), 2, logged.size());
+            for (String line : logged) {
+                assertTrue(line, line.startsWith("warn "));
+            }
+        }
+    }
+
+    /**
      * With the Device Detection product included, a response that holds no
      * part for it raises nothing while processing, and reading a property
      * throws PropertyMissingException, as for any property the response
