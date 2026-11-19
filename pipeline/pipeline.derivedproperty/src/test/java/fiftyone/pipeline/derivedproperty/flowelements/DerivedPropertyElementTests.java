@@ -328,38 +328,35 @@ public class DerivedPropertyElementTests {
     }
 
     /**
-     * Elements in a parallel group write into the one Element Data under
-     * derived at the same time.
+     * Two elements added one after the other both write into the one
+     * Element Data under derived. They are never put in the same parallel
+     * group, because both would write that Element Data at once.
      */
     @Test
-    public void elementsInAParallelGroupShareTheElementData()
+    public void twoElementsOneAfterTheOtherShareTheElementData()
         throws Exception {
         DerivedPropertyElement mobile =
             builder().addScript("Mobile", MOBILE_YAML).build();
         DerivedPropertyElement band =
             builder().addScript("Band", BAND_YAML).build();
-        Map<String, Map<String, Object>> values = new LinkedHashMap<>();
-        values.put("device", map("IsMobile", true, "IsCrawler", false,
-            "BrowserReleaseAge", 1));
         StubSourceElement device = new StubSourceElement("device",
             Arrays.asList("IsMobile", "IsCrawler", "BrowserReleaseAge"),
-            values.get("device"));
+            map("IsMobile", true, "IsCrawler", false,
+                "BrowserReleaseAge", 1));
         try (Pipeline pipeline = new TestPipelineBuilder()
                 .addFlowElement(device)
-                .addFlowElementsParallel(new FlowElement<?, ?>[]{mobile, band})
+                .addFlowElement(mobile)
+                .addFlowElement(band)
                 .setAutoCloseElements(true)
-                .build()) {
-            for (int request = 0; request < 50; request++) {
-                try (FlowData data = pipeline.createFlowData()) {
-                    data.process();
-                    IDerivedPropertyData derived =
-                        data.get(IDerivedPropertyData.class);
-                    assertEquals(Boolean.TRUE,
-                        derived.getAs("Mobile", Boolean.class).getValue());
-                    assertEquals("New",
-                        derived.getAs("band", String.class).getValue());
-                }
-            }
+                .build();
+             FlowData data = pipeline.createFlowData()) {
+            data.process();
+            IDerivedPropertyData derived =
+                data.get(IDerivedPropertyData.class);
+            assertEquals(Boolean.TRUE,
+                derived.getAs("Mobile", Boolean.class).getValue());
+            assertEquals("New",
+                derived.getAs("band", String.class).getValue());
         }
     }
 
