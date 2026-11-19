@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.translation.flowelements;
 
+import fiftyone.pipeline.annotations.ElementBuilder;
 import fiftyone.pipeline.translation.data.MissingTranslationBehavior;
 import fiftyone.pipeline.translation.data.TranslationData;
 import fiftyone.pipeline.translation.data.TranslationProperty;
@@ -41,7 +42,16 @@ import java.util.Map;
 
 /**
  * Fluent builder for {@link TranslationEngine}.
+ * <p>
+ * A configuration file names this builder as {@code TranslationEngine} and
+ * can set {@code SourceElementDataKey}, {@code FixedLanguage} and
+ * {@code MissingTranslationBehavior}. Sources and translations are added in
+ * code, so to build the engine from a configuration file, add them to a
+ * builder and give it to the pipeline builder with
+ * {@code PipelineBuilder.addElementBuilder}, which then uses it for the
+ * element the file names.
  */
+@ElementBuilder
 public class TranslationEngineBuilder {
 
     private final ILoggerFactory loggerFactory;
@@ -171,8 +181,21 @@ public class TranslationEngineBuilder {
     /**
      * Build a translation engine.
      * @return a new {@link TranslationEngine}
+     * @throws IllegalArgumentException if no source or no translation has
+     *                                  been added
      */
     public TranslationEngine build() {
+        // Checked here as well as in the engine, so that a configuration
+        // file naming this builder is told where sources and translations
+        // come from.
+        if (sources.isEmpty() || translationProperties.isEmpty()) {
+            throw new IllegalArgumentException(
+                "A Translation Engine needs at least one source and one " +
+                "translation, which are added in code with addSource and " +
+                "addTranslation. To build one from a configuration file, " +
+                "add them to a TranslationEngineBuilder and pass it to " +
+                "PipelineBuilder.addElementBuilder.");
+        }
         return new TranslationEngine(
             sourceElementDataKey,
             translationProperties,

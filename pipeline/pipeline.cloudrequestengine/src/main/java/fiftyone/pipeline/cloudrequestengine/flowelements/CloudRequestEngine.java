@@ -41,7 +41,8 @@ public interface CloudRequestEngine
     /**
      * A collection of the properties that the cloud service can populate in the
      * JSON response. Keyed on property name.
-     * @return public properties
+     * @return public properties, or null if they are not known yet, after a
+     * failure when the engine was built that can pass
      */
     Map<String, AccessiblePropertyMetaData.ProductMetaData> getPublicProperties();
 }

@@ -45,7 +45,7 @@
         <org.json.version>20211205</org.json.version>
 
         <maven-compiler-plugin.version>3.9.0</maven-compiler-plugin.version>
-        <maven-pmd-plugin.version>3.26.0</maven-pmd-plugin.version>
+        <maven-pmd-plugin.version>3.28.0</maven-pmd-plugin.version>
         <exec-maven-plugin.version>1.6.0</exec-maven-plugin.version>
         <maven-install-plugin.version>2.5.2</maven-install-plugin.version>
         <maven-jar-plugin.version>3.2.2</maven-jar-plugin.version>
@@ -392,9 +392,11 @@
         </license>
     </licenses>
 
-    <scm>
-        <url>https://github.com/51Degrees/ip-intelligence-java</url>
-        <connection>scm:git:git://github.com/51Degrees/ip-intelligence-java.git</connection>
-        <developerConnection>scm:git:info@51degrees.com:51Degrees/ip-intelligence-java.git</developerConnection>
+    <scm child.scm.connection.inherit.append.path="false"
+         child.scm.developerConnection.inherit.append.path="false"
+         child.scm.url.inherit.append.path="false">
+        <url>https://github.com/51Degrees/51degrees-java</url>
+        <connection>scm:git:https://github.com/51Degrees/51degrees-java.git</connection>
+        <developerConnection>scm:git:https://github.com/51Degrees/51degrees-java.git</developerConnection>
     </scm>
 </project>

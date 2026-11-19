@@ -22,11 +22,14 @@
 
 package fiftyone.devicedetection.examples.web;
 
+import fiftyone.devicedetection.examples.shared.DataFileHelper;
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
 import fiftyone.devicedetection.shared.DeviceData;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.FlowElement;
+import fiftyone.pipeline.engines.data.AspectPropertyValue;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -40,12 +43,19 @@ import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 import static fiftyone.devicedetection.examples.shared.PropertyHelper.asString;
 import static fiftyone.devicedetection.examples.shared.PropertyHelper.tryGet;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
 public class HtmlContentHelper {
+    /**
+     * The tag of the links in the pages' "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "web-shared-src-main-java-fiftyone-devicedetection-examples-web-htmlcontenthelper.java";
+
     /**
      * Helper to output HTML headers
      * @param out the PrintWriter to write to
@@ -172,6 +182,9 @@ public class HtmlContentHelper {
     public static void doDeviceData(PrintWriter out, DeviceData device, FlowData flowData,
                                     String dataFileLocation) {
         FlowElement<?, ?> engine = getFlowElement(flowData);
+        // The on-premise engine says which properties its data file has.
+        DeviceDetectionHashEngine onPremise = engine instanceof DeviceDetectionHashEngine ?
+                (DeviceDetectionHashEngine) engine : null;
         String content = "";
         if (engine instanceof CloudRequestEngine) {
             content = "<p>The following values were detected using the <strong>cloud " +
@@ -200,18 +213,33 @@ public class HtmlContentHelper {
                         "<th class=\"c-eg-table__cell\">Key</th>" +
                         "<th class=\"c-eg-table__cell\">Value</th></tr></thead>\n" +
                         "        <tbody>\n" +
-                        "        <tr class=\"c-eg-table__row c-eg-table__row--alt\"><td class=\"c-eg-table__cell c-eg-table__cell--key\">Hardware Vendor</td><td class=\"c-eg-table__cell\">" + asString(tryGet(device::getHardwareVendor)) + "</td></tr>\n" +
-                        "        <tr class=\"c-eg-table__row\"><td class=\"c-eg-table__cell c-eg-table__cell--key\">Hardware Name</td><td class=\"c-eg-table__cell\">" + asString(tryGet(device::getHardwareName)) + "</td></tr>\n" +
-                        "        <tr class=\"c-eg-table__row c-eg-table__row--alt\"><td class=\"c-eg-table__cell c-eg-table__cell--key\">Device Type</td><td class=\"c-eg-table__cell\">" + asString(tryGet(device::getDeviceType)) + "</td></tr>\n" +
-                        "        <tr class=\"c-eg-table__row\"><td class=\"c-eg-table__cell c-eg-table__cell--key\">Platform Vendor</td><td class=\"c-eg-table__cell\">" + asString(tryGet(device::getPlatformVendor)) + "</td></tr>\n" +
-                        "        <tr class=\"c-eg-table__row c-eg-table__row--alt\"><td class=\"c-eg-table__cell c-eg-table__cell--key\">Platform Name</td><td class=\"c-eg-table__cell\">" + asString(tryGet(device::getPlatformName)) + "</td></tr>\n" +
-                        "        <tr class=\"c-eg-table__row\"><td class=\"c-eg-table__cell c-eg-table__cell--key\">Platform Version</td><td class=\"c-eg-table__cell\">" + asString(tryGet(device::getPlatformVersion)) + "</td></tr>\n" +
-                        "        <tr class=\"c-eg-table__row c-eg-table__row--alt\"><td class=\"c-eg-table__cell c-eg-table__cell--key\">Browser Vendor</td><td class=\"c-eg-table__cell\">" + asString(tryGet(device::getBrowserVendor)) + "</td></tr>\n" +
-                        "        <tr class=\"c-eg-table__row\"><td class=\"c-eg-table__cell c-eg-table__cell--key\">Browser Name</td><td class=\"c-eg-table__cell\">" + asString(tryGet((device::getBrowserName))) + "</td></tr>\n" +
-                        "        <tr class=\"c-eg-table__row c-eg-table__row--alt\"><td class=\"c-eg-table__cell c-eg-table__cell--key\">Browser Version</td><td class=\"c-eg-table__cell\">" + asString(tryGet(device::getBrowserVersion)) + "</td></tr>\n" +
+                        "        <tr class=\"c-eg-table__row c-eg-table__row--alt\"><td class=\"c-eg-table__cell c-eg-table__cell--key\">Hardware Vendor</td><td class=\"c-eg-table__cell\">" + value(onPremise, "HardwareVendor", device::getHardwareVendor) + "</td></tr>\n" +
+                        "        <tr class=\"c-eg-table__row\"><td class=\"c-eg-table__cell c-eg-table__cell--key\">Hardware Name</td><td class=\"c-eg-table__cell\">" + value(onPremise, "HardwareName", device::getHardwareName) + "</td></tr>\n" +
+                        "        <tr class=\"c-eg-table__row c-eg-table__row--alt\"><td class=\"c-eg-table__cell c-eg-table__cell--key\">Device Type</td><td class=\"c-eg-table__cell\">" + value(onPremise, "DeviceType", device::getDeviceType) + "</td></tr>\n" +
+                        "        <tr class=\"c-eg-table__row\"><td class=\"c-eg-table__cell c-eg-table__cell--key\">Platform Vendor</td><td class=\"c-eg-table__cell\">" + value(onPremise, "PlatformVendor", device::getPlatformVendor) + "</td></tr>\n" +
+                        "        <tr class=\"c-eg-table__row c-eg-table__row--alt\"><td class=\"c-eg-table__cell c-eg-table__cell--key\">Platform Name</td><td class=\"c-eg-table__cell\">" + value(onPremise, "PlatformName", device::getPlatformName) + "</td></tr>\n" +
+                        "        <tr class=\"c-eg-table__row\"><td class=\"c-eg-table__cell c-eg-table__cell--key\">Platform Version</td><td class=\"c-eg-table__cell\">" + value(onPremise, "PlatformVersion", device::getPlatformVersion) + "</td></tr>\n" +
+                        "        <tr class=\"c-eg-table__row c-eg-table__row--alt\"><td class=\"c-eg-table__cell c-eg-table__cell--key\">Browser Vendor</td><td class=\"c-eg-table__cell\">" + value(onPremise, "BrowserVendor", device::getBrowserVendor) + "</td></tr>\n" +
+                        "        <tr class=\"c-eg-table__row\"><td class=\"c-eg-table__cell c-eg-table__cell--key\">Browser Name</td><td class=\"c-eg-table__cell\">" + value(onPremise, "BrowserName", device::getBrowserName) + "</td></tr>\n" +
+                        "        <tr class=\"c-eg-table__row c-eg-table__row--alt\"><td class=\"c-eg-table__cell c-eg-table__cell--key\">Browser Version</td><td class=\"c-eg-table__cell\">" + value(onPremise, "BrowserVersion", device::getBrowserVersion) + "</td></tr>\n" +
                         "        </tbody>\n" +
                         "    </table>\n" +
                         "</div>\n");
+    }
+
+    /**
+     * The value of a property for the page. With the on-premise engine, a
+     * property its data file does not have needs the Enterprise data file,
+     * and the value is only read when the data file has the property.
+     * @param onPremise the on-premise engine, or null for the cloud
+     */
+    private static <T> String value(DeviceDetectionHashEngine onPremise,
+                                    String property,
+                                    Supplier<AspectPropertyValue<T>> value) {
+        if (onPremise != null && DataFileHelper.hasProperty(onPremise, property) == false) {
+            return DataFileHelper.NEEDS_ENTERPRISE;
+        }
+        return asString(tryGet(value));
     }
 
     public static void doUachInfo(PrintWriter out) {
@@ -285,6 +313,10 @@ public class HtmlContentHelper {
     public static void doHtmlPostamble(PrintWriter out, FlowData flowData) {
         // language=html
         doContactUsMessage(out, flowData);
+        out.append(FindOutMore.html(EXAMPLE_TAG,
+                getFlowElement(flowData) instanceof CloudRequestEngine ?
+                        FindOutMore.CLOUD_REPOSITORIES :
+                        FindOutMore.ON_PREMISE_REPOSITORIES));
         out.append("\n</div>\n</body></html>\n");
     }
 

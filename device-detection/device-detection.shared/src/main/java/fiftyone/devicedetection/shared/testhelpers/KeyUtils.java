@@ -23,11 +23,17 @@
 package fiftyone.devicedetection.shared.testhelpers;
 
 import java.util.Base64;
+import java.util.Locale;
 import java.util.Objects;
 
 /**
  * Helpers to obtain keys from the environment
+ * @deprecated These are test helpers, which the published package should
+ * not hold. Example code reads and checks keys with
+ * {@code fiftyone.devicedetection.examples.shared.KeyHelper}, in the
+ * device-detection-java-examples.shared module.
  */
+@Deprecated
 public class KeyUtils {
     /**
      * Obtain a key either from environment variable or from a property.
@@ -37,7 +43,7 @@ public class KeyUtils {
     public static String getNamedKey(String keyName) {
         String resourceKey = System.getenv(keyName);
         if (Objects.isNull(resourceKey)) {
-            resourceKey = System.getenv(keyName.toUpperCase());
+            resourceKey = System.getenv(keyName.toUpperCase(Locale.ROOT));
             if (Objects.isNull(resourceKey)) {
                 resourceKey = System.getProperty(keyName);
             }

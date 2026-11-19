@@ -88,6 +88,19 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- The configuration schema, from the configuration-validation
+                 submodule rather than a copy. -->
+            <resource>
+                <directory>configuration-validation</directory>
+                <includes>
+                    <include>pipelineOptions.xsd</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

@@ -70,7 +70,8 @@ class ParallelElements
             parallelCallers.add(new FlowElementCallable(element, flowData));
         }
         try {
-            List<Future<FlowError>> results = threadPool.invokeAll(parallelCallers);
+            List<Future<FlowError>> results =
+                runMembers(flowData, parallelCallers);
             // all threads are now done
             for (Future<FlowError> future : results) {
                 FlowError error;
@@ -80,6 +81,29 @@ class ParallelElements
             }
         } catch (InterruptedException | ExecutionException e) {
             flowData.addError(e, this);
+        }
+    }
+
+    /**
+     * Run every member and wait for them all to stop. While they run, the
+     * Flow Data adds the errors members record under its errors lock.
+     */
+    private List<Future<FlowError>> runMembers(
+        FlowData flowData,
+        List<FlowElementCallable> parallelCallers)
+        throws InterruptedException {
+        FlowDataDefault running = flowData instanceof FlowDataDefault ?
+            (FlowDataDefault) flowData :
+            null;
+        if (running != null) {
+            running.groupStarted();
+        }
+        try {
+            return threadPool.invokeAll(parallelCallers);
+        } finally {
+            if (running != null) {
+                running.groupStopped();
+            }
         }
     }
 
@@ -114,6 +138,19 @@ class ParallelElements
 
     @Override
     public boolean isConcurrent() {
+        return true;
+    }
+
+    /**
+     * @return true if every child element has loaded its properties
+     */
+    @Override
+    public boolean hasLoadedProperties() {
+        for (FlowElement element : flowElements) {
+            if (element.hasLoadedProperties() == false) {
+                return false;
+            }
+        }
         return true;
     }
 

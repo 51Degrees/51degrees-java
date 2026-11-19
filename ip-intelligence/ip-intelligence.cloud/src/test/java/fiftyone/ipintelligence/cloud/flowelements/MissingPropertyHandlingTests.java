@@ -23,7 +23,6 @@
 package fiftyone.ipintelligence.cloud.flowelements;
 
 import fiftyone.ipintelligence.cloud.data.IPIntelligenceDataCloud;
-import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
@@ -33,7 +32,6 @@ import fiftyone.pipeline.engines.exceptions.PropertyMissingException;
 import fiftyone.pipeline.engines.services.MissingPropertyReason;
 import fiftyone.pipeline.engines.services.MissingPropertyResult;
 import fiftyone.pipeline.engines.services.MissingPropertyService;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
@@ -46,7 +44,6 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@Ignore
 public class MissingPropertyHandlingTests {
 
     protected static final ILoggerFactory loggerFactory = LoggerFactory.getILoggerFactory();
@@ -65,7 +62,6 @@ public class MissingPropertyHandlingTests {
                              .build()) {
 
             FlowData flowData = mock(FlowData.class);
-            addResponse(flowData, nullValueJson);
 
             IPIntelligenceDataCloud ipiData = new IPIntelligenceDataCloudInternal(
                     loggerFactory.getLogger(IPIntelligenceDataCloud.class.getSimpleName()),
@@ -75,7 +71,7 @@ public class MissingPropertyHandlingTests {
 
             engine.cloudRequestEngine = mock(CloudRequestEngine.class);
             engine.aspectProperties = properties;
-            engine.processEngine(flowData, ipiData);
+            engine.processCloudEngine(flowData, ipiData, nullValueJson);
 
             AspectPropertyValue<Float> latitude = ipiData.getLatitude();
             assertNotNull(latitude);
@@ -100,7 +96,6 @@ public class MissingPropertyHandlingTests {
                              .build()) {
 
             FlowData flowData = mock(FlowData.class);
-            addResponse(flowData, nullValueJson);
             MissingPropertyService missingPropertyService =
                     mock(MissingPropertyService.class);
             when(missingPropertyService.getMissingPropertyReason(
@@ -118,7 +113,7 @@ public class MissingPropertyHandlingTests {
 
             engine.cloudRequestEngine = mock(CloudRequestEngine.class);
             engine.aspectProperties = properties;
-            engine.processEngine(flowData, ipiData);
+            engine.processCloudEngine(flowData, ipiData, nullValueJson);
 
             try {
                 AspectPropertyValue<Float> longitude = ipiData.getLongitude();
@@ -136,7 +131,7 @@ public class MissingPropertyHandlingTests {
 
     private static String nullValueJson =
             "{\n" +
-                    "  'ip-intelligence': {\n" +
+                    "  'ip': {\n" +
                     "    'registeredname': 'Example Network',\n" +
                     "    'registeredcountry': 'US',\n" +
                     "    'latitude': null,\n" +
@@ -157,11 +152,4 @@ public class MissingPropertyHandlingTests {
                     add(new AspectPropertyMetaDataDefault("registeredcountry", null, null, String.class, null, true));
                 }
             };
-
-    private void addResponse(FlowData data, String json) {
-        CloudRequestData cloudData = mock(CloudRequestData.class);
-        when(cloudData.getJsonResponse()).thenReturn(json);
-        when(data.getFromElement(any(CloudRequestEngine.class)))
-                .thenReturn(cloudData);
-    }
 }

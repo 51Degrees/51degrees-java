@@ -81,7 +81,7 @@ public class ConfigIpiSwig extends ConfigBaseSwig {
   }
 
   public CollectionConfigSwig getComponents() {
-    return new CollectionConfigSwig(IpIntelligenceOnPremiseEngineModuleJNI.ConfigIpiSwig_getComponents(swigCPtr, this), true);
+    return new CollectionConfigSwig(IpIntelligenceOnPremiseEngineModuleJNI.ConfigIpiSwig_getComponents(swigCPtr, this), false);
   }
 
   public CollectionConfigSwig getMaps() {
@@ -89,15 +89,15 @@ public class ConfigIpiSwig extends ConfigBaseSwig {
   }
 
   public CollectionConfigSwig getProperties() {
-    return new CollectionConfigSwig(IpIntelligenceOnPremiseEngineModuleJNI.ConfigIpiSwig_getProperties(swigCPtr, this), true);
+    return new CollectionConfigSwig(IpIntelligenceOnPremiseEngineModuleJNI.ConfigIpiSwig_getProperties(swigCPtr, this), false);
   }
 
   public CollectionConfigSwig getValues() {
-    return new CollectionConfigSwig(IpIntelligenceOnPremiseEngineModuleJNI.ConfigIpiSwig_getValues(swigCPtr, this), true);
+    return new CollectionConfigSwig(IpIntelligenceOnPremiseEngineModuleJNI.ConfigIpiSwig_getValues(swigCPtr, this), false);
   }
 
   public CollectionConfigSwig getProfiles() {
-    return new CollectionConfigSwig(IpIntelligenceOnPremiseEngineModuleJNI.ConfigIpiSwig_getProfiles(swigCPtr, this), true);
+    return new CollectionConfigSwig(IpIntelligenceOnPremiseEngineModuleJNI.ConfigIpiSwig_getProfiles(swigCPtr, this), false);
   }
 
   public CollectionConfigSwig getGraphs() {

@@ -23,6 +23,7 @@
 package fiftyone.pipeline.engines.flowelements;
 
 import fiftyone.pipeline.annotations.DefaultValue;
+import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.engines.Constants;
 import fiftyone.pipeline.engines.configuration.DataFileConfiguration;
 import fiftyone.pipeline.engines.data.AspectEngineDataFile;
@@ -182,25 +183,106 @@ public abstract class OnPremiseAspectEngineBuilderBase<
         // will be updated now.
         // Create the auto-update configuration and register it.
         for (DataFileConfiguration dataFileConfig : dataFileConfigs) {
+            checkUpdateConfiguration(dataFileConfig);
+        }
+        for (DataFileConfiguration dataFileConfig : dataFileConfigs) {
             AspectEngineDataFile dataFile = newAspectEngineDataFile();
             dataFile.setIdentifier(dataFileConfig.getIdentifier());
             dataFile.setConfiguration(dataFileConfig);
             dataFile.setTempDataDirPath(tempDir);
+            if (dataFile instanceof AspectEngineDataFileDefault) {
+                // By convention an engine is named for its builder.
+                String builderName = getClass().getSimpleName();
+                ((AspectEngineDataFileDefault) dataFile).setEngineTypeName(
+                    builderName.endsWith("Builder") ?
+                        builderName.substring(
+                            0, builderName.length() - "Builder".length()) :
+                        builderName);
+            }
 
-            if (dataFileConfig.getAutomaticUpdatesEnabled()) {
-                if (dataUpdateService == null) {
-                    throw new RuntimeException(
-                        "Auto update enabled by data update service does not exist. " +
-                            "This can be corrected by passing an DataUpdateService " +
-                            "instance to the engine builder constructor. " +
-                            "If building from configuration, this can be corrected " +
-                            "by adding an DataUpdateService instance to the " +
-                            "the pipeline builder via addService() method.");
-                }
+            if (dataFileConfig.getAutomaticUpdatesEnabled() ||
+                dataFileConfig.getUpdateOnStartup() ||
+                isWatched(dataFileConfig)) {
                 dataUpdateService.registerDataFile(dataFile);
             }
             dataFiles.add(dataFile);
         }
+    }
+
+    /**
+     * Whether the data file is to be watched for a new file on disk. The
+     * file system watcher runs on its own setting and needs neither
+     * automatic updates nor a license key, only a data update service to run
+     * it and a data file on disk.
+     */
+    private boolean isWatched(DataFileConfiguration dataFileConfig) {
+        return dataUpdateService != null &&
+            dataFileConfig.getFileSystemWatcherEnabled() &&
+            dataFileConfig.getDataFilePath() != null &&
+            dataFileConfig.getDataFilePath().isEmpty() == false;
+    }
+
+    /**
+     * Refuse a data file configuration that needs a data update service or
+     * a license key it does not have. Every data file is checked before any
+     * is registered, so a refused build leaves nothing registered.
+     */
+    private void checkUpdateConfiguration(DataFileConfiguration dataFileConfig) {
+        boolean autoUpdate = dataFileConfig.getAutomaticUpdatesEnabled();
+        boolean updateOnStartup = dataFileConfig.getUpdateOnStartup();
+        if (autoUpdate == false && updateOnStartup == false) {
+            return;
+        }
+        String features = (autoUpdate ? "auto update" : "") +
+            (autoUpdate && updateOnStartup ? " and " : "") +
+            (updateOnStartup ? "update on startup" : "");
+        if (dataUpdateService == null) {
+            throw new RuntimeException(
+                "The data update service does not exist but is " +
+                    "needed for " + features + ". " +
+                    "This can be corrected by passing a DataUpdateService " +
+                    "instance to the engine builder constructor. " +
+                    "If building from configuration, this can be corrected " +
+                    "by adding a DataUpdateService instance to the " +
+                    "pipeline builder via addService() method.");
+        }
+        if (isLicenseKeyRequired(dataFileConfig) &&
+            hasLicenseKey(dataFileConfig) == false) {
+            throw new PipelineConfigurationException(
+                "No license key is set, and the data update URL " +
+                    "serves nothing without one, so the engine cannot " +
+                    "be built with " + features + " on. Set a license " +
+                    "key with setDataUpdateLicenseKey, or turn off " +
+                    (autoUpdate ? "auto update with setAutoUpdate(false)" : "") +
+                    (autoUpdate && updateOnStartup ? " and " : "") +
+                    (updateOnStartup ?
+                        "update on startup with setDataUpdateOnStartup(false)" : "") +
+                    ".");
+        }
+    }
+
+    /**
+     * Whether the data update URL in the configuration serves nothing
+     * without a license key. Engines whose update source needs a key
+     * override this, and the engine then refuses to build with a data update
+     * option on and no key set.
+     * @param dataFileConfig the data file configuration to check
+     * @return true if the update source needs a license key
+     */
+    protected boolean isLicenseKeyRequired(DataFileConfiguration dataFileConfig) {
+        return false;
+    }
+
+    private static boolean hasLicenseKey(DataFileConfiguration dataFileConfig) {
+        List<String> keys = dataFileConfig.getDataUpdateLicenseKeys();
+        if (keys != null) {
+            for (String key : keys) {
+                if (key != null && key.isEmpty() == false) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     @SuppressWarnings("unchecked")

@@ -71,8 +71,14 @@ class PipelineDefault implements PipelineInternal {
      * Map of {@link ElementPropertyMetaData}s keyed first on the data key of
      * the element which they belong to, then by the property name.
      */
-    private final Map<String, Map<String, ElementPropertyMetaData>>
+    private volatile Map<String, Map<String, ElementPropertyMetaData>>
         elementAvailableProperties;
+
+    /**
+     * Held while the map of available properties is built after an element
+     * had not loaded its properties when the Pipeline was built.
+     */
+    private final Object availablePropertiesLock = new Object();
 
     /**
      * Lock used for synchronised blocks.
@@ -155,8 +161,7 @@ class PipelineDefault implements PipelineInternal {
         for (FlowElement element : this.flowElements) {
             isConcurrent = isConcurrent || element.isConcurrent();
         }
-        this.elementAvailableProperties =
-            getElementAvailableProperties(flowElements);
+        getElementAvailableProperties();
 
         logger.debug("Pipeline '" + hashCode() + "' created.");
 
@@ -360,10 +365,41 @@ class PipelineDefault implements PipelineInternal {
         return Collections.unmodifiableList(flowElements);
     }
 
+    /**
+     * The available properties of each element. The map is kept once every
+     * element has loaded its properties. Until then, as after a cloud
+     * element could not reach its service when it was built, it is built
+     * again on each call, so it gains the properties once they are known.
+     * @return the available properties, keyed on element data key then
+     * property name
+     */
     @Override
     public Map<String, Map<String, ElementPropertyMetaData>>
     getElementAvailableProperties() {
-        return Collections.unmodifiableMap(elementAvailableProperties);
+        Map<String, Map<String, ElementPropertyMetaData>> properties =
+            elementAvailableProperties;
+        if (properties == null) {
+            synchronized (availablePropertiesLock) {
+                properties = elementAvailableProperties;
+                if (properties == null) {
+                    boolean loaded = allPropertiesLoaded();
+                    properties = getElementAvailableProperties(flowElements);
+                    if (loaded) {
+                        elementAvailableProperties = properties;
+                    }
+                }
+            }
+        }
+        return Collections.unmodifiableMap(properties);
+    }
+
+    private boolean allPropertiesLoaded() {
+        for (FlowElement element : flowElements) {
+            if (element.hasLoadedProperties() == false) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public void close(boolean closing) throws Exception {

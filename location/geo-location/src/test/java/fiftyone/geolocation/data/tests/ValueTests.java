@@ -67,9 +67,26 @@ public class ValueTests {
                     assertNotNull("Value of " + property.getName() + " is null. ", value);
                     assertTrue("Value of '" + property.getName() +
                             "' was of type " + value.getClass().getSimpleName() +
+                            " but should have been AspectPropertyValue.",
+                        value instanceof AspectPropertyValue);
+                    AspectPropertyValue<?> propertyValue =
+                        (AspectPropertyValue<?>) value;
+                    // A property can have no value at these coordinates, such
+                    // as Suburb. Its type cannot be read then, so only that it
+                    // carries a message is checked.
+                    if (propertyValue.hasValue() == false) {
+                        assertNotNull("Property '" + property.getName() +
+                                "' has no value and no message.",
+                            propertyValue.getNoValueMessage());
+                        continue;
+                    }
+                    assertTrue("Value of '" + property.getName() +
+                            "' was of type " +
+                            propertyValue.getValue().getClass().getSimpleName() +
                             " but should have been " + expectedType.getSimpleName() +
                             ".",
-                        expectedType.isAssignableFrom(value.getClass()));
+                        expectedType.isAssignableFrom(
+                            propertyValue.getValue().getClass()));
                 }
             }
         }

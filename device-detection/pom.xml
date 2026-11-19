@@ -56,7 +56,7 @@
         <maven-site-plugin.version>3.7.1</maven-site-plugin.version>
         <dependency-check-maven.version>6.5.3</dependency-check-maven.version>
         <central-publishing-maven-plugin.version>0.7.0</central-publishing-maven-plugin.version>
-        <maven-pmd-plugin.version>3.26.0</maven-pmd-plugin.version>
+        <maven-pmd-plugin.version>3.28.0</maven-pmd-plugin.version>
 
         <skippackagesign>true</skippackagesign>
         <skipPublishing>false</skipPublishing>
@@ -363,9 +363,11 @@
         </license>
     </licenses>
 
-    <scm>
-        <url>https://github.com/51Degrees/device-detection-java</url>
-        <connection>scm:git:git://github.com/51Degrees/device-detection-java.git</connection>
-        <developerConnection>scm:git:info@51degrees.com:51Degrees/device-detection-java.git</developerConnection>
+    <scm child.scm.connection.inherit.append.path="false"
+         child.scm.developerConnection.inherit.append.path="false"
+         child.scm.url.inherit.append.path="false">
+        <url>https://github.com/51Degrees/51degrees-java</url>
+        <connection>scm:git:https://github.com/51Degrees/51degrees-java.git</connection>
+        <developerConnection>scm:git:https://github.com/51Degrees/51degrees-java.git</developerConnection>
     </scm>
 </project>

@@ -25,6 +25,7 @@ package fiftyone.ipintelligence;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngineBuilder;
 import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
+import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.Constants;
 import fiftyone.pipeline.engines.data.AspectData;
@@ -47,7 +48,9 @@ import java.util.List;
 public class IPIntelligenceOnPremisePipelineBuilder
     extends PrePackagedPipelineBuilderBase<IPIntelligenceOnPremisePipelineBuilder> {
 
-    protected boolean shareUsageEnabled = true;
+    protected boolean shareUsageEnabled =
+        fiftyone.pipeline.engines.fiftyone.flowelements.Constants
+            .SHARE_USAGE_DEFAULT_ENABLED;
     private String filename;
     private boolean createTempDataCopy;
     private int concurrency = -1;
@@ -61,8 +64,11 @@ public class IPIntelligenceOnPremisePipelineBuilder
     private String dataUpdateUrl = null;
     private Boolean dataUpdateVerifyMd5 = null;
     private DataUpdateUrlFormatter dataUpdateUrlFormatter = null;
-    private Constants.PerformanceProfiles performanceProfile =
-        Constants.PerformanceProfiles.MaxPerformance;
+    /**
+     * The profile the caller chose, or null for the engine builder's
+     * default, which is Balanced.
+     */
+    private Constants.PerformanceProfiles performanceProfile = null;
 
     private DataUpdateService dataUpdateService;
 
@@ -240,7 +246,8 @@ public class IPIntelligenceOnPremisePipelineBuilder
 
     /**
      * Set the performance profile for the IP Intelligence engine.
-     * Defaults to MaxPerformance.
+     * Defaults to Balanced, which reads the data file as lookups need it,
+     * through caches. MaxPerformance loads the whole data file into memory.
      * @param profile The performance profile to use.
      * @return This builder instance.
      */
@@ -329,22 +336,33 @@ public class IPIntelligenceOnPremisePipelineBuilder
                 new IPIntelligenceOnPremiseEngineBuilder(loggerFactory, dataUpdateService);
         ipIntelligenceEngine = configureAndBuild(engineBuilder);
 
+        List<FlowElement<?, ?>> made = new ArrayList<>();
         if (ipIntelligenceEngine != null) {
-            // Add the share usage element to the list if enabled
-            if (shareUsageEnabled) {
-                getFlowElements().add(
-                    new ShareUsageBuilder(loggerFactory).build());
-            }
             // Add the IP Intelligence engine to the list
+            made.add(ipIntelligenceEngine);
             getFlowElements().add(ipIntelligenceEngine);
+            // Usage sharing goes last, so that it shares what every other
+            // Flow Element has added to the Evidence.
+            if (shareUsageEnabled) {
+                FlowElement<?, ?> shareUsage =
+                    new ShareUsageBuilder(loggerFactory).build();
+                made.add(shareUsage);
+                getFlowElements().add(shareUsage);
+            }
         } else {
             throw new RuntimeException("Unexpected error creating IP Intelligence engine.");
         }
 
         setAutoCloseElements(true);
 
-        // Create and return the pipeline
-        return super.build();
+        // Create and return the pipeline, closing what this builder made if
+        // the Pipeline is refused.
+        try {
+            return super.build();
+        } catch (Exception e) {
+            closeMadeElements(made, e);
+            throw e;
+        }
     }
 
     /**
@@ -386,8 +404,13 @@ public class IPIntelligenceOnPremisePipelineBuilder
                 builder.setProperty(property);
             }
         }
-        // Configure performance profile
-        builder.setPerformanceProfile(performanceProfile);
+        // Configure the performance profile only when the caller chose one.
+        // The engine builder already starts from Balanced, and applying
+        // Balanced again here would also replace the concurrency the engine
+        // builder set.
+        if (performanceProfile != null) {
+            builder.setPerformanceProfile(performanceProfile);
+        }
 
         // Configure the concurrency
         if (concurrency > 1) {

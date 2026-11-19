@@ -21,6 +21,7 @@
  * ********************************************************************* */
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
 import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
@@ -45,20 +46,34 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
 
 public class MetadataOnPrem {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-devicedetection-examples-console-metadataonprem.java";
+
     private static final Logger logger = LoggerFactory.getLogger(GettingStartedOnPrem.class);
 
     /* In this example, by default, the 51degrees "Lite" file is used from the data repository in
     cxx/data, and is downloaded if it is missing, or you may specify another file as a command line
     parameter.
 
-    Note that the Lite data file is only used for illustration, and has limited accuracy and
-    capabilities. Find out about the Enterprise data file here: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-metadataonprem.java&utm_term=lite_v_4_1_hash */
+    Note that the Lite data file is only used for illustration, and has a small number of
+    Properties. Contact us for a copy of the Enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-metadataonprem.java&utm_term=lite_v_4_1_hash */
     public static String LITE_V_4_1_HASH = "device-detection/51Degrees-LiteV4.1.hash";
+
+    /**
+     * Where to ask for a copy of the Enterprise data file, tagged with this
+     * example.
+     */
+    private static final String CONTACT_US = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-metadataonprem.java&utm_term=enterprise-data-file";
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
         String dataFile = args.length > 0 ? args[0] : LITE_V_4_1_HASH;
         run(dataFile, System.out);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
 
@@ -108,6 +123,9 @@ public class MetadataOnPrem {
             writer.flush();
 
             DataFileHelper.logDataFileInfo(ddEngine);
+            if (DataFileHelper.isLiteDataFile(ddEngine)) {
+                DataFileHelper.writeEnterpriseOffer(writer, CONTACT_US);
+            }
         }
     }
 

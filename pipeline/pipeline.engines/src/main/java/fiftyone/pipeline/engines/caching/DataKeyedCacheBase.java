@@ -70,14 +70,26 @@ public abstract class DataKeyedCacheBase<V> implements DataKeyedCache<V> {
      */
     protected abstract EvidenceKeyFilter getFilter();
 
+    /**
+     * Creates the key the internal cache holds the data of a {@link FlowData}
+     * under. By default this is the key the {@link FlowData} generates from
+     * the Evidence that {@link #getFilter()} includes. A class whose key is
+     * made from other values overrides this method.
+     * @param flowData the {@link FlowData} to make a key for
+     * @return the key to use in the internal cache
+     */
+    protected DataKey generateKey(FlowData flowData) {
+        return flowData.generateKey(getFilter());
+    }
+
     @Override
     public V get(FlowData flowData) {
-        return internalCache.get(flowData.generateKey(getFilter()));
+        return internalCache.get(generateKey(flowData));
     }
 
     @Override
     public void put(FlowData flowData, V value) {
-        internalCache.put(flowData.generateKey(getFilter()), value);
+        internalCache.put(generateKey(flowData), value);
     }
 
     @Override

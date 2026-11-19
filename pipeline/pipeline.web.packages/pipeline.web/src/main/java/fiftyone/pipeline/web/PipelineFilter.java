@@ -40,12 +40,26 @@ import jakarta.xml.bind.Unmarshaller;
 import java.io.File;
 import java.io.IOException;
 
+import static fiftyone.pipeline.web.Constants.DEFAULT_JSON_PATH;
+import static fiftyone.pipeline.web.Constants.CORE_JS_NAME;
+import static fiftyone.pipeline.web.Constants.DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS;
 import static fiftyone.pipeline.web.Constants.DEFAULT_CLIENTSIDE_ENABLED;
 import static fiftyone.pipeline.web.Constants.DEFAULT_CONFIG_FILE;
+import static fiftyone.pipeline.web.Constants.DEFAULT_ELEMENT_ENABLED;
+import static fiftyone.pipeline.web.Constants.INIT_PARAM_CLIENTSIDE_CACHE_MAX_AGE;
+import static fiftyone.pipeline.web.Constants.INIT_PARAM_JAVASCRIPT_PATH;
+import static fiftyone.pipeline.web.Constants.INIT_PARAM_JSON_PATH;
+import static fiftyone.pipeline.web.Constants.INIT_PARAM_SEQUENCE_ELEMENT_ENABLED;
+import static fiftyone.pipeline.web.Constants.INIT_PARAM_SET_HEADERS_ELEMENT_ENABLED;
 
 /**
  * Servlet filter used to intercept HTTP requests and process them using the
  * 51Degrees Pipeline.
+ * <p>
+ * A Flow Data cannot be used by two threads at once. Application code reads
+ * the values it needs from the Flow Data on the request's thread, and hands
+ * those values, not the Flow Data, to any other thread or task. The Flow
+ * Data is closed when the request ends.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/web-integration.md">Specification</a>
  */
 public class PipelineFilter implements Filter {
@@ -80,7 +94,21 @@ public class PipelineFilter implements Filter {
         else {
             clientsideEnabled = Boolean.parseBoolean(clientsideEnabledString);
         }
+        int cacheMaxAgeSeconds = getCacheMaxAgeSeconds(filterConfig);
         
+        boolean sequenceElementEnabled = getBooleanInitParameter(
+            filterConfig,
+            INIT_PARAM_SEQUENCE_ELEMENT_ENABLED,
+            DEFAULT_ELEMENT_ENABLED);
+        boolean setHeadersElementEnabled = getBooleanInitParameter(
+            filterConfig,
+            INIT_PARAM_SET_HEADERS_ELEMENT_ENABLED,
+            DEFAULT_ELEMENT_ENABLED);
+        String javaScriptPath = getPathInitParameter(
+            filterConfig, INIT_PARAM_JAVASCRIPT_PATH, CORE_JS_NAME);
+        String jsonPath = getPathInitParameter(
+            filterConfig, INIT_PARAM_JSON_PATH, DEFAULT_JSON_PATH);
+
         ServletContext context = config.getServletContext();
 
         File configFile = new File(context.getRealPath(configFileName));
@@ -96,7 +124,8 @@ public class PipelineFilter implements Filter {
             PipelineOptions options = (PipelineOptions) unmarshaller.unmarshal(configFile);
 
             pipeline = StartupHelpers.buildFromConfiguration(builder, options, 
-                clientsideEnabled, context.getContextPath());
+                clientsideEnabled, context.getContextPath(), jsonPath,
+                sequenceElementEnabled, setHeadersElementEnabled);
         } catch (Exception e) {
             throw new ServletException(e);
         }
@@ -105,12 +134,64 @@ public class PipelineFilter implements Filter {
         resultService = new PipelineResultServiceCore.Default(evidenceService, pipeline);
         flowDataProviderCore = new FlowDataProviderCore.Default();
         uachServiceCore = new UACHServiceCore.Default();
-        clientsidePropertyServiceCore = new ClientsidePropertyServiceCore.Default(
-            flowDataProviderCore,
-            pipeline);
+        ClientsidePropertyServiceCore.Default clientside =
+            new ClientsidePropertyServiceCore.Default(
+                flowDataProviderCore,
+                pipeline);
+        clientside.setCacheMaxAge(cacheMaxAgeSeconds);
+        clientsidePropertyServiceCore = clientside;
         jsService = new FiftyOneJSServiceCore.Default(
             clientsidePropertyServiceCore,
-            clientsideEnabled);
+            clientsideEnabled,
+            javaScriptPath,
+            jsonPath);
+    }
+
+    private static boolean getBooleanInitParameter(
+        FilterConfig filterConfig,
+        String name,
+        boolean defaultValue) {
+        String value = filterConfig.getInitParameter(name);
+        return value == null ? defaultValue : Boolean.parseBoolean(value);
+    }
+
+    private static String getPathInitParameter(
+        FilterConfig filterConfig,
+        String name,
+        String defaultValue) {
+        String value = filterConfig.getInitParameter(name);
+        return value == null || value.trim().isEmpty() ?
+            defaultValue : value.trim();
+    }
+
+    /**
+     * The max-age of the client-side endpoints' Cache-Control header, in
+     * seconds, from the filter's init parameter, or the default when the
+     * parameter is not set.
+     * @param filterConfig the filter's configuration
+     * @return the max-age in seconds
+     * @throws ServletException if the parameter is not a whole number of
+     * seconds, 0 or more
+     */
+    static int getCacheMaxAgeSeconds(FilterConfig filterConfig)
+        throws ServletException {
+        String value = filterConfig.getInitParameter(
+            INIT_PARAM_CLIENTSIDE_CACHE_MAX_AGE);
+        if (value == null || value.trim().isEmpty()) {
+            return DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS;
+        }
+        try {
+            int seconds = Integer.parseInt(value.trim());
+            if (seconds >= 0) {
+                return seconds;
+            }
+        } catch (NumberFormatException e) {
+            // Reported below, as a negative number is.
+        }
+        throw new ServletException("The '" +
+            INIT_PARAM_CLIENTSIDE_CACHE_MAX_AGE + "' init parameter must " +
+            "be a whole number of seconds, 0 or more, and was '" + value +
+            "'.");
     }
 
     @Override
@@ -118,6 +199,16 @@ public class PipelineFilter implements Filter {
         ServletRequest request,
         ServletResponse response,
         FilterChain chain) throws IOException, ServletException {
+
+        // A request for the 51Degrees JavaScript or JSON whose If-None-Match
+        // matches the ETag of its Evidence is answered without processing,
+        // because that Evidence alone decides the content.
+        if (jsService.serveNotModified(
+            (HttpServletRequest) request,
+            (HttpServletResponse) response,
+            resultService)) {
+            return;
+        }
 
         // Populate the request properties and store against the
         // HttpContext.

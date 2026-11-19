@@ -12,7 +12,7 @@
 
     <artifactId>ip-intelligence</artifactId>
     <name>51Degrees :: IP Intelligence</name>
-    <description>Provides IP Intelligence for the 51Degrees Pipeline API. This can be used as an alternative to legacy IP Intelligence services such as MaxMind or IPinfo.</description>
+    <description>IP Intelligence and IP geolocation for Java. Finds an IP address's likely location (country, region, town, and coordinates), connection type, and network. Works on-premise with a data file or in the cloud. Built on the 51Degrees Pipeline API. An alternative to MaxMind and IPinfo.</description>
     <url>https://github.com/51Degrees/51degrees-java</url>
 
     <dependencies>

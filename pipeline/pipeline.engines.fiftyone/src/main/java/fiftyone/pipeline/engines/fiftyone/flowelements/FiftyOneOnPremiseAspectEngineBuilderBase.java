@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.engines.fiftyone.flowelements;
 
+import fiftyone.pipeline.engines.configuration.DataFileConfiguration;
 import fiftyone.pipeline.engines.data.AspectEngineDataFile;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneDataFile;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneDataFileDefault;
@@ -78,6 +79,17 @@ public abstract class FiftyOneOnPremiseAspectEngineBuilderBase<
         super(loggerFactory, dataUpdateService);
         setDataUpdateUrl(DATA_UPDATE_URL);
         setDataUpdateUrlFormatter(new FiftyOneUrlFormatter());
+    }
+
+    /**
+     * The Distributor serves nothing without a license key, so a key is
+     * required while the data update URL is the Distributor's.
+     * @param dataFileConfig the data file configuration to check
+     * @return true if the data update URL is the Distributor's
+     */
+    @Override
+    protected boolean isLicenseKeyRequired(DataFileConfiguration dataFileConfig) {
+        return DATA_UPDATE_URL.equals(dataFileConfig.getDataUpdateUrl());
     }
 
     /**

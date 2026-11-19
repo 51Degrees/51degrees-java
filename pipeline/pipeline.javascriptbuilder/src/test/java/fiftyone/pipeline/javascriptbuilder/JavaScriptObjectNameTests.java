@@ -224,6 +224,112 @@ public class JavaScriptObjectNameTests {
     }
 
     /**
+     * The names the specification refuses that are not reserved words of the
+     * language, being eval, arguments, and the properties of the browser's
+     * Window object that a top level var cannot replace or that navigate the
+     * page away.
+     */
+    static final String[] REFUSED_NAMES = {
+        "eval", "arguments", "window", "document", "top", "name", "status",
+        "history", "navigator", "closed", "location", "frameElement",
+        "isSecureContext", "crossOriginIsolated", "trustedTypes", "crypto",
+        "indexedDB", "localStorage", "sessionStorage", "caches",
+        "cookieStore", "speechSynthesis", "styleMedia", "crashReport",
+        "credentialless", "customElements", "documentPictureInPicture",
+        "fence", "launchQueue", "originAgentCluster"
+    };
+
+    /**
+     * Window properties that a top level var can replace, so the names stay
+     * allowed.
+     */
+    static final String[] ALLOWED_WINDOW_NAMES = {
+        "self", "frames", "parent", "opener", "length"
+    };
+
+    static Stream<String> refusedNames() {
+        return Stream.of(REFUSED_NAMES);
+    }
+
+    static Stream<String> allowedWindowNames() {
+        return Stream.of(ALLOWED_WINDOW_NAMES);
+    }
+
+    @ParameterizedTest
+    @MethodSource("refusedNames")
+    public void ObjectName_RefusedNameFromEvidence_DefaultUsed(String name) {
+        JavaScriptBuilderElement element =
+            new JavaScriptBuilderElementBuilder(loggerFactory).build();
+        evidence.put(EVIDENCE_OBJECT_NAME, name);
+
+        String script = render(element);
+
+        assertWorkingObject(script, Constants.DEFAULT_OBJECT_NAME);
+        assertFalse(Pattern.compile("var " + Pattern.quote(name) +
+                " = new fiftyoneDegreesManager\\(\\);")
+                .matcher(withoutParameters(script)).find(),
+            "the script should not declare '" + name + "'");
+        assertEquals(1, count(script, "new fiftyoneDegreesManager()"));
+        List<String> warnings = warnings();
+        assertEquals(1, warnings.size(), String.join("\n", warnings));
+    }
+
+    @ParameterizedTest
+    @MethodSource("refusedNames")
+    public void ObjectName_RefusedNameFromBuilder_Refused(String name) {
+        assertThrows(
+            PipelineConfigurationException.class,
+            () -> new JavaScriptBuilderElementBuilder(loggerFactory)
+                .setObjectName(name)
+                .build());
+    }
+
+    @ParameterizedTest
+    @MethodSource("refusedNames")
+    public void ObjectName_RefusedNameFromConstructor_Refused(String name) {
+        assertThrows(
+            PipelineConfigurationException.class,
+            () -> new JavaScriptBuilderElement(
+                loggerFactory.getLogger("test"),
+                null,
+                "",
+                name,
+                false,
+                "",
+                ""));
+    }
+
+    @ParameterizedTest
+    @MethodSource("refusedNames")
+    public void ObjectName_IsValidObjectName_RefusedName(String name) {
+        assertFalse(JavaScriptBuilderElement.isValidObjectName(name));
+    }
+
+    @ParameterizedTest
+    @MethodSource("allowedWindowNames")
+    public void ObjectName_WindowPropertyVarCanReplace_Allowed(String name) {
+        assertTrue(JavaScriptBuilderElement.isValidObjectName(name));
+        JavaScriptBuilderElement element =
+            new JavaScriptBuilderElementBuilder(loggerFactory)
+                .setObjectName(name)
+                .build();
+
+        String script = render(element);
+
+        assertTrue(Pattern.compile(
+                "var " + Pattern.quote(name) + "\\s*=\\s*new")
+                .matcher(script).find(),
+            "the script should declare '" + name + "'");
+        assertEquals(0, warnings().size());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"windows", "Window", "cachesX"})
+    public void ObjectName_NearMissOfRefusedName_Allowed(String name) {
+        assertTrue(JavaScriptBuilderElement.isValidObjectName(name));
+    }
+
+    /**
      * No name configured means the default name, whether the name was never
      * set or was set to null.
      */
@@ -252,16 +358,20 @@ public class JavaScriptObjectNameTests {
     }
 
     private void assertWorkingObject(String script, String name) {
+        // The script is minified by default, so the patterns allow for the
+        // white space around '=' being taken out.
         assertTrue(Pattern.compile(
                 "var " + Pattern.quote(name) +
-                " = new fiftyoneDegreesManager\\(\\);")
+                "\\s*=\\s*new fiftyoneDegreesManager\\(\\);")
                 .matcher(script).find(),
             "the script should declare var " + name);
         if (name.equals("fod") == false) {
             assertFalse(Pattern.compile("var fod\\b").matcher(script).find(),
                 "the script should not declare var fod");
         }
-        assertTrue(script.contains("var sessionKey = \"" + name + "\";"),
+        assertTrue(Pattern.compile(
+                "var sessionKey\\s*=\\s*\"" + Pattern.quote(name) + "\";")
+                .matcher(script).find(),
             "the storage key should be " + name);
         assertTrue(script.contains("window[\"" + name + "Evidence\"]"),
             "the evidence lookup should use " + name);
@@ -302,25 +412,27 @@ public class JavaScriptObjectNameTests {
     }
 
     /**
-     * The script with the line that assigns its request parameters taken
-     * out. The script sends the page's query evidence, the requested object
-     * name included, back with its own request. The builder url encodes
-     * each value and the line holds them as JSON strings, so the requested
-     * name there is data and not code, and it is left out of the checks
-     * that the name was not written into the code. The line is found as the
-     * existing tests find it, by the word and a brace, because the template
-     * has named the declaration differently over time.
+     * The script with the object holding its request parameters taken out.
+     * The script sends the page's query evidence, the requested object name
+     * included, back with its own request. The builder url encodes each
+     * value, so no value holds a brace, and the object holds them as JSON
+     * strings, so the requested name there is data and not code, and it is
+     * left out of the checks that the name was not written into the code.
+     * The object is found by the word parameters and a brace, because the
+     * template has named the declaration differently over time, and not by
+     * line, because the script is minified by default.
      */
+    private static final Pattern PARAMETERS = Pattern.compile(
+        "(?i)\\w*parameters\\s*=\\s*" +
+        "(?:function\\s*\\(\\)\\s*\\{\\s*return\\s*)?\\{[^}]*\\}");
+
     private static String withoutParameters(String script) {
-        StringBuilder rest = new StringBuilder();
-        for (String line : script.split("\\r?\\n")) {
-            if (line.toLowerCase().contains("parameters =") &&
-                line.contains("{")) {
-                continue;
-            }
-            rest.append(line).append('\n');
-        }
-        return rest.toString();
+        Matcher matcher = PARAMETERS.matcher(script);
+        assertTrue(matcher.find(), "the script should assign its parameters");
+        String rest = matcher.replaceFirst("");
+        assertFalse(PARAMETERS.matcher(rest).find(),
+            "the script should assign its parameters once");
+        return rest;
     }
 
     private static int count(String text, String find) {

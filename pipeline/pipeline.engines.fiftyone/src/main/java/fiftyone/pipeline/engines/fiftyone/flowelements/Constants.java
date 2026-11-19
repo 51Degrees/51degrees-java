@@ -28,10 +28,10 @@ package fiftyone.pipeline.engines.fiftyone.flowelements;
 public class Constants {
 
     /**
-     * The maximum length of a piece of evidence's value which can be added to
-     * the usage data being sent.
+     * The maximum length, in characters, of a piece of evidence's value which
+     * can be added to the usage data being sent.
      */
-    public static final int SHARE_USAGE_MAX_EVIDENCE_LENGTH = 512;
+    public static final int SHARE_USAGE_MAX_EVIDENCE_LENGTH = 10000;
 
     /**
      * Session id evidence suffix. This is prefixed by the query constant.
@@ -58,6 +58,13 @@ public class Constants {
         fiftyone.pipeline.core.Constants.EVIDENCE_QUERY_PREFIX +
             fiftyone.pipeline.core.Constants.EVIDENCE_SEPERATOR +
             EVIDENCE_SEQUENCE_SUFIX;
+
+    /**
+     * Whether a 51Degrees Pipeline builder adds the Usage Sharing Element,
+     * unless it is told otherwise.
+     */
+    public static final boolean SHARE_USAGE_DEFAULT_ENABLED = true;
+
     public static final int SHARE_USAGE_DEFAULT_REPEAT_EVIDENCE_MINUTES = 20;
     public static final double SHARE_USAGE_DEFAULT_SHARE_PERCENTAGE = 1.0;
 
@@ -90,13 +97,40 @@ public class Constants {
     static final int SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT = 5000;
 
     /**
+     * The most time closing the Usage Sharing Element may take, from its
+     * start, in milliseconds.
+     */
+    static final int SHARE_USAGE_CLOSE_LIMIT_MILLIS = 5000;
+
+    /**
+     * The part of the close limit, in milliseconds, kept for what closing
+     * does after it stops waiting for the data to be sent: discarding the
+     * rest, logging the warning and freeing the resources.
+     */
+    static final int SHARE_USAGE_CLOSE_RESERVE_MILLIS = 500;
+
+    /**
      * Default lost data count for share usage before it wraps
      */
     static final int LOST_DATA_RESET_DEFAULT = 5000000;
+
+    /**
+     * While the queue is full, a message is logged for the first entry
+     * discarded and then once for every this many more, never one for each
+     * entry.
+     */
+    static final int QUEUE_FULL_LOG_EVERY = 1000;
     /**
      * The default URL to send usage data to.
      */
     static final String SHARE_USAGE_DEFAULT_URL = "https://devices-v4.51degrees.com/new.ashx";
+
+    /**
+     * Every query string and HTTP form parameter is shared by default, not
+     * only the 51Degrees ones and those named.
+     */
+    public static final boolean
+        SHARE_USAGE_DEFAULT_SHARE_ALL_QUERY_STRING_PARAMETERS = true;
 
     /**
      * Constant Added to blocked HTTP Headers so that the cookie header is
@@ -104,4 +138,43 @@ public class Constants {
      */
     static final String EVIDENCE_HTTPHEADER_COOKIE_SUFFIX = "cookie";
 
+    /**
+     * The default number of failed sends within the failures window that
+     * pauses sending.
+     */
+    public static final int SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_DEFAULT = 10;
+
+    /**
+     * The fewest failed sends that can be set to pause sending.
+     */
+    public static final int SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_MIN = 1;
+
+    /**
+     * The most failed sends that can be set to pause sending.
+     */
+    public static final int SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_MAX = 100;
+
+    /**
+     * The default time in seconds over which failed sends are counted.
+     */
+    public static final int SHARE_USAGE_FAILURES_WINDOW_SECONDS_DEFAULT = 100;
+
+    /**
+     * The default length in seconds of the first pause after failed sends.
+     */
+    public static final double
+        SHARE_USAGE_EXPONENTIAL_BACKOFF_INITIAL_DELAY_SECONDS_DEFAULT = 2.0;
+
+    /**
+     * The default longest pause in seconds.
+     */
+    public static final double
+        SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT = 300.0;
+
+    /**
+     * The default multiplier applied to the pause each time the send tried
+     * when a pause ends fails.
+     */
+    public static final double
+        SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT = 2.0;
 }

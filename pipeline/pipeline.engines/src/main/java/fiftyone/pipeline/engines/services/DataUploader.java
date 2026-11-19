@@ -44,5 +44,12 @@ public interface DataUploader {
      */
     int getResponseCode() throws IOException;
 
+    /**
+     * @return the content of the answer, which is logged when the code is
+     * not 200, or an empty string if the uploader cannot give it
+     */
+    default String getResponseContent() {
+        return "";
+    }
 
 }

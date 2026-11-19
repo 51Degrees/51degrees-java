@@ -33,7 +33,13 @@ import java.util.TreeMap;
  * Base implementation of {@link ElementData}.
  * Represents property values that have be determined by a specific
  * {@link FlowElement} based on the supplied evidence.
+ * <p>
+ * An instance is written only by the {@link FlowElement} that creates
+ * it, while that element processes. It is not intended to be written
+ * from several threads at once, nor read while it is being written.
+ * </p>
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/conceptual-overview.md#element-data">Specification</a>
+ * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/thread-safety.md#element-data">Thread safety</a>
  */
 public abstract class ElementDataBase extends DataBase implements ElementData {
 

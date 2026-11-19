@@ -1,8 +1,8 @@
 # 51Degrees Geo-Location Engines
 
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-geo-location-engines "Data rewards the curious") **Pipeline API**
+![51Degrees](https://raw.githubusercontent.com/51Degrees/51degrees-java/main/.github/images/logo-160.png "Data rewards the curious") **Pipeline API**
 
-[Developer Documentation](https://51degrees.com/location-java/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-geo-location-engines "developer documentation")
+[Developer Documentation](https://51degrees.com/documentation/_reverse_geocoding__quickstart.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-geo-location-engines "developer documentation")
 
 ## Introduction
  
@@ -18,7 +18,7 @@ but additional caution should be applied.
 
 You will require a [resource key](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=data)
 to use the Cloud API. You can create resource keys using our 
-[configurator](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=data), see our 
+[configuration page](https://51degrees.com/configure/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=data), see our 
 [documentation](https://51degrees.com/documentation/_services__configurator.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=data) on how to use this.
 
 ## Installation
@@ -75,5 +75,16 @@ See below for a list of the examples available.
 For complete documentation on the Pipeline API and associated engines, see the [51Degrees documentation site][Documentation].
 
 [Documentation]: https://51degrees.com/documentation/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=project-documentation
-[maven]: https://search.maven.org/artifact/com.51degrees/geo-location
+[maven]: https://central.sonatype.com/artifact/com.51degrees/geo-location
 
+## Flow Data and threads
+
+A Flow Data cannot be used by two threads at once. The web examples handle
+each request on one thread, and read the Flow Data there. An application that
+hands work from a request to another thread or task reads the values that
+work needs from the Flow Data on the request's thread, into its own
+variables, and passes those values, not the Flow Data. The Flow Data is
+closed when the request ends, so work that outlives the request must not
+keep it either. The
+[pipeline README](../pipeline/README.md#flow-data-and-threads)
+shows such a hand-off.

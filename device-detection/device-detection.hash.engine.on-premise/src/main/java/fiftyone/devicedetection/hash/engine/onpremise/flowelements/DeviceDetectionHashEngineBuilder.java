@@ -341,6 +341,7 @@ public class DeviceDetectionHashEngineBuilder
             dataFile,
             config,
             requiredProperties,
+            properties,
             new HashDataFactory(loggerFactory),
             tempDir);
     }

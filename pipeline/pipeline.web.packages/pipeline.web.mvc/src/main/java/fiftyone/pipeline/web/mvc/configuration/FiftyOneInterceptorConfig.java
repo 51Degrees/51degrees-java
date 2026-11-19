@@ -24,6 +24,8 @@ package fiftyone.pipeline.web.mvc.configuration;
 
 import fiftyone.pipeline.web.mvc.components.FiftyOneInterceptor;
 
+import static fiftyone.pipeline.web.Constants.DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS;
+
 /**
  * Configuration class for the {@link FiftyOneInterceptor}.
  */
@@ -40,4 +42,47 @@ public interface FiftyOneInterceptorConfig {
      * @return true if client-side properties are enabled
      */
     boolean getClientsidePropertiesEnabled();
+
+    /**
+     * Get how many seconds a browser may keep the client-side JavaScript or
+     * JSON before it asks again, the max-age of their Cache-Control header.
+     * @return the max-age in seconds, 0 or more
+     */
+    default int getClientsideCacheMaxAge() {
+        return DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS;
+    }
+
+    /**
+     * Get the end of the request path the JavaScript is served for.
+     * @return the path, or null or empty for the default
+     */
+    default String getJavaScriptPath() {
+        return null;
+    }
+
+    /**
+     * Get the end of the request path the JSON is served for.
+     * @return the path, or null or empty for the default
+     */
+    default String getJsonPath() {
+        return null;
+    }
+
+    /**
+     * Get whether the Sequence Element is added to the Pipeline when the
+     * configuration does not include it.
+     * @return true to add the Sequence Element
+     */
+    default boolean getSequenceElementEnabled() {
+        return true;
+    }
+
+    /**
+     * Get whether the Set Headers Element is added to the Pipeline when the
+     * configuration does not include it.
+     * @return true to add the Set Headers Element
+     */
+    default boolean getSetHeadersElementEnabled() {
+        return true;
+    }
 }

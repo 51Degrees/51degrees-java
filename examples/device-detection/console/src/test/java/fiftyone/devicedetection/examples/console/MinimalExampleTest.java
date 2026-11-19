@@ -23,17 +23,13 @@
 package fiftyone.devicedetection.examples.console;
 
 import fiftyone.devicedetection.examples.shared.KeyHelper;
-import fiftyone.devicedetection.shared.testhelpers.KeyUtils;
 import org.junit.Test;
-
-import static org.junit.Assume.assumeFalse;
 
 public class MinimalExampleTest {
     @Test
     public void minimalExampleTest() throws Exception {
-        String resourceKey = KeyHelper.getOrSetTestResourceKey(false);
-        assumeFalse("Skipping test, no resource key found",
-            KeyUtils.isInvalidKey(resourceKey));
+        String resourceKey = KeyHelper.requireTestResourceKey(
+            "whether a device is mobile", "device");
         MinimalExample.run(resourceKey);
     }
 }

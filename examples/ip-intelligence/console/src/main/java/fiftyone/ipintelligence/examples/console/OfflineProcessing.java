@@ -44,8 +44,9 @@
  *
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/console/src/main/java/fiftyone/ipintelligence/examples/console/OfflineProcessing.java).
  *
- * This example requires an enterprise IP Intelligence data file (.ipi).
- * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-offlineprocessing.java&utm_term=header).
+ * By default the example uses the free Lite IP Intelligence data file, which it downloads when
+ * it is missing, and records Country, which only the Enterprise data file has, as needing it. To
+ * obtain an Enterprise data file, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-offlineprocessing.java&utm_term=header).
  *
  * Required Maven Dependencies:
  * - [com.51degrees:ip-intelligence](https://central.sonatype.com/artifact/com.51degrees/ip-intelligence)
@@ -53,6 +54,7 @@
 
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.IPIntelligencePipelineBuilder;
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
@@ -74,8 +76,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
+import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asString;
 import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asStringProperty;
-import static fiftyone.ipintelligence.examples.shared.DataFileHelper.ENTERPRISE_DATA_FILE_REL_PATH;
+import static fiftyone.ipintelligence.examples.shared.DataFileHelper.LITE_DATA_FILE_REL_PATH;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
 /**
@@ -94,11 +97,17 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * using Performance Profile settings.
  */
 public class OfflineProcessing {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-ipintelligence-examples-console-offlineprocessing.java";
+
     static final Logger logger = LoggerFactory.getLogger(OfflineProcessing.class);
-    // This 51degrees IP Intelligence data file (distributed with the source) needs to
-    // be somewhere in the project space
+    // By default the free 51degrees Lite IP Intelligence data file is used from
+    // the data repository in cxx/data, and is downloaded if it is missing.
     //
-    // For testing, contact us to obtain an enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-offlineprocessing.java&utm_term=datadir
+    // Contact us for a copy of the Enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-offlineprocessing.java&utm_term=datadir
     private static final String dataDir = "ip-intelligence";
     // This 51degrees file of 20,000 examples (distributed with the source)
     // needs to be somewhere in the project space. Additional evidence files
@@ -106,13 +115,19 @@ public class OfflineProcessing {
     public static final String HEADER_EVIDENCE_YML =
             dataDir + "/evidence.yml";
 
+    /**
+     * Where to ask for a copy of the Enterprise data file, tagged with this
+     * example.
+     */
+    private static final String CONTACT_US = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-offlineprocessing.java&utm_term=enterprise-data-file";
+
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
 
         // Use provided data file argument, or fall back to default data file path
-        String dataFile = (args.length > 0) ? args[0] : ENTERPRISE_DATA_FILE_REL_PATH;
-        
-        File evidenceFile = getFilePath(HEADER_EVIDENCE_YML);
+        String dataFile = (args.length > 0) ? args[0] : LITE_DATA_FILE_REL_PATH;
+
+        File evidenceFile = DataFileHelper.findDataFile(HEADER_EVIDENCE_YML);
         run(dataFile, Files.newInputStream(evidenceFile.toPath()), System.out);
     }
 
@@ -135,7 +150,7 @@ public class OfflineProcessing {
             logger.error("Failed to find IP Intelligence data file at '{}'. " +
                     "Please provide a valid path to an IP Intelligence data file (.ipi). " +
                     "An explicit path can be supplied via the {} environment variable.",
-                    dataFile, DataFileHelper.IPI_PATH_ENV_VAR);
+                    dataFile, DataFileHelper.IPI_PATH_VARIABLE);
             throw e;
         }
 
@@ -162,8 +177,9 @@ public class OfflineProcessing {
         // that the pipeline is disposed when done
         try (Pipeline pipeline = new IPIntelligencePipelineBuilder()
                 .useOnPremise(dataFileLocation, false)
-                // inhibit sharing usage for this test, usually
-                // this should be set "true"
+                // Usage sharing is off because this example's evidence is already
+                // known to 51Degrees. In production, leave usage sharing on, which adds
+                // a Usage Sharing Element to the Pipeline and helps improve the service.
                 .setShareUsage(false)
                 // inhibit auto-update of the data file for this test
                 .setAutoUpdate(false)
@@ -172,11 +188,14 @@ public class OfflineProcessing {
                 // Performance options for IP Intelligence
                 //.setPerformanceProfile(Constants.PerformanceProfiles.MaxPerformance)
                 //.setPerformanceProfile(Constants.PerformanceProfiles.HighPerformance)
-                // Low memory profile has the data streamed from disk on
-                // demand and is conservative in its use of memory, but
-                // slower because of disk access
-                .setPerformanceProfile(Constants.PerformanceProfiles.MaxPerformance)
                 //.setPerformanceProfile(Constants.PerformanceProfiles.Balanced)
+                // We use the low memory profile, which reads the data file
+                // from disk as it is needed, because this example may be
+                // given the Enterprise data file, which is over 6 GB, through
+                // its first argument or _51DEGREES_IPI_PATH. MaxPerformance
+                // loads the whole data file into memory, which makes each
+                // lookup faster where there is memory to hold it.
+                .setPerformanceProfile(Constants.PerformanceProfiles.LowMemory)
                 .build()) {
 
             // get the details of the IP Intelligence engine from the pipeline,
@@ -192,6 +211,7 @@ public class OfflineProcessing {
             try (Writer writer = new OutputStreamWriter(os)) {
                 // read a batch of IP evidence from the stream
                 int count = 0;
+                boolean needsEnterprise = false;
                 while (evidenceIterator.hasNext() && count < 20) {
                     // Flow data is the container for inputs and outputs that
                     // flow through the pipeline a flowdata instance is
@@ -229,9 +249,16 @@ public class OfflineProcessing {
                         resultMap.put("ip.RegisteredName", asStringProperty(ipData.getRegisteredName()));
                         resultMap.put("ip.RegisteredOwner", asStringProperty(ipData.getRegisteredOwner()));
                         resultMap.put("ip.RegisteredCountry", asStringProperty(ipData.getRegisteredCountry()));
+                        // Only the Enterprise data file has Country.
+                        if (DataFileHelper.hasProperty(engine, "Country")) {
+                            resultMap.put("ip.Country", asString(ipData.getCountry()));
+                        } else {
+                            resultMap.put("ip.Country", DataFileHelper.NEEDS_ENTERPRISE);
+                            needsEnterprise = true;
+                        }
 
                         // To output all populated IP Intelligence properties instead of
-                        // the fixed subset above, replace the three puts with the helper:
+                        // the fixed subset above, replace the puts with the helper:
                         // resultMap.putAll(getPopulatedProperties(ipData, "ip."));
 
                         // write document to output stream as a YAML document
@@ -242,18 +269,20 @@ public class OfflineProcessing {
                     }
                     count++;
                 }
+                if (needsEnterprise) {
+                    // A comment keeps the output a valid YAML stream.
+                    writer.write("# Some of these properties need the " +
+                            "Enterprise data file. Contact us for a copy at " +
+                            CONTACT_US + "\n");
+                }
                 // finish the last YAML document
                 writer.write("...\n");
+                // The section is written as comments, so the output stays a
+                // valid YAML stream.
+                FindOutMore.writeCommented(new PrintWriter(writer), "# ",
+                        EXAMPLE_TAG, FindOutMore.ON_PREMISE_REPOSITORIES);
                 writer.flush();
                 logger.info("Finished processing {} records", count);
-
-                if (engine.getDataSourceTier().equals("Lite")) {
-                    logger.warn("You have used a Lite data file which has " +
-                            "limited properties and is of limited accuracy");
-                    logger.info("The example requires an Enterprise data file " +
-                            "to work fully. Find out about the Enterprise " +
-                            "data file here: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-offlineprocessing.java&utm_term=enterprise-data-file");
-                }
             }
         }
     }

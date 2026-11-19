@@ -23,6 +23,8 @@
 package fiftyone.pipeline.web.mvc.configuration;
 
 import javax.servlet.ServletContext;
+
+import static fiftyone.pipeline.web.Constants.DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -33,6 +35,17 @@ public class FiftyOneInterceptorConfigDefault implements FiftyOneInterceptorConf
     private String dataFilePath;
 
     private boolean clientsidePropertiesEnabled;
+
+    private int clientsideCacheMaxAge =
+        DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS;
+
+    private String javaScriptPath;
+
+    private String jsonPath;
+
+    private boolean sequenceElementEnabled = true;
+
+    private boolean setHeadersElementEnabled = true;
 
     @Autowired
     public ServletContext servletContext;
@@ -45,6 +58,57 @@ public class FiftyOneInterceptorConfigDefault implements FiftyOneInterceptorConf
         this.clientsidePropertiesEnabled = clientsidePropertiesEnabled;
     }
 
+    /**
+     * Set how many seconds a browser may keep the client-side JavaScript or
+     * JSON before it asks again, the max-age of their Cache-Control header.
+     * @param seconds the max-age, 0 or more
+     * @throws IllegalArgumentException if seconds is negative
+     */
+    public void setClientsideCacheMaxAge(int seconds) {
+        if (seconds < 0) {
+            throw new IllegalArgumentException(
+                "The max-age of the client-side responses cannot be " +
+                    "negative, and was " + seconds + ".");
+        }
+        this.clientsideCacheMaxAge = seconds;
+    }
+
+    public void setJavaScriptPath(String javaScriptPath) {
+        this.javaScriptPath = javaScriptPath;
+    }
+
+    public void setJsonPath(String jsonPath) {
+        this.jsonPath = jsonPath;
+    }
+
+    public void setSequenceElementEnabled(boolean sequenceElementEnabled) {
+        this.sequenceElementEnabled = sequenceElementEnabled;
+    }
+
+    public void setSetHeadersElementEnabled(boolean setHeadersElementEnabled) {
+        this.setHeadersElementEnabled = setHeadersElementEnabled;
+    }
+
+    @Override
+    public String getJavaScriptPath() {
+        return javaScriptPath;
+    }
+
+    @Override
+    public String getJsonPath() {
+        return jsonPath;
+    }
+
+    @Override
+    public boolean getSequenceElementEnabled() {
+        return sequenceElementEnabled;
+    }
+
+    @Override
+    public boolean getSetHeadersElementEnabled() {
+        return setHeadersElementEnabled;
+    }
+
     @Override
     public String getDataFilePath() {
         return dataFilePath;
@@ -53,5 +117,10 @@ public class FiftyOneInterceptorConfigDefault implements FiftyOneInterceptorConf
     @Override
     public boolean getClientsidePropertiesEnabled() {
         return clientsidePropertiesEnabled;
+    }
+
+    @Override
+    public int getClientsideCacheMaxAge() {
+        return clientsideCacheMaxAge;
     }
 }

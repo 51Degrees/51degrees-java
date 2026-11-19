@@ -51,12 +51,18 @@ import java.io.File;
 
 import static fiftyone.pipeline.web.Constants.CORE_JS_NAME;
 import static fiftyone.pipeline.web.Constants.CORE_JSON_NAME;
+import static fiftyone.pipeline.web.Constants.DEFAULT_JSON_PATH;
 
 /**
  * The 51Degrees middleware component.
  * This carries out the processing on the device making the request using the
  * Pipeline which has been constructed, and intercepts requests for the
  * 51Degrees JavaScript.
+ * <p>
+ * A Flow Data cannot be used by two threads at once. Application code reads
+ * the values it needs from the Flow Data on the request's thread, and hands
+ * those values, not the Flow Data, to any other thread or task. The Flow
+ * Data is closed when the request ends.
  */
 @Component
 public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
@@ -93,6 +99,10 @@ public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
             configFileName = Constants.DEFAULT_CONFIG_FILE;
         }
 
+        String jsonPath = config.getJsonPath() == null ||
+            config.getJsonPath().isEmpty() ?
+            DEFAULT_JSON_PATH : config.getJsonPath();
+
         File configFile = new File(configFileName);
         PipelineBuilder builder = new PipelineBuilder()
             .addService(new DataUpdateServiceDefault(
@@ -104,21 +114,54 @@ public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
             // Bind the configuration to a pipeline options instance
             PipelineOptions options = (PipelineOptions) unmarshaller.unmarshal(configFile);
             pipeline = StartupHelpers.buildFromConfiguration(
-                    builder, 
-                    options, 
-                    config.getClientsidePropertiesEnabled());
+                    builder,
+                    options,
+                    config.getClientsidePropertiesEnabled(),
+                    null,
+                    jsonPath,
+                    config.getSequenceElementEnabled(),
+                    config.getSetHeadersElementEnabled());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
 
         resultService.setPipeline(pipeline);
         clientsidePropertyService.setPipeline(pipeline);
+        clientsidePropertyService.setCacheMaxAge(
+            config.getClientsideCacheMaxAge());
         fiftyOneJsService.enable(config.getClientsidePropertiesEnabled());
+        fiftyOneJsService.setPaths(config.getJavaScriptPath(), jsonPath);
     }
 
     public static void enableClientsideProperties(ViewControllerRegistry viewControllerRegistry) {
         viewControllerRegistry.addViewController("/" + CORE_JS_NAME);
+        viewControllerRegistry.addViewController(DEFAULT_JSON_PATH);
         viewControllerRegistry.addViewController("/" + CORE_JSON_NAME);
+    }
+
+    /**
+     * Map the JavaScript and JSON paths that are not the defaults, which
+     * the application sets in its {@link FiftyOneInterceptorConfig}.
+     * @param viewControllerRegistry the registry to add the paths to
+     * @param javaScriptPath the JavaScript path, or null or empty for the
+     *                       default
+     * @param jsonPath the JSON path, or null or empty for the default
+     */
+    public static void enableClientsideProperties(
+        ViewControllerRegistry viewControllerRegistry,
+        String javaScriptPath,
+        String jsonPath) {
+        viewControllerRegistry.addViewController("/" + withoutSlash(
+            javaScriptPath == null || javaScriptPath.isEmpty() ?
+                CORE_JS_NAME : javaScriptPath));
+        viewControllerRegistry.addViewController("/" + withoutSlash(
+            jsonPath == null || jsonPath.isEmpty() ?
+                DEFAULT_JSON_PATH : jsonPath));
+        viewControllerRegistry.addViewController("/" + CORE_JSON_NAME);
+    }
+
+    private static String withoutSlash(String path) {
+        return path.startsWith("/") ? path.substring(1) : path;
     }
 
     @Override
@@ -126,6 +169,14 @@ public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
         HttpServletRequest request,
         HttpServletResponse response,
         Object handler) throws Exception {
+        // A request for the 51Degrees JavaScript or JSON whose If-None-Match
+        // matches the ETag of its Evidence is answered without processing,
+        // because that Evidence alone decides the content. Nothing is left
+        // to close.
+        if (fiftyOneJsService.serveNotModified(
+            request, response, resultService)) {
+            return false;
+        }
         resultService.process(request);
 
         boolean proceed = false;

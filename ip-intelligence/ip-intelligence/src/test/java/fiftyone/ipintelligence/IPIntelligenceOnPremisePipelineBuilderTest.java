@@ -65,6 +65,7 @@ public class IPIntelligenceOnPremisePipelineBuilderTest {
         when(loggerFactory.getLogger(anyString())).thenReturn(logger);
         builder = new IPIntelligencePipelineBuilder(loggerFactory)
                 .useOnPremise(datafile.getAbsolutePath(), false)
+                .setAutoUpdate(false)
                 .setShareUsage(false);
     }
 
@@ -121,6 +122,7 @@ public class IPIntelligenceOnPremisePipelineBuilderTest {
     public void setShareUsage_False_SharedFlowElementNotAdded() throws Exception {
         try (Pipeline pipeline = new IPIntelligencePipelineBuilder(loggerFactory)
                 .useOnPremise(datafile.getAbsolutePath(), false)
+                .setAutoUpdate(false)
                 .setShareUsage(false)
                 .build()) {
             List<FlowElement> flowElements = pipeline.getFlowElements();
@@ -133,11 +135,14 @@ public class IPIntelligenceOnPremisePipelineBuilderTest {
     public void setShareUsage_True_SharedFlowElementAdded() throws Exception {
         try (Pipeline pipeline = new IPIntelligencePipelineBuilder(loggerFactory)
                 .useOnPremise(datafile.getAbsolutePath(), false)
+                .setAutoUpdate(false)
                 .setShareUsage(true)
                 .build()) {
             List<FlowElement> flowElements = pipeline.getFlowElements();
             assertEquals(2, flowElements.size());
-            assertTrue(flowElements.get(0) instanceof ShareUsageElement);
+            // Usage sharing is the last Flow Element.
+            assertTrue(flowElements.get(flowElements.size() - 1)
+                instanceof ShareUsageElement);
         }
     }
 
@@ -145,6 +150,7 @@ public class IPIntelligenceOnPremisePipelineBuilderTest {
     public void setAutoUpdate_PropertyPropagatedToDataFileConfiguration() throws Exception {
         try (Pipeline pipeline = builder
                 .setAutoUpdate(true)
+                .setDataUpdateLicenseKey("licence_key")
                 .build()) {
             DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
             assertTrue(dataFileConfiguration.getAutomaticUpdatesEnabled());
@@ -166,6 +172,7 @@ public class IPIntelligenceOnPremisePipelineBuilderTest {
         DataUpdateServiceDefault dataUpdateServiceDefault = mock(DataUpdateServiceDefault.class);
         try (Pipeline ignored = builder
                 .setAutoUpdate(true)
+                .setDataUpdateLicenseKey("licence_key")
                 .setDataUpdateService(dataUpdateServiceDefault)
                 .build()) {
             verify(dataUpdateServiceDefault).registerDataFile(any());
@@ -176,6 +183,8 @@ public class IPIntelligenceOnPremisePipelineBuilderTest {
     public void setDataUpdateOnStartup_PropertyPropagatedToDataFileConfiguration() throws Exception {
         try (Pipeline pipeline = builder
                 .setDataUpdateOnStartup(true)
+                .setDataUpdateLicenseKey("licence_key")
+                .setDataUpdateService(mock(DataUpdateServiceDefault.class))
                 .build()) {
             DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
             assertTrue(dataFileConfiguration.getUpdateOnStartup());

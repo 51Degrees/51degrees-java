@@ -34,6 +34,7 @@ import fiftyone.pipeline.javascriptbuilder.flowelements.JavaScriptBuilderElement
 import fiftyone.pipeline.jsonbuilder.flowelements.JsonBuilderElementBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
@@ -54,7 +55,9 @@ import static org.mockito.Mockito.when;
 
 /**
  * Checks the callback URL the rendered script is given. These tests render
- * the script only and need no browser.
+ * the script only and need no browser. The script is not minified, so it is
+ * read as the template writes it. {@link JavaScriptMinifyTests} checks that
+ * the minified script carries the same values.
  */
 public class JavaScriptUrlTests {
     private final TestLoggerFactory loggerFactory;
@@ -71,7 +74,8 @@ public class JavaScriptUrlTests {
             new JavaScriptBuilderElementBuilder(loggerFactory)
                 .setEndpoint("/json")
                 .setHost("example.com")
-                .setProtocol("https");
+                .setProtocol("https")
+                .setMinify(false);
         if (contextRoot != null) {
             builder.setContextRoot(contextRoot);
         }
@@ -139,6 +143,50 @@ public class JavaScriptUrlTests {
     }
 
     /**
+     * Evidence keys ignore case, so query Evidence whose prefix is not in
+     * lower case reaches the parameters object, and the session id and
+     * sequence stay out of it whatever their case.
+     */
+    @Test
+    public void Parameters_QueryPrefixInAnyCase() throws Exception {
+        JavaScriptBuilderElement jsElement =
+            new JavaScriptBuilderElementBuilder(loggerFactory)
+                .setEndpoint("/json")
+                .setHost("example.com")
+                .setProtocol("https")
+                .setMinify(false)
+                .build();
+        String javaScript;
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+            .addFlowElement(new SequenceElementBuilder(loggerFactory).build())
+            .addFlowElement(new JsonBuilderElementBuilder(loggerFactory).build())
+            .addFlowElement(jsElement)
+            .build();
+             FlowData flowData = pipeline.createFlowData()) {
+            flowData.addEvidence("Query.Extra", "one");
+            flowData.addEvidence("QUERY.Other", "two");
+            flowData.addEvidence("Query.Session-Id", "a-session");
+            flowData.process();
+            javaScript = flowData.getFromElement(jsElement).getJavaScript();
+        }
+        String parameters = null;
+        for (String line : javaScript.split("\\r?\\n")) {
+            if (line.toLowerCase().contains("parameters =")
+                    && line.contains("{")) {
+                parameters = line;
+                break;
+            }
+        }
+        assertNotNull(parameters, "No parameters object in the script.");
+        assertTrue(parameters.contains("\"Extra\":\"one\""),
+            "Query.Extra is not in the parameters: " + parameters);
+        assertTrue(parameters.contains("\"Other\":\"two\""),
+            "QUERY.Other is not in the parameters: " + parameters);
+        assertFalse(parameters.toLowerCase().contains("session-id"),
+            "The session id is in the parameters: " + parameters);
+    }
+
+    /**
      * A context root still sits between the host and the endpoint, and the
      * URL still carries no query string.
      */
@@ -167,6 +215,7 @@ public class JavaScriptUrlTests {
         JavaScriptBuilderElement jsElement =
             new JavaScriptBuilderElementBuilder(factory)
                 .setEndpoint("/json")
+                .setMinify(false)
                 .build();
         List<String> scripts = new ArrayList<>();
         try (Pipeline pipeline = new PipelineBuilder(factory)
@@ -231,6 +280,34 @@ public class JavaScriptUrlTests {
     }
 
     /**
+     * A refused host is logged with *** in place of everything in the host
+     * value before its last '@', so a password is never written to the log.
+     * Each case has its own element, because a refusal is logged once per
+     * element.
+     */
+    @ParameterizedTest(name = "[{index}]")
+    @CsvSource(delimiter = '|', value = {
+        "user:secret@example.com|\"https://***@example.com/json\"",
+        "a@b@example.com|\"https://***@example.com/json\"",
+        "u@[::1]:80x|\"https://***@[::1]:80x/json\"",
+        "user:pa/ss@example.com|\"https://***@example.com/json\"",
+        "user:pa?ss@example.com|\"https://***@example.com/json\"",
+        "exa mple.com/a@b|\"https://***@b/json\"",
+        "example.123|\"https://example.123/json\"",
+        "https://example.com|\"https://https://example.com/json\""})
+    public void Url_RefusedHost_LoggedWithoutUserInformation(
+        String host, String logged) throws Exception {
+        renderWithHosts(host);
+
+        List<String> errors = builderErrors();
+        assertEquals(1, errors.size(), String.join("\n", errors));
+        assertTrue(errors.get(0).contains(logged), errors.get(0));
+        for (String secret : new String[] {"secret", "pa/", "pa?", "ss@"}) {
+            assertFalse(errors.get(0).contains(secret), errors.get(0));
+        }
+    }
+
+    /**
      * A protocol from the request that is neither http nor https gives a
      * script with no callback, and is logged once like any other URL that
      * is not valid.
@@ -241,6 +318,7 @@ public class JavaScriptUrlTests {
         JavaScriptBuilderElement jsElement =
             new JavaScriptBuilderElementBuilder(factory)
                 .setEndpoint("/json")
+                .setMinify(false)
                 .build();
         try (Pipeline pipeline = new PipelineBuilder(factory)
             .addFlowElement(new SequenceElementBuilder(factory).build())
@@ -273,7 +351,8 @@ public class JavaScriptUrlTests {
      * refused too, which String.equalsIgnoreCase would match to 's'.
      */
     @ParameterizedTest
-    @ValueSource(strings = {"ftp", "ws", "javascript", "https ", "http\u017f"})
+    @ValueSource(strings = {"ftp", "ws", "javascript", "https ", "http\u017f",
+        " ", "\t", "\u00a0"})
     public void Protocol_ConfiguredOtherThanHttpOrHttps_IsRefused(
         String protocol) {
         JavaScriptBuilderElementBuilder builder =

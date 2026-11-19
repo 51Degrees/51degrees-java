@@ -35,17 +35,19 @@ import static org.junit.Assume.assumeTrue;
 
 /**
  * Checks the order in which the on-premise web example picks its data file,
- * being 51DEGREES_DD_PATH first, then TestDataFile, then the Lite file.
+ * being _51DEGREES_DD_PATH first, then TestDataFile, then the Lite file.
  * System properties stand in for the environment variables, because the
  * lookup reads either and a test cannot set an environment variable.
  */
 public class OnPremDataFileOptionTest {
-    private static final String DD_PATH = "51DEGREES_DD_PATH";
+    private static final String DD_PATH = "_51DEGREES_DD_PATH";
+    private static final String OLD_DD_PATH = "51DEGREES_DD_PATH";
     private static final String TEST_DATA_FILE = "TestDataFile";
     private static final String LITE =
             "cxx/data/device-detection/51Degrees-LiteV4.1.hash";
 
     private String savedDdPath;
+    private String savedOldDdPath;
     private String savedTestDataFile;
 
     @Before
@@ -53,17 +55,21 @@ public class OnPremDataFileOptionTest {
         // An environment variable of either name would take precedence over
         // the system properties set here, so the test cannot run.
         assumeTrue(System.getenv(DD_PATH) == null);
+        assumeTrue(System.getenv(OLD_DD_PATH) == null);
         assumeTrue(System.getenv(TEST_DATA_FILE) == null);
         assumeTrue(System.getenv(TEST_DATA_FILE.toUpperCase()) == null);
         savedDdPath = System.getProperty(DD_PATH);
+        savedOldDdPath = System.getProperty(OLD_DD_PATH);
         savedTestDataFile = System.getProperty(TEST_DATA_FILE);
         System.clearProperty(DD_PATH);
+        System.clearProperty(OLD_DD_PATH);
         System.clearProperty(TEST_DATA_FILE);
     }
 
     @After
     public void restoreProperties() {
         restore(DD_PATH, savedDdPath);
+        restore(OLD_DD_PATH, savedOldDdPath);
         restore(TEST_DATA_FILE, savedTestDataFile);
     }
 
@@ -81,6 +87,20 @@ public class OnPremDataFileOptionTest {
     @Test
     public void prefersDdPathOverTestDataFile() throws Exception {
         System.setProperty(TEST_DATA_FILE, "from-test-data-file.hash");
+        System.setProperty(DD_PATH, "from-dd-path.hash");
+        assertEquals("from-dd-path.hash", dataFile());
+    }
+
+    @Test
+    public void usesOldDdPathWhenNewIsNotSet() throws Exception {
+        System.setProperty(TEST_DATA_FILE, "from-test-data-file.hash");
+        System.setProperty(OLD_DD_PATH, "from-old-dd-path.hash");
+        assertEquals("from-old-dd-path.hash", dataFile());
+    }
+
+    @Test
+    public void prefersDdPathOverOldDdPath() throws Exception {
+        System.setProperty(OLD_DD_PATH, "from-old-dd-path.hash");
         System.setProperty(DD_PATH, "from-dd-path.hash");
         assertEquals("from-dd-path.hash", dataFile());
     }

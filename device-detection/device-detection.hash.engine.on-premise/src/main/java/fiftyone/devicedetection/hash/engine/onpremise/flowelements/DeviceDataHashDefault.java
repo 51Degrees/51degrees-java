@@ -69,6 +69,12 @@ public class DeviceDataHashDefault
     private final List<ResultsHashSwig> resultsList = new ArrayList<>();
 
     /**
+     * The engine which created this instance, used to turn a property name
+     * into the required property index the engine was built with.
+     */
+    private final DeviceDetectionHashEngine hashEngine;
+
+    /**
      * Constructs a new instance.
      * @param logger used for logging
      * @param flowData the {@link FlowData} instance this element data will be
@@ -83,6 +89,18 @@ public class DeviceDataHashDefault
         DeviceDetectionHashEngine engine,
         MissingPropertyService missingPropertyService) {
         super(logger, flowData, engine, missingPropertyService);
+        this.hashEngine = engine;
+    }
+
+    /**
+     * Get the required property index for a property name, or null when the
+     * engine has no index for that name, so the read falls back to the name.
+     * @param propertyName name of the property
+     * @return required property index, or null
+     */
+    private Integer indexOf(String propertyName) {
+        return hashEngine == null ?
+            null : hashEngine.getPropertyIndex(propertyName);
     }
     
     /**
@@ -176,13 +194,11 @@ public class DeviceDataHashDefault
      * @return drift
      */
     private AspectPropertyValue<Integer> getDriftInternal() {
-        int result = Integer.MAX_VALUE;
+        int total = 0;
         for (ResultsHashSwig results : resultsList) {
-            if (results.getDrift() < result) {
-                result = results.getDrift();
-            }
+            total += results.getDrift();
         }
-        return new AspectPropertyValueDefault<>(result);
+        return new AspectPropertyValueDefault<>(total);
     }
 
     /**
@@ -243,6 +259,11 @@ public class DeviceDataHashDefault
     @Override
     protected boolean propertyIsAvailable(String propertyName) {
         checkState();
+        // A property the engine has a position for is held by its results,
+        // so that needs no lookup of the name in native code.
+        if (indexOf(propertyName) != null) {
+            return resultsList.isEmpty() == false;
+        }
         for (ResultsHashSwig results : resultsList) {
             if (results.containsProperty(Swig.asBytes(propertyName))) {
                 return true;
@@ -258,8 +279,10 @@ public class DeviceDataHashDefault
             new AspectPropertyValueDefault<>();
         ResultsHashSwig results = getSingleResults(propertyName);
         if (results != null) {
-            try (VectorStringValuesSwig value = results.getValues(
-                Swig.asBytes(propertyName))) {
+            Integer index = indexOf(propertyName);
+            try (VectorStringValuesSwig value = index == null ?
+                results.getValues(Swig.asBytes(propertyName)) :
+                results.getValues(index)) {
                 if (value.hasValue()) {
                     try (VectorStringSwig vector = value.getValue()) {
                         result.setValue(Collections.unmodifiableList(
@@ -279,9 +302,10 @@ public class DeviceDataHashDefault
         AspectPropertyValue<String> result = new AspectPropertyValueDefault<>();
         ResultsHashSwig results = getSingleResults(propertyName);
         if (results != null) {
-
-            try (StringValueSwig value = results.getValueAsString(
-                Swig.asBytes(propertyName))) {
+            Integer index = indexOf(propertyName);
+            try (StringValueSwig value = index == null ?
+                results.getValueAsString(Swig.asBytes(propertyName)) :
+                results.getValueAsString(index)) {
                 if (value.hasValue()) {
                     result.setValue(value.getValue());
                 }
@@ -300,8 +324,10 @@ public class DeviceDataHashDefault
             new AspectPropertyValueDefault<>();
         ResultsHashSwig results = getSingleResults(propertyName);
         if (results != null) {
-            try (StringValueSwig value = results.getValueAsString(
-                Swig.asBytes(propertyName))) {
+            Integer index = indexOf(propertyName);
+            try (StringValueSwig value = index == null ?
+                results.getValueAsString(Swig.asBytes(propertyName)) :
+                results.getValueAsString(index)) {
                 if (value.hasValue()) {
                     result.setValue(new JavaScript(value.getValue()));
                 }
@@ -319,8 +345,10 @@ public class DeviceDataHashDefault
         AspectPropertyValue<Integer> result = new AspectPropertyValueDefault<>();
         ResultsHashSwig results = getSingleResults(propertyName);
         if (results != null) {
-            try (IntegerValueSwig value = results.getValueAsInteger(
-                Swig.asBytes(propertyName))) {
+            Integer index = indexOf(propertyName);
+            try (IntegerValueSwig value = index == null ?
+                results.getValueAsInteger(Swig.asBytes(propertyName)) :
+                results.getValueAsInteger(index)) {
                 if (value.hasValue()) {
                     result.setValue(value.getValue());
                 }
@@ -337,8 +365,10 @@ public class DeviceDataHashDefault
         AspectPropertyValue<Boolean> result = new AspectPropertyValueDefault<>();
         ResultsHashSwig results = getSingleResults(propertyName);
         if (results != null) {
-            try (BoolValueSwig value = results.getValueAsBool(
-                Swig.asBytes(propertyName))) {
+            Integer index = indexOf(propertyName);
+            try (BoolValueSwig value = index == null ?
+                results.getValueAsBool(Swig.asBytes(propertyName)) :
+                results.getValueAsBool(index)) {
                 if (value.hasValue()) {
                     result.setValue(value.getValue());
                 }
@@ -355,8 +385,10 @@ public class DeviceDataHashDefault
         AspectPropertyValue<Double> result = new AspectPropertyValueDefault<>();
         ResultsHashSwig results = getSingleResults(propertyName);
         if (results != null) {
-            try (DoubleValueSwig value = results.getValueAsDouble(
-                Swig.asBytes(propertyName))) {
+            Integer index = indexOf(propertyName);
+            try (DoubleValueSwig value = index == null ?
+                results.getValueAsDouble(Swig.asBytes(propertyName)) :
+                results.getValueAsDouble(index)) {
                 if (value.hasValue()) {
                     result.setValue(value.getValue());
                 }

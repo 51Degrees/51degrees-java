@@ -32,17 +32,22 @@ import fiftyone.pipeline.core.exceptions.PipelineDataException;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.engines.exceptions.PropertyMissingException;
+import fiftyone.pipeline.engines.fiftyone.data.SequenceData;
+import fiftyone.pipeline.engines.fiftyone.flowelements.SequenceElement;
 import fiftyone.pipeline.javascriptbuilder.Constants;
 import fiftyone.pipeline.javascriptbuilder.data.JavaScriptBuilderData;
 import fiftyone.pipeline.javascriptbuilder.templates.JavaScriptResource;
 import fiftyone.pipeline.jsonbuilder.data.JsonBuilderData;
+import net.logicsquad.minifier.js.JSMinifier;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
 import java.io.*;
 import java.net.URLEncoder;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static fiftyone.pipeline.core.Constants.*;
@@ -67,7 +72,49 @@ public class JavaScriptBuilderElement
     protected String contextRoot;
     protected final String objName;
     protected final boolean enableCookies;
+    protected final boolean minify;
     private final Mustache mustache;
+
+    /**
+     * The minified forms of the template, one for each combination of its
+     * sections, with a placeholder where each value goes. Minifying is done
+     * once for each form and not for each request, so minification costs
+     * almost nothing per request, and the values the script carries are
+     * never passed through the minifier, so it cannot change them.
+     */
+    private final ConcurrentHashMap<Integer, String> minifiedForms =
+        new ConcurrentHashMap<>();
+
+    /**
+     * Set once minification has failed and been logged, after which the
+     * script is not minified.
+     */
+    private final AtomicBoolean minifyFailed = new AtomicBoolean(false);
+
+    /**
+     * The text each value is given when the template is minified. Each is
+     * an identifier, so the minifier leaves it as it is, whether it is in
+     * code or in a string.
+     */
+    private static final String PLACEHOLDER_PREFIX =
+        "fiftyoneDegreesMinifyPlaceholder";
+
+    /**
+     * The values of the template that differ for each request, in the
+     * order of {@link #PLACEHOLDER_NAMES}.
+     */
+    private static final String[] VALUE_KEYS = {
+        "_objName", "_jsonObject", "_sessionId", "_sequence", "_url",
+        "_parameters"};
+
+    /**
+     * The placeholder for each of {@link #VALUE_KEYS}.
+     */
+    private static final String[] PLACEHOLDER_NAMES = {
+        "ObjName", "Json", "SessionId", "Sequence", "Url", "Parameters"};
+
+    private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile(
+        PLACEHOLDER_PREFIX + "(" + String.join("|", PLACEHOLDER_NAMES) + ")");
 
     /**
      * Set once a callback URL that is not valid has been logged, because a
@@ -89,9 +136,11 @@ public class JavaScriptBuilderElement
      * Words the pattern accepts that cannot be the name of the object. These
      * are the reserved words of the language, including those reserved only
      * in strict mode, plus the three global values a top level var cannot
-     * replace, where the object would silently never be created. The last
-     * entry is the constructor the script itself defines and calls to create
-     * the object, so that name would clash with it.
+     * replace, eval, and the properties of the browser's Window object that a
+     * top level var cannot replace or that navigate the page away, where the
+     * object would never be created. The last entry is the constructor the
+     * script itself defines and calls to create the object, so that name
+     * would clash with it.
      */
     private static final Set<String> RESERVED_OBJECT_NAMES =
         Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
@@ -103,6 +152,15 @@ public class JavaScriptBuilderElement
             "return", "static", "super", "switch", "this", "throw", "true",
             "try", "typeof", "var", "void", "while", "with", "yield",
             "Infinity", "NaN", "undefined",
+            "eval", "arguments",
+            "window", "document", "top", "name", "status", "history",
+            "navigator", "closed", "location", "frameElement",
+            "isSecureContext", "crossOriginIsolated", "trustedTypes",
+            "crypto", "indexedDB", "localStorage", "sessionStorage",
+            "caches", "cookieStore", "speechSynthesis", "styleMedia",
+            "crashReport", "credentialless", "customElements",
+            "documentPictureInPicture", "fence", "launchQueue",
+            "originAgentCluster",
             "fiftyoneDegreesManager")));
 
     /**
@@ -140,8 +198,11 @@ public class JavaScriptBuilderElement
      * @param host The host that the client JavaScript should query for updates.
      * If null or blank then the host from the request will be used
      * @param protocol The protocol (HTTP or HTTPS) that the client JavaScript
-     *                 will use when querying for updates. If null or blank
+     *                 will use when querying for updates. If null or empty
      *                 then the protocol from the request will be used
+     * @throws PipelineConfigurationException if protocol is not null or empty
+     * and is neither http nor https in any case of its ASCII letters, or if
+     * objName is not a valid JavaScript identifier
      */
     public JavaScriptBuilderElement(
             Logger logger,
@@ -169,11 +230,13 @@ public class JavaScriptBuilderElement
      * @param host The host that the client JavaScript should query for updates.
      * If null or blank then the host from the request will be used
      * @param protocol The protocol (HTTP or HTTPS) that the client JavaScript
-     *                 will use when querying for updates. If null or blank
+     *                 will use when querying for updates. If null or empty
      *                 then the protocol from the request will be used
      * @param contextRoot The &lt;context-root&gt; setting from the web.xml.
      *                 This is needed when creating the callback URL.
-     * @throws PipelineConfigurationException if objName is not null and is
+     * @throws PipelineConfigurationException if protocol is not null or empty
+     * and is neither http nor https in any case of its ASCII letters, white
+     * space included, or if objName is not null and is
      * not a valid JavaScript identifier, see {@link #isValidObjectName}.
      * A null name means the default name is used, as no name was
      * configured, and an empty name is refused
@@ -187,6 +250,48 @@ public class JavaScriptBuilderElement
             String host,
             String protocol,
             String contextRoot) {
+        this(logger, elementDataFactory, endpoint, objName, enableCookies,
+            host, protocol, contextRoot, true);
+    }
+    //! [constructor]
+
+    //! [constructor]
+    /**
+     * Constructor.
+     * @param logger The logger.
+     * @param elementDataFactory The element data factory.
+     * @param endpoint Set the endpoint which will be queried on the host.
+     *                 e.g /api/v4/json
+     * @param objName The default name of the object instantiated by the client
+     *                JavaScript.
+     * @param enableCookies Set whether the client JavaScript stored results of
+     * client side processing in cookies.
+     * @param host The host that the client JavaScript should query for updates.
+     * If null or blank then the host from the request will be used
+     * @param protocol The protocol (HTTP or HTTPS) that the client JavaScript
+     *                 will use when querying for updates. If null or empty
+     *                 then the protocol from the request will be used
+     * @param contextRoot The &lt;context-root&gt; setting from the web.xml.
+     *                 This is needed when creating the callback URL.
+     * @param minify True to minify the JavaScript that is produced. The other
+     *               constructors minify it.
+     * @throws PipelineConfigurationException if protocol is not null or empty
+     * and is neither http nor https in any case of its ASCII letters, white
+     * space included, or if objName is not null and is
+     * not a valid JavaScript identifier, see {@link #isValidObjectName}.
+     * A null name means the default name is used, as no name was
+     * configured, and an empty name is refused
+     */
+    public JavaScriptBuilderElement(
+            Logger logger,
+            ElementDataFactory<JavaScriptBuilderData> elementDataFactory,
+            String endpoint,
+            String objName,
+            boolean enableCookies,
+            String host,
+            String protocol,
+            String contextRoot,
+            boolean minify) {
         super(logger, elementDataFactory);
         
         MustacheFactory mf = new DefaultMustacheFactory();
@@ -196,6 +301,13 @@ public class JavaScriptBuilderElement
         
         this.host = host;
         this.endpoint = endpoint;
+        if (protocol != null &&
+            protocol.isEmpty() == false &&
+            CallbackUrl.isScheme(protocol) == false) {
+            throw new PipelineConfigurationException(
+                "Invalid protocol in configuration (" + protocol +
+                "), must be 'http' or 'https'");
+        }
         this.protocol = protocol;
         if (objName == null) {
             this.objName = Constants.DEFAULT_OBJECT_NAME;
@@ -207,6 +319,7 @@ public class JavaScriptBuilderElement
         }
         this.enableCookies = enableCookies;
         this.contextRoot = contextRoot;
+        this.minify = minify;
     }
     //! [constructor]
 
@@ -232,8 +345,9 @@ public class JavaScriptBuilderElement
 
         String url = getUrl(reqProtocol, reqHost);
 
-        String sessionId = getSessionId(data);
-        int sequence = getSequence(data);
+        ElementData sequenceData = getSequenceData(data);
+        String sessionId = getSessionId(sequenceData);
+        int sequence = getSequence(sequenceData);
         String serializedParameters = serializeParameters(parameters);
 
         // With the gathered resources, build a new JavaScriptResource.
@@ -382,8 +496,12 @@ public class JavaScriptBuilderElement
                 .asKeyMap();
 
         for(Map.Entry<String, Object> entry : queryEvidence.entrySet()){
-            if(entry.getKey().startsWith(EVIDENCE_QUERY_PREFIX) &&
-                    EXCLUDED_PARAMETERS.contains(entry.getKey()) == false){
+            // Evidence keys ignore case, so the prefix and the excluded
+            // keys are matched whatever the case the key was added in.
+            if(entry.getKey().regionMatches(true, 0,
+                    EVIDENCE_QUERY_PREFIX, 0, EVIDENCE_QUERY_PREFIX.length()) &&
+                    EXCLUDED_PARAMETERS.contains(
+                        entry.getKey().toLowerCase(Locale.ROOT)) == false){
                 String key = entry.getKey().substring(entry.getKey().indexOf(EVIDENCE_SEPERATOR) + 1);
                 key = URLEncoder.encode(key, "UTF-8");
                 String value = URLEncoder.encode(entry.getValue().toString(), "UTF-8");
@@ -462,50 +580,75 @@ public class JavaScriptBuilderElement
 
     /**
      * Gets the session id to write into the script. This is the session id
-     * evidence, set by the Sequence Element or by the request, when it
-     * matches SESSION_ID_PATTERN, and an empty string otherwise.
-     * @param data the flow data
+     * the Sequence Element wrote, when it matches SESSION_ID_PATTERN, and an
+     * empty string otherwise, including when the pipeline has no Sequence
+     * Element.
+     * @param sequenceData the Sequence Element's data, or null
      * @return the session id, or an empty string
      */
-    private String getSessionId(FlowData data) {
-        TryGetResult<Object> trySessionId =
-            data.tryGetEvidence(EVIDENCE_SESSIONID, Object.class);
-        if (trySessionId.hasValue() &&
-            trySessionId.getValue() instanceof String) {
-            String sessionId = (String) trySessionId.getValue();
-            if (SESSION_ID_PATTERN.matcher(sessionId).matches()) {
-                return sessionId;
-            }
+    private String getSessionId(ElementData sequenceData) {
+        Object value = getSequenceValue(
+            sequenceData, SequenceData.SESSION_ID_PROPERTY_NAME);
+        if (value instanceof String &&
+            SESSION_ID_PATTERN.matcher((String) value).matches()) {
+            return (String) value;
         }
         return "";
     }
 
     /**
-     * Gets the sequence to write into the script. This is the sequence
-     * evidence, as a number or as text, when it is a positive 32 bit
-     * integer, and 1 otherwise, including when there is no Sequence Element.
-     * The value is written into the script as code, so text that is not a
-     * number could break the script, and a number below 1 is not a sequence
-     * the Sequence Element would ever give.
-     * @param data the flow data
+     * Gets the sequence to write into the script. This is the sequence the
+     * Sequence Element wrote, as a number or as text, when it is a positive
+     * 32 bit integer, and 1 otherwise, including when the pipeline has no
+     * Sequence Element. The value is written into the script as code, so
+     * text that is not a number could break the script, and a number below 1
+     * is not a sequence the Sequence Element would ever give.
+     * @param sequenceData the Sequence Element's data, or null
      * @return the sequence, which is always at least 1
      */
-    private int getSequence(FlowData data) {
-        TryGetResult<Object> trySequence =
-            data.tryGetEvidence(EVIDENCE_SEQUENCE, Object.class);
+    private int getSequence(ElementData sequenceData) {
+        Object value = getSequenceValue(
+            sequenceData, SequenceData.SEQUENCE_PROPERTY_NAME);
         long sequence = 0;
-        if (trySequence.hasValue()) {
-            Object value = trySequence.getValue();
-            if (value instanceof Integer) {
-                sequence = (Integer) value;
-            } else if (value instanceof String &&
-                SEQUENCE_PATTERN.matcher((String) value).matches()) {
-                sequence = Long.parseLong((String) value);
-            }
+        if (value instanceof Integer) {
+            sequence = (Integer) value;
+        } else if (value instanceof String &&
+            SEQUENCE_PATTERN.matcher((String) value).matches()) {
+            sequence = Long.parseLong((String) value);
         }
         return sequence >= 1 && sequence <= Integer.MAX_VALUE
             ? (int) sequence
             : 1;
+    }
+
+    /**
+     * The Sequence Element's data, or null when the pipeline has no Sequence
+     * Element. Step 5 of the specification takes the session id and the
+     * sequence from that data and not from Evidence, so a pipeline with no
+     * Sequence Element renders the defaults even when the request carried a
+     * session id or a sequence of its own.
+     * @param data the flow data
+     * @return the Sequence Element's data, or null
+     * @see <a href="https://github.com/51Degrees/specifications/blob/67ead6986f3118c68f0714325800b92d48ddc71f/pipeline-specification/pipeline-elements/javascript-builder.md#process">Specification</a>
+     */
+    private static ElementData getSequenceData(FlowData data) {
+        // get(String) throws when the Flow Data holds nothing under the key,
+        // so the keys it does hold are checked first.
+        return data.getDataKeys().contains(SequenceElement.DEFAULT_ELEMENT_DATA_KEY)
+            ? data.get(SequenceElement.DEFAULT_ELEMENT_DATA_KEY)
+            : null;
+    }
+
+    /**
+     * One value from the Sequence Element's data.
+     * @param sequenceData the Sequence Element's data, or null
+     * @param name the name of the value within that data
+     * @return the value, or null
+     */
+    private static Object getSequenceValue(
+        ElementData sequenceData,
+        String name) {
+        return sequenceData == null ? null : sequenceData.get(name);
     }
 
     private void buildJavaScript(
@@ -568,13 +711,88 @@ public class JavaScriptBuilderElement
             cookies,
             updateEnabled,
             hasDelayedProperties);
-      
-        StringWriter stringWriter = new StringWriter();
-        mustache.execute(stringWriter, javaScriptObj.asMap());
 
-        String content = stringWriter.toString();
+        Map<String, Object> values = javaScriptObj.asMap();
+        String content = null;
+        if (minify) {
+            content = renderMinified(values);
+        }
+        if (content == null) {
+            content = render(values);
+        }
 
         elementData.setJavaScript(content);
+    }
+
+    /**
+     * Renders the template as written.
+     */
+    private String render(Map<String, Object> values) {
+        StringWriter stringWriter = new StringWriter();
+        mustache.execute(stringWriter, values);
+        return stringWriter.toString();
+    }
+
+    /**
+     * Renders the minified template. The minified form of the template for
+     * the request's sections is made once and kept, and the request's values
+     * are put in place of its placeholders.
+     * @return the minified script, or null if minification failed
+     */
+    private String renderMinified(Map<String, Object> values) {
+        if (minifyFailed.get()) {
+            return null;
+        }
+        // The form depends only on the template's sections, being every
+        // value that is not one of the placeholders. The URL is a value, and
+        // whether it is present is the section _updateEnabled.
+        int key = 0;
+        for (String section : new String[] {
+            "_supportsPromises", "_enableCookies", "_updateEnabled",
+            "_hasDelayedProperties"}) {
+            key = (key << 1) | (Boolean.TRUE.equals(values.get(section)) ? 1 : 0);
+        }
+        String form = minifiedForms.computeIfAbsent(key, k -> minifyForm(values));
+        if (form.isEmpty()) {
+            return null;
+        }
+
+        Matcher matcher = PLACEHOLDER_PATTERN.matcher(form);
+        StringBuffer script = new StringBuffer(form.length() +
+            String.valueOf(values.get("_jsonObject")).length());
+        while (matcher.find()) {
+            String valueKey = VALUE_KEYS[
+                Arrays.asList(PLACEHOLDER_NAMES).indexOf(matcher.group(1))];
+            matcher.appendReplacement(script,
+                Matcher.quoteReplacement(String.valueOf(values.get(valueKey))));
+        }
+        matcher.appendTail(script);
+        return script.toString();
+    }
+
+    /**
+     * Renders the template with the given sections and a placeholder for
+     * each value, and minifies it.
+     * @return the minified form, or an empty string if minification failed
+     */
+    private String minifyForm(Map<String, Object> values) {
+        Map<String, Object> placeholders = new HashMap<>(values);
+        for (int i = 0; i < VALUE_KEYS.length; i++) {
+            placeholders.put(VALUE_KEYS[i],
+                PLACEHOLDER_PREFIX + PLACEHOLDER_NAMES[i]);
+        }
+        try {
+            StringWriter minified = new StringWriter();
+            new JSMinifier(new StringReader(render(placeholders)))
+                .minify(minified);
+            return minified.toString();
+        } catch (Exception e) {
+            if (minifyFailed.compareAndSet(false, true)) {
+                logger.error("The JavaScript could not be minified, so it " +
+                    "is sent as it is written.", e);
+            }
+            return "";
+        }
     }
 }
 //! [class]

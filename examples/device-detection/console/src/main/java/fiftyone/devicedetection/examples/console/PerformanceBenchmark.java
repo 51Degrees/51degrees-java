@@ -22,6 +22,7 @@
 
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.common.testhelpers.LogbackHelper;
 import fiftyone.devicedetection.DeviceDetectionOnPremisePipelineBuilder;
 import fiftyone.devicedetection.DeviceDetectionPipelineBuilder;
@@ -46,6 +47,7 @@ import java.util.concurrent.*;
 
 import static fiftyone.devicedetection.examples.shared.DataFileHelper.getDataFileLocation;
 import static fiftyone.devicedetection.examples.shared.DataFileHelper.getEvidenceFile;
+import static fiftyone.devicedetection.examples.shared.DataFileHelper.LITE_HASH_DATA_FILE_PATH;
 import static fiftyone.pipeline.engines.Constants.PerformanceProfiles.*;
 
 /**
@@ -57,12 +59,27 @@ import static fiftyone.pipeline.engines.Constants.PerformanceProfiles.*;
  * for more information about adjusting performance.
  */
 public class PerformanceBenchmark {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-devicedetection-examples-console-performancebenchmark.java";
+
     // the default number of threads if one is not provided.
     public static final int DEFAULT_NUMBER_OF_THREADS = 4;
     // the number of tests to execute.
     public static final int TESTS_PER_THREAD = 10000;
 
     public static final Logger logger = LoggerFactory.getLogger(PerformanceBenchmark.class);
+
+    /**
+     * Where to ask for a copy of the Enterprise data file, tagged with this
+     * example.
+     */
+    private static final String CONTACT_US = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-performancebenchmark.java&utm_term=enterprise-data-file";
+
+    // true when the benchmarks ran on the free Lite data file
+    private boolean usedLiteDataFile;
 
     // where the results of the tests are gathered
     private List<Future<BenchmarkResult>> resultList;
@@ -82,7 +99,9 @@ public class PerformanceBenchmark {
     public static void main(String[] args) throws Exception {
         LogbackHelper.configureLogback(FileFinder.getFilePath("logback.xml"));
 
-        String dataFilename = args.length > 0 ? args[0] : null;
+        // Use the supplied data file, or the free Lite file, which is
+        // downloaded if it is missing
+        String dataFilename = args.length > 0 ? args[0] : LITE_HASH_DATA_FILE_PATH;
         String evidenceFilename = args.length > 1 ? args[1] : null;
         int numberOfThreads = DEFAULT_NUMBER_OF_THREADS;
         if (args.length > 2) {
@@ -94,6 +113,8 @@ public class PerformanceBenchmark {
                 evidenceFilename,
                 numberOfThreads,
                 new PrintWriter(System.out,true));
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     /**
@@ -132,6 +153,9 @@ public class PerformanceBenchmark {
         for (PerformanceConfiguration config: performanceConfigurations){
             executeBenchmark(true, config);
         }
+        if (usedLiteDataFile) {
+            DataFileHelper.writeEnterpriseOffer(writer, CONTACT_US);
+        }
 
         logger.info("Finished Performance example");
     }
@@ -166,7 +190,10 @@ public class PerformanceBenchmark {
                 setPipelinePerformanceProperties(builder, config);
                 pipeline = builder.build();
 
-                DataFileHelper.logDataFileInfo(pipeline.getElement(DeviceDetectionHashEngine.class));
+                DeviceDetectionHashEngine engine =
+                        pipeline.getElement(DeviceDetectionHashEngine.class);
+                DataFileHelper.logDataFileInfo(engine);
+                usedLiteDataFile = DataFileHelper.isLiteDataFile(engine);
             } else {
                 logger.info("Load memory from {}", dataFileLocation);
                 byte[] fileContent = Files.readAllBytes(new File(dataFileLocation).toPath());

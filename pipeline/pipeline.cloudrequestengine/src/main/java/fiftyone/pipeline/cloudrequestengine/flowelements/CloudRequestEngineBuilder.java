@@ -25,6 +25,8 @@ package fiftyone.pipeline.cloudrequestengine.flowelements;
 
 import fiftyone.pipeline.annotations.DefaultValue;
 import fiftyone.pipeline.annotations.ElementBuilder;
+import fiftyone.pipeline.cloudrequestengine.Constants.Messages;
+import fiftyone.pipeline.cloudrequestengine.CloudDiscoveryState;
 import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
@@ -36,7 +38,12 @@ import fiftyone.pipeline.engines.services.HttpClient;
 import fiftyone.pipeline.engines.services.HttpClientDefault;
 import org.slf4j.ILoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 /**
@@ -54,13 +61,21 @@ public class CloudRequestEngineBuilder extends
     private String evidenceKeysEndpoint = null;
     private String resourceKey = null;
     private String licenseKey = null;
+    private final List<String> requestedProperties = new ArrayList<>();
     private String cloudRequestOrigin = null;
     private int timeoutMillis = Constants.DEFAULT_TIMEOUT_MILLIS;
+    private CloudDiscoveryState discoveryState = null;
+    private CloudRequestEngineDefault built = null;
     
     // Function to get environment variable value. This enable testable code.
     private Function<String, String> getEnvVar = (name) -> {
     	return System.getenv(name);
     };
+
+    // Set once the use of the deprecated end point variable has been
+    // logged, so that a process building many engines logs it once.
+    private static final AtomicBoolean oldEndPointVariableLogged =
+        new AtomicBoolean(false);
 
     public CloudRequestEngineBuilder(ILoggerFactory loggerFactory) {
         this(loggerFactory, new HttpClientDefault());
@@ -75,21 +90,19 @@ public class CloudRequestEngineBuilder extends
 
     @Override
     protected CloudRequestEngine newEngine(List<String> properties) throws Exception {
-        if(resourceKey == null || resourceKey.isEmpty()){
-            throw new PipelineConfigurationException("A resource key is " +
-                    "required to access the cloud server. Please use the " +
-                    "'setResourceKey(String) method to supply your resource " +
-                    "key obtained from https://configure.51degrees.com?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=pipeline.cloudrequestengine-src-main-java-fiftyone-pipeline-cloudrequestengine-flowelements-cloudrequestenginebuilder.java&utm_term=resource-key-required");
-        }
+        String trimmedResourceKey = trimmed(resourceKey);
+        String trimmedLicenseKey = trimmed(licenseKey);
+        List<String> requested = normalized(requestedProperties);
+        checkCredentials(trimmedResourceKey, trimmedLicenseKey, requested);
 
         /*
          *  Check if endPoint has been explicitly set via setEndpoint.
-         *  If not check for environment variable FOD_CLOUD_API_URL.
+         *  If not check for environment variable _51DEGREES_CLOUD_ENDPOINT,
+         *  and then for its deprecated name FOD_CLOUD_API_URL.
          *  If nothing else is set, use default value.
          */
         if (endPoint == null || endPoint.isEmpty()) {
-        	String envVarEndPoint = getEnvVar.apply(
-        		Constants.FOD_CLOUD_API_URL);
+        	String envVarEndPoint = endPointFromEnvironment();
         	if (envVarEndPoint == null || envVarEndPoint.isEmpty()) {
         		setEndpoint(Constants.END_POINT_DEFAULT);
         	}
@@ -98,17 +111,127 @@ public class CloudRequestEngineBuilder extends
         	}
         }
         
-        return new CloudRequestEngineDefault(
+        CloudRequestEngineDefault engine = new CloudRequestEngineDefault(
             loggerFactory.getLogger(CloudRequestEngine.class.getName()),
             new CloudRequestDataFactory(loggerFactory),
             httpClient,
             dataEndpoint,
-            resourceKey,
-            licenseKey,
+            trimmedResourceKey,
+            trimmedLicenseKey,
             propertiesEndpoint,
             evidenceKeysEndpoint,
-                timeoutMillis,
-            cloudRequestOrigin);
+            timeoutMillis,
+            cloudRequestOrigin,
+            requested);
+        if (discoveryState != null) {
+            engine.useDiscoveryState(discoveryState);
+        }
+        else {
+            // Fetch the accessible properties and the accepted evidence
+            // keys now, so that the built engine is ready. A 4xx answer
+            // fails the build, and any other failure is retried on first
+            // use.
+            engine.discover();
+        }
+        built = engine;
+        return engine;
+    }
+
+    /**
+     * Build the engine from a copy of what an earlier engine discovered for
+     * the same resource key, so that the build makes no discovery request.
+     * The copy comes from {@link #getDiscoveryState()} after a successful
+     * build, and can be kept with {@link CloudDiscoveryState#toJson()}.
+     * @param state the copy, or null to discover when building
+     * @return this builder
+     */
+    public CloudRequestEngineBuilder setDiscoveryState(
+        CloudDiscoveryState state) {
+        this.discoveryState = state;
+        return this;
+    }
+
+    /**
+     * A copy of what the engine this builder last built discovered, to give
+     * to a later build with {@link #setDiscoveryState(CloudDiscoveryState)}.
+     * @return the copy, or null if no engine has been built or it does not
+     * yet know both the accepted evidence keys and the accessible properties
+     */
+    public CloudDiscoveryState getDiscoveryState() {
+        CloudRequestEngineDefault engine = built;
+        return engine == null ? null : engine.getDiscoveryState();
+    }
+
+    /**
+     * The end point the environment gives, or null or empty when it gives
+     * none. {@link Constants#CLOUD_ENDPOINT_VARIABLE} is read first. Only
+     * when that is not set or is empty is the deprecated
+     * {@link Constants#FOD_CLOUD_API_URL} read, and the first use of it in
+     * the process is logged as a warning.
+     */
+    @SuppressWarnings("deprecation")
+    private String endPointFromEnvironment() {
+        String value = getEnvVar.apply(Constants.CLOUD_ENDPOINT_VARIABLE);
+        if (value != null && value.isEmpty() == false) {
+            return value;
+        }
+        value = getEnvVar.apply(Constants.FOD_CLOUD_API_URL);
+        if (value != null && value.isEmpty() == false
+            && oldEndPointVariableLogged.compareAndSet(false, true)) {
+            loggerFactory.getLogger(CloudRequestEngineBuilder.class.getName())
+                .warn("The environment variable "
+                    + Constants.FOD_CLOUD_API_URL + " is deprecated and "
+                    + Constants.CLOUD_ENDPOINT_VARIABLE + " replaces it. "
+                    + "Set " + Constants.CLOUD_ENDPOINT_VARIABLE
+                    + " to the same value, as a later release may no "
+                    + "longer read " + Constants.FOD_CLOUD_API_URL + ".");
+        }
+        return value;
+    }
+
+    private static String trimmed(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    /**
+     * The property names to send as values, trimmed and sent as given,
+     * with blank names and repeats left out. A repeat differs only in
+     * letter case, as the cloud service reads names without regard to
+     * case, and the first spelling given is kept.
+     */
+    private static List<String> normalized(List<String> names) {
+        List<String> result = new ArrayList<>();
+        Set<String> seen = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        for (String name : names) {
+            String normal = trimmed(name);
+            if (normal.isEmpty() == false && seen.add(normal)) {
+                result.add(normal);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Refuse the two combinations of keys and requested properties that the
+     * cloud service refuses on every request, so that a deployment sees one
+     * configuration error when the engine is built. A blank value counts as
+     * absent.
+     */
+    private static void checkCredentials(
+        String resourceKey,
+        String licenseKey,
+        List<String> requestedProperties) {
+        boolean hasResourceKey = resourceKey.isEmpty() == false;
+        boolean hasLicenseKey = licenseKey.isEmpty() == false;
+
+        if (hasResourceKey == false && hasLicenseKey == false) {
+            throw new PipelineConfigurationException(
+                Messages.NoCredential);
+        }
+        if (hasResourceKey == false && requestedProperties.isEmpty()) {
+            throw new PipelineConfigurationException(
+                Messages.LicenseKeyNeedsProperties);
+        }
     }
     
     private String getEnvironmentVariable(String name) {
@@ -133,7 +256,8 @@ public class CloudRequestEngineBuilder extends
             uri += '/';
         }
         endPoint = uri;
-        return setDataEndpoint(uri + (resourceKey != null ? resourceKey + "." : "") + "json")
+        String key = trimmed(resourceKey);
+        return setDataEndpoint(uri + (key.isEmpty() ? "" : key + ".") + "json")
             .setPropertiesEndpoint(uri + "accessibleproperties")
             .setEvidenceKeysEndpoint(uri + "evidencekeys");
 
@@ -142,7 +266,8 @@ public class CloudRequestEngineBuilder extends
     /**
      * The endpoint the CloudRequestEngine will query to get a processing result.
      * <p>
-     * By default, this is the endpoint value suffixed with the resourcekey and ".json"
+     * By default, this is the endpoint value suffixed with the resourcekey and
+     * ".json", or with "json" alone when no resource key is set
      * @param uri data endpoint
      * @return this builder
      */
@@ -183,11 +308,11 @@ public class CloudRequestEngineBuilder extends
     /**
      * The resource key to query the endpoint with.
      * <p>
-     * No default, a value must be supplied
+     * No default. Either a resource key or a license key must be supplied.
      * @param resourceKey resource key
      * @return this builder
      */
-    @DefaultValue("No default - a resource key must be supplied")
+    @DefaultValue("No default - a resource key or a license key must be supplied")
     public CloudRequestEngineBuilder setResourceKey(String resourceKey) {
         this.resourceKey = resourceKey;
         return this;
@@ -195,6 +320,11 @@ public class CloudRequestEngineBuilder extends
 
     /**
      * The license key to query the endpoint with.
+     * <p>
+     * A license key used without a resource key needs the properties
+     * wanted, named with {@link #setRequestedProperties(List)}. Beside a
+     * resource key it adds the requested properties the license grants to
+     * what the resource key carries.
      * <p>
      * There is no default
      * @param licenseKey license key
@@ -207,9 +337,51 @@ public class CloudRequestEngineBuilder extends
     }
 
     /**
-     * Timeout in seconds for the request to the endpoint.
+     * The properties each request asks the cloud service for, as fully
+     * qualified names such as {@code device.ismobile}, sent as values.
+     * Required with a license key alone. Beside a resource key the cloud
+     * service adds them to the properties the resource key carries. Names
+     * are trimmed and sent as given, and a name given again in another
+     * letter case is sent once. The properties set with
+     * {@link #setProperty(String)} and {@link #setProperties(List)} are not
+     * sent.
      * <p>
-     * Default value is 100 seconds
+     * By default no properties are requested
+     * @param properties the fully qualified property names
+     * @return this builder
+     */
+    @DefaultValue("None - required with a license key alone")
+    public CloudRequestEngineBuilder setRequestedProperties(
+        List<String> properties) {
+        if (properties == null) {
+            throw new IllegalArgumentException(
+                "properties must not be null");
+        }
+        requestedProperties.addAll(properties);
+        return this;
+    }
+
+    /**
+     * As {@link #setRequestedProperties(List)}, taking the names as one
+     * comma separated string, as a configuration file gives them.
+     * @param properties comma separated fully qualified property names
+     * @return this builder
+     */
+    @DefaultValue("None - required with a license key alone")
+    public CloudRequestEngineBuilder setRequestedProperties(
+        String properties) {
+        if (properties == null) {
+            throw new IllegalArgumentException(
+                "properties must not be null");
+        }
+        return setRequestedProperties(Arrays.asList(properties.split(",")));
+    }
+
+    /**
+     * Timeout in seconds for each request to the cloud service, the two
+     * discovery requests when the engine is built and each data request.
+     * <p>
+     * Default value is 2 seconds
      * @param timeout in seconds
      * @return this builder
      */

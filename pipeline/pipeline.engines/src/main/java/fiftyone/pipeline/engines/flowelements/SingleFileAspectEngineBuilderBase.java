@@ -216,8 +216,9 @@ public abstract class SingleFileAspectEngineBuilderBase<
      * disk and automatically refresh the engine as soon as the file is updated.
      * This setting enables/disables that feature.
      * <p>
-     * The {@link #setAutoUpdate(boolean)} feature must also be enabled in order
-     * for the file system watcher to work.
+     * The file system watcher runs on its own setting, whether
+     * {@link #setAutoUpdate(boolean)} is on or off, and needs no license key,
+     * as watching a file downloads nothing.
      * <p>
      * If the engine is built from a byte[] then this setting does nothing.
      * <p>

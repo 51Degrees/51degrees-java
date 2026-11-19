@@ -22,7 +22,7 @@
 
 package fiftyone.pipeline.cloudrequestengine.flowelements;
 
-import static fiftyone.pipeline.cloudrequestengine.Constants.Messages.ExceptionFailedToLoadProperties;
+import static fiftyone.pipeline.cloudrequestengine.Constants.Messages.MessageProductNotInResourceKey;
 import static fiftyone.pipeline.cloudrequestengine.Constants.Messages.ProcessCloudEngineNotImplemented;
 
 import fiftyone.pipeline.cloudrequestengine.NotImplementedException;
@@ -31,6 +31,7 @@ import fiftyone.pipeline.core.data.AccessiblePropertyMetaData;
 import fiftyone.pipeline.core.data.ElementPropertyMetaData;
 import fiftyone.pipeline.core.data.ElementPropertyMetaDataDefault;
 import fiftyone.pipeline.core.data.FlowData;
+import fiftyone.pipeline.core.data.FlowError;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.data.types.JavaScript;
 import fiftyone.pipeline.core.flowelements.FlowElement;
@@ -43,12 +44,15 @@ import fiftyone.pipeline.engines.flowelements.AspectEngineBase;
 import fiftyone.pipeline.engines.flowelements.CloudAspectEngine;
 import fiftyone.pipeline.util.Types;
 
+import org.json.JSONObject;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Base class for 51Degrees Cloud Aspect Engines
@@ -109,6 +113,7 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
     private volatile List<AspectPropertyMetaData> aspectProperties;
     private String dataSourceTier;
     private RequestEngineAccessor requestEngine;
+    private final AtomicBoolean productMissingLogged = new AtomicBoolean(false);
 
     /**
      * Construct a new instance of the {@link CloudAspectEngineBase}.
@@ -141,6 +146,13 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
         this.requestEngine = requestEngine;
     }
 
+    /**
+     * The property metadata of this engine, from the products the Cloud
+     * Request Engine reports. After a failure at build that can pass the
+     * products are not known yet, and an empty list is returned without
+     * being kept, so the metadata is read again on the next call.
+     * @return the property metadata
+     */
     @Override
     public List<AspectPropertyMetaData> getProperties() {
         List<AspectPropertyMetaData> localRef = aspectProperties;
@@ -149,17 +161,24 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
                 localRef = aspectProperties;
                 if (localRef == null) {
                     if(loadAspectProperties() == false) {
-                        throw new RuntimeException(
-                            String.format(
-                                ExceptionFailedToLoadProperties,
-                                this.getElementDataKey(),
-                                this.getElementDataKey())
-                        );
+                        return new ArrayList<>();
                     }
+                    localRef = aspectProperties;
                 }
             }
         }
-        return aspectProperties;
+        return localRef;
+    }
+
+    /**
+     * Whether the property metadata is loaded, which reads it if the Cloud
+     * Request Engine now knows the accessible properties.
+     * @return true once the property metadata is loaded
+     */
+    @Override
+    public boolean hasLoadedProperties() {
+        getProperties();
+        return aspectProperties != null;
     }
 
     @Override
@@ -192,17 +211,15 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
      */
     private boolean loadAspectProperties() {
         CloudRequestEngine requestEngine = getRequestEngine().getInstance();
-        Map<String, AccessiblePropertyMetaData.ProductMetaData> map = 
-            requestEngine.getPublicProperties();
+        AccessiblePropertyMetaData.ProductMetaData product =
+            findProduct(requestEngine.getPublicProperties());
 
-        if(map != null &&
-            map.size() > 0 &&
-            map.containsKey(this.getElementDataKey())) {
+        if(product != null) {
                 List<AspectPropertyMetaData> properties = new ArrayList<>();
-                dataSourceTier = map.get(this.getElementDataKey()).dataTier;
+                dataSourceTier = product.dataTier;
 
                 for (AccessiblePropertyMetaData.PropertyMetaData item :
-                    map.get(this.getElementDataKey()).properties) {
+                    product.properties) {
                     AspectPropertyMetaData property = new AspectPropertyMetaDataDefault(
                         item.name,
                         this,
@@ -218,10 +235,58 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
                 aspectProperties = properties;
                 return true;
         } else {
-            logger.error("Aspect properties could not be loaded for " + 
-                this.getClass().getName(), this);
+            // The Cloud Request Engine has logged why the products are not
+            // known yet.
             return false;
         }
+    }
+
+    /**
+     * Find this engine's product among the products the Cloud Request Engine
+     * reports for the resource key. A valid resource key can include no product
+     * that holds this engine's properties. That is logged once for this engine,
+     * as a warning naming its Data Key, and an empty product is returned, so
+     * the engine builds with empty property metadata and logs nothing on each
+     * request.
+     * @param products the products from
+     * {@link CloudRequestEngine#getPublicProperties()}, or null if they have
+     * not been loaded
+     * @return the product, an empty product if the resource key does not
+     * include it, or null if the products have not been loaded
+     */
+    protected AccessiblePropertyMetaData.ProductMetaData findProduct(
+        Map<String, AccessiblePropertyMetaData.ProductMetaData> products) {
+        if (products == null) {
+            return null;
+        }
+        AccessiblePropertyMetaData.ProductMetaData product =
+            products.get(getElementDataKey());
+        if (product != null) {
+            return product;
+        }
+        if (productMissingLogged.compareAndSet(false, true)) {
+            logger.warn(String.format(
+                MessageProductNotInResourceKey,
+                getElementDataKey(),
+                getClass().getSimpleName()));
+        }
+        AccessiblePropertyMetaData.ProductMetaData empty =
+            new AccessiblePropertyMetaData.ProductMetaData();
+        empty.properties = new ArrayList<>();
+        return empty;
+    }
+
+    /**
+     * This engine's part of the cloud response. Where the response has no
+     * part for this engine, as when the resource key does not include its
+     * product, an empty object is returned, so the element data holds no
+     * values and no error is raised.
+     * @param response the whole cloud response
+     * @return this engine's part of the response
+     */
+    protected JSONObject getElementJson(JSONObject response) {
+        JSONObject element = response.optJSONObject(getElementDataKey());
+        return element == null ? new JSONObject() : element;
     }
 
     private List<ElementPropertyMetaData> loadElementProperties(
@@ -246,7 +311,7 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
         List<ElementPropertyMetaData> properties) {
         Map<String, ElementPropertyMetaData> result = new HashMap<>();
         for (ElementPropertyMetaData property : properties) {
-            result.put(property.getName().toLowerCase(), property);
+            result.put(property.getName().toLowerCase(Locale.ROOT), property);
         }
         return result;
     }
@@ -283,9 +348,9 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
         for (Map.Entry<String, Object> property : cloudData.entrySet()) {
             if (property.getKey().endsWith("nullreason") == false) {
                 Object outputValue = property.getValue();
-                if (metaDataMap.containsKey(property.getKey().toLowerCase())) {
+                if (metaDataMap.containsKey(property.getKey().toLowerCase(Locale.ROOT))) {
                     ElementPropertyMetaData metaData =
-                        metaDataMap.get(property.getKey().toLowerCase());
+                        metaDataMap.get(property.getKey().toLowerCase(Locale.ROOT));
 
                     // If this property has a type of AspectPropertyValue
                     // then create a new instance and populate it.
@@ -334,13 +399,14 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
 	protected void processEngine(FlowData data, TData aspectData) {
 
         CloudRequestData requestData;
-        
+        CloudRequestEngine requestEngine;
+
         // Get requestData from CloudRequestEngine. If requestData does not
         // exist in the element data TypedKeyMap then the CloudRequestEngine either 
         // does not exist in the Pipeline or is not run before this engine.        
         try {
-            requestData = data.getFromElement(
-                    getRequestEngine().getInstance());        	
+            requestEngine = getRequestEngine().getInstance();
+            requestData = data.getFromElement(requestEngine);        	
         } 
         catch(Exception ex) {
             throw new PipelineConfigurationException(
@@ -358,7 +424,9 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
                 "before it in the Pipeline. This engine will be unable " +
                 "to produce results until this is corrected.");
         }
-        
+
+        setCloudRequestFailed(data, aspectData, requestEngine);
+
         String json = requestData == null ? null : requestData.getJsonResponse();
         
         // If the JSON is empty or null then do not Process the CloudAspectEngine.
@@ -377,6 +445,48 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
        }
 	}
 	
+    /**
+     * Where the Cloud Request Engine's request for the Flow Data failed,
+     * which an error it added to the Flow Data shows, record it in the
+     * Element Data, so that a property the Element Data does not hold is
+     * missing with the CloudRequestFailed reason.
+     * @param data the Flow Data being processed
+     * @param aspectData the Element Data this engine populates
+     * @param requestEngine the Cloud Request Engine of the Pipeline
+     */
+    protected void setCloudRequestFailed(
+        FlowData data,
+        TData aspectData,
+        CloudRequestEngine requestEngine) {
+        if (aspectData instanceof AspectDataBase == false ||
+            data.getErrors() == null) {
+            return;
+        }
+        for (FlowError error : data.getErrors()) {
+            if (error.getFlowElement() == requestEngine) {
+                ((AspectDataBase) aspectData).setCloudRequestFailed();
+                return;
+            }
+        }
+    }
+
+    /**
+     * The request for the property list failed where the Cloud Request
+     * Engine still does not know the accessible properties, because it
+     * requests them when it is built and again on first use.
+     * @return true if the request for the property list failed
+     */
+    @Override
+    public boolean propertyListRequestFailed() {
+        CloudRequestEngine requestEngine;
+        try {
+            requestEngine = getRequestEngine().getInstance();
+        } catch (PipelineConfigurationException e) {
+            return false;
+        }
+        return requestEngine.getPublicProperties() == null;
+    }
+
     /**
      * A virtual method to be implemented by the derived class which
      * uses the JsonResponse from the CloudRequestEngine to populate the TData

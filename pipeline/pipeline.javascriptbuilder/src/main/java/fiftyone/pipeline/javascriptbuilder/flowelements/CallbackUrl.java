@@ -31,9 +31,11 @@ import java.util.regex.Pattern;
  * and host usually come from the request, and the script holds the URL in a
  * single-quoted string, so the URL is checked before it is written into the
  * script. A URL that is not valid, including one whose protocol is not http
- * or https, is refused. In the user information, in anything after the host
- * and port, and in the endpoint, the characters a URL cannot hold or that
- * could end the string or the script are percent-encoded.
+ * or https, is refused. In anything after the authority, and in the
+ * endpoint, the characters a URL cannot hold or that could end the string or
+ * the script are percent-encoded. The rules are applied to the text given,
+ * and not to the result of parsing it, because a parser can accept hosts the
+ * rules refuse and rewrite others, such as 127.1.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/pipeline-elements/javascript-builder.md#callback-url">Specification</a>
  */
 final class CallbackUrl {
@@ -78,20 +80,21 @@ final class CallbackUrl {
     private static final String[] SCHEMES = {"http", "https"};
 
     /**
+     * The characters the host value cannot hold. A '?' or '#' would make the
+     * endpoint part of the query or fragment, and an '@' means user
+     * information, which fetch refuses and XMLHttpRequest sends.
+     */
+    private static final String NOT_IN_HOST = "?#@";
+
+    /**
      * A label of a host name, being ASCII letters, digits, '-' and '_'.
      */
     private static final Pattern LABEL = Pattern.compile("[A-Za-z0-9_-]+");
 
     /**
-     * An IPv6 zone identifier, being unreserved characters as RFC 3986
-     * section 2.3 defines them.
+     * A port as it follows the host, being ':' and at least one digit.
      */
-    private static final Pattern ZONE = Pattern.compile("[A-Za-z0-9._~-]+");
-
-    /**
-     * A port as it follows the host, being ':' and any number of digits.
-     */
-    private static final Pattern PORT = Pattern.compile(":[0-9]*");
+    private static final Pattern PORT = Pattern.compile(":[0-9]+");
 
     /**
      * One group of an IPv6 address.
@@ -108,13 +111,21 @@ final class CallbackUrl {
         "(\\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}");
 
     /**
+     * A label that the URL Standard reads as a number, being decimal digits
+     * or "0x" followed by hexadecimal digits.
+     */
+    private static final Pattern NUMBER =
+        Pattern.compile("[0-9]+|0[xX][0-9A-Fa-f]*");
+
+    /**
      * Whether the URL can be written into the script.
      */
     final boolean valid;
 
     /**
      * The URL to write into the script when it is valid, and otherwise the
-     * URL as it was built, for the log.
+     * URL as it was built, for the log, with *** in place of everything in
+     * the host value before its last '@'.
      */
     final String url;
 
@@ -129,8 +140,7 @@ final class CallbackUrl {
      * and removed when both do. The protocol and the host are written in
      * lower case and the rest as given, apart from the percent-encoding.
      * @param protocol the protocol, http or https in any case
-     * @param host the host, which can start with user information and end
-     *             with a port, a path, a query or a fragment
+     * @param host the host, which can end with a port and a path
      * @param endpoint the endpoint
      * @return the callback URL, or null when the protocol, host or endpoint
      * is not set
@@ -146,19 +156,41 @@ final class CallbackUrl {
         } else if (hostSlash && endpointSlash) {
             endpoint = endpoint.substring(1);
         }
-        String built = protocol + "://" + host + endpoint;
-        if (isScheme(protocol) == false) {
-            return new CallbackUrl(false, built);
-        }
         int end = authorityEnd(host);
-        String authority = checkedAuthority(host.substring(0, end));
+        String authority = isScheme(protocol) && hasNoForbiddenCharacter(host)
+            ? checkedHostPort(host.substring(0, end))
+            : null;
         if (authority == null) {
-            return new CallbackUrl(false, built);
+            return new CallbackUrl(
+                false,
+                protocol + "://" + withoutUserInformation(host) + endpoint);
         }
         return new CallbackUrl(
             true,
             asciiLowerCase(protocol) + "://" + authority +
                 encoded(host.substring(end)) + encoded(endpoint));
+    }
+
+    /**
+     * Whether the host value holds none of '?', '#' and '@'.
+     */
+    private static boolean hasNoForbiddenCharacter(String host) {
+        for (int i = 0; i < host.length(); i++) {
+            if (NOT_IN_HOST.indexOf(host.charAt(i)) >= 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * The host value with everything before its last '@' replaced by ***.
+     * The last '@' of the whole value is used, and not that of the
+     * authority, because a password can hold a '/', '?' or '#'.
+     */
+    private static String withoutUserInformation(String host) {
+        int at = host.lastIndexOf('@');
+        return at < 0 ? host : "***" + host.substring(at);
     }
 
     /**
@@ -208,41 +240,20 @@ final class CallbackUrl {
     }
 
     /**
-     * Where the authority ends, which is at the first '/', '?' or '#' of the
-     * host, or at its end.
+     * Where the authority ends, which is at the first '/' of the host, or at
+     * its end.
      */
     private static int authorityEnd(String host) {
-        for (int i = 0; i < host.length(); i++) {
-            char c = host.charAt(i);
-            if (c == '/' || c == '?' || c == '#') {
-                return i;
-            }
-        }
-        return host.length();
-    }
-
-    /**
-     * The user information, host and port as they are written into the URL,
-     * or null when they are not valid. The user information ends at the
-     * first '@', so a second '@' is part of the host and refused.
-     */
-    private static String checkedAuthority(String authority) {
-        int at = authority.indexOf('@');
-        if (at < 0) {
-            return checkedHostPort(authority);
-        }
-        String hostPort = checkedHostPort(authority.substring(at + 1));
-        return hostPort == null
-            ? null
-            : encoded(authority.substring(0, at)) + "@" + hostPort;
+        int end = host.indexOf('/');
+        return end < 0 ? host.length() : end;
     }
 
     /**
      * The host and optional port in lower case, or null when they are not
-     * valid. The host is an IPv6 address in brackets with an optional zone
-     * identifier, or a name of labels separated by dots with a dot allowed
-     * at the end. The port is ':' followed by digits up to 65535, or by
-     * nothing.
+     * valid. The host is an IPv6 address in brackets, or a name of labels
+     * separated by dots with a dot allowed at the end, which must be an IPv4
+     * address when its last label is a number. The port is ':' followed by
+     * digits up to 65535.
      */
     private static String checkedHostPort(String hostPort) {
         String host;
@@ -253,14 +264,6 @@ final class CallbackUrl {
                 return null;
             }
             String address = hostPort.substring(1, close);
-            int zone = address.indexOf("%25");
-            if (zone >= 0) {
-                if (ZONE.matcher(address.substring(zone + 3)).matches() ==
-                    false) {
-                    return null;
-                }
-                address = address.substring(0, zone);
-            }
             if (isIpv6(address) == false) {
                 return null;
             }
@@ -274,10 +277,15 @@ final class CallbackUrl {
             String name = host.endsWith(".")
                 ? host.substring(0, host.length() - 1)
                 : host;
-            for (String label : name.split("\\.", -1)) {
+            String[] labels = name.split("\\.", -1);
+            for (String label : labels) {
                 if (LABEL.matcher(label).matches() == false) {
                     return null;
                 }
+            }
+            if (NUMBER.matcher(labels[labels.length - 1]).matches() &&
+                IPV4.matcher(host).matches() == false) {
+                return null;
             }
         }
         if (port.isEmpty() == false && isPort(port) == false) {
@@ -288,7 +296,7 @@ final class CallbackUrl {
 
     /**
      * Whether the text is ':' followed by digits whose value is no more than
-     * 65535, or by nothing.
+     * 65535.
      */
     private static boolean isPort(String text) {
         if (PORT.matcher(text).matches() == false) {

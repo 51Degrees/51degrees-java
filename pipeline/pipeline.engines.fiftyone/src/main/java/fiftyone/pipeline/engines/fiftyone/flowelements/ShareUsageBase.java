@@ -26,9 +26,12 @@ import fiftyone.caching.LruPutCache;
 import fiftyone.pipeline.core.data.*;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
+import fiftyone.pipeline.core.flowelements.RunsLast;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.configuration.CacheConfiguration;
 import fiftyone.pipeline.engines.fiftyone.data.EvidenceKeyFilterShareUsage;
+import fiftyone.pipeline.engines.fiftyone.data.EvidenceKeyFilterShareUsageTracker;
+import fiftyone.pipeline.engines.fiftyone.data.ShareUsageEvidence;
 import fiftyone.pipeline.engines.fiftyone.exceptions.HttpException;
 import fiftyone.pipeline.engines.fiftyone.trackers.ShareUsageTracker;
 import fiftyone.pipeline.engines.trackers.Tracker;
@@ -41,6 +44,9 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -51,17 +57,36 @@ import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.LOST_DAT
 /**
  * Abstract base class for ShareUsage elements. Contains common functionality
  * such as filtering the evidence and building the XML records.
- * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/pipeline-elements/usage-sharing-element.md">Specification</a>
+ * @see <a href="https://github.com/51Degrees/specifications/blob/c8128ca4fa68c6348d76ddb2889bb5087de1aa5f/pipeline-specification/pipeline-elements/usage-sharing-element.md">Specification</a>
  */
 public abstract class ShareUsageBase
-    extends FlowElementBase<ElementData, ElementPropertyMetaData> {
+    extends FlowElementBase<ElementData, ElementPropertyMetaData>
+    implements RunsLast {
 
     /**
      * IP Addresses of local host device.
      */
     private static final InetAddress[] localHosts;
+
+    /** The form of DateSent, which is the time in UTC. */
+    private static final String DATE_SENT_PATTERN = "yyyy-MM-dd'T'HH:mm:ss";
+
+    private static final DateTimeFormatter DATE_SENT_FORMAT =
+        DateTimeFormatter.ofPattern(DATE_SENT_PATTERN, Locale.ROOT)
+            .withZone(ZoneOffset.UTC);
+
+    /**
+     * Formats a date as DateSent, in UTC.
+     * @deprecated the record takes DateSent from {@link #dateSentNow()},
+     * which is safe to call from any thread.
+     */
+    @Deprecated
     protected static final SimpleDateFormat DATE_FMT =
-        new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+        new SimpleDateFormat(DATE_SENT_PATTERN);
+
+    static {
+        DATE_FMT.setTimeZone(TimeZone.getTimeZone("UTC"));
+    }
 
     static {
         InetAddress[] localHosts1;
@@ -105,12 +130,15 @@ public abstract class ShareUsageBase
     protected final String shareUsageUrl;
 
     /**
-     * Evidence key filter including the session id.
+     * The Evidence this element accepts, which is none, so that cache keys,
+     * the ETag and the Vary header never depend on it. It finds what to share
+     * with {@link ShareUsageEvidence#find} instead.
      */
-    private final EvidenceKeyFilter evidenceKeyFilter;
+    private final EvidenceKeyFilter acceptedEvidence =
+        new EvidenceKeyFilterWhitelist(new ArrayList<String>());
 
     /**
-     * Evidence key filter excluding the session id
+     * Which of the values found are shared, leaving out the session cookie.
      */
     private final EvidenceKeyFilter evidenceKeyFilterExclSession;
 
@@ -179,8 +207,9 @@ public abstract class ShareUsageBase
     private List<String> flowElements = null;
 
     /**
-     * Version of the OS the pipeline is being run on, as reported by
-     * System.getProperty("os.name").
+     * The name of the operating system the Pipeline runs on, followed by
+     * its version where the JVM gives one, as System.getProperty("os.name")
+     * and System.getProperty("os.version") report them. Written as Platform.
      */
     protected final String osVersion;
 
@@ -214,6 +243,12 @@ public abstract class ShareUsageBase
     private volatile boolean stopping = false;
 
     /**
+     * Set when closing has waited as long as it may for the queue to be
+     * sent. The data left is discarded and a consumer sends nothing more.
+     */
+    private volatile boolean discarding = false;
+
+    /**
      * Keep a count of data lost
      */
     protected long lostData;
@@ -222,6 +257,23 @@ public abstract class ShareUsageBase
      * lostData is rest when it exceeds this value
      */
     protected long lostDataReset = LOST_DATA_RESET_DEFAULT;
+
+    /**
+     * True from the first entry discarded because the queue is full until an
+     * entry is next queued. While true, a message is logged only for every
+     * {@link Constants#QUEUE_FULL_LOG_EVERY} entries discarded.
+     */
+    private volatile boolean queueFullReported = false;
+
+    /**
+     * Decides when sending may happen after failed sends.
+     */
+    private final ShareUsageBackOff backOff;
+
+    /**
+     * Released when the element starts closing, to end any pause at once.
+     */
+    private final CountDownLatch closing = new CountDownLatch(1);
 
     /**
      * Constructor
@@ -391,6 +443,99 @@ public abstract class ShareUsageBase
         List<Map.Entry<String, String>> ignoreDataEvidenceFilter,
         String sessionCookieName,
         Tracker tracker) {
+        this(
+            logger,
+            sharePercentage,
+            minimumEntriesPerMessage,
+            maximumQueueSize,
+            addTimeout,
+            takeTimeout,
+            repeatEvidenceIntervalMinutes,
+            trackSession,
+            shareUsageUrl,
+            blockedHttpHeaders,
+            includedQueryStringParameters,
+            ignoreDataEvidenceFilter,
+            sessionCookieName,
+            tracker,
+            Constants.SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_DEFAULT,
+            Constants.SHARE_USAGE_FAILURES_WINDOW_SECONDS_DEFAULT,
+            Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_INITIAL_DELAY_SECONDS_DEFAULT,
+            Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT,
+            Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT,
+            false,
+            Constants.SHARE_USAGE_DEFAULT_SHARE_ALL_QUERY_STRING_PARAMETERS);
+    }
+
+    /**
+     * Constructor
+     * @param logger the logger to use
+     * @param sharePercentage the approximate proportion of requests to share.
+     *                        1 = 100%, 0.5 = 50%, etc.
+     * @param minimumEntriesPerMessage the minimum number of request entries per
+     *                                 message sent to 51Degrees
+     * @param maximumQueueSize the maximum number of items to hold in the queue
+     *                         at one time. This must be larger than minimum
+     *                         entries
+     * @param addTimeout the timeout in milliseconds to allow when attempting to
+     *                   add an item to the queue. If this timeout is exceeded
+     *                   then the item is not shared
+     * @param takeTimeout the timeout in milliseconds to allow when attempting
+     *                    to take an item to the queue
+     * @param repeatEvidenceIntervalMinutes the interval (in minutes) which is
+     *                                      used to decide if repeat evidence is
+     *                                      old enough to consider a new session
+     * @param trackSession set if the tracker should consider sessions in share
+     *                     usage
+     * @param shareUsageUrl the URL to send data to
+     * @param blockedHttpHeaders a list of the names of the HTTP headers that
+     *                           share usage should not send to 51Degrees
+     * @param includedQueryStringParameters a list of the names of query string
+     *                                      parameters that share usage should
+     *                                      send to 51Degrees
+     * @param ignoreDataEvidenceFilter the filter used to determine if an item
+     *                                 of evidence should be ignored or not
+     * @param sessionCookieName the name of the cookie that contains the session
+     *                          id
+     * @param tracker the {@link Tracker} to use to determine if a given
+     *                {@link FlowData} instance should be shared or not
+     * @param failuresToEnterRecovery the number of failed sends within the
+     *                                failures window that pauses sending
+     * @param failuresWindowSeconds the time in seconds over which failed sends
+     *                              are counted
+     * @param initialRecoveryDelaySeconds the length in seconds of the first
+     *                                    pause
+     * @param maxRecoveryDelaySeconds the longest a pause can be, in seconds
+     * @param recoveryMultiplier what the pause is multiplied by each time the
+     *                           send tried when a pause ends fails
+     * @param shareAllEvidence if true then all Evidence is shared, apart from
+     *                         the keys that are never shared and the cookies
+     *                         other than the 51Degrees ones
+     * @param shareAllQueryStringParameters if true then all query string
+     *                                      parameters are shared
+     */
+    protected ShareUsageBase(
+        Logger logger,
+        double sharePercentage,
+        int minimumEntriesPerMessage,
+        int maximumQueueSize,
+        int addTimeout,
+        int takeTimeout,
+        int repeatEvidenceIntervalMinutes,
+        boolean trackSession,
+        String shareUsageUrl,
+        List<String> blockedHttpHeaders,
+        List<String> includedQueryStringParameters,
+        List<Map.Entry<String, String>> ignoreDataEvidenceFilter,
+        String sessionCookieName,
+        Tracker tracker,
+        int failuresToEnterRecovery,
+        int failuresWindowSeconds,
+        double initialRecoveryDelaySeconds,
+        double maxRecoveryDelaySeconds,
+        double recoveryMultiplier,
+        boolean shareAllEvidence,
+        boolean shareAllQueryStringParameters) {
         super(logger, null);
 
         if (minimumEntriesPerMessage > maximumQueueSize) {
@@ -405,6 +550,12 @@ public abstract class ShareUsageBase
         }
 
         evidenceCollection = new LinkedBlockingQueue<>(maximumQueueSize);
+        backOff = new ShareUsageBackOff(
+            failuresToEnterRecovery,
+            failuresWindowSeconds,
+            initialRecoveryDelaySeconds,
+            maxRecoveryDelaySeconds,
+            recoveryMultiplier);
 
         this.addTimeout = addTimeout;
         this.takeTimeout = takeTimeout;
@@ -416,7 +567,8 @@ public abstract class ShareUsageBase
         // Some data is going to stay the same on all requests so we can
         // gather that now.
         languageVersion = System.getProperty("java.version");
-        osVersion = System.getProperty("os.name");
+        osVersion = platform(
+            System.getProperty("os.name"), System.getProperty("os.version"));
 
         this.enginesVersion = getClass().getPackage().getImplementationVersion();
         coreVersion = Pipeline.class.getPackage().getImplementationVersion();
@@ -424,10 +576,13 @@ public abstract class ShareUsageBase
         includedQueryStringParameters.add(Constants.EVIDENCE_SESSIONID_SUFFIX);
         includedQueryStringParameters.add(Constants.EVIDENCE_SEQUENCE_SUFIX);
 
-        evidenceKeyFilter = new EvidenceKeyFilterShareUsage(
-            blockedHttpHeaders, includedQueryStringParameters, true, sessionCookieName);
         evidenceKeyFilterExclSession = new EvidenceKeyFilterShareUsage(
-            blockedHttpHeaders, includedQueryStringParameters, false, sessionCookieName);
+            blockedHttpHeaders,
+            includedQueryStringParameters,
+            false,
+            sessionCookieName,
+            shareAllEvidence,
+            shareAllQueryStringParameters);
 
         this.ignoreDataEvidenceFilter = ignoreDataEvidenceFilter;
 
@@ -440,15 +595,41 @@ public abstract class ShareUsageBase
             this.tracker = new ShareUsageTracker(
                 cacheConfiguration,
                     intervalMillis,
-                new EvidenceKeyFilterShareUsage(
-                    blockedHttpHeaders, includedQueryStringParameters, trackSession, sessionCookieName));
+                new EvidenceKeyFilterShareUsageTracker(
+                    blockedHttpHeaders,
+                    includedQueryStringParameters,
+                    trackSession,
+                    sessionCookieName,
+                    shareAllEvidence,
+                    shareAllQueryStringParameters));
         }
 
         properties = new ArrayList<>();
     }
 
     /**
-     * Return a list of {@link FlowElement} in the pipeline.
+     * The time now in UTC, in the form DateSent is written in.
+     * @return the text for DateSent
+     */
+    protected static String dateSentNow() {
+        return DATE_SENT_FORMAT.format(Instant.now());
+    }
+
+    /**
+     * The text for Platform, which is the name of the operating system
+     * followed by its version where there is one.
+     */
+    private static String platform(String name, String version) {
+        String platform = name == null ? "" : name.trim();
+        if (version != null && version.trim().isEmpty() == false) {
+            platform = (platform + " " + version.trim()).trim();
+        }
+        return platform;
+    }
+
+    /**
+     * Return the fully qualified class name of each {@link FlowElement} in
+     * the pipeline.
      * If the list is null then populate from the pipeline.
      * If there are multiple or no pipelines then log an error.
      * @return list of flow elements
@@ -461,7 +642,7 @@ public abstract class ShareUsageBase
                 pipeline = getPipelines().get(0);
                 List<String> list = new ArrayList<>();
                 for ( FlowElement element : pipeline.getFlowElements()) {
-                    list.add(element.getClass().getSimpleName());
+                    list.add(element.getClass().getName());
                 }
                 flowElements = list;
             } else {
@@ -517,15 +698,20 @@ public abstract class ShareUsageBase
     @Override
     protected void processInternal(FlowData flowData){
         boolean ignoreData = false;
-        Map<String, Object> evidence = flowData.getEvidence().asKeyMap();
+        // The values are found here only for the ignore filter. Otherwise
+        // they are found once the tracker allows the call to be shared, as
+        // most calls repeat one already shared.
+        Map<String, Object> found = null;
 
         logger.debug("processInternal()");
 
-        if (ignoreDataEvidenceFilter != null) {
+        if (ignoreDataEvidenceFilter != null &&
+            ignoreDataEvidenceFilter.isEmpty() == false) {
+            found = ShareUsageEvidence.find(flowData.getEvidence());
             for (Map.Entry<String, String> entry : ignoreDataEvidenceFilter) {
                 String key = entry.getKey();
-                if (evidence.containsKey(key)) {
-                    if (evidence.get(key).toString().equals(entry.getValue())) {
+                if (found.containsKey(key)) {
+                    if (found.get(key).toString().equals(entry.getValue())) {
                         ignoreData = true;
                         break;
                     }
@@ -534,13 +720,13 @@ public abstract class ShareUsageBase
         }
 
         if (isCanceled() == false && ignoreData == false) {
-            processData(flowData);
+            processData(flowData, found);
         }
     }
 
     @Override
     public EvidenceKeyFilter getEvidenceKeyFilter() {
-        return evidenceKeyFilter;
+        return acceptedEvidence;
     }
 
     @Override
@@ -575,6 +761,15 @@ public abstract class ShareUsageBase
     }
 
     /**
+     * Returns true once closing has stopped waiting for the queue to be
+     * sent. A consumer that sees this sends nothing more.
+     * @return true if the data left is being discarded
+     */
+    protected boolean isDiscarding() {
+        return discarding;
+    }
+
+    /**
      * Returns true if there is a thread attempting to send usage data.
      * @return true if data is being sent
      */
@@ -597,27 +792,64 @@ public abstract class ShareUsageBase
         return null;
     }
 
+    /**
+     * The time closing may still wait for the data to be sent, so that the
+     * whole of closing, measured from its start, keeps within the close
+     * limit with the reserve left for what follows the wait.
+     * @param closeStartNanos {@link System#nanoTime()} when closing started
+     * @return milliseconds left to wait, never less than 0
+     */
+    private static long closeWaitLeftMillis(long closeStartNanos) {
+        long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(
+            System.nanoTime() - closeStartNanos);
+        return Math.max(0, closeWaitMillis() - elapsedMillis);
+    }
+
+    /**
+     * The longest closing waits for the data to be sent, from its start.
+     * @return milliseconds
+     */
+    private static long closeWaitMillis() {
+        return Constants.SHARE_USAGE_CLOSE_LIMIT_MILLIS -
+            Constants.SHARE_USAGE_CLOSE_RESERVE_MILLIS;
+    }
+
     @Override
     protected void managedResourcesCleanup() {
+        long closeStartNanos = System.nanoTime();
         // Tell any consumer - one that is already running as well as the final
         // one queued below - that the queue has to be drained completely rather
         // than stopping once fewer than minEntriesPerMessage entries are left.
         // This is set before anything is submitted, so a consumer can never
         // observe it as false and then exit leaving a partial batch behind.
         stopping = true;
-        // Queue a final consumer without consulting isRunning(). That check is
-        // subject to a time-of-check/time-of-use race: a consumer that has
-        // finished its loop with a sub-threshold remainder still reports as
-        // running until its Future flips to done, which used to stop close from
-        // queueing the drain that would have sent the remainder. The executor is
-        // single threaded, so the task queued here cannot run alongside a
-        // consumer that is already in flight - it runs after it - and shutdown()
-        // still allows an already submitted task to run to completion.
+        // Ends a pause at once, so closing never waits for one. Nothing is
+        // sent while paused.
+        closing.countDown();
+        // Queue a final consumer without consulting isRunning(). A consumer
+        // that has finished its loop with a sub-threshold remainder still
+        // reports as running until its Future is done, so checking would skip
+        // the drain that sends the remainder. The executor is single threaded,
+        // so the task queued here runs after any consumer already in flight,
+        // and shutdown() still allows an already submitted task to finish.
         submitSendData();
         try {
             executor.shutdown();
-            if (!executor.awaitTermination(Constants.SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT, TimeUnit.MILLISECONDS)){
-                logger.warn("Could not send final data on close down");
+            if (!executor.awaitTermination(
+                    closeWaitLeftMillis(closeStartNanos),
+                    TimeUnit.MILLISECONDS)) {
+                // Sending stops rather than hold up the process that closes
+                // the element, and the data left is discarded, all within
+                // the close limit.
+                discarding = true;
+                int discarded =
+                    evidenceCollection.drainTo(new ArrayList<ShareUsageData>());
+                logger.warn(
+                    "{} usage sharing entries were not sent, as sending had " +
+                        "not finished {} milliseconds after usage sharing " +
+                        "started closing.",
+                    discarded,
+                    closeWaitMillis());
                 executor.shutdownNow();
             }
         } catch (InterruptedException interruptedException) {
@@ -625,6 +857,13 @@ public abstract class ShareUsageBase
             // so leaving the flag set would make the next element's cleanup
             // abandon its own wait immediately.
             logger.warn("Interrupted while awaiting close down");
+        }
+        if (evidenceCollection.isEmpty() == false &&
+            backOff.remaining(ShareUsageBackOff.now()) > 0) {
+            logger.info(
+                "{} usage sharing entries were not sent, as sending was " +
+                    "paused after failed sends when usage sharing closed.",
+                evidenceCollection.size());
         }
     }
 
@@ -652,19 +891,24 @@ public abstract class ShareUsageBase
     /**
      * Process the supplied request data
      * @param data the {@link FlowData} instance that provides the evidence
+     * @param found the values {@link ShareUsageEvidence#find} found for it,
+     *              or null if they have not been found yet
      */
-    private void processData(FlowData data) {
+    private void processData(FlowData data, Map<String, Object> found) {
         logger.debug("processData()");
         if (random.nextDouble() <= sharePercentage) {
             // Check if the tracker will allow sharing of this data
             if (tracker.track(data)) {
+                Map<String, Object> shared = found != null ? found :
+                    ShareUsageEvidence.find(data.getEvidence());
                 // Extract the data we want from the evidence and add
                 // it to the collection.
                 try {
                     if (evidenceCollection.offer(
-                            getDataFromEvidence(data.getEvidence()),
+                            getDataFromEvidence(shared),
                             addTimeout,
                             TimeUnit.MILLISECONDS)) {
+                        queueFullReported = false;
                         logger.debug("Queued {} entries", evidenceCollection.size());
                         // If the collection has enough entries then start
                         // taking data from it to be sent.
@@ -672,11 +916,17 @@ public abstract class ShareUsageBase
                             trySendData();
                         }
                     } else {
-                        if (++lostData >= lostDataReset) {
-                            logger.warn("Could not queue data for Share Usage. This could mean that" +
-                                    " the queue is too small, that the proportion of data shared is" +
-                                    " too high - or that the sending process has encountered" +
-                                    " problems sending.");
+                        long lost = ++lostData;
+                        if (queueFullReported == false ||
+                            lost % Constants.QUEUE_FULL_LOG_EVERY == 0) {
+                            queueFullReported = true;
+                            logger.warn("The usage sharing queue is full, so usage data is " +
+                                    "being discarded. This could mean that the queue is too " +
+                                    "small, that the proportion of data shared is too high, " +
+                                    "or that sending is failing. {} entries have been " +
+                                    "discarded.", lost);
+                        }
+                        if (lost >= lostDataReset) {
                             lostData = 0;
                         }
                     }
@@ -688,24 +938,27 @@ public abstract class ShareUsageBase
     }
 
     /**
-     * Extract the desired data from the evidence.
+     * Extract the desired data from the values found.
      * In order to avoid problems with the evidence data being disposed before
      * it is sent, the data placed into a new object rather than being a
      * reference to the existing evidence instance.
      *
-     * @param evidence an {@link Evidence} instance that contains the data to be extracted
-     * @return a {@link ShareUsageData} instance populated with data from the evidence
+     * @param found the values {@link ShareUsageEvidence#find} found
+     * @return a {@link ShareUsageData} instance populated with the values
+     * the sharing rules allow
      */
-    private ShareUsageData getDataFromEvidence(Evidence evidence) {
+    private ShareUsageData getDataFromEvidence(Map<String, Object> found) {
         ShareUsageData shareUsageData = new ShareUsageData();
 
-        for (Map.Entry<String, Object> entry : evidence.asKeyMap().entrySet()) {
+        for (Map.Entry<String, Object> entry : found.entrySet()) {
             // Check if we can send this piece of evidence
             if (evidenceKeyFilterExclSession.include(entry.getKey()) == false) {
                 continue;
             }
 
-            switch (entry.getKey()) {
+            // The keys are compared without regard to case, and the constants
+            // are lower case.
+            switch (entry.getKey().toLowerCase(Locale.ROOT)) {
                 case fiftyone.pipeline.core.Constants.EVIDENCE_CLIENTIP_KEY:
                     // The client IP is dealt with separately for backwards
                     // compatibility purposes.
@@ -784,6 +1037,51 @@ public abstract class ShareUsageBase
     protected abstract void sendUsageData() throws HttpException;
 
     /**
+     * Waits until sending may start again after failed sends. A consumer
+     * calls this before each message it sends.
+     * @return false if the element started closing while sending was paused,
+     * in which case nothing more should be sent
+     */
+    protected boolean waitWhilePaused() {
+        long pause;
+        while ((pause = backOff.remaining(ShareUsageBackOff.now())) > 0) {
+            try {
+                if (closing.await(pause, TimeUnit.MILLISECONDS)) {
+                    return false;
+                }
+            } catch (InterruptedException e) {
+                // Not re-interrupting, for the reason given in
+                // managedResourcesCleanup. The interrupt comes from closing.
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Records whether the remote service accepted a message, so that repeated
+     * failures pause sending and a success ends the pause.
+     * @param accepted true if the message was accepted
+     */
+    protected void recordSendResult(boolean accepted) {
+        if (accepted) {
+            if (backOff.succeeded()) {
+                logger.info("Usage sharing resumed after a send succeeded.");
+            }
+        } else {
+            long pause = backOff.failed(ShareUsageBackOff.now());
+            if (pause > 0) {
+                logger.warn(
+                    "Usage sharing paused for {} seconds after failed " +
+                        "sends. Usage data is still queued, up to the " +
+                        "maximum queue size, and sending starts again when " +
+                        "the pause ends.",
+                    pause / 1000.0);
+            }
+        }
+    }
+
+    /**
      * Get engine Version No.
      * @return engine version no
      */
@@ -829,5 +1127,16 @@ public abstract class ShareUsageBase
             categoryDict.put(field, value.toString());
         }
 
+    }
+
+    /**
+     * Usage sharing reads what every other Flow Element has added to the
+     * Evidence, so it is the last Flow Element of a Pipeline and outside any
+     * parallel group.
+     * @return the name a misplaced usage sharing element is refused with
+     */
+    @Override
+    public String getRunsLastName() {
+        return "The usage sharing element";
     }
 }

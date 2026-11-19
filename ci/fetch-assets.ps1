@@ -19,20 +19,16 @@ foreach ($asset in $deviceDetectionAssets) {
     New-Item -ItemType SymbolicLink -Force -Target "$PWD/assets/$asset" -Path "$deviceDetectionData/$asset"
 }
 
-./steps/fetch-assets.ps1 -IpIntelligence:$IpIntelligence -IpIntelligenceUrl:$IpIntelligenceUrl -Assets '51Degrees-EnterpriseIpiV41.ipi', '51Degrees-LiteIpiV41.ipi'
+./steps/fetch-assets.ps1 -IpIntelligence:$IpIntelligence -IpIntelligenceUrl:$IpIntelligenceUrl -Assets '51Degrees-EnterpriseIpiV41.ipi', '51Degrees-LiteIpiV41.ipi', '51Degrees-IPIV4AsnIpiV41.ipi'
 New-Item -ItemType SymbolicLink -Force -Target "$PWD/assets/51Degrees-EnterpriseIpiV41.ipi" -Path "$ipIntelligenceData/51Degrees-EnterpriseIpiV41.ipi"
 # The asset is fetched under the blob name, but the tests, DataFileHelper and
 # the data repository scripts use the unpacked name 51Degrees-LiteV41.ipi, so
 # link it as that.
 New-Item -ItemType SymbolicLink -Force -Target "$PWD/assets/51Degrees-LiteIpiV41.ipi" -Path "$ipIntelligenceData/51Degrees-LiteV41.ipi"
 
-# The data repository's script downloads every linked file that is not
-# already there. The files linked above are kept, so this gets the free files
-# that are not assets, which is the Asn file.
-& "$data/get-data-files.ps1"
-if (-not $?) {
-    throw "The data repository's get-data-files.ps1 could not download every file"
-}
+# The Asn file the IP Intelligence tests use. Every data file is an asset, so
+# a test job restores it from the run's cache rather than downloading it.
+Copy-Item "assets/51Degrees-IPIV4AsnIpiV41.ipi" $ipIntelligenceData
 
 Write-Host "Assets hashes:"
 Get-FileHash -Algorithm MD5 -Path assets/*

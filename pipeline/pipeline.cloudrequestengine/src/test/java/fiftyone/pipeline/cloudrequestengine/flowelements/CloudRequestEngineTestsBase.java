@@ -69,24 +69,26 @@ public class CloudRequestEngineTestsBase {
                         invocationOnMock.getMethod().getName() + "' should not have been called.");
             }
         });
-        final HttpURLConnection connection = mock(HttpURLConnection.class, new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
-                throw new Exception("The method '" +
-                        invocationOnMock.getMethod().getName() + "' should not have been called.");
-            }
-        });
-        doNothing().when(connection).setConnectTimeout(anyInt());
-        doNothing().when(connection).setReadTimeout(anyInt());
-        Map<String, List<String>> responseHeaders = new HashMap<String, List<String>>();
-        doReturn(responseHeaders).when(connection).getHeaderFields();
+        // Each request gets a connection of its own, because the engine
+        // makes its two discovery requests at once.
         doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
-                URL url = (URL)invocationOnMock.getArgument(0);              
-                doReturn(url).when(connection).getURL();                
+                URL url = (URL)invocationOnMock.getArgument(0);
+                HttpURLConnection connection = mock(HttpURLConnection.class, new Answer<Object>() {
+                    @Override
+                    public Object answer(InvocationOnMock invocation) throws Throwable {
+                        throw new Exception("The method '" +
+                                invocation.getMethod().getName() + "' should not have been called.");
+                    }
+                });
+                doNothing().when(connection).setConnectTimeout(anyInt());
+                doNothing().when(connection).setReadTimeout(anyInt());
+                Map<String, List<String>> responseHeaders = new HashMap<String, List<String>>();
+                doReturn(responseHeaders).when(connection).getHeaderFields();
+                doReturn(url).when(connection).getURL();
                 if (url.getPath().endsWith("properties")) {
-                	propertiesEndPoint = url.getQuery();
+                    propertiesEndPoint = url.getQuery();
                     doReturn(accessiblePropertiesResponseCode).when(connection).getResponseCode();
                 }
                 else {
@@ -120,7 +122,21 @@ public class CloudRequestEngineTestsBase {
             .when(httpClient)
             .getResponseString(any(HttpURLConnection.class), anyMap());
 
-        doReturn(jsonResponse)
+        // A license key makes the discovery requests POSTs, so a POST is
+        // answered by its URL in the same way.
+        doAnswer(new Answer<Object>() {
+            @Override
+            public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+                URL url = ((HttpURLConnection)invocationOnMock.getArgument(0)).getURL();
+                if (url.getPath().endsWith("properties")) {
+                    return accessiblePropertiesResponse;
+                }
+                if (url.getPath().endsWith("evidencekeys")) {
+                    return evidenceKeysResponse;
+                }
+                return jsonResponse;
+            }
+        })
                 .when(httpClient)
                 .postData(
                         any(HttpURLConnection.class),

@@ -22,6 +22,7 @@
 
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.devicedetection.DeviceDetectionPipelineBuilder;
 import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import fiftyone.devicedetection.examples.shared.EvidenceHelper;
@@ -45,6 +46,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
+import static fiftyone.devicedetection.examples.shared.DataFileHelper.LITE_HASH_DATA_FILE_PATH;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 import static java.util.stream.Collectors.groupingBy;
 
@@ -60,12 +62,29 @@ import static java.util.stream.Collectors.groupingBy;
  * page.
  */
 public class MatchMetrics {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-devicedetection-examples-console-matchmetrics.java";
+
     private static final Logger logger = LoggerFactory.getLogger(MatchMetrics.class);
+
+    /**
+     * Where to ask for a copy of the Enterprise data file, tagged with this
+     * example.
+     */
+    private static final String CONTACT_US = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-matchmetrics.java&utm_term=enterprise-data-file";
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
-        String dataFilename = args.length > 0 ? args[0] : null;
+        // Use the supplied data file, or the free Lite file, which is
+        // downloaded if it is missing
+        String dataFilename = DataFileHelper.getDataFileLocation(
+                args.length > 0 ? args[0] : LITE_HASH_DATA_FILE_PATH);
         run(dataFilename, EvidenceHelper.setUpEvidence(), false, System.out);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     /**
@@ -106,8 +125,9 @@ public class MatchMetrics {
                 // Uncomment BrowserName to include Browser component profile ID
                 // in the device ID value.
                 //.setProperty("BrowserName")
-                // If using the full on-premise data file this property will be
-                // present in the data file. See https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-matchmetrics.java&utm_term=run
+                // Only the Enterprise data file has this property, and the
+                // free Lite data file leaves it out. Contact us for a copy at
+                // https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-matchmetrics.java&utm_term=run
                 .setProperty("HardwareName")
                 // Only use the predictive graph to better handle variances
                 // between the training data and the target User-Agent string.
@@ -214,6 +234,10 @@ public class MatchMetrics {
                     });
                 });
                 writer.println();
+            }
+            if (DataFileHelper.isLiteDataFile(
+                    pipeline.getElement(DeviceDetectionHashEngine.class))) {
+                DataFileHelper.writeEnterpriseOffer(writer, CONTACT_US);
             }
         }
         logger.info("Finished Match Metrics Example");

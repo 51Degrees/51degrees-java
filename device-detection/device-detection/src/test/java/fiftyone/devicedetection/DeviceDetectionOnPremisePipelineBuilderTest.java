@@ -24,13 +24,14 @@ package fiftyone.devicedetection;
 
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.ConfigHashSwig;
-import fiftyone.devicedetection.shared.testhelpers.FileUtils;
+import fiftyone.devicedetection.shared.testhelpers.TestFileUtils;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.configuration.DataFileConfiguration;
 import fiftyone.pipeline.engines.data.AspectEngineDataFile;
 import fiftyone.pipeline.engines.data.DataUpdateUrlFormatter;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneDataFileDefault;
+import fiftyone.pipeline.engines.fiftyone.flowelements.SequenceElementBuilder;
 import fiftyone.pipeline.engines.fiftyone.flowelements.ShareUsageElement;
 import fiftyone.pipeline.engines.services.DataUpdateServiceDefault;
 import fiftyone.pipeline.util.FileFinder;
@@ -51,7 +52,7 @@ import static org.mockito.Mockito.*;
 @SuppressWarnings({"rawtypes", "deprecation"})
 public class DeviceDetectionOnPremisePipelineBuilderTest {
 
-    private static final String HASH_DATA_FILE_NAME = FileUtils.getHashFileName();
+    private static final String HASH_DATA_FILE_NAME = TestFileUtils.getHashFileName();
     private DeviceDetectionOnPremisePipelineBuilder builder;
     private File datafile = FileFinder.getFilePath(HASH_DATA_FILE_NAME);
     private ILoggerFactory loggerFactory;
@@ -64,6 +65,7 @@ public class DeviceDetectionOnPremisePipelineBuilderTest {
         when(loggerFactory.getLogger(anyString())).thenReturn(logger);
         builder = new DeviceDetectionPipelineBuilder(loggerFactory)
                 .useOnPremise(datafile.getAbsolutePath(), false)
+                .setAutoUpdate(false)
                 .setShareUsage(false);
     }
 
@@ -122,6 +124,7 @@ public class DeviceDetectionOnPremisePipelineBuilderTest {
         try (Pipeline pipeline = new DeviceDetectionPipelineBuilder(loggerFactory)
                 .useOnPremise(new byte[]{}, Enums.DeviceDetectionAlgorithm.Hash)
                 .setEngineData(data)
+                .setAutoUpdate(false)
                 .setShareUsage(false)
                 .build()) {
             DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
@@ -144,6 +147,7 @@ public class DeviceDetectionOnPremisePipelineBuilderTest {
     public void setShareUsage_False_SharedFlowElementNotAdded() throws Exception {
         try (Pipeline pipeline = new DeviceDetectionPipelineBuilder(loggerFactory)
                 .useOnPremise(datafile.getAbsolutePath(), false)
+                .setAutoUpdate(false)
                 .setShareUsage(false)
                 .build()) {
             List<FlowElement> flowElements = pipeline.getFlowElements();
@@ -156,11 +160,35 @@ public class DeviceDetectionOnPremisePipelineBuilderTest {
     public void setShareUsage_True_SharedFlowElementAdded() throws Exception {
         try (Pipeline pipeline = new DeviceDetectionPipelineBuilder(loggerFactory)
                 .useOnPremise(datafile.getAbsolutePath(), false)
+                .setAutoUpdate(false)
                 .setShareUsage(true)
                 .build()) {
             List<FlowElement> flowElements = pipeline.getFlowElements();
             assertEquals(2, flowElements.size());
-            assertTrue(flowElements.get(0) instanceof ShareUsageElement);
+            // Usage sharing is the last Flow Element.
+            assertTrue(flowElements.get(flowElements.size() - 1)
+                instanceof ShareUsageElement);
+        }
+    }
+
+    /**
+     * An element the caller adds after turning usage sharing on still goes
+     * before usage sharing, which the builder adds when it builds.
+     */
+    @Test
+    public void setShareUsage_True_ElementAddedAfter_ShareUsageLast()
+        throws Exception {
+        try (Pipeline pipeline = new DeviceDetectionPipelineBuilder(loggerFactory)
+                .useOnPremise(datafile.getAbsolutePath(), false)
+                .setAutoUpdate(false)
+                .setShareUsage(true)
+                .addFlowElement(new SequenceElementBuilder(loggerFactory).build())
+                .build()) {
+            List<FlowElement> flowElements = pipeline.getFlowElements();
+            assertEquals(3, flowElements.size());
+            assertTrue(flowElements.toString(),
+                flowElements.get(flowElements.size() - 1)
+                    instanceof ShareUsageElement);
         }
     }
 
@@ -168,6 +196,7 @@ public class DeviceDetectionOnPremisePipelineBuilderTest {
     public void setAutoUpdate_PropertyPropagatedToDataFileConfiguration() throws Exception {
         try (Pipeline pipeline = builder
                 .setAutoUpdate(true)
+                .setDataUpdateLicenseKey("licence_key")
                 .build()) {
             DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
             assertTrue(dataFileConfiguration.getAutomaticUpdatesEnabled());
@@ -189,6 +218,7 @@ public class DeviceDetectionOnPremisePipelineBuilderTest {
         DataUpdateServiceDefault dataUpdateServiceDefault = mock(DataUpdateServiceDefault.class);
         try (Pipeline ignored = builder
                 .setAutoUpdate(true)
+                .setDataUpdateLicenseKey("licence_key")
                 .setDataUpdateService(dataUpdateServiceDefault)
                 .build()) {
             verify(dataUpdateServiceDefault).registerDataFile(any());
@@ -199,6 +229,8 @@ public class DeviceDetectionOnPremisePipelineBuilderTest {
     public void setDataUpdateOnStartup_PropertyPropagatedToDataFileConfiguration() throws Exception {
         try (Pipeline pipeline = builder
                 .setDataUpdateOnStartup(true)
+                .setDataUpdateLicenseKey("licence_key")
+                .setDataUpdateService(mock(DataUpdateServiceDefault.class))
                 .build()) {
             DataFileConfiguration dataFileConfiguration = getDataFileConfiguration(pipeline);
             assertTrue(dataFileConfiguration.getUpdateOnStartup());

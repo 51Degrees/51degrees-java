@@ -33,8 +33,10 @@
  * 
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/console/src/main/java/fiftyone/ipintelligence/examples/console/GettingStartedOnPrem.java).
  * 
- * This example requires an enterprise IP Intelligence data file (.ipi).
- * To obtain an enterprise data file for testing, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedonprem.java&utm_term=header).
+ * By default the example uses the free Lite IP Intelligence data file, which it downloads when
+ * it is missing. The Lite data file has the registration properties, and the example shows each
+ * property only the Enterprise data file has as needing it. To obtain an Enterprise data file,
+ * please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedonprem.java&utm_term=header).
  * 
  * Required Maven Dependencies:
  * - [com.51degrees:ip-intelligence](https://central.sonatype.com/artifact/com.51degrees/ip-intelligence)
@@ -42,6 +44,7 @@
 
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.engine.onpremise.interop.swig.WeightedStringListValueSwig;
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
 import fiftyone.ipintelligence.examples.shared.EvidenceHelper;
@@ -64,14 +67,9 @@ import java.util.List;
 import java.util.Map;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
-import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asStringProperty;
-import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asIntegerProperty;
-import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asFloatProperty;
-import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asIPAddressProperty;
-import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asWktStringProperty;
-import static fiftyone.ipintelligence.examples.shared.PropertyHelper.tryGet;
+import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asString;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
-import static fiftyone.ipintelligence.examples.shared.DataFileHelper.ENTERPRISE_DATA_FILE_REL_PATH;
+import static fiftyone.ipintelligence.examples.shared.DataFileHelper.LITE_DATA_FILE_REL_PATH;
 
 /**
  * Provides an illustration of the fundamental elements of carrying out IP Intelligence using
@@ -84,28 +82,36 @@ import static fiftyone.ipintelligence.examples.shared.DataFileHelper.ENTERPRISE_
  * The concepts of "pipeline", "flow data", "evidence" and "results" are illustrated.
  */
 public class GettingStartedOnPrem {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedonprem.java";
+
     private static final Logger logger = LoggerFactory.getLogger(GettingStartedOnPrem.class);
 
-    /* In this example, the 51degrees IP Intelligence data file needs to be specified as a command line parameter.
-    
-    To test this example, you need to:
-    1. Host an IP Intelligence data file (.ipi) at a custom URL accessible to this application
-    2. Provide the path to that hosted data file as a command line parameter
-    3. No license key is required when using a custom URL
-    
-    For production use, you will eventually need to use a Distributor service and license key
-    to keep your data file updated.
-    
-    To obtain access to enterprise data files for hosting, please contact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedonprem.java&utm_term=main */
+    /* In this example, by default, the free 51degrees Lite IP Intelligence data file is used from
+    the data repository in cxx/data, and is downloaded if it is missing, or you may specify another
+    file as a command line parameter.
+
+    Contact us for a copy of the Enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedonprem.java&utm_term=main */
+
+    /**
+     * Where to ask for a copy of the Enterprise data file, tagged with this
+     * example.
+     */
+    private static final String CONTACT_US = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedonprem.java&utm_term=enterprise-data-file";
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
 
         // Use the supplied path for the data file
-        String dataFile = args.length > 0 ? args[0] : ENTERPRISE_DATA_FILE_REL_PATH;
+        String dataFile = args.length > 0 ? args[0] : LITE_DATA_FILE_REL_PATH;
         // prepare 'evidence' for use in pipeline (see below)
         List<Map<String, String>> evidence = EvidenceHelper.setUpEvidence();
         run(dataFile, evidence, System.out);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     /**
@@ -131,7 +137,7 @@ public class GettingStartedOnPrem {
                     "An explicit path can be supplied via the {} environment variable. " +
                     "For testing, you can obtain an enterprise data file by contacting us at " +
                     "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedonprem.java&utm_term=data-file-not-found",
-                    dataFile, DataFileHelper.IPI_PATH_ENV_VAR);
+                    dataFile, DataFileHelper.IPI_PATH_VARIABLE);
             throw e;
         }
 
@@ -149,18 +155,27 @@ public class GettingStartedOnPrem {
         PipelineOptions pipelineOptions = PipelineOptionsFactory.getOptionsFromFile(optionsFile);
         // Build a new Pipeline from the configuration.
         try (Pipeline pipeline = new FiftyOnePipelineBuilder()
+                // Usage sharing is off because this example's evidence is already
+                // known to 51Degrees. In production, leave usage sharing on, which adds
+                // a Usage Sharing Element to the Pipeline and helps improve the service.
+                .setShareUsage(false)
                 .buildFromConfiguration(pipelineOptions)) {
 
-
-            // carry out some sample detections
-            for (Map<String, String> evidence : evidenceList) {
-                analyzeEvidence(evidence, pipeline, outputStream);
-            }
 
             /* Get the 'engine' element within the pipeline that performs IP Intelligence. We
             can use this to get details about the data file as well as meta-data describing
             things such as the available properties. */
             IPIntelligenceOnPremiseEngine engine = pipeline.getElement(IPIntelligenceOnPremiseEngine.class);
+
+            // carry out some sample detections
+            boolean needsEnterprise = false;
+            for (Map<String, String> evidence : evidenceList) {
+                needsEnterprise |= analyzeEvidence(evidence, pipeline, engine, outputStream);
+            }
+            if (needsEnterprise) {
+                DataFileHelper.writeEnterpriseNote(new PrintWriter(outputStream), CONTACT_US);
+            }
+
             DataFileHelper.logDataFileInfo(engine);
 
             logger.info("All done");
@@ -172,11 +187,15 @@ public class GettingStartedOnPrem {
      * supplied and output the IP Intelligence results to the output stream.
      * @param evidence a map representing HTTP headers
      * @param pipeline a pipeline set up to process the evidence
+     * @param engine the engine, which says which properties its data file has
      * @param out somewhere to send the detection results
+     * @return true if a property needed the Enterprise data file
      */
-    private static void analyzeEvidence(Map<String, String> evidence,
-                                        Pipeline pipeline,
-                                        OutputStream out) throws Exception {
+    private static boolean analyzeEvidence(Map<String, String> evidence,
+                                           Pipeline pipeline,
+                                           IPIntelligenceOnPremiseEngine engine,
+                                           OutputStream out) throws Exception {
+        boolean needsEnterprise = false;
         PrintWriter writer = new PrintWriter(out);
         /* FlowData is a data structure that is used to convey information required for a lookup
         and the results of the lookup through the pipeline. Information required for
@@ -210,25 +229,53 @@ public class GettingStartedOnPrem {
             property dictionary at https://51degrees.com/developers/property-dictionary?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedonprem.java&utm_term=analyzeevidence for
             details of all available properties. */
             
-            // Output all the properties using shared PropertyHelper methods
-            writer.println("\tRegisteredName: " + asStringProperty(tryGet(ipData::getRegisteredName)));
-            writer.println("\tRegisteredOwner: " + asStringProperty(tryGet(ipData::getRegisteredOwner)));
-            writer.println("\tRegisteredCountry: " + asStringProperty(tryGet(ipData::getRegisteredCountry)));
-            writer.println("\tIpRangeStart: " + asIPAddressProperty(tryGet(ipData::getIpRangeStart)));
-            writer.println("\tIpRangeEnd: " + asIPAddressProperty(tryGet(ipData::getIpRangeEnd)));
-            writer.println("\tCountry: " + asStringProperty(tryGet(ipData::getCountry)));
-            writer.println("\tCountryCode: " + asStringProperty(tryGet(ipData::getCountryCode)));
-            writer.println("\tCountryCode3: " + asStringProperty(tryGet(ipData::getCountryCode3)));
-            writer.println("\tRegion: " + asStringProperty(tryGet(ipData::getRegion)));
-            writer.println("\tState: " + asStringProperty(tryGet(ipData::getState)));
-            writer.println("\tTown: " + asStringProperty(tryGet(ipData::getTown)));
-            writer.println("\tLatitude: " + asFloatProperty(tryGet(ipData::getLatitude)));
-            writer.println("\tLongitude: " + asFloatProperty(tryGet(ipData::getLongitude)));
-            writer.println("\tAreas: " + asWktStringProperty(tryGet(ipData::getAreas)));
-            writer.println("\tAccuracyRadiusMin: " + asIntegerProperty(tryGet(ipData::getAccuracyRadiusMin)));
-            writer.println("\tTimeZoneOffset: " + asIntegerProperty(tryGet(ipData::getTimeZoneOffset)));
+            // The free Lite data file has the registration properties, and
+            // only the Enterprise data file has the others. Each value is
+            // read by name, which gives it with its weighting.
+            needsEnterprise |= writeValue(writer, engine, ipData, "RegisteredName");
+            needsEnterprise |= writeValue(writer, engine, ipData, "RegisteredOwner");
+            needsEnterprise |= writeValue(writer, engine, ipData, "RegisteredCountry");
+            needsEnterprise |= writeValue(writer, engine, ipData, "IpRangeStart");
+            needsEnterprise |= writeValue(writer, engine, ipData, "IpRangeEnd");
+            needsEnterprise |= writeValue(writer, engine, ipData, "Country");
+            needsEnterprise |= writeValue(writer, engine, ipData, "CountryCode");
+            needsEnterprise |= writeValue(writer, engine, ipData, "CountryCode3");
+            needsEnterprise |= writeValue(writer, engine, ipData, "Region");
+            needsEnterprise |= writeValue(writer, engine, ipData, "State");
+            needsEnterprise |= writeValue(writer, engine, ipData, "Town");
+            needsEnterprise |= writeValue(writer, engine, ipData, "Latitude");
+            needsEnterprise |= writeValue(writer, engine, ipData, "Longitude");
+            needsEnterprise |= writeValue(writer, engine, ipData, "Areas");
+            needsEnterprise |= writeValue(writer, engine, ipData, "AccuracyRadiusMin");
+            needsEnterprise |= writeValue(writer, engine, ipData, "TimeZoneOffset");
         }
         writer.println();
         writer.flush();
+        return needsEnterprise;
+    }
+
+    /**
+     * Writes a property, or that it needs the Enterprise data file when the
+     * data file in use does not have it. The value is only read when the
+     * data file has the property.
+     * <p>
+     * IP Intelligence values are weighted. Reading a property by name gives
+     * a list of values, each with its weighting, and a property with one
+     * answer gives it with a weighting of 1. The typed getters, such as
+     * {@link IPIntelligenceData#getRegisteredName()}, give the value alone.
+     * @return true if the property needs the Enterprise data file
+     */
+    private static boolean writeValue(PrintWriter writer,
+                                      IPIntelligenceOnPremiseEngine engine,
+                                      IPIntelligenceData ipData,
+                                      String property) {
+        if (DataFileHelper.hasProperty(engine, property)) {
+            AspectPropertyValue<?> value =
+                    (AspectPropertyValue<?>) ipData.get(property);
+            writer.println("\t" + property + ": " + asString(value));
+            return false;
+        }
+        writer.println("\t" + property + ": " + DataFileHelper.NEEDS_ENTERPRISE);
+        return true;
     }
 }

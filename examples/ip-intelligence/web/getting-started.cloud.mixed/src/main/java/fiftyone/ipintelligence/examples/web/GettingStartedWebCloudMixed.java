@@ -47,6 +47,7 @@
 
 package fiftyone.ipintelligence.examples.web;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.devicedetection.shared.DeviceData;
 import fiftyone.ipintelligence.examples.shared.KeyHelper;
 import fiftyone.ipintelligence.shared.IPIntelligenceData;
@@ -88,6 +89,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * 8084 when PORT is not set.
  */
 public class GettingStartedWebCloudMixed extends HttpServlet {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "web-getting-started.cloud.mixed-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedwebcloudmixed.java";
+
     private static final long serialVersionUID = 1734154705981153543L;
     public static Logger logger = LoggerFactory.getLogger(GettingStartedWebCloudMixed.class);
 
@@ -98,7 +105,15 @@ public class GettingStartedWebCloudMixed extends HttpServlet {
         // Get the resource key from the command line, environment variable or
         // system property. This sets the "TestResourceKey" system property
         // which is interpolated in the pipeline configuration file.
-        KeyHelper.getOrSetTestResourceKey(args.length > 0 ? args[0] : null, true);
+        String resourceKey = KeyHelper.findResourceKey(
+                args.length > 0 ? args[0] : null);
+        if (resourceKey == null) {
+            KeyHelper.writeNoResourceKey(System.out, EXAMPLE_TAG);
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES);
+            return;
+        }
+        KeyHelper.getOrSetTestResourceKey(resourceKey, true);
 
         String portEnv = System.getenv("PORT");
         if (portEnv != null) {
@@ -129,6 +144,9 @@ public class GettingStartedWebCloudMixed extends HttpServlet {
         // The detection has already been carried out by the PipelineFilter,
         // which closes the FlowData at the end of the request, so it is not
         // closed here.
+        // A Flow Data cannot be used by two threads at once. Work handed to
+        // another thread or task gets the values it needs, read here on the
+        // request's thread, not the Flow Data.
         FlowData flowData = flowDataProvider.getFlowData(request);
 
         // Determine target IP for display.
@@ -202,6 +220,8 @@ public class GettingStartedWebCloudMixed extends HttpServlet {
             .replace("${AREAS_JS}", escapeForJs(asWktStringProperty(tryGet(ipiData::getAreas))))
             .replace("${ACCURACY_RADIUS}", asIntegerProperty(tryGet(ipiData::getAccuracyRadiusMin)))
             .replace("${TIME_ZONE_OFFSET}", asIntegerProperty(tryGet(ipiData::getTimeZoneOffset)))
+            .replace("${FIND_OUT_MORE}", FindOutMore.html(EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES))
             .replace("${EVIDENCE_ROWS}", buildEvidenceRows(flowData))
             .replace("${LocationConfidence}", asStringProperty(tryGet(ipiData::getLocationConfidence)))
             .replace("${ConnectionType}", asStringProperty(tryGet(ipiData::getConnectionType)))

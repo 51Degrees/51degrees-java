@@ -27,6 +27,12 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LinearRing;
 import org.locationtech.jts.geom.Polygon;
+import org.locationtech.proj4j.CoordinateReferenceSystem;
+import org.locationtech.proj4j.CoordinateTransform;
+import org.locationtech.proj4j.ProjCoordinate;
+
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -166,6 +172,43 @@ public class CalculationsTest {
                 createRectangle(0, 51, 1), 0, 0);
         assertEquals("The point should not be contained in the area",
                 false, result2.getContains());
+    }
+
+    /**
+     * A projection that returns a result one bit different the second time it
+     * is given the same point, as compiled code can for Math.sin.
+     */
+    private static class DriftingTransform implements CoordinateTransform {
+        private final Set<String> seen = new HashSet<>();
+
+        @Override
+        public CoordinateReferenceSystem getSourceCRS() {
+            return null;
+        }
+
+        @Override
+        public CoordinateReferenceSystem getTargetCRS() {
+            return null;
+        }
+
+        @Override
+        public ProjCoordinate transform(ProjCoordinate src, ProjCoordinate tgt) {
+            tgt.x = src.x;
+            tgt.y = src.y;
+            if (!seen.add(src.x + "," + src.y)) {
+                tgt.x = Math.nextUp(tgt.x);
+            }
+            return tgt;
+        }
+    }
+
+    @Test
+    public void testProjectedRingIsClosedWhenEndsDifferByOneBit() {
+        LinearRing source = createRectangle(0, 0, 1).getExteriorRing();
+        LinearRing projected = Calculations.transformRing(
+                source, new DriftingTransform());
+        assertTrue(projected.isClosed());
+        assertEquals(1.0, factory.createPolygon(projected).getArea(), 1e-9);
     }
 
     private static Polygon createRectangle(double x, double y, double d) {
