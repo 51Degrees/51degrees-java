@@ -35,8 +35,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -178,6 +180,41 @@ public class FinishedFlowDataTests {
             assertEquals(1, data.getErrors().size());
             assertReadOnly(data, writer);
             assertEquals(1, data.getErrors().size());
+        }
+    }
+
+    /**
+     * The Element Data map taken before processing refuses writes once
+     * processing has finished, as one taken afterwards does.
+     */
+    @Test
+    public void mapTakenBeforeProcessing_WritesFailOnceFinished()
+        throws Exception {
+        Writer writer = new Writer(false);
+        try (Pipeline pipeline = new PipelineBuilder(
+                LoggerFactory.getILoggerFactory())
+                .setSuppressProcessException(true)
+                .addFlowElement(writer)
+                .build();
+             FlowData data = pipeline.createFlowData()) {
+            Map<String, Object> map = data.elementDataAsMap();
+            data.process();
+
+            assertFails("Putting Element Data into the map",
+                () -> map.put("other", new TestElementData(LOGGER, data)));
+            assertFails("Putting a map of Element Data into the map",
+                () -> map.putAll(Collections.<String, Object>singletonMap(
+                    "other",
+                    new TestElementData(LOGGER, data))));
+            assertFails("Removing Element Data from the map",
+                () -> map.remove("writer"));
+            assertFails("Clearing the map", map::clear);
+
+            // Reads through the map still work, and see what processing
+            // added.
+            assertSame(data.get("writer"), map.get("writer"));
+            assertFalse(map.containsKey("other"));
+            assertFalse(data.elementDataAsMap().containsKey("other"));
         }
     }
 
