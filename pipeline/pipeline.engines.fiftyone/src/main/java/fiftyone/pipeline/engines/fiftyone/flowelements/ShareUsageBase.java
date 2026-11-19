@@ -26,6 +26,7 @@ import fiftyone.caching.LruPutCache;
 import fiftyone.pipeline.core.data.*;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
+import fiftyone.pipeline.core.flowelements.ParallelElements;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.configuration.CacheConfiguration;
 import fiftyone.pipeline.engines.fiftyone.data.EvidenceKeyFilterShareUsage;
@@ -741,11 +742,10 @@ public abstract class ShareUsageBase
      * artifact id and given its version, in name order. They are the
      * package that holds the pipeline, the package that holds each of its
      * flow elements and this element, and every 51Degrees package those
-     * depend on. The flow elements inside a parallel group are not listed
-     * by the pipeline, so their packages are found only as dependencies.
+     * depend on. The pipeline lists a parallel group as one element, so the
+     * members of each group are added as well.
      * @return the packages and their versions
      */
-    @SuppressWarnings("rawtypes")
     protected Map<String, String> getPackages() {
         if (packages == null) {
             List<Class<?>> classes = new ArrayList<>();
@@ -753,13 +753,31 @@ public abstract class ShareUsageBase
             if (getPipelines().size() == 1) {
                 Pipeline pipeline = getPipelines().get(0);
                 classes.add(pipeline.getClass());
-                for (FlowElement element : pipeline.getFlowElements()) {
-                    classes.add(element.getClass());
-                }
+                addElementClasses(classes, pipeline.getFlowElements());
             }
             packages = packageFinder.apply(classes);
         }
         return packages;
+    }
+
+    /**
+     * Add the class of each flow element, and of each member of a parallel
+     * group among them, to the classes in use.
+     * @param classes the classes in use
+     * @param elements the flow elements to add
+     */
+    @SuppressWarnings("rawtypes")
+    private static void addElementClasses(
+            List<Class<?>> classes,
+            List<FlowElement> elements) {
+        for (FlowElement element : elements) {
+            classes.add(element.getClass());
+            if (element instanceof ParallelElements) {
+                addElementClasses(
+                    classes,
+                    ((ParallelElements) element).getFlowElements());
+            }
+        }
     }
 
     @Override
