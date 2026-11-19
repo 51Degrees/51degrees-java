@@ -42,20 +42,18 @@ import static org.mockito.Mockito.RETURNS_DEFAULTS;
 import static org.mockito.Mockito.mock;
 
 /**
- * Finished Element Data MUST be safe to read from several threads at once,
- * so Aspect Data that reads its values from a ResultsHash instance MUST let
- * only one thread at a time read from its results
- * (device-detection-specification/pipeline-elements/device-detection-on-premise.md
- * line 327 at 706de1f0). Each test reads the same data from two threads, and
- * the mock results record the most threads that were ever inside them at
- * once. A thread that gets in waits for the other to join it, up to a
- * limit. With a lock the other cannot join, so the wait runs out and one
- * thread was inside at a time. Without one, both are inside together. The
- * limit only makes a test with a lock take longer, never fail.
+ * Aspect Data that reads its values from a ResultsHash instance MUST NOT lock
+ * it, and the caller is responsible for thread-safe access. Each test reads
+ * the same data from two threads, and the mock results record the most
+ * threads that were ever inside them at once. A thread that gets in waits for
+ * the other to join it, up to a limit. With no lock both are inside together.
+ * With one the other cannot join, the wait runs out, and one thread was
+ * inside at a time.
+ * @see <a href="https://github.com/51Degrees/specifications/blob/d79bbe3b2aef86273570742f6b660f29bfe72816/device-detection-specification/pipeline-elements/device-detection-on-premise.md#results-and-threads">Specification</a>
  */
-public class ResultsOneThreadAtATimeTests {
+public class ResultsNotLockedTests {
 
-    private static final long JOIN_WAIT_MILLIS = 500;
+    private static final long JOIN_WAIT_MILLIS = 5000;
 
     /**
      * Answer for every native results call that counts the threads inside the
@@ -79,9 +77,6 @@ public class ResultsOneThreadAtATimeTests {
             try {
                 bothInside.await(JOIN_WAIT_MILLIS, TimeUnit.MILLISECONDS);
                 Class<?> returns = invocation.getMethod().getReturnType();
-                if (name.equals("getDeviceId")) {
-                    return "0-0-0-0";
-                }
                 if (name.equals("containsProperty")) {
                     return true;
                 }
@@ -138,37 +133,15 @@ public class ResultsOneThreadAtATimeTests {
     }
 
     /**
-     * A match metric, such as DeviceId, reads the results too, and walks every
-     * graph not yet walked.
+     * The public list read goes to the native results with no lock, so two
+     * threads that share the data are inside the results together.
      */
     @Test
-    public void Results_MatchMetric_OneThreadAtATime() throws Exception {
+    public void Results_GetValues_NotLocked() throws Exception {
         assertEquals(
-            "Two threads read the native results at once for DeviceId",
-            1,
-            mostThreadsInsideResults(d -> d.getDeviceId()));
-    }
-
-    /**
-     * A typed property read, which first asks the results whether they have
-     * the property.
-     */
-    @Test
-    public void Results_PropertyRead_OneThreadAtATime() throws Exception {
-        assertEquals(
-            "Two threads read the native results at once for IsMobile",
-            1,
-            mostThreadsInsideResults(d -> d.getIsMobile()));
-    }
-
-    /**
-     * The public list read.
-     */
-    @Test
-    public void Results_GetValues_OneThreadAtATime() throws Exception {
-        assertEquals(
-            "Two threads read the native results at once for getValues",
-            1,
+            "One thread waited for the other to leave the native results " +
+                "for getValues, so the read took a lock",
+            2,
             mostThreadsInsideResults(d -> d.getValues("HardwareName")));
     }
 }
