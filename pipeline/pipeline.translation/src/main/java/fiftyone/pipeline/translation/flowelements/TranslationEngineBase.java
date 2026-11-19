@@ -68,6 +68,10 @@ import java.util.regex.Pattern;
  * Only string based types are supported for translation (string, list of
  * strings, weighted list of strings and the {@code AspectPropertyValue}
  * wrappers); the output type matches the input.
+ * <p>
+ * Make a translation engine through its builder, as every Flow Element is
+ * made. The class stays concrete with a public constructor because released
+ * code may make one directly.
  *
  * @param <T> the type of element data the engine writes
  */
