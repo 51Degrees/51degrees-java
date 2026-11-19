@@ -101,6 +101,10 @@ public abstract class DeviceDataBaseOnPremise extends DeviceDataBase
      * The Property is first read through its typed accessor, so a Property
      * that is not in the results throws, and a lazy loaded result is waited
      * for, exactly as for that accessor.
+     * <p>
+     * The value is read from the results instance with no lock, so this
+     * instance is not safe to use from several threads at once. A caller
+     * that shares it coordinates its own access.
      */
     @SuppressWarnings("unchecked")
     @Override
@@ -109,9 +113,7 @@ public abstract class DeviceDataBaseOnPremise extends DeviceDataBase
         getAs(propertyName,
             AspectPropertyValue.class,
             getPropertyType(propertyName));
-        synchronized (getLock) {
-            return getValueAsString(propertyName);
-        }
+        return getValueAsString(propertyName);
     }
 
     /**

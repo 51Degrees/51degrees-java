@@ -107,14 +107,16 @@ public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceData
      * The Property is first read as {@link #get(String)} reads it, so a
      * Property that is not in the results throws, and a lazy loaded result
      * is waited for, exactly as for that accessor.
+     * <p>
+     * The value is read from the results instance with no lock, so this
+     * instance is not safe to use from several threads at once. A caller
+     * that shares it coordinates its own access.
      */
     @Override
     public AspectPropertyValue<String> getStoredValueAsString(
         String propertyName) {
         get(propertyName);
-        synchronized (getLock) {
-            return getValueAsString(propertyName);
-        }
+        return getValueAsString(propertyName);
     }
 
     /**
