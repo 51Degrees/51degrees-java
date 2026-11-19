@@ -22,10 +22,15 @@
 
 package fiftyone.pipeline.cloudrequestengine.flowelements;
 
+import fiftyone.caching.Cache;
+import fiftyone.caching.CacheBuilder;
+import fiftyone.caching.LruPutCache;
+import fiftyone.caching.PutCache;
 import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
+import fiftyone.pipeline.engines.configuration.CacheConfiguration;
 import fiftyone.pipeline.engines.configuration.LazyLoadingConfiguration;
 import org.json.JSONArray;
 import org.junit.jupiter.api.Test;
@@ -34,6 +39,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -202,6 +208,66 @@ public class CloudRequestEngineLazyCacheTests
 
         assertEquals(Arrays.asList(first, second), answers,
             "A response with a 51Did was served from the cache.");
+    }
+
+    /**
+     * With lazy loading, the result is offered to the cache on the thread
+     * that called process, so the processing task never reads the Flow Data
+     * to make the cache key once process has returned.
+     */
+    @Test
+    public void process_LazyResultIsStoredOnTheProcessingThread()
+        throws Exception {
+        mockService(new CountDownLatch(1), new CountDownLatch(0),
+            jsonResponse);
+        final List<Thread> putThreads =
+            Collections.synchronizedList(new ArrayList<>());
+        CacheBuilder recording = new CacheBuilder() {
+            @Override
+            public <K, V> Cache<K, V> build(Cache<K, V> c, int cacheSize) {
+                final PutCache<K, V> inner =
+                    new LruPutCache.Builder().build(c, cacheSize);
+                return new PutCache<K, V>() {
+                    @Override
+                    public void put(K key, V value) {
+                        putThreads.add(Thread.currentThread());
+                        inner.put(key, value);
+                    }
+
+                    @Override
+                    public V get(K key) {
+                        return inner.get(key);
+                    }
+
+                    @Override
+                    public void close() throws java.io.IOException {
+                        inner.close();
+                    }
+                };
+            }
+        };
+        CloudRequestEngine engine =
+            new CloudRequestEngineBuilder(loggerFactory, httpClient)
+                .setResourceKey("resourcekey")
+                .setCache(new CacheConfiguration(recording, 10))
+                .setLazyLoading(
+                    new LazyLoadingConfiguration(LAZY_TIMEOUT_MILLIS))
+                .build();
+
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+                .addFlowElement(engine).build();
+             FlowData data = pipeline.createFlowData()) {
+            data.addEvidence("query.User-Agent", "iPhone");
+            data.process();
+            // Waits for the processing task to finish.
+            assertEquals(jsonResponse,
+                data.get(CloudRequestData.class).getJsonResponse());
+        }
+
+        assertEquals(1, putThreads.size(),
+            "The result was not offered to the cache once.");
+        assertSame(Thread.currentThread(), putThreads.get(0),
+            "The processing task read the Flow Data to cache the result.");
     }
 
     private List<String> processTwice(CloudRequestEngine engine)
