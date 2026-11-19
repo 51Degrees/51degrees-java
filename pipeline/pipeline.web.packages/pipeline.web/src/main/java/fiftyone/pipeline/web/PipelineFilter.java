@@ -223,6 +223,12 @@ public class PipelineFilter implements Filter {
             logger.error("The 51Degrees Pipeline could not process the " +
                 "request, which goes on without its results.", e);
             served = false;
+        } catch (IOException e) {
+            // Writing the JavaScript or JSON failed, for example because the
+            // client went away. The request ends here, so the FlowData is
+            // closed before the failure is thrown.
+            closeFlowData(httpRequest, suppress, e);
+            throw e;
         }
         if (served) {
             closeFlowData(httpRequest, suppress, null);
@@ -296,7 +302,7 @@ public class PipelineFilter implements Filter {
     private void closeFlowData(
         HttpServletRequest request,
         boolean suppress,
-        RuntimeException failure) throws ServletException {
+        Exception failure) throws ServletException {
         FlowData flowData;
         try {
             flowData = flowDataProviderCore.getFlowData(request);
