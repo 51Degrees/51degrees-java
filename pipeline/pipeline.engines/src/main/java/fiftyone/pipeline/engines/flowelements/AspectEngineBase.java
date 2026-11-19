@@ -139,14 +139,15 @@ public abstract class AspectEngineBase<
      * Whether a result may be stored in the cache, and served when it is
      * found there. A result that holds a value created for the one request
      * that asked for it, such as a 51Did, must be neither. See the
-     * <a href="https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/features/caching.md#L144">caching specification</a>:
+     * <a href="https://github.com/51Degrees/specifications/blob/d79bbe3b2aef86273570742f6b660f29bfe72816/pipeline-specification/features/caching.md#L151-L156">caching specification</a>:
      * "A cache MUST NOT store a result that holds such a value, and MUST NOT
      * serve one that it finds."
      * <p>
-     * It is only asked about a result that has been processed: with lazy
-     * loading, the processing task asks once its work is done, so the check
-     * never makes process wait for a result. A result found in the cache was
-     * processed before it was stored.
+     * It is asked about a processed result before it is stored, and about a
+     * result found in the cache before it is served. With the deprecated
+     * lazy loading option a result is stored before it has been processed,
+     * so only the check before serving applies, and an override must answer
+     * without waiting for the processing to finish.
      * @param data the result to check
      * @return true, unless an engine overrides this to keep a result out of
      * the cache
@@ -195,19 +196,22 @@ public abstract class AspectEngineBase<
                 // If lazy loading is configured then create a task
                 // to do the processing and assign the task to the
                 // aspect data property.
-                // The result is offered to the cache by the task, once it
-                // has been processed, so that process does not wait for it
-                // to decide whether the result may be cached.
                 ((AspectDataBase) aspectData).addProcessCallable(
                     new ProcessCallable(this) {
                         @Override
                         public Void call() throws Exception {
                             processEngine(flowData, aspectData);
-                            putInCache(flowData, aspectData);
                             return null;
                         }
                     }
                 );
+                // The cache key is made from the Flow Data's Evidence, so
+                // the result is stored here, on the processing thread, and
+                // not by the task. It is not processed yet, so the check
+                // before serving keeps out a result that may not be cached.
+                if (cache != null) {
+                    cache.put(flowData, aspectData);
+                }
             }
             else {
                 // If not lazy loading, just start processing.

@@ -51,10 +51,10 @@ import static org.mockito.Mockito.*;
 
 /**
  * A lazy loading Cloud Request Engine with a cache returns from process
- * without waiting for the cloud service, and still keeps a response with a
- * 51Did out of the cache. Lazy loading means "the Engine returns from process
+ * without waiting for the cloud service, and still never serves a response
+ * with a 51Did from the cache. Lazy loading means "the Engine returns from process
  * at once and the work is done on another thread", which the check of
- * <a href="https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/features/caching.md#L144">caching.md</a>
+ * <a href="https://github.com/51Degrees/specifications/blob/d79bbe3b2aef86273570742f6b660f29bfe72816/pipeline-specification/features/caching.md#L151-L156">caching.md</a>
  * ("A cache MUST NOT store a result that holds such a value, and MUST NOT
  * serve one that it finds.") must not undo.
  * <p>
@@ -193,11 +193,13 @@ public class CloudRequestEngineLazyCacheTests
     }
 
     /**
-     * With lazy loading, a response with a 51Did is not cached, so the second
-     * identical request goes to the cloud service and gets its own.
+     * With lazy loading, a response with a 51Did is not served from the
+     * cache, so the second identical request goes to the cloud service and
+     * gets its own. The result is stored before it is processed, so the
+     * check before serving is the one that keeps it out.
      */
     @Test
-    public void process_LazyFodIdResponseIsNotStored() throws Exception {
+    public void process_LazyFodIdResponseIsNotServed() throws Exception {
         CountDownLatch gate = new CountDownLatch(0);
         String first = "{'device':{'value':'1'},'fodid':'first'}";
         String second = "{'device':{'value':'1'},'fodid':'second'}";
