@@ -63,6 +63,9 @@ import static fiftyone.pipeline.web.Constants.INIT_PARAM_SET_HEADERS_ELEMENT_ENA
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/web-integration.md">Specification</a>
  */
 public class PipelineFilter implements Filter {
+    private static final org.slf4j.Logger logger =
+        LoggerFactory.getLogger(PipelineFilter.class);
+
     private Pipeline pipeline;
 
     private WebRequestEvidenceServiceCore evidenceService;
@@ -200,42 +203,125 @@ public class PipelineFilter implements Filter {
         ServletResponse response,
         FilterChain chain) throws IOException, ServletException {
 
-        // A request for the 51Degrees JavaScript or JSON whose If-None-Match
-        // matches the ETag of its Evidence is answered without processing,
-        // because that Evidence alone decides the content.
-        if (jsService.serveNotModified(
-            (HttpServletRequest) request,
-            (HttpServletResponse) response,
-            resultService)) {
+        HttpServletRequest httpRequest = (HttpServletRequest) request;
+        HttpServletResponse httpResponse = (HttpServletResponse) response;
+        boolean suppress = isSuppressProcessExceptions();
+
+        boolean served;
+        try {
+            served = processRequest(httpRequest, httpResponse);
+        } catch (RuntimeException e) {
+            // The Pipeline's setting decides whether an error in the web
+            // integration stops the request. When exceptions are suppressed
+            // it is logged and the request goes on without the results, so
+            // the API does not take down the website. See
+            // https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/features/exception-handling.md#L73
+            closeFlowData(httpRequest, suppress, e);
+            if (suppress == false) {
+                throw e;
+            }
+            logger.error("The 51Degrees Pipeline could not process the " +
+                "request, which goes on without its results.", e);
+            served = false;
+        } catch (IOException e) {
+            // Writing the JavaScript or JSON failed, for example because the
+            // client went away. The request ends here, so the FlowData is
+            // closed before the failure is thrown.
+            closeFlowData(httpRequest, suppress, e);
+            throw e;
+        }
+        if (served) {
+            closeFlowData(httpRequest, suppress, null);
             return;
         }
 
-        // Populate the request properties and store against the
-        // HttpContext.
-        resultService.process((HttpServletRequest)request);
-
         try {
-            // Get FlowData from the request.
-            FlowData flowData = flowDataProviderCore.getFlowData((HttpServletRequest)request);
-
-            // Set UACH response headers.
-            uachServiceCore.setResponseHeaders(
-                flowData, (HttpServletResponse)response);
-
-            // If 51Degrees JavaScript or JSON is being requested then serve it.
-            // Otherwise continue down the filter Pipeline.
-            if (jsService.serveJS((HttpServletRequest)request, (HttpServletResponse) response) == false &&
-                jsService.serveJson((HttpServletRequest)request, (HttpServletResponse) response) == false) {
-                chain.doFilter(request, response);//sends request to next resource
-            }
+            chain.doFilter(request, response);//sends request to next resource
         } finally {
             // The rest of the filters in the chain have now been called, or
             // one of them failed. Either way it is time to dispose of the
             // FlowData instance.
-            try {
-                flowDataProviderCore.getFlowData((HttpServletRequest) request).close();
-            } catch (Exception e) {
-                throw new ServletException("FlowData could not be disposed of.", e);
+            closeFlowData(httpRequest, suppress, null);
+        }
+    }
+
+    /**
+     * Whether the Pipeline suppresses process exceptions, which also
+     * decides whether an error in this filter stops the request.
+     * @return true if exceptions are suppressed and logged
+     */
+    private boolean isSuppressProcessExceptions() {
+        return pipeline != null && pipeline.isSuppressProcessExceptions();
+    }
+
+    /**
+     * Process the request and set the response headers, and serve the
+     * 51Degrees JavaScript or JSON if that is what is asked for.
+     * @param request the request
+     * @param response the response
+     * @return true if the response has been served, so the request does not
+     * go on down the filter chain
+     * @throws IOException if the JavaScript or JSON could not be written
+     */
+    private boolean processRequest(
+        HttpServletRequest request,
+        HttpServletResponse response) throws IOException {
+        // A request for the 51Degrees JavaScript or JSON whose If-None-Match
+        // matches the ETag of its Evidence is answered without processing,
+        // because that Evidence alone decides the content.
+        if (jsService.serveNotModified(request, response, resultService)) {
+            return true;
+        }
+
+        // Populate the request properties and store against the
+        // HttpContext.
+        resultService.process(request);
+
+        // Get FlowData from the request.
+        FlowData flowData = flowDataProviderCore.getFlowData(request);
+
+        // Set UACH response headers.
+        uachServiceCore.setResponseHeaders(flowData, response);
+
+        // If 51Degrees JavaScript or JSON is being requested then serve it.
+        // Otherwise the request continues down the filter chain.
+        return jsService.serveJS(request, response) ||
+            jsService.serveJson(request, response);
+    }
+
+    /**
+     * Close the request's FlowData, if processing put one there.
+     * @param request the request
+     * @param suppress true if a failure to close is logged rather than
+     *                 thrown
+     * @param failure the failure already being handled, which a failure to
+     *                close is added to, or null
+     * @throws ServletException if the FlowData could not be closed and
+     * exceptions are not suppressed
+     */
+    private void closeFlowData(
+        HttpServletRequest request,
+        boolean suppress,
+        Exception failure) throws ServletException {
+        FlowData flowData;
+        try {
+            flowData = flowDataProviderCore.getFlowData(request);
+        } catch (RuntimeException e) {
+            flowData = null;
+        }
+        if (flowData == null) {
+            return;
+        }
+        try {
+            flowData.close();
+        } catch (Exception e) {
+            if (failure != null) {
+                failure.addSuppressed(e);
+            } else if (suppress) {
+                logger.error("FlowData could not be disposed of.", e);
+            } else {
+                throw new ServletException(
+                    "FlowData could not be disposed of.", e);
             }
         }
     }

@@ -457,6 +457,46 @@ public class CloudRequestEngineDefault
         }
     }
 
+    /**
+     * A response whose JSON has a top-level member named fodid, in any case,
+     * holds a 51Did created for the one request, so it is neither stored in
+     * nor served from the cache, and the request goes to the cloud service
+     * instead. See the
+     * <a href="https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/features/caching.md#L144">caching specification</a>:
+     * "A cache MUST NOT store a result that holds such a value, and MUST NOT
+     * serve one that it finds." A response that cannot be read as a JSON
+     * object is not cached either, as it cannot be checked.
+     * <p>
+     * The response is read without waiting for lazy loading, so the check
+     * never makes process wait for the cloud service. With lazy loading it
+     * is made by the processing task once the response is stored.
+     * @param data the result to check
+     * @return false if the response has a top-level fodid member
+     */
+    @Override
+    protected boolean isCacheable(CloudRequestData data) {
+        String response =
+            ((CloudRequestDataInternal)data).getJsonResponseWithoutWaiting();
+        if (response == null) {
+            return false;
+        }
+        try {
+            for (String key : new JSONObject(response).keySet()) {
+                if (FODID.equalsIgnoreCase(key)) {
+                    return false;
+                }
+            }
+            return true;
+        } catch (JSONException e) {
+            return false;
+        }
+    }
+
+    /**
+     * The top-level member of a cloud response that holds a 51Did.
+     */
+    private static final String FODID = "fodid";
+
     @Override
     protected void processEngine(FlowData data, CloudRequestData aspectData) throws IOException {
         ((CloudRequestDataInternal)aspectData).setProcessStarted(true);

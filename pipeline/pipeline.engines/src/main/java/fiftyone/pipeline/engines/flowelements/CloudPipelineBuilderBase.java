@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.engines.flowelements;
 
+import fiftyone.pipeline.annotations.DefaultValue;
 import org.slf4j.ILoggerFactory;
 
 import java.util.ArrayList;
@@ -70,6 +71,8 @@ public abstract class CloudPipelineBuilderBase<
      * @param url endpoint URL
      * @return this builder
      */
+    @DefaultValue("https://cloud.51degrees.com/api/v4/, the Cloud Request " +
+        "Engine's default")
     @SuppressWarnings("unchecked")
     public TBuilder setEndPoint(String url) {
         if (url.endsWith("/") == false) {
@@ -84,6 +87,7 @@ public abstract class CloudPipelineBuilderBase<
      * @param url data URL
      * @return this builder
      */
+    @DefaultValue("The endpoint followed by {resourcekey}.json")
     @SuppressWarnings("unchecked")
     public TBuilder setDataEndpoint(String url) {
         this.dataEndpoint = url;
@@ -96,6 +100,7 @@ public abstract class CloudPipelineBuilderBase<
      * @param propertiesEndpoint properties URL
      * @return this builder
      */
+    @DefaultValue("The endpoint followed by accessibleproperties")
     @SuppressWarnings("unchecked")
     public TBuilder setPropertiesEndpoint(String propertiesEndpoint) {
         this.propertiesEndpoint = propertiesEndpoint;
@@ -108,6 +113,7 @@ public abstract class CloudPipelineBuilderBase<
      * @param evidenceKeysEndpoint evidence keys URL
      * @return this builder
      */
+    @DefaultValue("The endpoint followed by evidencekeys")
     @SuppressWarnings("unchecked")
     public TBuilder setEvidenceKeysEndpoint(String evidenceKeysEndpoint) {
         this.evidenceKeysEndpoint = evidenceKeysEndpoint;
@@ -119,6 +125,8 @@ public abstract class CloudPipelineBuilderBase<
      * @param key resource key
      * @return this builder
      */
+    @DefaultValue("No default - a resource key or a license key must be " +
+        "supplied")
     @SuppressWarnings("unchecked")
     public TBuilder setResourceKey(String key) {
         this.resourceKey = key;
@@ -134,6 +142,7 @@ public abstract class CloudPipelineBuilderBase<
      * @param key license key
      * @return this builder
      */
+    @DefaultValue("No default")
     @SuppressWarnings("unchecked")
     public TBuilder setLicenseKey(String key) {
         this.licenseKey = key;
@@ -148,6 +157,7 @@ public abstract class CloudPipelineBuilderBase<
      * @param properties the fully qualified property names
      * @return this builder
      */
+    @DefaultValue("None - required with a license key alone")
     @SuppressWarnings("unchecked")
     public TBuilder setRequestedProperties(List<String> properties) {
         if (properties == null) {
@@ -164,6 +174,7 @@ public abstract class CloudPipelineBuilderBase<
      * @param properties comma separated fully qualified property names
      * @return this builder
      */
+    @DefaultValue("None - required with a license key alone")
     public TBuilder setRequestedProperties(String properties) {
         if (properties == null) {
             throw new IllegalArgumentException(
@@ -183,6 +194,7 @@ public abstract class CloudPipelineBuilderBase<
      * @param cloudRequestOrigin the value to set the origin header to
      * @return this builder
      */
+    @DefaultValue("None")
     @SuppressWarnings("unchecked")
     public TBuilder setCloudRequestOrigin(String cloudRequestOrigin) {
         this.cloudRequestOrigin = cloudRequestOrigin;

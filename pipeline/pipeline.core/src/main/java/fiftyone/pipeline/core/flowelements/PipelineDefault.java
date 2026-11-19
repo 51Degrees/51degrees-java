@@ -150,7 +150,11 @@ class PipelineDefault implements PipelineInternal {
         boolean suppressProcessExceptions) {
         this.logger = logger;
         this.flowDataFactory = flowDataFactory;
-        this.flowElements = flowElements;
+        // A copy, so that the builder adding to its own list later cannot
+        // change this Pipeline, which is immutable. See
+        // https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/conceptual-overview.md#L118
+        this.flowElements = Collections.unmodifiableList(
+            new ArrayList<>(flowElements));
         this.services = new ArrayList<>();
         this.autoDisposeElements = autoDisposeElements;
         this.suppressProcessExceptions = suppressProcessExceptions;
@@ -210,6 +214,11 @@ class PipelineDefault implements PipelineInternal {
     @Override
     public boolean isConcurrent() {
         return isConcurrent;
+    }
+
+    @Override
+    public boolean isSuppressProcessExceptions() {
+        return suppressProcessExceptions;
     }
 
     @Override

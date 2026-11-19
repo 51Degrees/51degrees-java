@@ -362,8 +362,21 @@ class FlowDataDefault implements FlowData {
     @Override
     @SuppressWarnings("rawtypes")
     public Map<String, String> getWhere(PropertyMatcher matcher) {
+        if (processed.get() == false) {
+            throw new IllegalStateException(
+                "This instance has not yet been processed.");
+        }
         Map<String, String> map = new HashMap<>();
         for (FlowElement element : pipeline.getFlowElements()) {
+            // An element that did not run, for example because an earlier
+            // one stopped processing, has no data, and a property may have
+            // no value. Neither is the caller's mistake, so both are left
+            // out rather than thrown. See
+            // https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/features/exception-handling.md#L57
+            if (data.containsKey(element.getElementDataKey()) == false) {
+                continue;
+            }
+            ElementData elementData = get(element.getElementDataKey());
             // We know the property has extends ElementPropertyMetaData as it
             // is a constraint of the FlowElement interface, so don't check this
             // cast
@@ -371,10 +384,14 @@ class FlowDataDefault implements FlowData {
                 ElementPropertyMetaData property =
                     (ElementPropertyMetaData)propertyObject;
                 if (property.isAvailable() && matcher.isMatch(property)) {
-                    map.put(
-                        element.getElementDataKey() + "." + property.getName(),
-                        get(element.getElementDataKey())
-                            .get(property.getName().toLowerCase(Locale.ROOT)).toString());
+                    Object value = elementData.get(
+                        property.getName().toLowerCase(Locale.ROOT));
+                    if (value != null) {
+                        map.put(
+                            element.getElementDataKey() + "." +
+                                property.getName(),
+                            value.toString());
+                    }
                 }
             }
         }

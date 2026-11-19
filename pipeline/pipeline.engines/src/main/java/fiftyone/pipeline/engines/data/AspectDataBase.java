@@ -214,6 +214,18 @@ public abstract class AspectDataBase extends ElementDataBase implements AspectDa
     }
 
     /**
+     * Get the value stored for the key as it is now, without waiting for any
+     * lazy loading processing to finish, so it can be read from inside that
+     * processing. The value is null when nothing has been stored for the key,
+     * including when processing has not stored it yet.
+     * @param key the key to read
+     * @return the value stored for the key, or null
+     */
+    protected Object getWithoutWaiting(String key) {
+        return super.asKeyMap().get(key);
+    }
+
+    /**
      * Gets the value stored using the specified key with full checks
      * against the {@link MissingPropertyService}.
      * @param propertyName to get the value for

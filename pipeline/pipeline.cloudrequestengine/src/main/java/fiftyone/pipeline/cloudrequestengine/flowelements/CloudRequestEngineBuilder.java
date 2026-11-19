@@ -145,6 +145,7 @@ public class CloudRequestEngineBuilder extends
      * @param state the copy, or null to discover when building
      * @return this builder
      */
+    @DefaultValue("None - discovered when the engine is built")
     public CloudRequestEngineBuilder setDiscoveryState(
         CloudDiscoveryState state) {
         this.discoveryState = state;
@@ -271,7 +272,7 @@ public class CloudRequestEngineBuilder extends
      * @param uri data endpoint
      * @return this builder
      */
-    @DefaultValue(Constants.END_POINT_DEFAULT + "{resourcekey}.json")
+    @DefaultValue(Constants.END_POINT_DEFAULT + "/{resourcekey}.json")
     public CloudRequestEngineBuilder setDataEndpoint(String uri) {
         dataEndpoint = uri;
         return this;
@@ -285,7 +286,7 @@ public class CloudRequestEngineBuilder extends
      * @param uri properties endpoint
      * @return this builder
      */
-    @DefaultValue(Constants.END_POINT_DEFAULT + "accessibleproperties")
+    @DefaultValue(Constants.END_POINT_DEFAULT + "/accessibleproperties")
     public CloudRequestEngineBuilder setPropertiesEndpoint(String uri) {
         propertiesEndpoint = uri;
         return this;
@@ -299,7 +300,7 @@ public class CloudRequestEngineBuilder extends
      * @param uri evidence keys endpoint
      * @return this builder
      */
-    @DefaultValue(Constants.END_POINT_DEFAULT + "evidencekeys")
+    @DefaultValue(Constants.END_POINT_DEFAULT + "/evidencekeys")
     public CloudRequestEngineBuilder setEvidenceKeysEndpoint(String uri) {
         evidenceKeysEndpoint = uri;
         return this;

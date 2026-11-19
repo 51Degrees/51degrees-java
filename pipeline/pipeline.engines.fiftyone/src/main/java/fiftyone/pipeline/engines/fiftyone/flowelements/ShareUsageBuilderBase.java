@@ -358,6 +358,7 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      * @return this builder
      */
     @Deprecated
+    @DefaultValue(intValue = Constants.SHARE_USAGE_DEFAULT_ADD_TIMEOUT)
     public ShareUsageBuilderBase<T> setAddTimeout(int milliseconds) {
         addTimeout = milliseconds;
         return this;
@@ -388,6 +389,7 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      * @return this builder
      */
     @Deprecated
+    @DefaultValue(intValue = Constants.SHARE_USAGE_DEFAULT_TAKE_TIMEOUT)
     public ShareUsageBuilderBase<T> setTakeTimeout(int milliseconds) {
         takeTimeout = milliseconds;
         return this;

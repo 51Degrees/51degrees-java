@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.translation.flowelements;
 
+import fiftyone.pipeline.annotations.DefaultValue;
 import fiftyone.pipeline.annotations.ElementBuilder;
 import fiftyone.pipeline.translation.data.MissingTranslationBehavior;
 import fiftyone.pipeline.translation.data.TranslationData;
@@ -80,6 +81,7 @@ public class TranslationEngineBuilder {
      * @param sourceElementDataKey the source element data key
      * @return this builder
      */
+    @DefaultValue("No default - the source element data key must be supplied")
     public TranslationEngineBuilder setSourceElementDataKey(
         String sourceElementDataKey) {
         this.sourceElementDataKey = sourceElementDataKey;
@@ -93,6 +95,7 @@ public class TranslationEngineBuilder {
      * @param language the language to translate to
      * @return this builder
      */
+    @DefaultValue("None - the language is resolved from the evidence")
     public TranslationEngineBuilder setFixedLanguage(String language) {
         this.fixedLanguage = language;
         return this;
@@ -103,6 +106,7 @@ public class TranslationEngineBuilder {
      * @param behavior the missing-translation behaviour
      * @return this builder
      */
+    @DefaultValue("ORIGINAL")
     public TranslationEngineBuilder setMissingTranslationBehavior(
         MissingTranslationBehavior behavior) {
         this.behavior = behavior;

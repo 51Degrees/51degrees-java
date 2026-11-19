@@ -24,6 +24,7 @@ package fiftyone.ipintelligence.translation.flowelements;
 
 import fiftyone.ipintelligence.translation.Constants;
 import fiftyone.ipintelligence.translation.data.CountryCodeTranslationData;
+import fiftyone.pipeline.annotations.DefaultValue;
 import fiftyone.pipeline.annotations.ElementBuilder;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
@@ -61,6 +62,7 @@ public class CountryCodeTranslationEngineBuilder {
      * @param sourceElementDataKey the IP Intelligence element data key
      * @return this builder
      */
+    @DefaultValue(Constants.IP_INTELLIGENCE_KEY)
     public CountryCodeTranslationEngineBuilder setSourceElementDataKey(
         String sourceElementDataKey) {
         this.sourceElementDataKey = sourceElementDataKey;
