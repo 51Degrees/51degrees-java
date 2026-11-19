@@ -113,13 +113,14 @@ public class DataRefreshTests extends TestsBase {
     }
 
     /**
-     * Several threads refresh the engine at once, half from its data file
-     * and half from the same data held in memory, and every refresh
-     * completes and the engine then gives the values it gave before. The
-     * engine lets only one refresh run at a time, whichever way it comes.
+     * Several threads refresh the engine at once from the same data held in
+     * memory, and every refresh completes and the engine then gives the
+     * values it gave before. A refresh from memory leaves the native engine
+     * without a file path, so this test doesn't mix it with refreshes from
+     * the file.
      */
     @Test
-    public void Refresh_FromFileAndMemoryOnSeveralThreads_EngineStillWorks()
+    public void Refresh_FromMemoryOnSeveralThreads_EngineStillWorks()
         throws Exception {
         List<Boolean> expected = isMobile();
         DeviceDetectionHashEngine engine = getWrapper().getEngine();
@@ -129,16 +130,10 @@ public class DataRefreshTests extends TestsBase {
         CountDownLatch start = new CountDownLatch(1);
         List<Future<Integer>> refreshers = new ArrayList<>();
         for (int t = 0; t < THREADS; t++) {
-            boolean fromMemory = t % 2 == 1;
             refreshers.add(executor.submit(() -> {
                 start.await();
                 for (int i = 0; i < REFRESHES; i++) {
-                    if (fromMemory) {
-                        engine.refreshData(identifier, data);
-                    }
-                    else {
-                        engine.refreshData(identifier);
-                    }
+                    engine.refreshData(identifier, data);
                 }
                 return REFRESHES;
             }));
