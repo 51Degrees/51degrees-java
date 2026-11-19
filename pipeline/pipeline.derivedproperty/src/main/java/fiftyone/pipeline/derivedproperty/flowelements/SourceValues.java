@@ -26,6 +26,7 @@ import fiftyone.pipeline.core.data.ElementData;
 import fiftyone.pipeline.core.data.IWeightedValue;
 import fiftyone.pipeline.core.data.WktString;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
+import fiftyone.pipeline.engines.data.ProvidesValuesAsString;
 
 import java.math.BigInteger;
 import java.util.List;
@@ -78,7 +79,7 @@ final class SourceValues {
         }
         Object raw;
         try {
-            raw = data.get(property.getPropertyName());
+            raw = readRaw(data, property);
         } catch (RuntimeException e) {
             return notAvailable(property, NOT_PRESENT);
         }
@@ -86,6 +87,23 @@ final class SourceValues {
             return notAvailable(property, NOT_PRESENT);
         }
         return readValue(raw, property);
+    }
+
+    /**
+     * The value an element holds for a property. Where the script compares
+     * the property with text and the element can give the string it
+     * stored, that string is read. A typed accessor has to answer in its
+     * own type, so a stored Unknown, meaning the 51Degrees JavaScript has
+     * not run, would otherwise read as False, and a script could never see
+     * it.
+     */
+    private static Object readRaw(ElementData data, SourceProperty property) {
+        if (property.getType() == ValueType.STRING &&
+            data instanceof ProvidesValuesAsString) {
+            return ((ProvidesValuesAsString) data)
+                .getStoredValueAsString(property.getPropertyName());
+        }
+        return data.get(property.getPropertyName());
     }
 
     /**

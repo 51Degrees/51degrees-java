@@ -22,16 +22,22 @@
 
 package fiftyone.pipeline.derivedproperty.flowelements;
 
+import fiftyone.pipeline.core.data.ElementData;
 import fiftyone.pipeline.core.data.IWeightedValue;
 import fiftyone.pipeline.core.data.WeightedValue;
 import fiftyone.pipeline.core.data.WktString;
+import fiftyone.pipeline.core.flowelements.Pipeline;
+import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
+import fiftyone.pipeline.engines.data.ProvidesValuesAsString;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -188,5 +194,100 @@ public class SourceValuesTests {
             JsText.quote("a\"b\\c\n\u0001\u00e9"));
         assertEquals("\"\\ud800\"", JsText.quote("\ud800"));
         assertEquals("\"\ud83d\ude00\"", JsText.quote("\ud83d\ude00"));
+    }
+
+    /** Element Data holding typed values only. */
+    private static class Typed implements ElementData {
+        private final Map<String, Object> typed = new HashMap<>();
+
+        @Override
+        public Object get(String key) {
+            return typed.get(key);
+        }
+
+        @Override
+        public void put(String key, Object value) {
+            typed.put(key, value);
+        }
+
+        @Override
+        public void populateFromMap(Map<String, Object> values) {
+            typed.putAll(values);
+        }
+
+        @Override
+        public Map<String, Object> asKeyMap() {
+            return typed;
+        }
+
+        @Override
+        public Pipeline getPipeline() {
+            return null;
+        }
+
+        @Override
+        public void setPipeline(Pipeline pipeline) {
+        }
+    }
+
+    /**
+     * Element Data that can also give the string each value was stored
+     * as, as the on-premise engines can.
+     */
+    private static final class StoredStrings extends Typed
+        implements ProvidesValuesAsString {
+        private final Map<String, String> stored = new HashMap<>();
+
+        @Override
+        public AspectPropertyValue<String> getStoredValueAsString(
+            String propertyName) {
+            String value = stored.get(propertyName);
+            if (value == null) {
+                AspectPropertyValue<String> none =
+                    new AspectPropertyValueDefault<>();
+                none.setNoValueMessage("nothing was stored");
+                return none;
+            }
+            return new AspectPropertyValueDefault<>(value);
+        }
+    }
+
+    /**
+     * A property the 51Degrees JavaScript has not yet measured is stored
+     * as Unknown, and its typed value reads False. A script comparing the
+     * property with text reads the stored string, so it can see Unknown,
+     * and a script comparing it with a boolean reads the typed value.
+     */
+    @Test
+    public void storedStringIsReadWhereTheScriptComparesText() {
+        StoredStrings data = new StoredStrings();
+        data.put("IsVisible", new AspectPropertyValueDefault<>(false));
+        data.stored.put("IsVisible", "Unknown");
+        assertEquals("Unknown", SourceValues.read(data,
+            new SourceProperty("device.IsVisible", ValueType.STRING))
+            .getString());
+        assertFalse(SourceValues.read(data,
+            new SourceProperty("device.IsVisible", ValueType.BOOL))
+            .getBool());
+    }
+
+    @Test
+    public void storedStringWithNoValueGivesItsMessage() {
+        StoredStrings data = new StoredStrings();
+        data.put("IsVisible", new AspectPropertyValueDefault<>(true));
+        Slot slot = SourceValues.read(data,
+            new SourceProperty("device.IsVisible", ValueType.STRING));
+        assertFalse(slot.isAvailable());
+        assertEquals("element 'device' has no value for 'IsVisible': " +
+            "nothing was stored", slot.getReason());
+    }
+
+    @Test
+    public void typedValueIsReadWhereNoStringIsStored() {
+        ElementData data = new Typed();
+        data.put("IsVisible", new AspectPropertyValueDefault<>(true));
+        assertEquals("True", SourceValues.read(data,
+            new SourceProperty("device.IsVisible", ValueType.STRING))
+            .getString());
     }
 }
