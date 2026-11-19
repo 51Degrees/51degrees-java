@@ -51,8 +51,9 @@
             <BuilderName>JavaScriptBuilderElement</BuilderName>
             <BuildParameters>
                 <!-- 
-                Set based on the origin being used. Remember in secure origins 
-                won't be able to run some features like GetHighEntropyValues. 
+                Set based on the origin being used. Browsers run some
+                features, such as getHighEntropyValues, only in a secure
+                (https) origin or on localhost.
                 -->
                 <Protocol>http</Protocol>
                 <!-- <Protocol>https</Protocol> -->

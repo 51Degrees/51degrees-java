@@ -135,6 +135,31 @@ public class FlowDataTests {
     }
 
     @Test
+    public void FlowData_AddDataString_GetDataStringOtherCase() {
+        flowData.process();
+        ElementData data = flowData.getOrAdd(
+            "device",
+            (FlowElement.DataFactory<ElementData>) flowData -> new TestElementData(mock(Logger.class), flowData));
+
+        assertEquals(data, flowData.get("Device"));
+        assertEquals(data, flowData.get("DEVICE"));
+    }
+
+    @Test
+    public void FlowData_GetOrAddOtherCase_SameData() {
+        flowData.process();
+        ElementData data = flowData.getOrAdd(
+            "device",
+            (FlowElement.DataFactory<ElementData>) flowData -> new TestElementData(mock(Logger.class), flowData));
+
+        ElementData again = flowData.getOrAdd(
+            "Device",
+            (FlowElement.DataFactory<ElementData>) flowData -> new TestElementData(mock(Logger.class), flowData));
+
+        assertSame(data, again);
+    }
+
+    @Test
     public void FlowData_AddDataString_GetDataTypedKey() {
         flowData.process();
         String key = "key";
@@ -315,6 +340,25 @@ public class FlowDataTests {
             new TestElement(mock(Logger.class), mock(ElementDataFactory.class))
         );
         assertNull(result);
+    }
+
+    /**
+     * The error logged for a processing failure carries the exception, so
+     * the log says why processing failed.
+     */
+    @Test
+    public void FlowData_AddError_LogsTheException() throws Exception {
+        Logger logger = mock(Logger.class);
+        when(logger.isErrorEnabled()).thenReturn(true);
+        Exception cause = new Exception("The cause of the failure.");
+        try (FlowData data = new FlowDataDefault(
+            logger,
+            pipeline,
+            new EvidenceDefault(mock(Logger.class)))) {
+
+            data.addError(cause, mock(FlowElement.class));
+        }
+        verify(logger).error(anyString(), same(cause));
     }
 
     @Test(expected = IllegalStateException.class)

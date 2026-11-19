@@ -28,7 +28,9 @@ import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
 import fiftyone.pipeline.core.data.AccessiblePropertyMetaData.ProductMetaData;
 import fiftyone.pipeline.core.data.AccessiblePropertyMetaData.PropertyMetaData;
 import fiftyone.pipeline.core.data.FlowData;
+import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.Pipeline;
+import fiftyone.pipeline.core.typed.TypedKey;
 import fiftyone.pipeline.engines.exceptions.PropertyMissingException;
 import fiftyone.pipeline.engines.services.MissingPropertyReason;
 import fiftyone.pipeline.engines.services.MissingPropertyServiceDefault;
@@ -94,6 +96,28 @@ public class ProductMissingTests {
             }
             List<String> logged = warningsAndErrors();
             assertEquals(logged.toString(), 1, logged.size());
+        }
+    }
+
+    /**
+     * A failed cloud request leaves no response. The engine processes
+     * nothing, throws nothing and logs one warning, as the Cloud Request
+     * Engine's error says why. The shared Cloud Aspect Engine processing
+     * makes that check, so the test processes through it.
+     */
+    @Test
+    public void NoResponse_ProcessesNothing() throws Exception {
+        try (IPIntelligenceCloudEngine engine = buildEngine("ip", "registeredname")) {
+            for (String response : new String[] { null, "" }) {
+                IPIntelligenceDataCloud data =
+                    processFlowData(engine, response);
+                assertFalse(data.asKeyMap().containsKey("registeredname"));
+            }
+            List<String> logged = warningsAndErrors();
+            assertEquals(logged.toString(), 2, logged.size());
+            for (String line : logged) {
+                assertTrue(line, line.startsWith("warn "));
+            }
         }
     }
 
@@ -243,25 +267,48 @@ public class ProductMissingTests {
     }
 
     /**
-     * Process the given cloud response.
+     * Process a Flow Data whose Cloud Request Engine ran and gave the
+     * response, as a Pipeline does, through the engine's public process
+     * method.
      */
-    private IPIntelligenceDataCloud process(
+    @SuppressWarnings("unchecked")
+    private IPIntelligenceDataCloud processFlowData(
         IPIntelligenceCloudEngine engine,
-        String response) {
+        String response) throws Exception {
         CloudRequestData cloudData = mock(CloudRequestData.class);
+        when(cloudData.getProcessStarted()).thenReturn(true);
         when(cloudData.getJsonResponse()).thenReturn(response);
 
         FlowData flowData = mock(FlowData.class);
         when(flowData.getFromElement(any(CloudRequestEngine.class)))
             .thenReturn(cloudData);
-
         IPIntelligenceDataCloud data = new IPIntelligenceDataCloudInternal(
             loggerFactory.getLogger(
                 IPIntelligenceDataCloud.class.getSimpleName()),
             flowData,
             engine,
             MissingPropertyServiceDefault.getInstance());
-        engine.processEngine(flowData, data);
+        when(flowData.getOrAdd(
+            any(TypedKey.class),
+            any(FlowElement.DataFactory.class))).thenReturn(data);
+        engine.process(flowData);
+        return data;
+    }
+
+    /**
+     * Process the given cloud response.
+     */
+    private IPIntelligenceDataCloud process(
+        IPIntelligenceCloudEngine engine,
+        String response) {
+        FlowData flowData = mock(FlowData.class);
+        IPIntelligenceDataCloud data = new IPIntelligenceDataCloudInternal(
+            loggerFactory.getLogger(
+                IPIntelligenceDataCloud.class.getSimpleName()),
+            flowData,
+            engine,
+            MissingPropertyServiceDefault.getInstance());
+        engine.processCloudEngine(flowData, data, response);
         return data;
     }
 

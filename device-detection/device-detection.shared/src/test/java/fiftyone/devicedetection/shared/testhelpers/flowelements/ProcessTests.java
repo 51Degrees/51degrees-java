@@ -87,6 +87,21 @@ public class ProcessTests {
         }
     }
 
+    /**
+     * Evidence keys ignore case, the prefix as well as the field, so a
+     * User-Agent given with its prefix in capitals is used.
+     */
+    public static void caseInsensitiveEvidencePrefix(
+        Wrapper wrapper,
+        DataValidator validator) throws Exception {
+        try (FlowData data = wrapper.getPipeline().createFlowData()) {
+            data
+                .addEvidence("HEADER.User-Agent", Constants.ChromeUserAgent)
+                .process();
+            validator.validateData(data, true);
+        }
+    }
+
     public static void profileOverride(
         Wrapper wrapper,
         DataValidator validator) throws Exception {

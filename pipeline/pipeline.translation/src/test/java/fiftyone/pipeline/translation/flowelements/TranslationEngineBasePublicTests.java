@@ -20,29 +20,38 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-package pipeline.developerexamples.fodid;
+package fiftyone.pipeline.translation.flowelements;
+
+import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Modifier;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Prints the resource key and the licence key the example read from the
- * environment of the process. {@link DeprecatedKeyNameTests} runs this in
- * a Java process of its own, because the example reads both keys once,
- * when its class loads, and a process cannot change its own environment
- * variables.
+ * TranslationEngineBase is a released public class with a public
+ * constructor, so a patch release keeps it concrete and keeps that
+ * constructor, and code that makes one with {@code new} still compiles.
  */
-public final class KeyProbe {
+public class TranslationEngineBasePublicTests {
 
-    static final String RESOURCE_PREFIX = "RESOURCE ";
-    static final String LICENCE_PREFIX = "LICENCE ";
-
-    private KeyProbe() {
+    @Test
+    public void translationEngineBase_IsConcrete() {
+        assertFalse(
+            Modifier.isAbstract(TranslationEngineBase.class.getModifiers()),
+            "TranslationEngineBase is abstract, so code that makes one " +
+                "with new no longer compiles");
     }
 
-    public static void main(String[] args) {
-        System.out.println(
-            RESOURCE_PREFIX + CreatorContextDemoServer.RESOURCE);
-        System.out.println(
-            LICENCE_PREFIX + CreatorContextDemoServer.LICENCE);
-        System.out.flush();
-        System.exit(0);
+    @Test
+    public void translationEngineBase_HasPublicConstructor() {
+        boolean found = false;
+        for (Constructor<?> constructor :
+            TranslationEngineBase.class.getConstructors()) {
+            found |= Modifier.isPublic(constructor.getModifiers());
+        }
+        assertTrue(found, "TranslationEngineBase has no public constructor");
     }
 }

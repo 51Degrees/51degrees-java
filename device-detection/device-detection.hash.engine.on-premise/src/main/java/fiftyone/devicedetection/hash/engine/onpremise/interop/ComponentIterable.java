@@ -39,6 +39,10 @@ public class ComponentIterable
 
     private final DeviceDetectionHashEngine engine;
 
+    private final long nativeSize;
+
+    private final ComponentMetaData[] added;
+
     /**
      * Create a new instance.
      * @param engine the engine which the meta data relates to
@@ -47,14 +51,41 @@ public class ComponentIterable
     public ComponentIterable(
         DeviceDetectionHashEngine engine,
         ComponentMetaDataCollectionSwig collection) {
-        super(collection.getSize());
+        this(engine, collection, collection.getSize());
+    }
+
+    /**
+     * Create a new instance which gives the native components and then the
+     * components given, such as the Metrics component, which the data file
+     * does not have.
+     * @param engine the engine which the meta data relates to
+     * @param collection the native collection of components
+     * @param added components to give after the native ones
+     */
+    public ComponentIterable(
+        DeviceDetectionHashEngine engine,
+        ComponentMetaDataCollectionSwig collection,
+        ComponentMetaData... added) {
+        this(engine, collection, collection.getSize(), added);
+    }
+
+    private ComponentIterable(
+        DeviceDetectionHashEngine engine,
+        ComponentMetaDataCollectionSwig collection,
+        long nativeSize,
+        ComponentMetaData... added) {
+        super(nativeSize + added.length);
         this.engine = engine;
         this.collection = collection;
+        this.nativeSize = nativeSize;
+        this.added = added;
     }
 
     @Override
     protected ComponentMetaData get(long index) {
-        return new ComponentMetaDataHash(engine, collection.getByIndex(index));
+        return index < nativeSize ?
+            new ComponentMetaDataHash(engine, collection.getByIndex(index)) :
+            added[(int) (index - nativeSize)];
     }
 
     @Override
