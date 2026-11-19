@@ -24,6 +24,8 @@ package fiftyone.pipeline.web;
 
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
+import fiftyone.pipeline.web.services.FiftyOneJSServiceCore;
+import fiftyone.pipeline.web.services.FlowDataProviderCore;
 import fiftyone.pipeline.web.services.PipelineResultServiceCore;
 import fiftyone.pipeline.web.services.UACHServiceCore;
 import org.junit.After;
@@ -40,6 +42,7 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 
 import static fiftyone.pipeline.web.Constants.HTTPCONTEXT_FLOWDATA;
@@ -50,6 +53,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -185,5 +189,40 @@ public class PipelineFilterErrorTests {
         } catch (ServletException e) {
             fail("The failure was wrapped: " + e);
         }
+    }
+
+    /**
+     * Serving the 51Degrees JavaScript fails with an IOException, for
+     * example when the client has gone away. The failure is thrown, and the
+     * Flow Data is still closed, so its Element Data and native results are
+     * released.
+     */
+    @Test
+    public void servingJavaScriptFails_IOException_FlowDataClosed()
+        throws Exception {
+        suppress(true);
+        set("resultService", mock(PipelineResultServiceCore.class));
+        set("uachServiceCore", mock(UACHServiceCore.class));
+        FlowData flowData = mock(FlowData.class);
+        FlowDataProviderCore provider = mock(FlowDataProviderCore.class);
+        when(provider.getFlowData(any(HttpServletRequest.class)))
+            .thenReturn(flowData);
+        set("flowDataProviderCore", provider);
+        FiftyOneJSServiceCore js = mock(FiftyOneJSServiceCore.class);
+        IOException failure = new IOException("client went away");
+        when(js.serveJS(any(HttpServletRequest.class),
+            any(HttpServletResponse.class))).thenThrow(failure);
+        set("jsService", js);
+
+        try {
+            filter.doFilter(request, response, chain);
+            fail("The failure was not thrown.");
+        } catch (IOException e) {
+            assertSame(failure, e);
+        }
+
+        verify(flowData, times(1)).close();
+        verify(chain, never()).doFilter(
+            any(ServletRequest.class), any(ServletResponse.class));
     }
 }
