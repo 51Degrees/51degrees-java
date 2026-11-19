@@ -54,6 +54,12 @@ public class IPIntelligenceOnPremiseEngine
     extends FiftyOneOnPremiseAspectEngineBase<IPIntelligenceDataHash,
     FiftyOneAspectPropertyMetaData> {
     private EngineIpiSwig engine = null;
+    /**
+     * Held for the whole of each refresh, so that only one refresh of this
+     * engine runs in the native code at a time. Nothing else takes it, and
+     * no other lock is taken while it is held, so it cannot deadlock.
+     */
+    private final Object refreshLock = new Object();
     private final List<FiftyOneAspectPropertyMetaData> properties = new ArrayList<>();
     private final ConfigIpiSwig config;
     private final RequiredPropertiesConfigSwig propertiesConfigSwig;
@@ -324,8 +330,21 @@ public class IPIntelligenceOnPremiseEngine
         return evidenceKeyFilter;
     }
 
+    /**
+     * {@inheritDoc}
+     * Only one refresh of this engine runs at a time, from either overload,
+     * whichever route calls it. A second refresh waits for the first to
+     * finish. Processing takes no part in this and never waits for a
+     * refresh.
+     */
     @Override
     public void refreshData(String dataFileIdentifier) {
+        synchronized (refreshLock) {
+            refreshFromFile();
+        }
+    }
+
+    private void refreshFromFile() {
         AspectEngineDataFile dataFile = getDataFiles().get(0);
 
         if (Objects.isNull(engine)) {
@@ -357,14 +376,21 @@ public class IPIntelligenceOnPremiseEngine
         setEngineMetaData();
     }
 
+    /**
+     * {@inheritDoc}
+     * Only one refresh of this engine runs at a time, as
+     * {@link #refreshData(String)} describes.
+     */
     @Override
     public void refreshData(String dataFileIdentifier, byte[] data) {
-        if (engine == null) {
-            engine = new EngineIpiSwig(data, config, propertiesConfigSwig);
-        } else {
-            engine.refreshData(data);
+        synchronized (refreshLock) {
+            if (engine == null) {
+                engine = new EngineIpiSwig(data, config, propertiesConfigSwig);
+            } else {
+                engine.refreshData(data);
+            }
+            setEngineMetaData();
         }
-        setEngineMetaData();
     }
 
     @Override
