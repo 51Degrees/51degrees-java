@@ -44,6 +44,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -162,6 +163,52 @@ public class ShareUsageParameterTests {
             }
         }
         return capture.text();
+    }
+
+    /**
+     * Share two requests that differ only in one query parameter and give
+     * how many of them were sent. The repeat Evidence check hashes the
+     * values that would be shared, so the second is a repeat only when the
+     * parameter is not shared.
+     * @param key the query parameter whose value differs
+     */
+    private int sharedOfTwo(String key) throws Exception {
+        Capture capture = new Capture();
+        ShareUsageBuilder builder = new ShareUsageBuilder(
+            loggerFactory,
+            capture);
+        builder.setMinimumEntriesPerMessage(1);
+        ShareUsageElement shareUsage = builder.build();
+
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+                .addFlowElement(new Acceptor())
+                .addFlowElement(shareUsage)
+                .setAutoCloseElements(true)
+                .build()) {
+            for (int i = 1; i <= 2; i++) {
+                try (FlowData data = pipeline.createFlowData()) {
+                    data.addEvidence("header.user-agent", "same-header");
+                    data.addEvidence(key, "value-" + i);
+                    data.process();
+                }
+            }
+        }
+        String record = capture.text();
+        return record.split("same-header", -1).length - 1;
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"query.user-agent", "query.51D_Value"})
+    public void repeats_DifferInASharedParameter_BothShared(String key)
+        throws Exception {
+        assertEquals(2, sharedOfTwo(key));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"query.password"})
+    public void repeats_DifferInAParameterNotShared_OneShared(String key)
+        throws Exception {
+        assertEquals(1, sharedOfTwo(key));
     }
 
     @ParameterizedTest
