@@ -41,6 +41,9 @@ final class JsText {
 
     private static final char LAST_CONTROL = 0x1f;
     private static final char VERTICAL_TAB = 0x0b;
+    private static final char LINE_SEPARATOR = 0x2028;
+    private static final char PARAGRAPH_SEPARATOR = 0x2029;
+    private static final char BYTE_ORDER_MARK = 0xfeff;
     private static final String HEX_DIGITS = "0123456789abcdef";
     private static final int NIBBLE_BITS = 4;
     private static final int NIBBLE_MASK = 0xf;
@@ -136,7 +139,8 @@ final class JsText {
      */
     static boolean isWhitespace(char c) {
         return c == '\t' || c == '\n' || c == VERTICAL_TAB || c == '\f' ||
-            c == '\r' || c == ' ' || c == ' ' || c == '﻿' ||
+            c == '\r' || c == LINE_SEPARATOR || c == PARAGRAPH_SEPARATOR ||
+            c == BYTE_ORDER_MARK ||
             Character.getType(c) == Character.SPACE_SEPARATOR;
     }
 
