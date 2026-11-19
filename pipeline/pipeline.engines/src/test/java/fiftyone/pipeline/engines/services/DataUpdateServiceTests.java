@@ -289,6 +289,13 @@ public class DataUpdateServiceTests {
         file.setEngine(engine);
         file.setConfiguration(config);
 
+        // With no polling interval the delay is the random number of whole
+        // seconds alone, which can be 0. The check is not run, so a check
+        // that starts at once cannot schedule again before the verify.
+        doReturn(mock(ScheduledFuture.class)).when(futureFactory).schedule(
+            any(Runnable.class),
+            anyLong());
+
         // Act
         dataUpdate.registerDataFile(file);
 
@@ -755,9 +762,9 @@ public class DataUpdateServiceTests {
             }
         });
 
-        // The invalid MD5 will cause a warning to be logged so we want
-        // to ignore this
-        ignoreWranings = 1;
+        // The invalid MD5 is the Errors table integrity row, logged once
+        // at Error, so it is ignored in cleanup.
+        ignoreErrors = 1;
 
         OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
@@ -892,12 +899,13 @@ public class DataUpdateServiceTests {
             // reconfigured to try again later.
             verify(futureFactory, atLeast(1))
                 .schedule(any(Runnable.class), anyLong());
-            // We expect one warning to be logged so make sure it's
-            // ignored in cleanup and verify its presence.
-            ignoreWranings = 1;
-            assertEquals(1, logger.warningsLogged.size());
-            assertTrue(logger.warningsLogged.get(0).contains(errorText));
-            assertEquals(0, logger.errorsLogged.size());
+            // The failed connection is the Errors table's access error,
+            // logged once at Error, so it is ignored in cleanup.
+            ignoreErrors = 1;
+            assertEquals(0, logger.warningsLogged.size());
+            assertEquals(1, logger.errorsLogged.size());
+            assertEquals("Error during check for data update",
+                logger.errorsLogged.get(0));
             assertEquals(AUTO_UPDATE_HTTPS_ERR, completeEventArgs[0].getStatus());
         }
         finally {
@@ -1724,8 +1732,8 @@ public class DataUpdateServiceTests {
         assertTrue("The 'checkForUpdateComplete' " +
             "event was never fired",
             completed);
-        // Ignore the warning that is logged due to the 429
-        ignoreWranings = 1;
+        // Ignore the error that is logged due to the 429
+        ignoreErrors = 1;
         // Check that the timer has been set to go off again.
         assertNotNull(file.getFuture());
         // Check that the timer has been set to expire in 10 seconds.

@@ -110,7 +110,7 @@ public class IPIntelligencePipelineBuilder {
     /**
      * Use the 51Degrees Cloud service to perform IP Intelligence.
      * @param resourceKey The resource key to use when querying the Cloud service. 
-     * Obtain one from https://configure.51degrees.com?utm_source=code&amp;utm_medium=comment&amp;utm_campaign=51degrees-java&amp;utm_content=ip-intelligence-src-main-java-fiftyone-ipintelligence-ipintelligencepipelinebuilder.java&amp;utm_term=usecloud
+     * Obtain one from https://51degrees.com/configure?utm_source=code&amp;utm_medium=comment&amp;utm_campaign=51degrees-java&amp;utm_content=ip-intelligence-src-main-java-fiftyone-ipintelligence-ipintelligencepipelinebuilder.java&amp;utm_term=usecloud
      * @return A builder that can be used to configure and build a pipeline
      * that will use the Cloud IP Intelligence engine.
      */

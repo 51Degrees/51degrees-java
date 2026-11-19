@@ -13,7 +13,7 @@ $PSNativeCommandUseErrorActionPreference = $true
 # pipeline.version is left alone. The libraries set it to ${project.version}
 # so that they build against the Pipeline API in this repository, and it must
 # not be replaced by the latest published version.
-foreach ($package in $Packages) {
+foreach ($package in $Trees) {
     $allowSnapshots = (-not $package.Publish).ToString().ToLower()
     Write-Host "Updating dependencies of '$($package.Path)'. Patch version only. Snapshots allowed: $allowSnapshots."
     Push-Location "$RepoName/$($package.Path)"

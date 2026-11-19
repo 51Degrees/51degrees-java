@@ -49,7 +49,7 @@ public class ExampleTests {
                 + "tried in that order. Any key works here, because the "
                 + "example reports a product the key does not carry rather "
                 + "than failing on it. Create a key at "
-                + "https://configure.51degrees.com.");
+                + "https://51degrees.com/configure.");
         }
         new Main.Example().run();
     }

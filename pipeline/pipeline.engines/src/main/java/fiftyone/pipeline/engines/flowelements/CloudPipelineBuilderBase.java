@@ -24,6 +24,10 @@ package fiftyone.pipeline.engines.flowelements;
 
 import org.slf4j.ILoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * Base class for pipeline builders that will produce a pipeline with specific
  * flow elements.
@@ -44,6 +48,8 @@ public abstract class CloudPipelineBuilderBase<
     protected String resourceKey = "";
 
     protected String licenseKey = "";
+
+    protected final List<String> requestedProperties = new ArrayList<>();
 
     protected String cloudRequestOrigin = "";
 
@@ -120,7 +126,11 @@ public abstract class CloudPipelineBuilderBase<
     }
 
     /**
-     * Set the license key to be used when calling the endpoints.
+     * Set the license key to be used when calling the endpoints. A license
+     * key used without a resource key needs the properties wanted, named
+     * with {@link #setRequestedProperties(List)}. Beside a resource key it
+     * adds the requested properties the license grants to what the resource
+     * key carries.
      * @param key license key
      * @return this builder
      */
@@ -128,6 +138,38 @@ public abstract class CloudPipelineBuilderBase<
     public TBuilder setLicenseKey(String key) {
         this.licenseKey = key;
         return (TBuilder)this;
+    }
+
+    /**
+     * Name the properties each request asks the cloud service for, as fully
+     * qualified names such as {@code device.ismobile}. Required with a
+     * license key alone. Beside a resource key the cloud service adds them
+     * to the properties the resource key carries.
+     * @param properties the fully qualified property names
+     * @return this builder
+     */
+    @SuppressWarnings("unchecked")
+    public TBuilder setRequestedProperties(List<String> properties) {
+        if (properties == null) {
+            throw new IllegalArgumentException(
+                "properties must not be null");
+        }
+        requestedProperties.addAll(properties);
+        return (TBuilder)this;
+    }
+
+    /**
+     * As {@link #setRequestedProperties(List)}, taking the names as one
+     * comma separated string.
+     * @param properties comma separated fully qualified property names
+     * @return this builder
+     */
+    public TBuilder setRequestedProperties(String properties) {
+        if (properties == null) {
+            throw new IllegalArgumentException(
+                "properties must not be null");
+        }
+        return setRequestedProperties(Arrays.asList(properties.split(",")));
     }
 
     /**

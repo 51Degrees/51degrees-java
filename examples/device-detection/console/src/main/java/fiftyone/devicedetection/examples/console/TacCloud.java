@@ -22,10 +22,11 @@
 
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
+import fiftyone.devicedetection.examples.shared.KeyHelper;
 import fiftyone.devicedetection.cloud.data.MultiDeviceDataCloud;
 import fiftyone.devicedetection.shared.Constants;
 import fiftyone.devicedetection.shared.DeviceData;
-import fiftyone.devicedetection.shared.testhelpers.KeyUtils;
 import fiftyone.pipeline.core.configuration.PipelineOptions;
 import fiftyone.pipeline.core.configuration.PipelineOptionsFactory;
 import fiftyone.pipeline.core.data.FlowData;
@@ -49,13 +50,19 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * Unlike other examples, use of this example requires a license key which can be purchased from our
  * <a href="https://51degrees.com/pricing?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-taccloud.java&amp;utm_term=taccloud">pricing page</a>. Once this is done, a resource key with the
  * properties required by this example can be created
- * <a href="https://configure.51degrees.com/QKyYH5XT?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-taccloud.java&amp;utm_term=taccloud">here</a>.
+ * <a href="https://51degrees.com/configure/QKyYH5XT?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-taccloud.java&amp;utm_term=taccloud">here</a>.
  * <p>
  * This resource key can be supplied as a command line argument to this program, as an environment
  * variable "SuperResourceKey", as a System Property "SuperResourceKey" or by editing the config
  * file tacCloud.xml.
  */
 public class TacCloud {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-devicedetection-examples-console-taccloud.java";
+
     // Example values to use when looking up device details from TACs.
     static final String TAC_1 = "35925406";
     static final String TAC_2 = "86386802";
@@ -63,7 +70,21 @@ public class TacCloud {
 
     public static void main (String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
-        String resourceKey = args.length > 0 ? args[0] : null;
+        String resourceKey = KeyHelper.findResourceKey(
+                args.length > 0 ? args[0] : null,
+                TAC_EXAMPLE_RESOURCE_KEY_NAME);
+        // A key typed into the options file is used as it is.
+        String fileResourceKey = PipelineOptionsFactory.getOptionsFromFile(
+                getFilePath("tacCloud.xml"))
+                .find("CloudRequestEngine", "ResourceKey");
+        if (resourceKey == null && isInvalidKey(fileResourceKey)) {
+            KeyHelper.writeNoResourceKey(System.out, EXAMPLE_TAG,
+                    TAC_EXAMPLE_RESOURCE_KEY_NAME,
+                    KeyHelper.PAID_PROPERTIES_CONFIGURATION);
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES);
+            return;
+        }
         run(resourceKey, System.out);
     }
 
@@ -80,7 +101,7 @@ public class TacCloud {
         // use the one supplied to this method
         PipelineOptions pipelineOptions = PipelineOptionsFactory.getOptionsFromFile(optionsFile);
         String fileResourceKey = pipelineOptions.find("CloudRequestEngine", "ResourceKey");
-        if (KeyUtils.isInvalidKey(fileResourceKey)) {
+        if (isInvalidKey(fileResourceKey)) {
             getOrSetSuperResourceKey(resourceKey, TAC_EXAMPLE_RESOURCE_KEY_NAME);
         }
         try (PrintWriter writer = new PrintWriter(os)) {
@@ -100,6 +121,10 @@ public class TacCloud {
                 analyseTac(TAC_1, pipeline, writer);
                 analyseTac(TAC_2, pipeline, writer);
             }
+            // The writer closes the stream it was given, so the section is
+            // written before it.
+            FindOutMore.write(writer, EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES);
         }
     }
 
@@ -136,7 +161,7 @@ public class TacCloud {
  *
  * Unlike other examples, use of this example requires a license key which can be purchased from our
  * [pricing page](https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-taccloud.java&utm_term=top). Once this is done, a resource key with the
- * properties required by this example can be created [here](https://configure.51degrees.com/QKyYH5XT?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-taccloud.java&utm_term=top).
+ * properties required by this example can be created [here](https://51degrees.com/configure/QKyYH5XT?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-taccloud.java&utm_term=top).
  *
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/device-detection/console/src/main/java/fiftyone/devicedetection/examples/console/TacCloud.java).
  *

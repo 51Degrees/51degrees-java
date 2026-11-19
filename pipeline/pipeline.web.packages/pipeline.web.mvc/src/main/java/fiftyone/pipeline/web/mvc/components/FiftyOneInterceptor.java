@@ -58,6 +58,11 @@ import static fiftyone.pipeline.web.Constants.DEFAULT_JSON_PATH;
  * This carries out the processing on the device making the request using the
  * Pipeline which has been constructed, and intercepts requests for the
  * 51Degrees JavaScript.
+ * <p>
+ * A Flow Data cannot be used by two threads at once. Application code reads
+ * the values it needs from the Flow Data on the request's thread, and hands
+ * those values, not the Flow Data, to any other thread or task. The Flow
+ * Data is closed when the request ends.
  */
 @Component
 public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
@@ -122,6 +127,8 @@ public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
 
         resultService.setPipeline(pipeline);
         clientsidePropertyService.setPipeline(pipeline);
+        clientsidePropertyService.setCacheMaxAge(
+            config.getClientsideCacheMaxAge());
         fiftyOneJsService.enable(config.getClientsidePropertiesEnabled());
         fiftyOneJsService.setPaths(config.getJavaScriptPath(), jsonPath);
     }
@@ -162,6 +169,14 @@ public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
         HttpServletRequest request,
         HttpServletResponse response,
         Object handler) throws Exception {
+        // A request for the 51Degrees JavaScript or JSON whose If-None-Match
+        // matches the ETag of its Evidence is answered without processing,
+        // because that Evidence alone decides the content. Nothing is left
+        // to close.
+        if (fiftyOneJsService.serveNotModified(
+            request, response, resultService)) {
+            return false;
+        }
         resultService.process(request);
 
         boolean proceed = false;

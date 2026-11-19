@@ -514,7 +514,7 @@ public class ShareUsageElementTests {
         request.put("header.X-Blocked", "blocked");
         request.put("cookie.51D_Profile", "123456");
         request.put("cookie.other", "not-shared");
-        request.put("query.secret", "not-shared");
+        request.put("query.campaign", "shared-query");
         request.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
         request.put("server.request-method", "GET");
         request.put("server.request-path", "/a%2Fb/c");
@@ -554,9 +554,13 @@ public class ShareUsageElementTests {
                 "//cookie[@Name='51D_Profile']", doc),
                 "A 51D_ cookie from the web request was not shared.");
             assertEquals(0, ((NodeList) xpath.evaluate(
-                "//cookie[@Name='other'] | //query[@Name='secret']", doc,
+                "//cookie[@Name='other']", doc,
                 XPathConstants.NODESET)).getLength(),
-                "A cookie or query string parameter the rules leave out was shared.");
+                "A cookie the rules leave out was shared.");
+            assertEquals("shared-query", xpath.evaluate(
+                "//query[@Name='campaign']", doc),
+                "A query string parameter from the web request was not " +
+                "shared by default.");
             assertEquals("1.2.3.4", xpath.evaluate("//ClientIP", doc),
                 "The client IP from the web request was not shared.");
             assertEquals("GET", xpath.evaluate(
@@ -864,17 +868,14 @@ public class ShareUsageElementTests {
         String[] expected = {"SessionId", "Sequence", "DateSent", "Version",
             "Product", "FlowElement", "Language", "LanguageVersion",
             "ClientIP", "ServerIP", "Platform"};
-        List<String> required = Arrays.asList("SessionId", "Sequence",
-            "DateSent", "Product", "Language", "LanguageVersion");
+        // Every element is always written, empty when there is no value.
+        // FlowElement is written once for each element of the Pipeline, so
+        // not at all here, where the test's Pipeline holds no elements.
         int last = -1;
         for (String name : expected) {
             int index = names.indexOf(name);
-            if (!required.contains(name)) {
-                // Only present when the Pipeline, the request and the
-                // platform give one.
-                if (index < 0) {
-                    continue;
-                }
+            if (index < 0 && name.equals("FlowElement")) {
+                continue;
             }
             assertTrue(index >= 0, name + " missing from " + names);
             assertTrue(index > last, name + " out of order in " + names);
@@ -1260,10 +1261,10 @@ public class ShareUsageElementTests {
     }
 
     /**
-     * Default settings share headers other than Cookie, the 51Degrees cookies
-     * and query string parameters, and other evidence, and leave out ordinary
-     * cookies, other parameters, session values and the evidence that is
-     * never shared.
+     * Default settings share headers other than Cookie, the 51Degrees cookies,
+     * every query string parameter but those never shared, and other
+     * evidence, and leave out ordinary cookies, session values and the
+     * evidence that is never shared.
      */
     @Test
     public void ShareUsageElement_DefaultSharesOnlyAcceptedEvidence() throws Exception {
@@ -1304,11 +1305,12 @@ public class ShareUsageElementTests {
         String output = new String(
             connector.getBaos().toByteArray(), StandardCharsets.UTF_8);
         for (String shared : Arrays.asList(
-            "some user agent", "screen width", "fiftyone parameter")) {
+            "some user agent", "screen width", "fiftyone parameter",
+            "password parameter")) {
             assertTrue(output.contains(shared), shared);
         }
         for (String withheld : Arrays.asList(
-            "sessionid cookie", "cookie header", "password parameter",
+            "sessionid cookie", "cookie header",
             "email parameter", "email header", "salt value",
             "whole query string", "request path", "session attribute")) {
             assertFalse(output.contains(withheld), withheld);
@@ -1351,6 +1353,79 @@ public class ShareUsageElementTests {
         NodeList devices = (NodeList) xpath.compile("//Device")
             .evaluate(doc, XPathConstants.NODESET);
         assertEquals(1, devices.getLength(), "1 device expected");
+    }
+
+    /**
+     * Within one session, a request that differs from one already shared
+     * only in its sequence number is not shared again, and a later request
+     * with a 51D_ value changed is, with the same SessionId and its own
+     * Sequence. The session id and the sequence never enter the repeat
+     * comparison and are always written to the record.
+     */
+    @Test
+    public void ShareUsageElement_OneSession_ChangedValueSharedWithItsSequence()
+        throws Exception {
+        // Arrange
+        tracker = null;
+        createShareUsage(
+            1,
+            3,
+            1,
+            new ArrayList<>(),
+            new ArrayList<>(),
+            new ArrayList<>());
+        String[] screenWidths = { "1920", "1920", "1024" };
+
+        // Act
+        for (int sequence = 1; sequence <= screenWidths.length; sequence++) {
+            Map<String, Object> evidenceData = new HashMap<>();
+            evidenceData.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
+            evidenceData.put("header.user-agent", "one session user agent");
+            evidenceData.put(
+                "cookie.51D_ScreenPixelsWidth",
+                screenWidths[sequence - 1]);
+            evidenceData.put(Constants.EVIDENCE_SESSIONID, "one session");
+            evidenceData.put(Constants.EVIDENCE_SEQUENCE, sequence);
+            try (FlowData data = pipeline.createFlowData()) {
+                data.addEvidence(evidenceData);
+                shareUsageElement.process(data);
+            }
+        }
+        shareUsageElement.close();
+
+        // Assert
+        Document doc = docBuilderFactory.newDocumentBuilder().parse(
+            new ByteArrayInputStream(connector.getBaos().toByteArray()));
+        NodeList devices = (NodeList) xpath.compile("//Device")
+            .evaluate(doc, XPathConstants.NODESET);
+        assertEquals(2, devices.getLength(),
+            "Only the first request and the one with a changed value " +
+                "should be shared");
+        assertEquals("one session", xpath.evaluate("SessionId", devices.item(0)));
+        assertEquals("1", xpath.evaluate("Sequence", devices.item(0)));
+        assertEquals("1920", cookieValue(devices.item(0), "51D_ScreenPixelsWidth"));
+        assertEquals("one session", xpath.evaluate("SessionId", devices.item(1)));
+        assertEquals("3", xpath.evaluate("Sequence", devices.item(1)));
+        assertEquals("1024", cookieValue(devices.item(1), "51D_ScreenPixelsWidth"));
+    }
+
+    /**
+     * The value a record gives for the named cookie, or null when it gives
+     * none. Names are compared without regard to case.
+     */
+    private static String cookieValue(Node device, String name) {
+        NodeList children = device.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node child = children.item(i);
+            Node nameAttribute = child.getAttributes() == null ?
+                null : child.getAttributes().getNamedItem("Name");
+            if ("cookie".equals(child.getNodeName()) &&
+                nameAttribute != null &&
+                name.equalsIgnoreCase(nameAttribute.getNodeValue())) {
+                return child.getTextContent();
+            }
+        }
+        return null;
     }
 
     /**

@@ -56,11 +56,35 @@ public class EvidenceKeyFilterShareUsageTests {
             false);
     }
 
+    private static EvidenceKeyFilterShareUsage filter(
+        boolean includeSession,
+        boolean shareAllEvidence,
+        boolean shareAllQueryStringParameters) {
+        return new EvidenceKeyFilterShareUsage(
+            Collections.<String>emptyList(),
+            Collections.<String>emptyList(),
+            includeSession,
+            DEFAULT_SESSION_COOKIE_NAME,
+            shareAllEvidence,
+            shareAllQueryStringParameters);
+    }
+
     /**
-     * By default headers other than Cookie are shared, cookies, session
-     * values and query string parameters only when their names start with
-     * 51D_, and any other evidence.
+     * Shares only the 51D_ query string parameters and those named, as when
+     * share all query string parameters is turned off.
      */
+    private static EvidenceKeyFilterShareUsage namedParametersOnly(
+        List<String> blockedHttpHeaders,
+        List<String> includedQueryStringParams) {
+        return new EvidenceKeyFilterShareUsage(
+            blockedHttpHeaders,
+            includedQueryStringParams,
+            false,
+            DEFAULT_SESSION_COOKIE_NAME,
+            false,
+            false);
+    }
+
     /**
      * The whole web request is read by the Usage Sharing Element and never
      * shared as a value, so the filter does not include it.
@@ -73,6 +97,11 @@ public class EvidenceKeyFilterShareUsageTests {
         assertFalse(filter.include("Server.Http-Request"));
     }
 
+    /**
+     * By default every header but Cookie, every query string parameter but
+     * those never shared, and any other evidence are shared, and cookies and
+     * session values only when their names start with 51D_.
+     */
     @Test
     public void defaultRules() {
         EvidenceKeyFilterShareUsage filter = defaults();
@@ -87,10 +116,82 @@ public class EvidenceKeyFilterShareUsageTests {
         assertFalse(filter.include("session.org.example.attribute"));
         assertTrue(filter.include("query.51d_gethighentropyvalues"));
         assertTrue(filter.include("query.51D_Test"));
-        assertFalse(filter.include("query.password"));
+        assertTrue(filter.include("query.password"));
+        assertTrue(filter.include("Query.Utm_Source"));
         assertFalse(filter.include("query.id.email"));
+        assertFalse(filter.include("server.request-query"));
         assertTrue(filter.include("server.client-ip"));
         assertTrue(filter.include("nodot"));
+    }
+
+    /**
+     * With share all query string parameters off, only the 51D_ parameters
+     * and those named are shared.
+     */
+    @Test
+    public void shareAllQueryStringParametersOff_OnlyNamedAnd51D() {
+        EvidenceKeyFilterShareUsage filter = namedParametersOnly(
+            Collections.<String>emptyList(),
+            Collections.singletonList("campaign"));
+
+        assertFalse(filter.include("query.password"));
+        assertTrue(filter.include("query.campaign"));
+        assertTrue(filter.include("query.51D_Test"));
+        assertTrue(filter.include("header.user-agent"));
+    }
+
+    /**
+     * Even when all Evidence is shared, a cookie is shared only when its
+     * name starts with 51D_, whatever its case. The session cookie is kept
+     * only by a filter that includes it for the tracker to compare.
+     */
+    @Test
+    public void shareAllEvidence_NoCookieBut51D() {
+        EvidenceKeyFilterShareUsage sent = filter(false, true, true);
+        EvidenceKeyFilterShareUsage kept = filter(true, true, true);
+
+        for (EvidenceKeyFilterShareUsage filter : Arrays.asList(sent, kept)) {
+            assertTrue(filter.include("cookie.51D_Profile"));
+            assertTrue(filter.include("cookie.51d_screenpixelswidth"));
+            assertFalse(filter.include("cookie._ga"));
+            assertFalse(filter.include("Cookie.Other"));
+            assertFalse(filter.include("cookie.a.b"));
+            assertTrue(filter.include("session.org.example.attribute"));
+            assertTrue(filter.include("header.x-anything"));
+            assertTrue(filter.include("query.password"));
+        }
+        assertFalse(sent.include("cookie." + DEFAULT_SESSION_COOKIE_NAME));
+        assertTrue(kept.include("cookie." + DEFAULT_SESSION_COOKIE_NAME));
+    }
+
+    /**
+     * With all Evidence shared, the tracker compares the session cookie only
+     * when track session is on, and no other cookie but the 51D_ ones.
+     */
+    @Test
+    public void trackerWithShareAllEvidence_SessionCookieOnlyWhenTracked() {
+        EvidenceKeyFilterShareUsageTracker tracked =
+            new EvidenceKeyFilterShareUsageTracker(
+                Collections.<String>emptyList(),
+                Collections.<String>emptyList(),
+                true,
+                DEFAULT_SESSION_COOKIE_NAME,
+                true,
+                true);
+        EvidenceKeyFilterShareUsageTracker untracked =
+            new EvidenceKeyFilterShareUsageTracker(
+                Collections.<String>emptyList(),
+                Collections.<String>emptyList(),
+                false,
+                DEFAULT_SESSION_COOKIE_NAME,
+                true,
+                true);
+
+        assertTrue(tracked.include("cookie." + DEFAULT_SESSION_COOKIE_NAME));
+        assertFalse(untracked.include("cookie." + DEFAULT_SESSION_COOKIE_NAME));
+        assertFalse(tracked.include("cookie._ga"));
+        assertFalse(untracked.include("cookie._ga"));
+        assertTrue(untracked.include("cookie.51D_Profile"));
     }
 
     /**
@@ -99,10 +200,9 @@ public class EvidenceKeyFilterShareUsageTests {
      */
     @Test
     public void fieldIsEverythingAfterTheFirstDot() {
-        EvidenceKeyFilterShareUsage filter = filter(
+        EvidenceKeyFilterShareUsage filter = namedParametersOnly(
             Collections.<String>emptyList(),
-            Collections.singletonList("valid.email"),
-            false);
+            Collections.singletonList("valid.email"));
 
         assertTrue(filter.include("query.valid.email"));
         assertFalse(filter.include("query.valid"));
@@ -115,10 +215,9 @@ public class EvidenceKeyFilterShareUsageTests {
      */
     @Test
     public void listsIgnoreCase() {
-        EvidenceKeyFilterShareUsage filter = filter(
+        EvidenceKeyFilterShareUsage filter = namedParametersOnly(
             Collections.singletonList("X-Secret"),
-            Collections.singletonList("Campaign"),
-            false);
+            Collections.singletonList("Campaign"));
 
         assertFalse(filter.include("header.x-secret"));
         assertTrue(filter.include("query.campaign"));
@@ -185,6 +284,33 @@ public class EvidenceKeyFilterShareUsageTests {
         }
         assertTrue(filter.include("header.cookies-allowed"));
         assertTrue(filter.include("server.request-method"));
+    }
+
+    /**
+     * By default every header but Cookie is shared, so a header named
+     * Cookies is shared like any other header.
+     */
+    @Test
+    public void onlyTheCookieHeaderIsBlockedByDefault() {
+        EvidenceKeyFilterShareUsage filter = defaults();
+        assertFalse(filter.include("header.cookie"));
+        assertFalse(filter.include("header.Cookie"));
+        assertTrue(filter.include("header.cookies"));
+        assertTrue(filter.include("header.Cookies"));
+    }
+
+    /**
+     * A header named Cookies is blocked when the blocked headers name it.
+     */
+    @Test
+    public void aCookiesHeaderIsBlockedWhenNamed() {
+        EvidenceKeyFilterShareUsage filter = filter(
+            Collections.singletonList("Cookies"),
+            Collections.<String>emptyList(),
+            false);
+        assertFalse(filter.include("header.cookies"));
+        assertFalse(filter.include("header.Cookies"));
+        assertFalse(filter.include("header.cookie"));
     }
 
     /**

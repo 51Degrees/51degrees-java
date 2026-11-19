@@ -1,13 +1,17 @@
 param(
     [Parameter(Mandatory)][string]$RepoName,
     [string]$Name,
-    # Set by the publish workflow to the version it built and installed. Not
-    # set when a pull request is tested, which builds the reactor itself.
+    # Set by the publish workflow, which built and installed the packages, to
+    # its label for the run. Not set when a pull request is tested, which
+    # builds the reactor itself.
     [string]$Version,
     [string]$TestResourceKey,
     [string]$DeviceDetection,
     [string]$IpIntelligence,
-    [string]$IpIntelligenceUrl
+    [string]$IpIntelligenceUrl,
+    # False, from select-options.ps1, on every entry of a pull request but
+    # one, so the browser contract runs once.
+    [bool]$SeleniumContract = $true
 )
 $ErrorActionPreference = "Stop"
 # Each part's exit code is checked below, so one failing part does not stop
@@ -20,13 +24,15 @@ $results = "$RepoName/test-results/integration"
 $failed = @()
 
 # The examples take the libraries from Maven Central unless told otherwise.
-# Pointing them at the version the publish workflow installed tests the
-# packages as a project of your own would use them. For a pull request the
-# dev profile points them at the reactor build-project.ps1 installed.
-[string[]]$versionArgs = if ($Version) {
-    "-Ddevice-detection.version=$Version", "-Dip-intelligence.version=$Version"
+# Pointing them at the versions the publish workflow built and installed, each
+# package's own, tests the packages as a project of your own would use them.
+# For a pull request the dev profile points them at the reactor
+# build-project.ps1 installed.
+if ($Version) {
+    . "$PSScriptRoot/release.ps1"
+    [string[]]$versionArgs = Get-ExampleVersionArguments $RepoName
 } else {
-    , '-Pdev'
+    [string[]]$versionArgs = '-Pdev'
 }
 
 # The Pipeline API developer examples, as the pipeline repository ran them.
@@ -58,7 +64,7 @@ if ($Version) {
             Write-Host "::warning title=Examples skipped::Skipping '$($example.Path)', as IpIntelligenceUrl was not provided."
             continue
         }
-        Write-Host "::group::$($example.Path) against $Version"
+        Write-Host "::group::$($example.Path) against $($versionArgs -join ' ')"
         Push-Location "$RepoName/$($example.Path)"
         try {
             mvn clean test @MavenOptions @versionArgs `
@@ -132,7 +138,9 @@ function Invoke-ContractTests {
 }
 
 Write-Host "::group::Selenium contract tests"
-if (-not $TestResourceKey) {
+if (-not $SeleniumContract) {
+    Write-Host "Another entry runs the Selenium contract tests for this pull request."
+} elseif (-not $TestResourceKey) {
     Write-Host "::warning title=Selenium skipped::No resource key, so the Selenium contract tests were not run against the web examples."
 } elseif ($IsLinux -and [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -eq [System.Runtime.InteropServices.Architecture]::Arm64) {
     Write-Host "::warning title=Selenium skipped::Selenium contract skipped on linux-arm64, which has no selenium-manager build. It runs on x64 and macOS arm64."

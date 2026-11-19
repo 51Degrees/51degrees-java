@@ -88,6 +88,6 @@ final class LiveCloudKeys {
             + "as an environment variable or as a system property, tried in "
             + "that order. The key has to carry the device product, because "
             + "the test asks the service for device detection properties. "
-            + "Create a key at https://configure.51degrees.com.";
+            + "Create a key at https://51degrees.com/configure.";
     }
 }

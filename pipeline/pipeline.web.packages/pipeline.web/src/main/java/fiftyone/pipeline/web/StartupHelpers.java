@@ -59,6 +59,23 @@ public class StartupHelpers {
     }
 
     /**
+     * Add an element at the end of the configuration, but before a usage
+     * sharing element, which must stay the last Flow Element.
+     * @param options the options to add to
+     * @param element the element to add
+     */
+    private static void addBeforeUsageSharing(
+        PipelineOptions options,
+        ElementOptions element) {
+        int index = getElementIndex(options, "ShareUsage");
+        if (index >= 0 && index == options.elements.size() - 1) {
+            options.elements.add(index, element);
+        } else {
+            options.elements.add(element);
+        }
+    }
+
+    /**
      * Configure the extra web elements required and build the Pipeline using
      * the {@link PipelineBuilder#buildFromConfiguration(PipelineOptions)}
      * method.
@@ -184,7 +201,7 @@ public class StartupHelpers {
                     jsIndex++;
                 }
                 else {
-                    options.elements.add(jsonBuilderElement);
+                    addBeforeUsageSharing(options, jsonBuilderElement);
                 }
             }
 
@@ -196,7 +213,7 @@ public class StartupHelpers {
                 if(contextRoot != null) {
                     javaScriptBuilderElement.buildParameters.put("ContextRoot", contextRoot);
                 }
-                options.elements.add(javaScriptBuilderElement);
+                addBeforeUsageSharing(options, javaScriptBuilderElement);
             }
             else {
                 // There is already a JavaScript builder config so check if
@@ -238,7 +255,7 @@ public class StartupHelpers {
             // The set-headers element is not included so add it.
             ElementOptions setHeadersElement = new ElementOptions();
             setHeadersElement.builderName = SetHeadersElement.class.getSimpleName();
-            options.elements.add(setHeadersElement);
+            addBeforeUsageSharing(options, setHeadersElement);
         }
         
         return builder.buildFromConfiguration(options);

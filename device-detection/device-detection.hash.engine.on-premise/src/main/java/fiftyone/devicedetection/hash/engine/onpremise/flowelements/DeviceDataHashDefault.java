@@ -259,6 +259,11 @@ public class DeviceDataHashDefault
     @Override
     protected boolean propertyIsAvailable(String propertyName) {
         checkState();
+        // A property the engine has a position for is held by its results,
+        // so that needs no lookup of the name in native code.
+        if (indexOf(propertyName) != null) {
+            return resultsList.isEmpty() == false;
+        }
         for (ResultsHashSwig results : resultsList) {
             if (results.containsProperty(Swig.asBytes(propertyName))) {
                 return true;

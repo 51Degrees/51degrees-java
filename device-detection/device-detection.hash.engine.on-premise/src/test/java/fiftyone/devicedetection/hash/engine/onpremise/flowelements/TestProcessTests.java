@@ -68,6 +68,11 @@ public class TestProcessTests extends TestsBase {
     }
 
     @Test
+    public void Process_Hash_CaseInsensitivePrefix() throws Exception {
+        ProcessTests.caseInsensitiveEvidencePrefix(getWrapper(), new DataValidatorHash(getWrapper().getEngine()));
+    }
+
+    @Test
     public void Process_Hash_ProfileOverride() throws Exception {
         ProcessTests.profileOverride(getWrapper(), new DataValidatorHash(getWrapper().getEngine()));
     }

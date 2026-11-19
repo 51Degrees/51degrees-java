@@ -65,7 +65,8 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     protected double maxRecoveryDelaySeconds = Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT;
     protected double recoveryMultiplier = Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT;
     protected boolean shareAllEvidence;
-    protected boolean shareAllQueryStringParameters;
+    protected boolean shareAllQueryStringParameters =
+        Constants.SHARE_USAGE_DEFAULT_SHARE_ALL_QUERY_STRING_PARAMETERS;
 
     /**
      * Constructor
@@ -154,13 +155,14 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      * If set to true, every query string and HTTP form parameter is shared,
      * rather than only those that start with 51D_ or are named in the
      * included parameters. The whole query string and the parameters that are
-     * never shared are still not shared.
+     * never shared are still not shared. Set it to false to share only the
+     * 51D_ parameters and those named.
      * <p>
-     * Default value is false
+     * Default value is true
      * @param shareAll true to share all query string parameters
      * @return this builder
      */
-    @DefaultValue(booleanValue = false)
+    @DefaultValue(booleanValue = true)
     public ShareUsageBuilderBase<T> setShareAllQueryStringParameters(
         boolean shareAll) {
         this.shareAllQueryStringParameters = shareAll;
@@ -177,10 +179,11 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
 
     /**
      * If set to true, all Evidence is shared, which overrides the blocked
-     * HTTP headers and the rules for cookies, session values and query string
+     * HTTP headers and the rules for session values and query string
      * parameters. The keys that are never shared (an email address, the salt
      * for hashed email identifiers, the whole query string, the path and the
-     * Cookie header) are still not shared.
+     * Cookie header) are still not shared, and nor is any cookie whose name
+     * does not start with 51D_.
      * <p>
      * Default value is false
      * @param shareAll true to share all Evidence
@@ -201,24 +204,22 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     }
 
     /**
-     * By default, all HTTP headers (excluding a few such as 'cookies', if they
-     * don't start with 51D_) are shared. Individual headers can be excluded from sharing by
-     * adding them to this list.
+     * By default, every HTTP header is shared except Cookie. Individual
+     * headers can be excluded from sharing by adding them to this list.
      * <p>
      * This setter replaces the current list
      * @param blockedHeaders the (case-insensitive) names of the headers to block
      * @return this builder
      */
-    @DefaultValue("All HTTP Headers are shared except cookies that do not start with 51D_")
+    @DefaultValue("All HTTP headers are shared except Cookie")
     public ShareUsageBuilderBase<T> setBlockedHttpHeaders(List<String> blockedHeaders) {
         blockedHttpHeaders = blockedHeaders;
         return this;
     }
 
     /**
-     * By default, all HTTP headers (excluding a few such as 'cookies', if they
-     * don't start with 51D_) are shared. Individual headers can be excluded from sharing by
-     * adding them to this list.
+     * By default, every HTTP header is shared except Cookie. Individual
+     * headers can be excluded from sharing by adding them to this list.
      * <p>
      * This setter adds to the blocked headers
      * @param blockedHeaders a comma separated list of
@@ -226,22 +227,21 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      *                                  headers to include
      * @return this builder
      */
-    @DefaultValue("All HTTP Headers are shared except cookies that do not start with 51D_")
+    @DefaultValue("All HTTP headers are shared except Cookie")
     public ShareUsageBuilderBase<T> setBlockedHttpHeaders(String blockedHeaders) {
         blockedHttpHeaders.addAll(Arrays.asList(blockedHeaders.split("\\s*,\\s*")));
         return this;
     }
 
     /**
-     * By default, all HTTP headers (excluding a few such as 'cookies', if they
-     * don't start with 51D_) are shared. Individual headers can be excluded from sharing by
-     * adding them to this list.
+     * By default, every HTTP header is shared except Cookie. Individual
+     * headers can be excluded from sharing by adding them to this list.
      * <p>
      * This setter allows you to add the name of a header to block.
      * @param blockedHeader the (case-insensitive) name of the header to block
      * @return this builder
      */
-    @DefaultValue("All HTTP Headers are shared except cookies that do not start with 51D_")
+    @DefaultValue("All HTTP headers are shared except Cookie")
     public ShareUsageBuilderBase<T> setBlockedHttpHeader(String blockedHeader) {
         blockedHttpHeaders.add(blockedHeader.trim());
         return this;
@@ -450,7 +450,8 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      * If exactly the same evidence values are seen multiple times within this
      * time limit then they will only be shared once.
      * <p>
-     * The default value for this is 0 - meaning always share.
+     * The default is 20 minutes. An interval of 0, or a negative one,
+     * shares every repeat.
      * @param interval the interval in minutes
      * @return this builder
      */
