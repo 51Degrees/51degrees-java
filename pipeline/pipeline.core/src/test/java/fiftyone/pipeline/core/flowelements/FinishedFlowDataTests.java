@@ -115,11 +115,9 @@ public class FinishedFlowDataTests {
             write.write();
             fail(what + " succeeded on a Flow Data that has finished");
         } catch (Exception e) {
-            // A read only map refuses a put in the usual way.
             assertTrue(
                 what + " failed with " + e,
-                e instanceof IllegalStateException ||
-                    e instanceof UnsupportedOperationException);
+                e instanceof IllegalStateException);
         }
     }
 
