@@ -44,6 +44,12 @@ import static fiftyone.pipeline.util.StringManipulation.stringJoin;
 /**
  * Internal implementation of the {@link DeviceDataHash} interface. This can
  * only be constructed by the {@link DeviceDetectionHashEngine}.
+ * <p>
+ * Values are read from the native results with no lock. Reading a value
+ * writes into the results, so an instance is not safe to use from several
+ * threads at once, and a caller that shares one is responsible for any
+ * locking.
+ * @see <a href="https://github.com/51Degrees/specifications/blob/d79bbe3b2aef86273570742f6b660f29bfe72816/device-detection-specification/pipeline-elements/device-detection-on-premise.md#results-and-threads">Results and threads</a>
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/device-detection-specification/pipeline-elements/device-detection-on-premise.md#element-data">Specification</a>
  */
 public class DeviceDataHashDefault
@@ -73,14 +79,6 @@ public class DeviceDataHashDefault
      * into the required property index the engine was built with.
      */
     private final DeviceDetectionHashEngine hashEngine;
-
-    /**
-     * Held for every read of the native results. A native results instance
-     * is used by one thread at a time, because reading a value writes into
-     * it, so this lets finished data be read from several threads at once.
-     * @see <a href="https://github.com/51Degrees/specifications/blob/main/device-detection-specification/pipeline-elements/device-detection-on-premise.md#results-and-threads">Specification</a>
-     */
-    private final Object resultsLock = new Object();
 
     /**
      * Constructs a new instance.
@@ -267,19 +265,17 @@ public class DeviceDataHashDefault
     @Override
     protected boolean propertyIsAvailable(String propertyName) {
         checkState();
-        synchronized (resultsLock) {
-            // A property the engine was created with has a position, and the
-            // read goes by it, so there is no need to look the name up in the
-            // results first. A property the data set lacks keeps its position
-            // and reads as having no value. With results from more than one
-            // engine, the name finds the results that hold the property.
-            if (resultsList.size() == 1 && indexOf(propertyName) != null) {
+        // A property the engine was created with has a position, and the
+        // read goes by it, so there is no need to look the name up in the
+        // results first. A property the data set lacks keeps its position
+        // and reads as having no value. With results from more than one
+        // engine, the name finds the results that hold the property.
+        if (resultsList.size() == 1 && indexOf(propertyName) != null) {
+            return true;
+        }
+        for (ResultsHashSwig results : resultsList) {
+            if (results.containsProperty(Swig.asBytes(propertyName))) {
                 return true;
-            }
-            for (ResultsHashSwig results : resultsList) {
-                if (results.containsProperty(Swig.asBytes(propertyName))) {
-                    return true;
-                }
             }
         }
         return false;
@@ -290,22 +286,20 @@ public class DeviceDataHashDefault
         checkState();
         AspectPropertyValue<List<String>> result =
             new AspectPropertyValueDefault<>();
-        synchronized (resultsLock) {
-            ResultsHashSwig results = getSingleResults(propertyName);
-            if (results != null) {
-                Integer index = indexOf(propertyName);
-                try (VectorStringValuesSwig value = index == null ?
-                    results.getValues(Swig.asBytes(propertyName)) :
-                    results.getValues(index)) {
-                    if (value.hasValue()) {
-                        try (VectorStringSwig vector = value.getValue()) {
-                            result.setValue(Collections.unmodifiableList(
-                                Swig.asList(vector)));
-                        }
+        ResultsHashSwig results = getSingleResults(propertyName);
+        if (results != null) {
+            Integer index = indexOf(propertyName);
+            try (VectorStringValuesSwig value = index == null ?
+                results.getValues(Swig.asBytes(propertyName)) :
+                results.getValues(index)) {
+                if (value.hasValue()) {
+                    try (VectorStringSwig vector = value.getValue()) {
+                        result.setValue(Collections.unmodifiableList(
+                            Swig.asList(vector)));
                     }
-                    else {
-                        result.setNoValueMessage(value.getNoValueMessage());
-                    }
+                }
+                else {
+                    result.setNoValueMessage(value.getNoValueMessage());
                 }
             }
         }
@@ -315,19 +309,17 @@ public class DeviceDataHashDefault
     @Override
     protected AspectPropertyValue<String> getValueAsString(String propertyName) {
         AspectPropertyValue<String> result = new AspectPropertyValueDefault<>();
-        synchronized (resultsLock) {
-            ResultsHashSwig results = getSingleResults(propertyName);
-            if (results != null) {
-                Integer index = indexOf(propertyName);
-                try (StringValueSwig value = index == null ?
-                    results.getValueAsString(Swig.asBytes(propertyName)) :
-                    results.getValueAsString(index)) {
-                    if (value.hasValue()) {
-                        result.setValue(value.getValue());
-                    }
-                    else {
-                        result.setNoValueMessage(value.getNoValueMessage());
-                    }
+        ResultsHashSwig results = getSingleResults(propertyName);
+        if (results != null) {
+            Integer index = indexOf(propertyName);
+            try (StringValueSwig value = index == null ?
+                results.getValueAsString(Swig.asBytes(propertyName)) :
+                results.getValueAsString(index)) {
+                if (value.hasValue()) {
+                    result.setValue(value.getValue());
+                }
+                else {
+                    result.setNoValueMessage(value.getNoValueMessage());
                 }
             }
         }
@@ -339,19 +331,17 @@ public class DeviceDataHashDefault
         String propertyName) {
         AspectPropertyValue<JavaScript> result =
             new AspectPropertyValueDefault<>();
-        synchronized (resultsLock) {
-            ResultsHashSwig results = getSingleResults(propertyName);
-            if (results != null) {
-                Integer index = indexOf(propertyName);
-                try (StringValueSwig value = index == null ?
-                    results.getValueAsString(Swig.asBytes(propertyName)) :
-                    results.getValueAsString(index)) {
-                    if (value.hasValue()) {
-                        result.setValue(new JavaScript(value.getValue()));
-                    }
-                    else {
-                        result.setNoValueMessage(value.getNoValueMessage());
-                    }
+        ResultsHashSwig results = getSingleResults(propertyName);
+        if (results != null) {
+            Integer index = indexOf(propertyName);
+            try (StringValueSwig value = index == null ?
+                results.getValueAsString(Swig.asBytes(propertyName)) :
+                results.getValueAsString(index)) {
+                if (value.hasValue()) {
+                    result.setValue(new JavaScript(value.getValue()));
+                }
+                else {
+                    result.setNoValueMessage(value.getNoValueMessage());
                 }
             }
         }
@@ -362,19 +352,17 @@ public class DeviceDataHashDefault
     protected AspectPropertyValue<Integer> getValueAsInteger(
         String propertyName) {
         AspectPropertyValue<Integer> result = new AspectPropertyValueDefault<>();
-        synchronized (resultsLock) {
-            ResultsHashSwig results = getSingleResults(propertyName);
-            if (results != null) {
-                Integer index = indexOf(propertyName);
-                try (IntegerValueSwig value = index == null ?
-                    results.getValueAsInteger(Swig.asBytes(propertyName)) :
-                    results.getValueAsInteger(index)) {
-                    if (value.hasValue()) {
-                        result.setValue(value.getValue());
-                    }
-                    else {
-                        result.setNoValueMessage(value.getNoValueMessage());
-                    }
+        ResultsHashSwig results = getSingleResults(propertyName);
+        if (results != null) {
+            Integer index = indexOf(propertyName);
+            try (IntegerValueSwig value = index == null ?
+                results.getValueAsInteger(Swig.asBytes(propertyName)) :
+                results.getValueAsInteger(index)) {
+                if (value.hasValue()) {
+                    result.setValue(value.getValue());
+                }
+                else {
+                    result.setNoValueMessage(value.getNoValueMessage());
                 }
             }
         }
@@ -384,19 +372,17 @@ public class DeviceDataHashDefault
     @Override
     protected AspectPropertyValue<Boolean> getValueAsBool(String propertyName) {
         AspectPropertyValue<Boolean> result = new AspectPropertyValueDefault<>();
-        synchronized (resultsLock) {
-            ResultsHashSwig results = getSingleResults(propertyName);
-            if (results != null) {
-                Integer index = indexOf(propertyName);
-                try (BoolValueSwig value = index == null ?
-                    results.getValueAsBool(Swig.asBytes(propertyName)) :
-                    results.getValueAsBool(index)) {
-                    if (value.hasValue()) {
-                        result.setValue(value.getValue());
-                    }
-                    else {
-                        result.setNoValueMessage(value.getNoValueMessage());
-                    }
+        ResultsHashSwig results = getSingleResults(propertyName);
+        if (results != null) {
+            Integer index = indexOf(propertyName);
+            try (BoolValueSwig value = index == null ?
+                results.getValueAsBool(Swig.asBytes(propertyName)) :
+                results.getValueAsBool(index)) {
+                if (value.hasValue()) {
+                    result.setValue(value.getValue());
+                }
+                else {
+                    result.setNoValueMessage(value.getNoValueMessage());
                 }
             }
         }
@@ -406,19 +392,17 @@ public class DeviceDataHashDefault
     @Override
     protected AspectPropertyValue<Double> getValueAsDouble(String propertyName) {
         AspectPropertyValue<Double> result = new AspectPropertyValueDefault<>();
-        synchronized (resultsLock) {
-            ResultsHashSwig results = getSingleResults(propertyName);
-            if (results != null) {
-                Integer index = indexOf(propertyName);
-                try (DoubleValueSwig value = index == null ?
-                    results.getValueAsDouble(Swig.asBytes(propertyName)) :
-                    results.getValueAsDouble(index)) {
-                    if (value.hasValue()) {
-                        result.setValue(value.getValue());
-                    }
-                    else {
-                        result.setNoValueMessage(value.getNoValueMessage());
-                    }
+        ResultsHashSwig results = getSingleResults(propertyName);
+        if (results != null) {
+            Integer index = indexOf(propertyName);
+            try (DoubleValueSwig value = index == null ?
+                results.getValueAsDouble(Swig.asBytes(propertyName)) :
+                results.getValueAsDouble(index)) {
+                if (value.hasValue()) {
+                    result.setValue(value.getValue());
+                }
+                else {
+                    result.setNoValueMessage(value.getNoValueMessage());
                 }
             }
         }
@@ -437,33 +421,29 @@ public class DeviceDataHashDefault
         if (result.hasValue() == false) {
             boolean objSet = false;
             Object obj = null;
-            // A match metric describes every component, so reading one can
-            // walk every graph not yet walked, which writes into the results.
-            synchronized (resultsLock) {
-                if (key.equalsIgnoreCase("DeviceId")) {
-                    obj = getDeviceIdInternal();
-                    objSet = true;
-                } else if (key.equalsIgnoreCase("Difference")) {
-                    obj = getDifferenceInternal();
-                    objSet = true;
-                } else if (key.equalsIgnoreCase("UserAgents")) {
-                    obj = getUserAgentsInternal();
-                    objSet = true;
-                } else if (key.equalsIgnoreCase("Drift")) {
-                    obj = getDriftInternal();
-                    objSet = true;
-                } else if (key.equalsIgnoreCase("Iterations")) {
-                    obj = getIterationsInternal();
-                    objSet = true;
-                }
-                else if (key.equalsIgnoreCase("MatchedNodes")) {
-                    obj = getMatchedNodesInternal();
-                    objSet = true;
-                }
-                else if (key.equalsIgnoreCase("Method")){
-                    obj = getMethodInternal();
-                    objSet = true;
-                }
+            if (key.equalsIgnoreCase("DeviceId")) {
+                obj = getDeviceIdInternal();
+                objSet = true;
+            } else if (key.equalsIgnoreCase("Difference")) {
+                obj = getDifferenceInternal();
+                objSet = true;
+            } else if (key.equalsIgnoreCase("UserAgents")) {
+                obj = getUserAgentsInternal();
+                objSet = true;
+            } else if (key.equalsIgnoreCase("Drift")) {
+                obj = getDriftInternal();
+                objSet = true;
+            } else if (key.equalsIgnoreCase("Iterations")) {
+                obj = getIterationsInternal();
+                objSet = true;
+            }
+            else if (key.equalsIgnoreCase("MatchedNodes")) {
+                obj = getMatchedNodesInternal();
+                objSet = true;
+            }
+            else if (key.equalsIgnoreCase("Method")){
+                obj = getMethodInternal();
+                objSet = true;
             }
             if (objSet == true) {
                 try {
@@ -496,17 +476,15 @@ public class DeviceDataHashDefault
 
     @Override
     public void close() {
-        synchronized (resultsLock) {
-            closed = true;
-            for (ResultsHashSwig result : resultsList) {
-                try {
-                    result.close();
-                } catch (Exception e) {
-                    logger.error("Failed to close native results instance. " +
-                        "A DeviceDataHash instance contains native unmanaged " +
-                        "memory which needs to be closed. Failing to close " +
-                        "could lead to memory leaks.", e);
-                }
+        closed = true;
+        for (ResultsHashSwig result : resultsList) {
+            try {
+                result.close();
+            } catch (Exception e) {
+                logger.error("Failed to close native results instance. " +
+                    "A DeviceDataHash instance contains native unmanaged " +
+                    "memory which needs to be closed. Failing to close " +
+                    "could lead to memory leaks.", e);
             }
         }
     }
