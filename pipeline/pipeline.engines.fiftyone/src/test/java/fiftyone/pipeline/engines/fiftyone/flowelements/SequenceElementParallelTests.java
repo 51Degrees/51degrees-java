@@ -24,7 +24,6 @@ package fiftyone.pipeline.engines.fiftyone.flowelements;
 
 import fiftyone.pipeline.core.configuration.ElementOptions;
 import fiftyone.pipeline.core.configuration.PipelineOptions;
-import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
@@ -35,14 +34,13 @@ import org.slf4j.LoggerFactory;
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The Sequence Element adds Evidence, and a Flow Element that runs in a
- * parallel group must not add Evidence (the specification's evidence.md,
- * "Adding Evidence values"), so
- * every public way of making a parallel group refuses it.
+ * A Flow Element in a parallel group must not add Evidence, and that is the
+ * Flow Element's responsibility, so implementations do not check for it. A
+ * parallel group that holds the Sequence Element, which adds Evidence, is
+ * built by every public way of making one, as it always has been.
+ * @see <a href="https://github.com/51Degrees/specifications/blob/d79bbe3b2aef86273570742f6b660f29bfe72816/pipeline-specification/features/thread-safety.md#evidence">Specification</a>
  */
 public class SequenceElementParallelTests {
 
@@ -54,21 +52,21 @@ public class SequenceElementParallelTests {
     }
 
     @Test
-    public void AddFlowElementsParallel_SequenceElement_IsRefused() {
+    public void AddFlowElementsParallel_SequenceElement_IsBuilt()
+        throws Exception {
         FlowElement<?, ?>[] group =
             new FlowElement<?, ?>[] {sequence(), sequence()};
-        PipelineConfigurationException refused = assertThrows(
-            PipelineConfigurationException.class,
-            () -> new PipelineBuilder(loggerFactory)
-                .addFlowElementsParallel(group)
-                .build());
-        assertTrue(refused.getMessage().contains("SequenceElement"),
-            "The message does not name the element: " +
-                refused.getMessage());
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+            .addFlowElementsParallel(group)
+            .setAutoCloseElements(true)
+            .build()) {
+            assertNotNull(pipeline);
+        }
     }
 
     @Test
-    public void BuildFromConfiguration_SequenceElementInSubElements_IsRefused() {
+    public void BuildFromConfiguration_SequenceElementInSubElements_IsBuilt()
+        throws Exception {
         ElementOptions first = new ElementOptions();
         first.builderName = "SequenceElementBuilder";
         ElementOptions second = new ElementOptions();
@@ -77,10 +75,10 @@ public class SequenceElementParallelTests {
         group.subElements = Arrays.asList(first, second);
         PipelineOptions options = new PipelineOptions();
         options.elements.add(group);
-        assertThrows(
-            PipelineConfigurationException.class,
-            () -> new PipelineBuilder(loggerFactory)
-                .buildFromConfiguration(options));
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+            .buildFromConfiguration(options)) {
+            assertNotNull(pipeline);
+        }
     }
 
     @Test
@@ -88,6 +86,7 @@ public class SequenceElementParallelTests {
         throws Exception {
         try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
             .addFlowElement(sequence())
+            .setAutoCloseElements(true)
             .build()) {
             assertNotNull(pipeline);
         }
