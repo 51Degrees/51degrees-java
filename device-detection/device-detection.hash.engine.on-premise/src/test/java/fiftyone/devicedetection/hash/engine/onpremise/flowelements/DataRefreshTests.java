@@ -31,6 +31,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -98,6 +100,45 @@ public class DataRefreshTests extends TestsBase {
                 start.await();
                 for (int i = 0; i < REFRESHES; i++) {
                     engine.refreshData(identifier);
+                }
+                return REFRESHES;
+            }));
+        }
+        start.countDown();
+        for (Future<Integer> refresher : refreshers) {
+            assertEquals(Integer.valueOf(REFRESHES),
+                refresher.get(WAIT_SECONDS, TimeUnit.SECONDS));
+        }
+        assertEquals(expected, isMobile());
+    }
+
+    /**
+     * Several threads refresh the engine at once, half from its data file
+     * and half from the same data held in memory, and every refresh
+     * completes and the engine then gives the values it gave before. The
+     * engine lets only one refresh run at a time, whichever way it comes.
+     */
+    @Test
+    public void Refresh_FromFileAndMemoryOnSeveralThreads_EngineStillWorks()
+        throws Exception {
+        List<Boolean> expected = isMobile();
+        DeviceDetectionHashEngine engine = getWrapper().getEngine();
+        String identifier = engine.getDataFileMetaData().getIdentifier();
+        byte[] data = Files.readAllBytes(Paths.get(
+            engine.getDataFileMetaData().getDataFilePath()));
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<Integer>> refreshers = new ArrayList<>();
+        for (int t = 0; t < THREADS; t++) {
+            boolean fromMemory = t % 2 == 1;
+            refreshers.add(executor.submit(() -> {
+                start.await();
+                for (int i = 0; i < REFRESHES; i++) {
+                    if (fromMemory) {
+                        engine.refreshData(identifier, data);
+                    }
+                    else {
+                        engine.refreshData(identifier);
+                    }
                 }
                 return REFRESHES;
             }));
