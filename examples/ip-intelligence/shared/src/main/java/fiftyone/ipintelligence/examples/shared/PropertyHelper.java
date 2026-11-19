@@ -30,6 +30,7 @@ import fiftyone.pipeline.engines.exceptions.PropertyMissingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -83,14 +84,31 @@ public class PropertyHelper {
                             return String.format(
                                     Locale.ROOT,
                                     "%s (weighting %.2f)",
-                                    inner != null ? inner.toString() : "Unknown",
+                                    toDisplayString(inner),
                                     weighted.getWeighting());
                         }
-                        return item != null ? item.toString() : "Unknown";
+                        return toDisplayString(item);
                     })
                     .collect(Collectors.joining(", "));
         }
-        return value != null ? value.toString() : "Unknown";
+        return toDisplayString(value);
+    }
+
+    /**
+     * Text for a single value. An address is shown in its literal form, for
+     * example "8.8.8.0", because InetAddress.toString() puts the host name
+     * and a slash in front of it.
+     * @param value a single unwrapped value, may be null
+     * @return the text to display
+     */
+    private static String toDisplayString(Object value) {
+        if (value == null) {
+            return "Unknown";
+        }
+        if (value instanceof InetAddress) {
+            return ((InetAddress) value).getHostAddress();
+        }
+        return value.toString();
     }
     /**
      * Build the "no value" output for a property and log the
@@ -169,6 +187,7 @@ public class PropertyHelper {
     /**
      * Helper to get the value of an IP Intelligence InetAddress property.
      * Handles runtime List&lt;IWeightedValue&gt; values due to type erasure.
+     * The address is shown in its literal form, for example "8.8.8.0".
      */
     public static String asIPAddressProperty(AspectPropertyValue<java.net.InetAddress> property) {
         if (property == null || !property.hasValue()) {
