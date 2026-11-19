@@ -28,7 +28,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.PrintStream;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 public class KeyHelper {
@@ -40,17 +39,13 @@ public class KeyHelper {
     public static final String RESOURCE_KEY_VARIABLE = "_51DEGREES_RESOURCE_KEY";
 
     /**
-     * The old name of {@link #RESOURCE_KEY_VARIABLE}, read only when that
-     * one is not set.
+     * The old name of {@link #RESOURCE_KEY_VARIABLE}. It is no longer read.
      * @deprecated use {@link #RESOURCE_KEY_VARIABLE}, and set the variable
      * it names in place of this one.
      */
     @Deprecated
     public static final String RESOURCE_KEY_ENV_VAR = "51DEGREES_RESOURCE_KEY";
 
-    // Set once the use of the deprecated name has been logged.
-    private static final AtomicBoolean OLD_NAME_LOGGED =
-        new AtomicBoolean(false);
     public static final String TEST_RESOURCE_KEY = "TestResourceKey";
     static Logger logger = LoggerFactory.getLogger(KeyHelper.class);
 
@@ -75,8 +70,7 @@ public class KeyHelper {
 
     /**
      * The resource key a cloud example runs with, being the key given as
-     * its argument, or else the key in {@link #RESOURCE_KEY_VARIABLE}, its
-     * deprecated name {@link #RESOURCE_KEY_ENV_VAR}, or
+     * its argument, or else the key in {@link #RESOURCE_KEY_VARIABLE} or
      * {@link #TEST_RESOURCE_KEY}, each read as an environment variable,
      * under its upper case name and as a system property.
      * @param argument the key given on the command line, or null
@@ -87,9 +81,6 @@ public class KeyHelper {
             return argument.trim();
         }
         String value = readKey(RESOURCE_KEY_VARIABLE);
-        if (value == null) {
-            value = oldNameResourceKey(KeyHelper::readKey);
-        }
         if (value == null) {
             value = readKey(TEST_RESOURCE_KEY);
         }
@@ -141,37 +132,11 @@ public class KeyHelper {
         names.addAll(exampleNames);
         for (String name : names) {
             String value = read.apply(name);
-            if (KeyUtils.isInvalidKey(value)
-                && RESOURCE_KEY_VARIABLE.equals(name)) {
-                value = oldNameResourceKey(read);
-            }
             if (KeyUtils.isInvalidKey(value) == false) {
                 return value.trim();
             }
         }
         throw new AssertionError(noResourceKey(names, asksFor, products));
-    }
-
-    /**
-     * The key held under the deprecated {@link #RESOURCE_KEY_ENV_VAR}, or
-     * null when there is none. It is read only when
-     * {@link #RESOURCE_KEY_VARIABLE} holds no key, and its first use is
-     * logged as a warning.
-     */
-    private static String oldNameResourceKey(Function<String, String> read) {
-        String value = read.apply(RESOURCE_KEY_ENV_VAR);
-        if (KeyUtils.isInvalidKey(value)) {
-            return null;
-        }
-        if (OLD_NAME_LOGGED.compareAndSet(false, true)) {
-            logger.warn(
-                "The environment variable " + RESOURCE_KEY_ENV_VAR
-                + " is deprecated and " + RESOURCE_KEY_VARIABLE
-                + " replaces it. Set " + RESOURCE_KEY_VARIABLE
-                + " to the same value, as a later release may no longer "
-                + "read " + RESOURCE_KEY_ENV_VAR + ".");
-        }
-        return value;
     }
 
     static String noResourceKey(List<String> names, String asksFor,
@@ -241,9 +206,8 @@ public class KeyHelper {
     /**
      * Obtain a resource key from the passed argument,
      * from environment variable or from a property. The aligned
-     * {@link #RESOURCE_KEY_VARIABLE} name is checked first, then the
-     * deprecated {@link #RESOURCE_KEY_ENV_VAR}, then the passed variable
-     * name. Store as System Property under the passed variable name.
+     * {@link #RESOURCE_KEY_VARIABLE} name is checked first, then the passed
+     * variable name. Store as System Property under the passed variable name.
      */
     public static String getOrSetResourceKey(String value, String variableName,
                                              String errorMessage,
@@ -251,12 +215,6 @@ public class KeyHelper {
         if (Objects.isNull(value)) {
             // check the aligned name first, then the legacy name
             value = KeyUtils.getNamedKey(RESOURCE_KEY_VARIABLE);
-            if (Objects.isNull(value) || value.isEmpty()) {
-                String oldNameKey = oldNameResourceKey(KeyUtils::getNamedKey);
-                if (Objects.nonNull(oldNameKey)) {
-                    value = oldNameKey;
-                }
-            }
             if (Objects.isNull(value)) {
                 value = KeyUtils.getNamedKey(variableName);
             }

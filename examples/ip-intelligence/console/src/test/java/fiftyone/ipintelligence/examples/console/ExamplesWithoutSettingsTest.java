@@ -63,21 +63,15 @@ public class ExamplesWithoutSettingsTest {
     /**
      * Runs the example's main with the arguments given, none unless a test
      * gives some, and the data file and licence key system properties
-     * removed, and returns what it wrote to standard output. The deprecated
-     * name of the data file variable is read when the current one is not
-     * set, so both are checked and removed.
+     * removed, and returns what it wrote to standard output.
      */
-    @SuppressWarnings("deprecation")
     private static String runWithoutSettings(Main main, String... args)
             throws Exception {
         assumeTrue("Skipping, a data file or licence key is set in the environment",
                 System.getenv(DataFileHelper.IPI_PATH_VARIABLE) == null &&
-                        System.getenv(DataFileHelper.IPI_PATH_ENV_VAR) == null &&
                         System.getenv(LICENSE_KEY) == null &&
                         System.getenv(LICENSE_KEY.toUpperCase()) == null);
         String dataFile = System.clearProperty(DataFileHelper.IPI_PATH_VARIABLE);
-        String oldNameDataFile =
-                System.clearProperty(DataFileHelper.IPI_PATH_ENV_VAR);
         String licenseKey = System.clearProperty(LICENSE_KEY);
         PrintStream out = System.out;
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -88,10 +82,6 @@ public class ExamplesWithoutSettingsTest {
             System.setOut(out);
             if (dataFile != null) {
                 System.setProperty(DataFileHelper.IPI_PATH_VARIABLE, dataFile);
-            }
-            if (oldNameDataFile != null) {
-                System.setProperty(DataFileHelper.IPI_PATH_ENV_VAR,
-                        oldNameDataFile);
             }
             if (licenseKey != null) {
                 System.setProperty(LICENSE_KEY, licenseKey);
