@@ -22,6 +22,7 @@
 
 package fiftyone.devicedetection.examples.console.comparison;
 
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -147,5 +148,13 @@ public interface Detection {
         Properties detect(Detection.Request request) throws Exception;
 
         String getVendorId();
+
+        /**
+         * Writes anything the reader should know about how the solution
+         * ran, after the report. Nothing by default.
+         * @param writer where to write
+         */
+        default void writeNote(PrintWriter writer) {
+        }
     }
 }

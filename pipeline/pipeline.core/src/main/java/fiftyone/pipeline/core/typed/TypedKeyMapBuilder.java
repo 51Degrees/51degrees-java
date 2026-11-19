@@ -27,6 +27,7 @@ import fiftyone.pipeline.core.exceptions.PipelineDataException;
 
 import java.io.Closeable;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -78,14 +79,11 @@ public class TypedKeyMapBuilder {
      * Extends the internal implementation to add thread-safety to the
      * {@link #get(Object)} and {@link #put(String, Object)} methods.
      */
+    /**
+     * Adds with compare and swap, so members of a parallel group add without
+     * a lock, and reads take none. Removal is rare and keeps its lock.
+     */
     private static class TypedKeyMapConcurrent extends TypedKeyMapInternal {
-        @Override
-        public <T> void put(TypedKey<T> typedKey, T value) {
-            synchronized (this) {
-                super.put(typedKey, value);
-            }
-        }
-
         @Override
         public <T> T removeIfExists(TypedKey<T> typedKey) {
             synchronized (this) {
@@ -101,7 +99,47 @@ public class TypedKeyMapBuilder {
     private static class TypedKeyMapInternal implements TypedKeyMap, Map<String, Object>, Closeable {
 
         private static final Entry[] emptyEntryPair = new Entry[]{null, null};
-        private Entry _head = null;
+
+        /**
+         * The newest entry. A new entry is linked to the current head and
+         * swapped in with one compare and swap, retrying if another thread
+         * added first, so readers follow the links with no lock.
+         */
+        private volatile Entry _head = null;
+
+        private static final AtomicReferenceFieldUpdater<TypedKeyMapInternal, Entry>
+            HEAD = AtomicReferenceFieldUpdater.newUpdater(
+                TypedKeyMapInternal.class, Entry.class, "_head");
+
+        /**
+         * Find the entry for a name in the list starting at head.
+         */
+        private static Entry findFrom(Entry head, String typedKeyName) {
+            Entry current = head;
+            while (current != null) {
+                if (current._key.getName().equalsIgnoreCase(typedKeyName)) {
+                    return current;
+                }
+                current = current._next;
+            }
+            return null;
+        }
+
+        @Override
+        public <T> T putIfAbsent(TypedKey<T> typedKey, T value) {
+            while (true) {
+                Entry head = _head;
+                Entry existing = findFrom(head, typedKey.getName());
+                if (existing != null) {
+                    return typedKey.getType().cast(existing._value);
+                }
+                Entry<T> first = new Entry<>(typedKey, value);
+                first._next = head;
+                if (HEAD.compareAndSet(this, head, first)) {
+                    return value;
+                }
+            }
+        }
 
         private Entry[] findWithPrevious(String typedKeyName) {
             Entry current = _head;
@@ -223,10 +261,11 @@ public class TypedKeyMapBuilder {
                 current._value = value;
             } else {
                 // The key does not exist so add it to the head of the linked
-                // list.
-                Entry<T> first = new Entry<>(typedKey, value);
-                first._next = _head;
-                _head = first;
+                // list, or overwrite the value another thread added first.
+                T held = putIfAbsent(typedKey, value);
+                if (held != value) {
+                    put(typedKey, value);
+                }
             }
         }
 
@@ -364,8 +403,8 @@ public class TypedKeyMapBuilder {
 
         private static class Entry<T> {
             final TypedKey<T> _key;
-            T _value;
-            Entry _next = null;
+            volatile T _value;
+            volatile Entry _next = null;
 
             Entry(TypedKey<T> key, T value) {
                 _key = key;

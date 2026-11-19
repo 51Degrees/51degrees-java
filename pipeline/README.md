@@ -113,6 +113,42 @@ This affects `SequenceElementBuilder`, `SetHeadersElementBuilder` and `ShareUsag
 which ship inside `pipeline.engines.fiftyone`. Short names continue to work for every
 builder on the class path.
 
+## Web integration
+
+`pipeline.web` provides `PipelineFilter`, a servlet filter, and
+`pipeline.web.mvc` provides `FiftyOneInterceptor`, a Spring MVC interceptor.
+Each creates one Flow Data for each request, processes it, and closes it when
+the request ends. Application code reads it through `FlowDataProviderCore` or
+`FlowDataProvider`.
+
+### Flow Data and threads
+
+A Flow Data cannot be used by two threads at once. A servlet or a controller
+handles each request on one thread, so reading the Flow Data there is safe. An
+application that hands work from a request to another thread or task reads the
+values that work needs from the Flow Data on the request's thread, into its
+own variables, and passes those values, not the Flow Data. The Flow Data is
+closed when the request ends, so work that outlives the request must not keep
+it either. A Flow Data is not safe to use from several threads at once, and an
+application that shares one across threads is responsible for any locking.
+
+This controller, based on the
+[clientside-element-mvc](pipeline.developer-examples/pipeline.developer-examples.clientside-element-mvc)
+example, hands a value to an executor.
+
+```java
+@RequestMapping(method = RequestMethod.GET)
+public String get(ModelMap model, HttpServletRequest request) {
+    FlowData data = flowDataProvider.getFlowData(request);
+    // Read on the request's thread, into a variable of its own.
+    String starSign = data.get(StarSignData.class).getStarSign();
+    // Hand the value, not the Flow Data, to the other thread.
+    executor.submit(() -> statistics.count(starSign));
+    model.addAttribute("starSign", starSign);
+    return "example";
+}
+```
+
 ## Tests
 
 Most packages contain tests which use junit and mockito. These tests can be run using maven by calling: `mvn test`

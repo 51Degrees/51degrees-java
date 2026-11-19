@@ -46,6 +46,9 @@ public class ExampleController {
 
     @RequestMapping(method = RequestMethod.GET)
     public String get(ModelMap model, HttpServletRequest request) {
+        // A Flow Data cannot be used by two threads at once. Work handed to
+        // another thread or task gets the values it needs, read here on the
+        // request's thread, not the Flow Data.
         FlowData data = flowDataProvider.getFlowData(request);
         GeoData geo = data.get(GeoData.class);
 
