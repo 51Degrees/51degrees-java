@@ -382,10 +382,84 @@ class FlowDataDefault implements FlowData {
 
     @Override
     public Map<String, Object> elementDataAsMap() {
-        // Read only once processing has finished.
-        return finished ?
-            Collections.unmodifiableMap(data.asStringKeyMap()) :
-            data.asStringKeyMap();
+        return new ElementDataMap(data.asStringKeyMap());
+    }
+
+    /**
+     * The Element Data as a map, whose writes fail once processing has
+     * finished, whenever the map was taken. Reads go straight to the
+     * Flow Data's map, which gives copies of its keys, values and entries.
+     */
+    private final class ElementDataMap extends AbstractMap<String, Object> {
+        private final Map<String, Object> live;
+
+        ElementDataMap(Map<String, Object> live) {
+            this.live = live;
+        }
+
+        @Override
+        public int size() {
+            return live.size();
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return live.isEmpty();
+        }
+
+        @Override
+        public boolean containsKey(Object key) {
+            return live.containsKey(key);
+        }
+
+        @Override
+        public boolean containsValue(Object value) {
+            return live.containsValue(value);
+        }
+
+        @Override
+        public Object get(Object key) {
+            return live.get(key);
+        }
+
+        @Override
+        public Set<String> keySet() {
+            return live.keySet();
+        }
+
+        @Override
+        public Collection<Object> values() {
+            return live.values();
+        }
+
+        @Override
+        public Set<Map.Entry<String, Object>> entrySet() {
+            return live.entrySet();
+        }
+
+        @Override
+        public Object put(String key, Object value) {
+            checkNotFinished();
+            return live.put(key, value);
+        }
+
+        @Override
+        public void putAll(Map<? extends String, ?> m) {
+            checkNotFinished();
+            live.putAll(m);
+        }
+
+        @Override
+        public Object remove(Object key) {
+            checkNotFinished();
+            return live.remove(key);
+        }
+
+        @Override
+        public void clear() {
+            checkNotFinished();
+            live.clear();
+        }
     }
 
     @Override
