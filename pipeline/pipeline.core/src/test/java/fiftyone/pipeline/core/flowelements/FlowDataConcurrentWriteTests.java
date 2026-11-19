@@ -46,16 +46,17 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 /**
- * Flow Data of a Pipeline with parallel elements takes writes from several
- * threads safely, and Flow Data of a Pipeline without them does not pay for
- * it. See
- * <a href="https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/advanced-features/parallel-processing.md#L22">parallel-processing.md line 22</a>:
- * "Flow Data MUST be capable of enforcing thread-safe writes to data
- * structures while also maintaining performance when it is not needed."
+ * Flow Data of a Pipeline with parallel elements takes Element Data and
+ * errors from several threads, with no lock to add Element Data and errors
+ * kept whole. See
+ * <a href="https://github.com/51Degrees/specifications/blob/d79bbe3b2aef86273570742f6b660f29bfe72816/pipeline-specification/features/thread-safety.md#L88-L115">thread-safety.md lines 88 to 115</a>:
+ * a Flow Element adds its Element Data with one compare and swap, readers
+ * take no lock, and errors that members add while a group runs are added
+ * under a lock.
  * <p>
  * The first writer is held inside its write until the test lets it go,
- * and the second is checked from its thread's state, so nothing depends
- * on how long anything takes. The deadline only stops a broken run from
+ * and the second is checked from what it has done, so nothing depends on
+ * how long anything takes. The deadline only stops a broken run from
  * hanging.
  */
 public class FlowDataConcurrentWriteTests {
@@ -80,34 +81,25 @@ public class FlowDataConcurrentWriteTests {
         return builder.build();
     }
 
-    private static boolean blockedInFlowData(Thread thread) {
-        if (thread.getState() != Thread.State.BLOCKED) {
-            return false;
-        }
-        StackTraceElement[] stack = thread.getStackTrace();
-        return stack.length > 0 &&
-            stack[0].getClassName().equals(FlowDataDefault.class.getName());
-    }
-
     /**
-     * Two threads that add Element Data under the same key at once create
-     * it once, and both get the same instance. The second waits while the
-     * first creates it.
+     * Two threads that add Element Data under the same key at once do not
+     * wait for each other, and both get the one instance that was kept.
      */
     @Test
-    public void getOrAdd_SameKeyFromTwoThreads_CreatesOnce() throws Exception {
+    public void getOrAdd_SameKeyFromTwoThreads_NeitherWaits()
+        throws Exception {
         try (Pipeline pipeline = pipeline(true);
              FlowData flowData = pipeline.createFlowData()) {
             assertTrue(pipeline.isConcurrent());
             AtomicInteger created = new AtomicInteger();
-            CountDownLatch firstCreating = new CountDownLatch(1);
+            CountDownLatch bothCreating = new CountDownLatch(2);
             CountDownLatch release = new CountDownLatch(1);
             AtomicReference<Throwable> failure = new AtomicReference<>();
             List<ElementData> results = new ArrayList<>();
 
             FlowElement.DataFactory<ElementData> factory = data -> {
                 created.incrementAndGet();
-                firstCreating.countDown();
+                bothCreating.countDown();
                 try {
                     release.await(DEADLINE_MILLIS, TimeUnit.MILLISECONDS);
                 } catch (InterruptedException e) {
@@ -127,25 +119,20 @@ public class FlowDataConcurrentWriteTests {
             };
 
             Thread first = new Thread(add);
-            first.start();
-            assertTrue(firstCreating.await(
-                DEADLINE_MILLIS, TimeUnit.MILLISECONDS));
             Thread second = new Thread(add);
+            first.start();
             second.start();
-            long deadline = System.currentTimeMillis() + DEADLINE_MILLIS;
-            while (created.get() < 2 && second.isAlive() &&
-                blockedInFlowData(second) == false) {
-                assertTrue("The second writer neither waited nor wrote.",
-                    System.currentTimeMillis() < deadline);
-                Thread.sleep(1);
-            }
+            // Both writers reach the factory while neither has finished, so
+            // neither waited for the other.
+            boolean neitherWaited = bothCreating.await(
+                DEADLINE_MILLIS, TimeUnit.MILLISECONDS);
             release.countDown();
             first.join(DEADLINE_MILLIS);
             second.join(DEADLINE_MILLIS);
 
             assertNull("A write failed: " + failure.get(), failure.get());
-            assertEquals("The Element Data was created twice.",
-                1, created.get());
+            assertTrue("One writer waited for the other.", neitherWaited);
+            assertEquals(2, created.get());
             assertEquals(2, results.size());
             assertSame(results.get(0), results.get(1));
         }
