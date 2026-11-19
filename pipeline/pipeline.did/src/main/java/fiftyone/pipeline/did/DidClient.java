@@ -59,9 +59,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Logger;
 
 /**
  * The client for everything a server does with a 51Did against the
@@ -120,8 +118,8 @@ public final class DidClient {
         "_51DEGREES_CLOUD_ENDPOINT";
 
     /**
-     * The old name of the environment variable read for the API base, read
-     * only when {@link #CLOUD_ENDPOINT_VARIABLE} is not set.
+     * The old name of the environment variable read for the API base. It
+     * is no longer read.
      *
      * @deprecated use {@link #CLOUD_ENDPOINT_VARIABLE}, and set the
      *             environment variable it names in place of this one.
@@ -148,13 +146,6 @@ public final class DidClient {
     static final Duration REFETCH_INTERVAL = Duration.ofMinutes(1);
 
     private static final String USER_AGENT = "pipeline.did/" + version();
-
-    /**
-     * Set once the use of {@link #ENDPOINT_VARIABLE} has been logged, so
-     * that a process creating many clients logs it once.
-     */
-    private static final AtomicBoolean OLD_VARIABLE_LOGGED =
-        new AtomicBoolean(false);
 
     /**
      * Longest encoded identifier this client will take from a caller. The
@@ -1173,28 +1164,13 @@ public final class DidClient {
 
     /**
      * The API base to use: the argument, else
-     * {@value #CLOUD_ENDPOINT_VARIABLE}, else the deprecated
-     * {@value #ENDPOINT_VARIABLE}, else {@link #DEFAULT_ENDPOINT}, ending
-     * in exactly one slash so every route can be appended directly. The
-     * first use of the deprecated variable in the process is logged as a
-     * warning.
+     * {@value #CLOUD_ENDPOINT_VARIABLE}, else {@link #DEFAULT_ENDPOINT},
+     * ending in exactly one slash so every route can be appended directly.
      */
     static String resolveEndpoint(String endpoint) {
         String value = blankToNull(endpoint);
         if (value == null) {
             value = blankToNull(System.getenv(CLOUD_ENDPOINT_VARIABLE));
-        }
-        if (value == null) {
-            value = blankToNull(System.getenv(ENDPOINT_VARIABLE));
-            if (value != null
-                && OLD_VARIABLE_LOGGED.compareAndSet(false, true)) {
-                Logger.getLogger(DidClient.class.getName()).warning(
-                    "The environment variable " + ENDPOINT_VARIABLE
-                    + " is deprecated and " + CLOUD_ENDPOINT_VARIABLE
-                    + " replaces it. Set " + CLOUD_ENDPOINT_VARIABLE
-                    + " to the same value, as a later release may no "
-                    + "longer read " + ENDPOINT_VARIABLE + ".");
-            }
         }
         if (value == null) {
             value = DEFAULT_ENDPOINT;

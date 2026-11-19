@@ -49,7 +49,7 @@ public class WebOnPremWithoutSettingsTest {
     private static final int PORT = 8083;
 
     private static final String[] DATA_FILE_NAMES = {
-            "TestDataFile", "_51DEGREES_DD_PATH", "51DEGREES_DD_PATH"};
+            "TestDataFile", "_51DEGREES_DD_PATH"};
 
     @Test
     public void runsWithoutSettings() throws Exception {

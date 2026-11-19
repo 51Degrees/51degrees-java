@@ -57,40 +57,18 @@ public class FileUtilsTest {
      * variable.
      */
     @Test
-    public void oldPathNameIsReadWhenNewIsNotSet() throws IOException {
-        assumePathNamesNotInEnvironment();
+    public void newPathNameIsRead() throws IOException {
+        assumeTrue(System.getenv(NEW_PATH_NAME) == null);
         String savedNew = System.clearProperty(NEW_PATH_NAME);
-        String savedOld = System.clearProperty(OLD_PATH_NAME);
-        File file = File.createTempFile("old-path-name", ".ipi");
-        try {
-            System.setProperty(OLD_PATH_NAME, file.getPath());
-            assertEquals(file, FileUtils.getHashFile());
-        } finally {
-            restore(NEW_PATH_NAME, savedNew);
-            restore(OLD_PATH_NAME, savedOld);
-            file.delete();
-        }
-    }
-
-    @Test
-    public void newPathNameWinsOverOld() throws IOException {
-        assumePathNamesNotInEnvironment();
-        String savedNew = System.clearProperty(NEW_PATH_NAME);
-        String savedOld = System.clearProperty(OLD_PATH_NAME);
         File newFile = File.createTempFile("new-path-name", ".ipi");
-        File oldFile = File.createTempFile("old-path-name", ".ipi");
         try {
             System.setProperty(NEW_PATH_NAME, newFile.getPath());
-            System.setProperty(OLD_PATH_NAME, oldFile.getPath());
             assertEquals(newFile, FileUtils.getHashFile());
         } finally {
             restore(NEW_PATH_NAME, savedNew);
-            restore(OLD_PATH_NAME, savedOld);
             newFile.delete();
-            oldFile.delete();
         }
     }
-
     @Test
     @SuppressWarnings("deprecation")
     public void oldPathConstantKeepsItsValue() throws Exception {
@@ -99,11 +77,6 @@ public class FileUtilsTest {
             .isAnnotationPresent(Deprecated.class));
         assertEquals(NEW_PATH_NAME,
             FileUtils.class.getField("IPI_PATH_VARIABLE").get(null));
-    }
-
-    private static void assumePathNamesNotInEnvironment() {
-        assumeTrue(System.getenv(NEW_PATH_NAME) == null);
-        assumeTrue(System.getenv(OLD_PATH_NAME) == null);
     }
 
     private static void restore(String name, String value) {
