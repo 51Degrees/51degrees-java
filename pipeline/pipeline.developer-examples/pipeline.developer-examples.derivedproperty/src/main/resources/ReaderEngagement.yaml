@@ -1,0 +1,73 @@
+# *********************************************************************
+# This Original Work is copyright of 51 Degrees Mobile Experts Limited.
+# Copyright 2026 51 Degrees Mobile Experts Limited, Davidson House,
+# Forbury Square, Reading, Berkshire, United Kingdom RG1 3EU.
+#
+# This Original Work is licensed under the European Union Public Licence
+# (EUPL) v.1.2 and is subject to its terms as set out below.
+#
+# If a copy of the EUPL was not distributed with this file, You can obtain
+# one at https://opensource.org/licenses/EUPL-1.2.
+#
+# The 'Compatible Licences' set out in the Appendix to the EUPL (as may be
+# amended by the European Commission) shall be deemed incompatible for
+# the purposes of the Work and the provisions of the compatibility
+# clause in Article 5 of the EUPL shall not apply.
+#
+# If using the Work as, or as part of, a network application, by
+# including the attribution notice(s) required under Article 5 of the EUPL
+# in the end user terms of the application under an appropriate heading,
+# such notice(s) shall fulfill the requirements of that article.
+# *********************************************************************
+
+# A derived property script written for this example alone.
+#
+# The scripts 51Degrees ships inside the pipeline.derivedproperty package
+# come from https://github.com/51Degrees/derived-properties and are named
+# by BuiltInScript in code, or by the Scripts build parameter in a
+# configuration file. This file is not one of them, so the example runs the
+# same whatever that repository holds.
+#
+# The reference for everything below is docs/format-1.md in that
+# repository.
+
+Format: 1
+Name: ReaderEngagement
+Version: "1.0.0"
+Output:
+  Name: ReaderEngagement
+  Description: How far the visitor appears to have engaged with the page, judged only from properties another element has already produced. Returns one of High, Medium or Low.
+  ValueType: string
+  DefaultValue: Low
+  IsList: false
+  IsMandatory: true
+  IsObsolete: false
+  Category: Example
+  IsPopular: false
+  ExportValues: true
+  Values:
+    - Name: High
+      Description: Every test went in favour of engagement.
+    - Name: Medium
+      Description: One test went against engagement.
+    - Name: Low
+      Description: More than one test went against engagement.
+
+# A property named here is a property the script needs. Where any one of
+# the three is missing from a request, the script produces no value and
+# says which property was missing and what the element that supplies it
+# said, rather than answering on part of the evidence.
+Checks:
+  SeveralPages: { Property: session.PagesViewed, Ge: 3 }
+  LongEnough:   { Property: session.SecondsSincePageLoad, Ge: 30 }
+  PointerMoved: { Property: session.PointerMoved, Eq: true }
+
+# Rules are read in order and the first one whose When is true wins. The
+# last rule is an Else, which every script ends in, so a script always
+# chooses a value once its source properties have been read.
+Rules:
+  - When: { Failed: Checks, Eq: 0 }
+    Then: High
+  - When: { Failed: Checks, Eq: 1 }
+    Then: Medium
+  - Else: Low
