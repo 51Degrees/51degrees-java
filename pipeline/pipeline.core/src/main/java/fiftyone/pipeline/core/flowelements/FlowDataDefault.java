@@ -71,6 +71,17 @@ class FlowDataDefault implements FlowData {
 
     private final AtomicBoolean processed = new AtomicBoolean(false);
 
+    /**
+     * Set when processing ends, after which the Flow Data is read only. A
+     * write tests it, and nothing waits on it.
+     */
+    private volatile boolean finished = false;
+
+    static final String FINISHED_MESSAGE =
+        "This Flow Data has finished processing, so it is read only. " +
+        "Add Evidence before processing, and Element Data and errors only " +
+        "while a Flow Element processes.";
+
     FlowDataDefault(Logger logger, Pipeline pipeline, Evidence evidence) {
         this.logger = logger;
         this.pipeline = (PipelineInternal) pipeline;
@@ -97,7 +108,26 @@ class FlowDataDefault implements FlowData {
         } else if (pipeline.isClosed()) {
             throw new IllegalStateException("Pipeline has been closed.");
         } else {
-            pipeline.process(this);
+            try {
+                pipeline.process(this);
+            } finally {
+                finished = true;
+                // Evidence made by this package refuses writes from now on
+                // too, including through getEvidence().
+                if (evidence instanceof EvidenceDefault) {
+                    ((EvidenceDefault) evidence).finish();
+                }
+            }
+        }
+    }
+
+    /**
+     * Fail a write once processing has finished.
+     * @throws IllegalStateException if processing has finished
+     */
+    private void checkNotFinished() {
+        if (finished) {
+            throw new IllegalStateException(FINISHED_MESSAGE);
         }
     }
 
@@ -137,6 +167,7 @@ class FlowDataDefault implements FlowData {
 
     @Override
     public void addError(FlowError error) {
+        checkNotFinished();
         if (groupsRunning.get() > 0) {
             synchronized (errors) {
                 errors.add(error);
@@ -194,6 +225,7 @@ class FlowDataDefault implements FlowData {
 
     @Override
     public FlowData addEvidence(String key, Object value) {
+        checkNotFinished();
         evidence.put(key, value);
         if (logger.isDebugEnabled()) {
             logger.debug("FlowData '" + hashCode() + "' set evidence " +
@@ -204,6 +236,7 @@ class FlowDataDefault implements FlowData {
 
     @Override
     public FlowData addEvidence(Map<String, ?> values) {
+        checkNotFinished();
         for (Map.Entry<String, ?> entry : values.entrySet()) {
             addEvidence(entry.getKey(), entry.getValue());
         }
@@ -316,6 +349,7 @@ class FlowDataDefault implements FlowData {
         // Data with one compare and swap, and making an instance never
         // waits for another member.
         if (data.containsKey(elementDataKey) == false) {
+            checkNotFinished();
             data.putIfAbsent(typedKey, dataFactory.create(this));
         }
         return (T) data.get(typedKey);
@@ -332,6 +366,7 @@ class FlowDataDefault implements FlowData {
             Object.class);
         // No lock, as above.
         if (data.containsKey(key) == false) {
+            checkNotFinished();
             data.putIfAbsent(key, dataFactory.create(this));
         }
         try {
@@ -347,7 +382,84 @@ class FlowDataDefault implements FlowData {
 
     @Override
     public Map<String, Object> elementDataAsMap() {
-        return data.asStringKeyMap();
+        return new ElementDataMap(data.asStringKeyMap());
+    }
+
+    /**
+     * The Element Data as a map, whose writes fail once processing has
+     * finished, whenever the map was taken. Reads go straight to the
+     * Flow Data's map, which gives copies of its keys, values and entries.
+     */
+    private final class ElementDataMap extends AbstractMap<String, Object> {
+        private final Map<String, Object> live;
+
+        ElementDataMap(Map<String, Object> live) {
+            this.live = live;
+        }
+
+        @Override
+        public int size() {
+            return live.size();
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return live.isEmpty();
+        }
+
+        @Override
+        public boolean containsKey(Object key) {
+            return live.containsKey(key);
+        }
+
+        @Override
+        public boolean containsValue(Object value) {
+            return live.containsValue(value);
+        }
+
+        @Override
+        public Object get(Object key) {
+            return live.get(key);
+        }
+
+        @Override
+        public Set<String> keySet() {
+            return live.keySet();
+        }
+
+        @Override
+        public Collection<Object> values() {
+            return live.values();
+        }
+
+        @Override
+        public Set<Map.Entry<String, Object>> entrySet() {
+            return live.entrySet();
+        }
+
+        @Override
+        public Object put(String key, Object value) {
+            checkNotFinished();
+            return live.put(key, value);
+        }
+
+        @Override
+        public void putAll(Map<? extends String, ?> m) {
+            checkNotFinished();
+            live.putAll(m);
+        }
+
+        @Override
+        public Object remove(Object key) {
+            checkNotFinished();
+            return live.remove(key);
+        }
+
+        @Override
+        public void clear() {
+            checkNotFinished();
+            live.clear();
+        }
     }
 
     @Override
