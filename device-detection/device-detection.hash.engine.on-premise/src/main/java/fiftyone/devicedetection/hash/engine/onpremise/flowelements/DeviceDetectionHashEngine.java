@@ -63,14 +63,6 @@ public class DeviceDetectionHashEngine
     private final Random rand = new Random();
 
     /**
-     * Held across each refresh of the data, so that refreshes of this engine
-     * run one at a time, whichever thread or service starts them. The native
-     * engine does not guard against two refreshes at once. Processing does
-     * not take it.
-     */
-    private final Object refreshLock = new Object();
-
-    /**
      * Case insensitive map from each property name the engine was built with
      * to its required property index, which is the place of the name in that
      * list, the first where a name is given more than once, as the native
@@ -380,7 +372,10 @@ public class DeviceDetectionHashEngine
 
     @Override
     public void refreshData(String dataFileIdentifier) {
-        synchronized (refreshLock) {
+        // Refreshes of this engine run one at a time, as the native engine
+        // does not guard against two at once. The lock is the engine itself,
+        // which exists however the engine is made. Processing does not take it.
+        synchronized (this) {
             AspectEngineDataFile dataFile = getDataFiles().get(0);
 
             if (Objects.isNull(engine)) {
@@ -415,7 +410,10 @@ public class DeviceDetectionHashEngine
 
     @Override
     public void refreshData(String dataFileIdentifier, byte[] data) {
-        synchronized (refreshLock) {
+        // Refreshes of this engine run one at a time, as the native engine
+        // does not guard against two at once. The lock is the engine itself,
+        // which exists however the engine is made. Processing does not take it.
+        synchronized (this) {
             if (engine == null) {
                 engine = new EngineHashSwig(data, config, propertiesConfigSwig);
             } else {
