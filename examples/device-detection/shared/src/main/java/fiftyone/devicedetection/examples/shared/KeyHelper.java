@@ -49,7 +49,7 @@ public class KeyHelper {
     public static String getNamedKey(String keyName) {
         String key = System.getenv(keyName);
         if (Objects.isNull(key)) {
-            key = System.getenv(keyName.toUpperCase());
+            key = System.getenv(keyName.toUpperCase(Locale.ROOT));
             if (Objects.isNull(key)) {
                 key = System.getProperty(keyName);
             }
@@ -252,7 +252,7 @@ public class KeyHelper {
     private static String readKey(String name) {
         for (String value : new String[]{
             System.getenv(name),
-            System.getenv(name.toUpperCase()),
+            System.getenv(name.toUpperCase(Locale.ROOT)),
             System.getProperty(name)}) {
             if (isInvalidKey(value) == false) {
                 return value;
