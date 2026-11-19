@@ -23,7 +23,6 @@
 package fiftyone.pipeline.core.flowelements;
 
 import fiftyone.pipeline.core.data.*;
-import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
@@ -52,28 +51,8 @@ class ParallelElements
      */
     ParallelElements(Logger logger, List<FlowElement> flowElements) {
         super(logger, null);
-        refuseElementsThatAddEvidence(flowElements);
         threadPool = Executors.newCachedThreadPool();
         this.flowElements = flowElements;
-    }
-
-    /**
-     * Refuses any element marked {@link AddsEvidence}, as an element in a
-     * parallel group must not add Evidence.
-     * @param flowElements the elements of the group
-     * @throws PipelineConfigurationException if any element adds Evidence
-     */
-    private static void refuseElementsThatAddEvidence(
-        List<FlowElement> flowElements) {
-        for (FlowElement element : flowElements) {
-            if (element instanceof AddsEvidence) {
-                throw new PipelineConfigurationException(
-                    "The element '" + element.getClass().getSimpleName() +
-                    "' adds Evidence, so it cannot run in a parallel " +
-                    "group, where the elements run at the same time. Add " +
-                    "it to the Pipeline on its own, before the group.");
-            }
-        }
     }
 
     /**
