@@ -73,7 +73,7 @@ public class MissingPropertyHandlingTests {
 
             engine.cloudRequestEngine = mock(CloudRequestEngine.class);
             engine.aspectProperties = properties;
-            engine.processCloudEngine(flowData, device, nullValueJson);
+            engine.processEngine(flowData, device);
 
             AspectPropertyValue<String> priceBand = device.getPriceBand();
             assertTrue(priceBand != null);
@@ -116,7 +116,7 @@ public class MissingPropertyHandlingTests {
 
             engine.cloudRequestEngine = mock(CloudRequestEngine.class);
             engine.aspectProperties = properties;
-            engine.processCloudEngine(flowData, device, nullValueJson);
+            engine.processEngine(flowData, device);
 
             try {
                 AspectPropertyValue<String> deviceType = device.getDeviceType();

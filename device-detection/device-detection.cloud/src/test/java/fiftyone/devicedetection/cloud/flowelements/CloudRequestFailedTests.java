@@ -29,14 +29,11 @@ import fiftyone.pipeline.core.data.AccessiblePropertyMetaData.ProductMetaData;
 import fiftyone.pipeline.core.data.AccessiblePropertyMetaData.PropertyMetaData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.FlowError;
-import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.Pipeline;
-import fiftyone.pipeline.core.typed.TypedKey;
 import fiftyone.pipeline.engines.exceptions.PropertyMissingException;
 import fiftyone.pipeline.engines.services.MissingPropertyServiceDefault;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentMatchers;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 
@@ -176,13 +173,9 @@ public class CloudRequestFailedTests {
             flowData,
             engine,
             MissingPropertyServiceDefault.getInstance());
-        when(flowData.getOrAdd(
-            ArgumentMatchers.<TypedKey<DeviceDataCloud>>any(),
-            ArgumentMatchers.<FlowElement.DataFactory<DeviceDataCloud>>any()))
-            .thenReturn(device);
         try {
-            engine.process(flowData);
-        } catch (Exception e) {
+            engine.processEngine(flowData, device);
+        } catch (RuntimeException e) {
             // A failed request's response may not be readable. The
             // property is read afterwards either way, as it is through a
             // Pipeline that suppresses process exceptions.
