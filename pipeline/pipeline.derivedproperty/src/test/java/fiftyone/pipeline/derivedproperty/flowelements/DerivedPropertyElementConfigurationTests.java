@@ -48,7 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * each a comma separated string.
  * <p>
  * See the
- * <a href="https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/pipeline-elements/derived-property-element.md#configuration">configuration
+ * <a href="https://github.com/51Degrees/specifications/blob/52e9b047743db365592f9bd1c737fc7ddb6a2de4/pipeline-specification/pipeline-elements/derived-property-element.md#configuration">configuration
  * section</a> of the specification.
  */
 public class DerivedPropertyElementConfigurationTests {
