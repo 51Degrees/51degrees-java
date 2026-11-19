@@ -34,9 +34,8 @@ import java.util.concurrent.*;
  * ParallelElements executes it's child {@link FlowElement} objects in parallel.
  * A {@link Pipeline} lists a parallel group as one of these, so code that
  * needs every Flow Element in use, such as the usage sharing element, reads
- * the group's members with {@link #getFlowElements()}. Only
- * {@link PipelineBuilderBase#addFlowElementsParallel(FlowElement[])} creates
- * one.
+ * the group's members with {@link #getFlowElements()}. The constructor is
+ * package-private, so only the Pipeline builders create one.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/advanced-features/parallel-processing.md">Specification</a>
  */
 @SuppressWarnings("rawtypes")
