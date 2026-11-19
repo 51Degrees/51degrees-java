@@ -25,7 +25,13 @@ package fiftyone.pipeline.engines.fiftyone.flowelements;
 import fiftyone.common.testhelpers.LogbackHelper;
 import fiftyone.common.testhelpers.TestLogger;
 import fiftyone.common.testhelpers.TestLoggerFactory;
+import fiftyone.pipeline.core.data.ElementData;
+import fiftyone.pipeline.core.data.ElementPropertyMetaData;
+import fiftyone.pipeline.core.data.EvidenceKeyFilter;
+import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import fiftyone.pipeline.core.data.FlowData;
+import fiftyone.pipeline.core.flowelements.FlowElement;
+import fiftyone.pipeline.core.flowelements.FlowElementBase;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
 import fiftyone.pipeline.engines.services.DataUploader;
@@ -370,6 +376,99 @@ public class ShareUsageElementTests {
         assertEquals(1, asked.size(), "The packages are found once");
         assertTrue(asked.get(0).contains(ShareUsageElement.class),
             "This element's own package is among those in use");
+    }
+
+    /**
+     * A Flow Element of the test's own, which processes nothing. Each
+     * subclass is a class of its own, so the classes the packages are asked
+     * for show which elements were found.
+     */
+    private static class GroupMember
+        extends FlowElementBase<ElementData, ElementPropertyMetaData> {
+        private final String key;
+
+        GroupMember(String key) {
+            super(LoggerFactory.getLogger(GroupMember.class), null);
+            this.key = key;
+        }
+
+        @Override
+        protected void processInternal(FlowData data) {
+        }
+
+        @Override
+        public String getElementDataKey() {
+            return key;
+        }
+
+        @Override
+        public EvidenceKeyFilter getEvidenceKeyFilter() {
+            return new EvidenceKeyFilterWhitelist(new ArrayList<String>());
+        }
+
+        @Override
+        public List<ElementPropertyMetaData> getProperties() {
+            return Collections.emptyList();
+        }
+
+        @Override
+        protected void managedResourcesCleanup() {
+        }
+
+        @Override
+        protected void unmanagedResourcesCleanup() {
+        }
+    }
+
+    private static class FirstGroupMember extends GroupMember {
+        FirstGroupMember() {
+            super("first");
+        }
+    }
+
+    private static class SecondGroupMember extends GroupMember {
+        SecondGroupMember() {
+            super("second");
+        }
+    }
+
+    /**
+     * A Flow Element in a parallel group is in use as much as one the
+     * Pipeline lists itself, so the packages are asked for with its class
+     * too. The specification's Package element is written "for every
+     * 51Degrees package in use, being the package that holds the Pipeline,
+     * the package that holds each FlowElement in the Pipeline, and every
+     * 51Degrees package those depend on".
+     */
+    @Test
+    @SuppressWarnings("rawtypes")
+    public void ShareUsageElement_Packages_IncludeParallelGroupMembers() throws Exception {
+        pipeline.close();
+        pipeline = new PipelineBuilder()
+            .addFlowElementsParallel(new FlowElement[] {
+                new FirstGroupMember(),
+                new SecondGroupMember() })
+            .build();
+        createShareUsage(
+                1,
+                1,
+                1,
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>());
+        List<Collection<Class<?>>> asked = new ArrayList<>();
+        shareUsageElement.packageFinder = classes -> {
+            asked.add(new ArrayList<>(classes));
+            return new TreeMap<>();
+        };
+
+        shareUsageElement.getPackages();
+
+        assertEquals(1, asked.size(), "The packages are found once");
+        assertTrue(asked.get(0).contains(FirstGroupMember.class),
+            "The first member of the group is among the classes in use");
+        assertTrue(asked.get(0).contains(SecondGroupMember.class),
+            "The second member of the group is among the classes in use");
     }
 
     private static Node previousElement(Node node) {
