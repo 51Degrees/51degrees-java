@@ -26,6 +26,7 @@ import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetecti
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngineBuilder;
 import fiftyone.pipeline.annotations.DefaultValue;
 import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
+import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.Constants;
 import fiftyone.pipeline.engines.data.AspectData;
@@ -456,22 +457,33 @@ public class DeviceDetectionOnPremisePipelineBuilder
                 new DeviceDetectionHashEngineBuilder(loggerFactory, dataUpdateService);
         deviceDetectionEngine = configureAndBuild(hashBuilder);
 
+        List<FlowElement<?, ?>> made = new ArrayList<>();
         if (deviceDetectionEngine != null) {
-            // Add the share usage element to the list if enabled
-            if (shareUsageEnabled) {
-                getFlowElements().add(
-                    new ShareUsageBuilder(loggerFactory).build());
-            }
             // Add the device detection engine to the list
+            made.add(deviceDetectionEngine);
             getFlowElements().add(deviceDetectionEngine);
+            // Usage sharing goes last, so that it shares what every other
+            // Flow Element has added to the Evidence.
+            if (shareUsageEnabled) {
+                FlowElement<?, ?> shareUsage =
+                    new ShareUsageBuilder(loggerFactory).build();
+                made.add(shareUsage);
+                getFlowElements().add(shareUsage);
+            }
         } else {
             throw new RuntimeException("Unexpected error creating device detection engine.");
         }
 
         setAutoCloseElements(true);
 
-        // Create and return the pipeline
-        return super.build();
+        // Create and return the pipeline, closing what this builder made if
+        // the Pipeline is refused.
+        try {
+            return super.build();
+        } catch (Exception e) {
+            closeMadeElements(made, e);
+            throw e;
+        }
     }
 
     /**
