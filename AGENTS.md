@@ -156,9 +156,9 @@ The IP Intelligence example looks up `116.154.188.222`, `45.236.48.61` and an
 IPv6 address. For each it prints `Input values:` with `query.client-ip`, then
 `Results:` with a line for each property, from `RegisteredName` to
 `TimeZoneOffset`. Each value is followed by its weighting, as in
-`Japan (weighting 1.00)`. The Lite file has RegisteredName, RegisteredOwner
-and RegisteredCountry, so every other line reads `needs the Enterprise data
-file`.
+`RegisteredCountry: CN (weighting 1.00)`. The Lite file has RegisteredName,
+RegisteredOwner and RegisteredCountry, so every other line reads `needs the
+Enterprise data file`.
 
 Both then end the same way, where `<tier>` is `Lite` for Device Detection and
 `IPIV4Lite` for IP Intelligence.

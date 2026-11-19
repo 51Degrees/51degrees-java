@@ -59,10 +59,8 @@ public class PropertyHelper {
      * Unwrap a value that may be a List of IWeightedValue at runtime
      * (due to Java generics type erasure, the on-premise engine may return
      * List&lt;IWeightedValue&lt;T&gt;&gt; even when the declared type is T).
-     * For single-element lists, returns just the value.
-     * For multi-element lists, returns values joined with ", ".
-     * A weighted value is followed by its weighting, as in
-     * "Japan (weighting 1.00)".
+     * A list's values are joined with ", ", and a weighted value is
+     * followed by its weighting, as in "Japan (weighting 1.00)".
      * @param value the raw value from AspectPropertyValue.getValue()
      * @return the unwrapped string representation
      */
