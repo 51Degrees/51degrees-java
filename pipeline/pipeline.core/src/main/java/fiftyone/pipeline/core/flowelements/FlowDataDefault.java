@@ -384,8 +384,8 @@ class FlowDataDefault implements FlowData {
                 ElementPropertyMetaData property =
                     (ElementPropertyMetaData)propertyObject;
                 if (property.isAvailable() && matcher.isMatch(property)) {
-                    Object value =
-                        elementData.get(property.getName().toLowerCase());
+                    Object value = elementData.get(
+                        property.getName().toLowerCase(Locale.ROOT));
                     if (value != null) {
                         map.put(
                             element.getElementDataKey() + "." +

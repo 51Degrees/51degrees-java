@@ -315,7 +315,7 @@ public class DeviceDetectionCloudEngine
     private AspectPropertyValue<Integer> getIntegerAspectPropertyValue(
         JSONObject deviceObj,
         AspectPropertyMetaData property) {
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<Integer> intValue = new AspectPropertyValueDefault<>();
         if(deviceObj.isNull(key)){
             intValue.setNoValueMessage(getNoValueReason(deviceObj, key));
@@ -327,7 +327,7 @@ public class DeviceDetectionCloudEngine
     }
 
     private AspectPropertyValue<Double> getDoubleAspectPropertyValue(JSONObject deviceObj, AspectPropertyMetaData property) {
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<Double> doubleValue = new AspectPropertyValueDefault<>();
         if(deviceObj.isNull(key)){
             doubleValue.setNoValueMessage(getNoValueReason(deviceObj, key));
@@ -349,7 +349,7 @@ public class DeviceDetectionCloudEngine
     private AspectPropertyValue<Boolean> getBooleanAspectPropertyValue(
         JSONObject deviceObj,
         AspectPropertyMetaData property) {
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<Boolean> booleanValue = new AspectPropertyValueDefault<>();
         if(deviceObj.isNull(key)){
             booleanValue.setNoValueMessage(getNoValueReason(deviceObj, key));
@@ -371,7 +371,7 @@ public class DeviceDetectionCloudEngine
     private AspectPropertyValue<List<String>> getListAspectPropertyValue(
         JSONObject deviceObj,
         AspectPropertyMetaData property){
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<List<String>> listValue = new AspectPropertyValueDefault<>();
         if(deviceObj.isNull(key))
         {
@@ -400,7 +400,7 @@ public class DeviceDetectionCloudEngine
     private AspectPropertyValue<JavaScript> getJavaScriptAspectPropertyValue(
         JSONObject deviceObj,
         AspectPropertyMetaData property){
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<JavaScript> jsValue = new AspectPropertyValueDefault<>();
         if(deviceObj.isNull(key)){
             jsValue.setNoValueMessage(getNoValueReason(deviceObj, key));
@@ -421,7 +421,7 @@ public class DeviceDetectionCloudEngine
     private AspectPropertyValue<String> getStringAspectPropertyValue(
         JSONObject deviceObj,
         AspectPropertyMetaData property){
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<String> stringValue = new AspectPropertyValueDefault<>();
         if(deviceObj.isNull(key)){
             stringValue.setNoValueMessage(getNoValueReason(deviceObj, key));
