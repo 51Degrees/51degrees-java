@@ -143,7 +143,7 @@ public abstract class ShareUsageBase
     /**
      * Which of the values found are shared, leaving out the session cookie.
      */
-    private final EvidenceKeyFilter evidenceKeyFilterExclSession;
+    private final EvidenceKeyFilterShareUsage evidenceKeyFilterExclSession;
 
     /**
      * The filter used to determine if an item of evidence should be ignored or
@@ -1012,6 +1012,18 @@ public abstract class ShareUsageBase
     }
 
     /**
+     * The Evidence key filter of the Pipeline processing the Flow Data,
+     * which decides which query string and form parameters it uses.
+     * @param data the Flow Data being processed
+     * @return the filter, or null if the Flow Data has no Pipeline
+     */
+    private static EvidenceKeyFilter pipelineUses(FlowData data) {
+        return data.getPipeline() == null ?
+            null :
+            data.getPipeline().getEvidenceKeyFilter();
+    }
+
+    /**
      * Process the supplied request data
      * @param data the {@link FlowData} instance that provides the evidence
      * @param found the values {@link ShareUsageEvidence#find} found for it,
@@ -1028,7 +1040,9 @@ public abstract class ShareUsageBase
                 // it to the collection.
                 try {
                     if (evidenceCollection.offer(
-                            getDataFromEvidence(shared),
+                            getDataFromEvidence(
+                                shared,
+                                pipelineUses(data)),
                             addTimeout,
                             TimeUnit.MILLISECONDS)) {
                         queueFullReported = false;
@@ -1067,15 +1081,23 @@ public abstract class ShareUsageBase
      * reference to the existing evidence instance.
      *
      * @param found the values {@link ShareUsageEvidence#find} found
+     * @param pipelineUses the Evidence key filter of the Pipeline, which
+     *                     decides which parameters it uses
      * @return a {@link ShareUsageData} instance populated with the values
      * the sharing rules allow
      */
-    private ShareUsageData getDataFromEvidence(Map<String, Object> found) {
+    private ShareUsageData getDataFromEvidence(
+        Map<String, Object> found,
+        EvidenceKeyFilter pipelineUses) {
         ShareUsageData shareUsageData = new ShareUsageData();
 
         for (Map.Entry<String, Object> entry : found.entrySet()) {
-            // Check if we can send this piece of evidence
-            if (evidenceKeyFilterExclSession.include(entry.getKey()) == false) {
+            // Check if we can send this piece of evidence. A query string or
+            // form parameter is sent only if it starts with 51D_ or the
+            // Pipeline uses it.
+            if (evidenceKeyFilterExclSession.include(
+                    entry.getKey(),
+                    pipelineUses) == false) {
                 continue;
             }
 

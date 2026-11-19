@@ -111,9 +111,10 @@ class PipelineDefault implements PipelineInternal {
      * A filter that will only include the evidence keys that can be used by at
      * least one {@link FlowElement} within this pipeline.
      * (Will only be populated after the {@link #getEvidenceKeyFilter()} method
-     * is called.)
+     * is called.) Volatile because requests read it with no lock, and it is
+     * filled after it is created.
      */
-    private EvidenceKeyFilter evidenceKeyFilter = null;
+    private volatile EvidenceKeyFilter evidenceKeyFilter = null;
 
     /**
      * The pipeline maintains a map of the elements it contains indexed by type.
