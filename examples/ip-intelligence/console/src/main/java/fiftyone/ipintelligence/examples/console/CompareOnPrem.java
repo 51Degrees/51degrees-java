@@ -97,6 +97,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -286,7 +287,9 @@ public class CompareOnPrem {
                 // for more detail on this and other configuration options.
                 // https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-compareonprem.java&utm_term=automatic-datafile-updates
                 .setPerformanceProfile(profile)
-                // inhibit sharing usage for this example
+                // Usage sharing is off because this example's evidence is already
+                // known to 51Degrees. In production, leave usage sharing on, which adds
+                // a Usage Sharing Element to the Pipeline and helps improve the service.
                 .setShareUsage(false)
                 // inhibit auto-update of the data file for this example
                 .setAutoUpdate(false)
@@ -434,11 +437,20 @@ public class CompareOnPrem {
                     latitude + "," +
                     longitude + "," +
                     (confidence != null ? confidence : "") + "," +
-                    String.format("%.3f", distanceKms) + "," +
+                    kilometres(distanceKms) + "," +
                     area.getSquareKms() + "," +
                     area.getGeometries() + "," +
                     area.getContains();
         }
+    }
+
+    /**
+     * A distance to three decimal places with a full stop as the separator
+     * whatever the default locale, as a decimal comma would split the CSV
+     * column in two.
+     */
+    static String kilometres(double distanceKms) {
+        return String.format(Locale.ROOT, "%.3f", distanceKms);
     }
 
     /**

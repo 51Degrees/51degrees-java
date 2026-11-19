@@ -25,6 +25,7 @@ package fiftyone.pipeline.core.data;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.Assert.*;
@@ -41,6 +42,27 @@ public class EvidenceKeyFilterWhitelistTests {
         assertTrue(filter.include("key1"));
         assertTrue(filter.include("key2"));
         assertFalse(filter.include("key3"));
+    }
+
+    /**
+     * Evidence keys ignore case, so a whitelist made without a comparator
+     * ignores case too, whether it is made from a list or from a map.
+     */
+    @Test
+    public void EvidenceKeyFilterWhitelist_Default_IgnoresCase() {
+        filter = new EvidenceKeyFilterWhitelist(
+            Arrays.asList("header.user-agent"));
+
+        assertTrue(filter.include("Header.User-Agent"));
+        assertTrue(filter.include("HEADER.USER-AGENT"));
+        assertFalse(filter.include("header.user-agent2"));
+
+        Map<String, Integer> keys = new HashMap<>();
+        keys.put("query.Session-Id", 2);
+        filter = new EvidenceKeyFilterWhitelist(keys);
+
+        assertTrue(filter.include("query.session-id"));
+        assertEquals(Integer.valueOf(2), filter.order("QUERY.SESSION-ID"));
     }
 
     @Test

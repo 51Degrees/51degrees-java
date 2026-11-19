@@ -63,7 +63,6 @@ import org.slf4j.LoggerFactory;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
@@ -105,8 +104,14 @@ public class GettingStartedCloud {
 
         // Use the resource key from the command line, environment variable or
         // system property.
-        String resourceKey = args.length > 0 ? args[0] :
-                KeyHelper.getOrSetTestResourceKey();
+        String resourceKey = KeyHelper.findResourceKey(
+                args.length > 0 ? args[0] : null);
+        if (resourceKey == null) {
+            KeyHelper.writeNoResourceKey(System.out, EXAMPLE_TAG);
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES);
+            return;
+        }
         // An optional custom endpoint for a self-hosted Cloud service.
         String endPoint = args.length > 1 ? args[1] :
                 KeyUtils.getNamedKey(CLOUD_END_POINT_NAME);
@@ -240,8 +245,8 @@ public class GettingStartedCloud {
             if (line.length() > 0) {
                 line.append(", ");
             }
-            line.append(weighted.getValue())
-                .append(String.format(Locale.ROOT, " (weighting %.2f)",
+            line.append(asWeightedString(
+                    weighted.getValue(),
                     weighted.getWeighting()));
         }
         writer.println("\t" + property + ": " + line);

@@ -43,8 +43,10 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigInteger;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -59,6 +61,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -80,6 +83,8 @@ public class DataUpdateServiceLoggingTests {
         FULL_KEY + "&Download=True&Type=HashV41";
     private static final String MASKED_URL = UPDATE_URL + "?LicenseKeys=" +
         MASKED_KEY + "&Download=True&Type=HashV41";
+    // The body of a download the tests apply.
+    private static final byte[] DOWNLOAD = {1, 2, 3};
 
     private ch.qos.logback.classic.Logger logger;
     private ListAppender<ILoggingEvent> appender;
@@ -417,82 +422,101 @@ public class DataUpdateServiceLoggingTests {
         assertTrue(logged(Level.WARN).isEmpty());
     }
 
-    /**
-     * "These messages MUST also be consistent across languages to make life
-     * easier for 51Degrees support." (data-updates.md line 481) The
-     * integrity check row is at Error, with the table's message and
-     * AUTO_UPDATE_ERR_MD5_VALIDATION_FAILED.
-     */
     @Test
     public void Md5DoesNotMatch_LogsTheTableRow() throws Exception {
-        byte[] body = new byte[]{1, 2, 3};
         when(connection.getResponseCode())
             .thenReturn(HttpURLConnection.HTTP_OK);
         when(connection.getInputStream())
-            .thenReturn(new ByteArrayInputStream(body));
+            .thenReturn(new ByteArrayInputStream(DOWNLOAD));
         when(connection.getHeaderField("Content-MD5")).thenReturn("0");
         AspectEngineDataFileDefault file = newDataFile(true, false, false);
         file.getConfiguration().setVerifyMd5(true);
-        String computed = jakarta.xml.bind.DatatypeConverter.printHexBinary(
-            java.security.MessageDigest.getInstance("MD5").digest(body));
+
+        DataUpdateService.AutoUpdateStatus status =
+            dataUpdate.checkForUpdate(engine);
 
         assertEquals(
             DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_ERR_MD5_VALIDATION_FAILED,
-            dataUpdate.checkForUpdate(engine));
-
+            status);
         assertCheckFailed("Integrity check failed. MD5 hash in HTTP " +
             "response '0' for '" + engineType + "'data update does not " +
-            "match calculated hash for the downloaded file '" + computed +
-            "'.", null);
+            "match calculated hash for the downloaded file '" +
+            md5Hex(DOWNLOAD) + "'.", null);
+        verify(engine, never()).refreshData(anyString(), any(byte[].class));
     }
 
     /**
-     * "These messages MUST also be consistent across languages to make life
-     * easier for 51Degrees support." (data-updates.md line 481) A response
-     * with no Content-MD5 header is a Warning, and the check goes on.
+     * A response with no Content-MD5 header is warned about, and the check
+     * goes on to apply the download.
      */
     @Test
-    public void NoMd5Header_WarnsAndGoesOn() throws Exception {
+    public void Md5Missing_WarnsAndAppliesTheUpdate() throws Exception {
         when(connection.getResponseCode())
             .thenReturn(HttpURLConnection.HTTP_OK);
         when(connection.getInputStream())
-            .thenReturn(new ByteArrayInputStream(new byte[]{1, 2, 3}));
-        when(connection.getHeaderField("Content-MD5")).thenReturn(null);
+            .thenReturn(new ByteArrayInputStream(DOWNLOAD));
         AspectEngineDataFileDefault file = newDataFile(true, false, false);
         file.getConfiguration().setVerifyMd5(true);
 
-        assertEquals(DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_SUCCESS,
-            dataUpdate.checkForUpdate(engine));
+        DataUpdateService.AutoUpdateStatus status =
+            dataUpdate.checkForUpdate(engine);
 
         assertLogged(Level.WARN, "No MD5 hash included in data update " +
             "response for '" + UPDATE_URL + "'. Unable to verify data " +
             "integrity");
+        assertEquals(
+            DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_SUCCESS,
+            status);
         verify(engine).refreshData(anyString(), any(byte[].class));
     }
 
-    /**
-     * "These messages MUST also be consistent across languages to make life
-     * easier for 51Degrees support." (data-updates.md line 481) No temporary
-     * path gives AUTO_UPDATE_TEMP_PATH_NOT_SET.
-     */
     @Test
-    public void NoTemporaryFilePath_LogsError() {
+    public void NoTemporaryFilePath_LogsTheTableRow() {
         AspectEngineDataFileDefault file = newDataFile(false, false, false);
         file.setTempDataDirPath(null);
         when(engine.getTempDataDirPath()).thenReturn(null);
 
-        assertEquals("AUTO_UPDATE_TEMP_PATH_NOT_SET",
-            dataUpdate.checkForUpdate(engine).name());
+        DataUpdateService.AutoUpdateStatus status =
+            dataUpdate.checkForUpdate(engine);
 
-        assertLogged(Level.ERROR, "The data file 'default' is checking for " +
-            "updates but does not have a temporary file path configured.");
+        assertEquals("AUTO_UPDATE_TEMP_PATH_NOT_SET", status.name());
+        assertCheckFailed("The data file 'default' is checking for " +
+            "updates but does not have a temporary file path configured.",
+            null);
     }
 
     /**
-     * "These messages MUST also be consistent across languages to make life
-     * easier for 51Degrees support." (data-updates.md line 481) An error of
-     * any other kind is logged at Error with the last row's message and the
-     * error attached, and gives AUTO_UPDATE_UNKNOWN_ERROR.
+     * Data passed in from memory that cannot be written to the data file is
+     * warned about, and the engine is still refreshed with it.
+     */
+    @Test
+    public void UpdateFromMemory_FileCannotBeWritten_WarnsAndRefreshes()
+        throws Exception {
+        AspectEngineDataFileDefault file = newDataFile(false, false, false);
+        String unwritable = new File(new File(
+            System.getProperty("java.io.tmpdir"),
+            "no-such-directory-" + System.nanoTime()), "data.hash")
+            .getAbsolutePath();
+        file.getConfiguration().setDataFilePath(unwritable);
+
+        DataUpdateService.AutoUpdateStatus status =
+            dataUpdate.updateFromMemory(file, DOWNLOAD);
+
+        assertLogged(Level.WARN, "An error occurred when writing to '" +
+            unwritable + "'. The engine will be updated to use the new data " +
+            "but the file on disk will still contain old data.");
+        assertTrue("An error was logged: " + logged(Level.ERROR),
+            logged(Level.ERROR).isEmpty());
+        assertEquals(
+            DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_SUCCESS,
+            status);
+        verify(engine).refreshData(anyString(), any(byte[].class));
+    }
+
+    /**
+     * An error of any other kind is logged at Error with the Errors table's
+     * last message and the error attached, and gives
+     * AUTO_UPDATE_UNKNOWN_ERROR.
      */
     @Test
     public void UnexpectedError_LogsTheLastRow() {
@@ -524,27 +548,11 @@ public class DataUpdateServiceLoggingTests {
     }
 
     /**
-     * "These messages MUST also be consistent across languages to make life
-     * easier for 51Degrees support." (data-updates.md line 481) A failed
-     * write of data passed in from memory is a Warning, and the Engine is
-     * still refreshed.
+     * The MD5 hash of the bytes as lower case hexadecimal.
      */
-    @Test
-    public void UpdateFromMemory_WriteFails_WarnsAndRefreshes() {
-        AspectEngineDataFileDefault file = newDataFile(false, false, false);
-        // A folder cannot be written as a file.
-        String path = System.getProperty("java.io.tmpdir");
-        file.getConfiguration().setDataFilePath(path);
-
-        assertEquals(DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_SUCCESS,
-            dataUpdate.updateFromMemory(file, new byte[]{1, 2, 3}));
-
-        assertLogged(Level.WARN, "An error occurred when writing to '" +
-            path + "'. The engine will be updated to use the new data but " +
-            "the file on disk will still contain old data.");
-        assertTrue("Logged at Error: " + logged(Level.ERROR),
-            logged(Level.ERROR).isEmpty());
-        verify(engine).refreshData(anyString(), any(byte[].class));
+    private static String md5Hex(byte[] bytes) throws Exception {
+        byte[] digest = MessageDigest.getInstance("MD5").digest(bytes);
+        return String.format("%032x", new BigInteger(1, digest));
     }
 
     /**

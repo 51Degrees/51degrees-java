@@ -762,8 +762,8 @@ public class DataUpdateServiceTests {
             }
         });
 
-        // The invalid MD5 is logged at Error, as the specification's Errors
-        // table gives, so we want to ignore this
+        // The invalid MD5 is the Errors table integrity row, logged once
+        // at Error, so it is ignored in cleanup.
         ignoreErrors = 1;
 
         OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);

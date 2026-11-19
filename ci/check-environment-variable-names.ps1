@@ -114,6 +114,8 @@ $script:DeprecatedFallbacks = @{
         @($oldDdPath)
     "$onPrem/test/java/$onPremPackage/OnPremDataFileOptionTest.java" =
         @($oldDdPath)
+    "$onPrem/test/java/$onPremPackage/WebOnPremWithoutSettingsTest.java" =
+        @($oldDdPath)
 }
 
 # Whether the text matched in the file at this path, relative to the root

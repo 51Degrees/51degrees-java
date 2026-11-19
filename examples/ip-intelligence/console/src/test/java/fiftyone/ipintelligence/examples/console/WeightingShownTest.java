@@ -37,7 +37,7 @@ import static org.junit.Assert.assertTrue;
  * weighting" (ip-intelligence-specification/required-examples.md line 107).
  * The getting started examples are where a developer first reads how to get
  * a result, so their own code reads each value with its weighting, rather
- * than leaving it to a helper the developer does not see.
+ * than leaving it to code in another file the developer does not see.
  */
 public class WeightingShownTest {
 

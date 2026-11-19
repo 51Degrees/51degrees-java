@@ -61,8 +61,8 @@ public class PropertyHelper {
      * Unwrap a value that may be a List of IWeightedValue at runtime
      * (due to Java generics type erasure, the on-premise engine may return
      * List&lt;IWeightedValue&lt;T&gt;&gt; even when the declared type is T).
-     * For single-element lists, returns just the value.
-     * For multi-element lists, returns values joined with ", ".
+     * A list's values are joined with ", ", and a weighted value is
+     * followed by its weighting, as in "Japan (weighting 1.00)".
      * @param value the raw value from AspectPropertyValue.getValue()
      * @return the unwrapped string representation
      */
@@ -76,8 +76,13 @@ public class PropertyHelper {
             return list.stream()
                     .map(item -> {
                         if (item instanceof IWeightedValue) {
-                            Object inner = ((IWeightedValue<?>) item).getValue();
-                            return inner != null ? inner.toString() : "Unknown";
+                            // An IP Intelligence value comes with the
+                            // weighting the data gives it, which is 1 for
+                            // a property with one answer.
+                            IWeightedValue<?> weighted = (IWeightedValue<?>) item;
+                            return asWeightedString(
+                                    weighted.getValue(),
+                                    weighted.getWeighting());
                         }
                         return item != null ? item.toString() : "Unknown";
                     })
@@ -197,6 +202,12 @@ public class PropertyHelper {
     }
 
     /**
+     * The raw weighting of a value that is the only answer, which is a
+     * weighting of 1.
+     */
+    private static final int FULL_WEIGHTING = 65535;
+
+    /**
      * Get each value of an IP Intelligence property with its weighting. IP
      * Intelligence properties return weighted values, and a property with a
      * single answer returns it with a weighting of 1. Due to Java generics
@@ -228,10 +239,19 @@ public class PropertyHelper {
     }
 
     /**
-     * The raw weighting of a value that is the only answer, which is a
-     * weighting of 1.
+     * Write a value with its weighting, for example "gb (weighting 1.00)".
+     * Every weighting the examples print is written this way.
+     * @param value the value, may be null
+     * @param weighting the weighting, between 0 and 1
+     * @return the value followed by its weighting
      */
-    private static final int FULL_WEIGHTING = 65535;
+    public static String asWeightedString(Object value, float weighting) {
+        return String.format(
+                Locale.ROOT,
+                "%s (weighting %.2f)",
+                value != null ? value.toString() : "Unknown",
+                weighting);
+    }
 
     /**
      * Write each value of an IP Intelligence property with its weighting,
@@ -244,8 +264,9 @@ public class PropertyHelper {
             return reportNoValue(property);
         }
         return weightedValues(property).stream()
-                .map(weighted -> String.format(Locale.ROOT, "%s (weighting %.2f)",
-                        weighted.getValue(), weighted.getWeighting()))
+                .map(weighted -> asWeightedString(
+                        weighted.getValue(),
+                        weighted.getWeighting()))
                 .collect(Collectors.joining(", "));
     }
 

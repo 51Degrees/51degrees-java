@@ -33,6 +33,7 @@ import java.util.Locale;
 import java.util.Set;
 
 import static fiftyone.pipeline.core.Constants.*;
+import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_DEFAULT_SHARE_ALL_QUERY_STRING_PARAMETERS;
 
 /**
  * This filter is used by the {@link ShareUsageElement} to decide which of the
@@ -44,14 +45,13 @@ import static fiftyone.pipeline.core.Constants.*;
  * 2) A cookie that starts with {@link Constants#FIFTYONE_COOKIE_PREFIX} or is
  *     the session cookie (if configured in the constructor).
  * 3) A session value that starts with {@link Constants#FIFTYONE_COOKIE_PREFIX}.
- * 4) A query string parameter that starts with
+ * 4) A query string parameter, when all query string parameters are shared,
+ *     which is the default. Otherwise one that starts with
  *     {@link Constants#FIFTYONE_COOKIE_PREFIX} or has been configured to be
  *     shared using the constructor parameter.
  * 5) Not a header, cookie, session value or query string parameter.
- * When all Evidence is shared, everything is included apart from cookies that
- * do not start with {@link Constants#FIFTYONE_COOKIE_PREFIX}, which are never
- * shared. When all query string parameters are shared, every query string
- * parameter is included.
+ * When all Evidence is shared, everything is included but cookies, which
+ * follow rule 2 whatever the configuration.
  * The prefix of a key is everything before its first '.', and the field
  * everything after it. An email address, the salt for hashed email
  * identifiers, the query string, the path and the Cookie header are never
@@ -114,12 +114,14 @@ public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
     };
 
     /**
-     * Constructor.
+     * Constructor. All Evidence is not shared, and all query string
+     * parameters are, as are the defaults.
      * @param blockedHttpHeaders a list of the names of the HTTP headers that
      *                           share usage should not send to 51Degrees
      * @param includedQueryStringParams a list of the names of query string
      *                                  parameters that share usage should send
-     *                                  to 51Degrees
+     *                                  to 51Degrees when not all of them are
+     *                                  shared
      * @param includeSession if true then the session cookie will be included in
      *                       the filter
      * @param sessionCookieName the name of the cookie that contains the session
@@ -136,7 +138,7 @@ public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
             includeSession,
             sessionCookieName,
             false,
-            false);
+            SHARE_USAGE_DEFAULT_SHARE_ALL_QUERY_STRING_PARAMETERS);
     }
 
     /**
@@ -145,13 +147,15 @@ public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
      *                           share usage should not send to 51Degrees
      * @param includedQueryStringParams a list of the names of query string
      *                                  parameters that share usage should send
-     *                                  to 51Degrees
+     *                                  to 51Degrees when not all of them are
+     *                                  shared
      * @param includeSession if true then the session cookie will be included in
      *                       the filter
      * @param sessionCookieName the name of the cookie that contains the session
      *                          id
      * @param shareAllEvidence if true then all Evidence is included, apart from
-     *                         the keys that are never shared
+     *                         the keys that are never shared and the cookies
+     *                         other than the 51Degrees ones
      * @param shareAllQueryStringParameters if true then all query string
      *                                      parameters are included
      */
@@ -201,10 +205,8 @@ public class EvidenceKeyFilterShareUsage implements EvidenceKeyFilter {
 
         int separator = lowerKey.indexOf(EVIDENCE_SEPERATOR);
 
-        // Only cookies that start with the 51Degrees cookie prefix are
-        // shared, whatever the configuration and even when all Evidence is
-        // shared. The session cookie is included only for the tracker, which
-        // compares it and never sends it.
+        // Only the 51Degrees cookies are shared, even when all Evidence is.
+        // The session cookie is included only for the tracker to compare.
         if (separator > 0 &&
             EVIDENCE_COOKIE_PREFIX.equals(lowerKey.substring(0, separator))) {
             String field = lowerKey.substring(separator + 1);

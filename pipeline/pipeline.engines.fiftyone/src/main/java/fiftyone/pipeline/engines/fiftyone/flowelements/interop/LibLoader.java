@@ -28,6 +28,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -44,7 +45,7 @@ public class LibLoader {
      * @throws UnsupportedOperationException if the OS is not supported
      */
     private static OS getOs() throws UnsupportedOperationException {
-        String os = System.getProperty("os.name").toLowerCase();
+        String os = System.getProperty("os.name").toLowerCase(Locale.ROOT);
 
         // Check for Windows
         if (os.contains("win")) {
@@ -76,7 +77,7 @@ public class LibLoader {
      *                                       supported
      */
     private static String getArch() throws UnsupportedOperationException {
-        String arch = System.getProperty("os.arch").toLowerCase();
+        String arch = System.getProperty("os.arch").toLowerCase(Locale.ROOT);
 
         // Check aarch64/arm64 BEFORE generic arm (arm64 contains "arm")
         if (arch.contains("aarch64") || arch.contains("arm64")) {

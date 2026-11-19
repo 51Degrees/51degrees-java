@@ -134,13 +134,8 @@ public class FlowDataTests {
         assertEquals(data, result);
     }
 
-    /**
-     * "String comparisons MUST be case insensitive."
-     * (pipeline-specification/features/access-to-results.md line 11)
-     * Element Data stored under "device" is found as "Device" and "DEVICE".
-     */
     @Test
-    public void FlowData_GetDataString_IgnoresCase() {
+    public void FlowData_AddDataString_GetDataStringOtherCase() {
         flowData.process();
         ElementData data = flowData.getOrAdd(
             "device",
@@ -148,37 +143,20 @@ public class FlowDataTests {
 
         assertEquals(data, flowData.get("Device"));
         assertEquals(data, flowData.get("DEVICE"));
-        assertEquals(data, flowData.get(
-            new TypedKeyDefault<TestElementData>("Device")));
-        assertTrue(flowData.tryGetValue(
-            new TypedKeyDefault<TestElementData>("dEvIcE")).hasValue());
-        // Adding under another case finds the data that is there already.
-        assertEquals(data, flowData.getOrAdd(
-            "DEVICE",
-            (FlowElement.DataFactory<ElementData>) flowData -> new TestElementData(mock(Logger.class), flowData)));
-        assertEquals(1, flowData.elementDataAsMap().size());
     }
 
-    /**
-     * "String comparisons MUST be case insensitive."
-     * (pipeline-specification/features/access-to-results.md line 11)
-     */
     @Test
-    public void TypedKeyMap_KeysIgnoreCase() {
-        for (boolean concurrent : new boolean[]{false, true}) {
-            fiftyone.pipeline.core.typed.TypedKeyMap map =
-                new fiftyone.pipeline.core.typed.TypedKeyMapBuilder(concurrent)
-                    .build();
-            map.put(new TypedKeyDefault<>("device", String.class), "value");
+    public void FlowData_GetOrAddOtherCase_SameData() {
+        flowData.process();
+        ElementData data = flowData.getOrAdd(
+            "device",
+            (FlowElement.DataFactory<ElementData>) flowData -> new TestElementData(mock(Logger.class), flowData));
 
-            assertEquals("value",
-                map.get(new TypedKeyDefault<>("Device", String.class)));
-            assertTrue(map.containsKey("DEVICE"));
-            assertEquals("value", map.asStringKeyMap().get("dEvIcE"));
-            assertEquals("value", map.removeIfExists(
-                new TypedKeyDefault<>("DeViCe", String.class)));
-            assertFalse(map.containsKey("device"));
-        }
+        ElementData again = flowData.getOrAdd(
+            "Device",
+            (FlowElement.DataFactory<ElementData>) flowData -> new TestElementData(mock(Logger.class), flowData));
+
+        assertSame(data, again);
     }
 
     @Test

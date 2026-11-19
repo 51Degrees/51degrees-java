@@ -115,7 +115,7 @@ public class JavaScriptObjectNameTests {
     @Test
     public void ObjectName_FromBuilder_UsedThroughout() {
         JavaScriptBuilderElement element =
-            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false)
+            new JavaScriptBuilderElementBuilder(loggerFactory)
                 .setObjectName("myFod")
                 .build();
 
@@ -128,7 +128,7 @@ public class JavaScriptObjectNameTests {
     @Test
     public void ObjectName_FromEvidence_UsedThroughout() {
         JavaScriptBuilderElement element =
-            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false).build();
+            new JavaScriptBuilderElementBuilder(loggerFactory).build();
         evidence.put(EVIDENCE_OBJECT_NAME, "myFod");
 
         String script = render(element);
@@ -160,7 +160,7 @@ public class JavaScriptObjectNameTests {
         String name,
         String[] absent) {
         JavaScriptBuilderElement element =
-            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false).build();
+            new JavaScriptBuilderElementBuilder(loggerFactory).build();
         evidence.put(EVIDENCE_OBJECT_NAME, name);
 
         String script = render(element);
@@ -181,7 +181,7 @@ public class JavaScriptObjectNameTests {
     @Test
     public void ObjectName_InvalidFromEvidence_ConfiguredNameUsed() {
         JavaScriptBuilderElement element =
-            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false)
+            new JavaScriptBuilderElementBuilder(loggerFactory)
                 .setObjectName("myFod")
                 .build();
         evidence.put(EVIDENCE_OBJECT_NAME, "9bad");
@@ -198,7 +198,7 @@ public class JavaScriptObjectNameTests {
     public void ObjectName_InvalidFromBuilder_Refused(String name) {
         assertThrows(
             PipelineConfigurationException.class,
-            () -> new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false)
+            () -> new JavaScriptBuilderElementBuilder(loggerFactory)
                 .setObjectName(name)
                 .build());
     }
@@ -259,7 +259,7 @@ public class JavaScriptObjectNameTests {
     @MethodSource("refusedNames")
     public void ObjectName_RefusedNameFromEvidence_DefaultUsed(String name) {
         JavaScriptBuilderElement element =
-            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false).build();
+            new JavaScriptBuilderElementBuilder(loggerFactory).build();
         evidence.put(EVIDENCE_OBJECT_NAME, name);
 
         String script = render(element);
@@ -279,7 +279,7 @@ public class JavaScriptObjectNameTests {
     public void ObjectName_RefusedNameFromBuilder_Refused(String name) {
         assertThrows(
             PipelineConfigurationException.class,
-            () -> new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false)
+            () -> new JavaScriptBuilderElementBuilder(loggerFactory)
                 .setObjectName(name)
                 .build());
     }
@@ -310,13 +310,15 @@ public class JavaScriptObjectNameTests {
     public void ObjectName_WindowPropertyVarCanReplace_Allowed(String name) {
         assertTrue(JavaScriptBuilderElement.isValidObjectName(name));
         JavaScriptBuilderElement element =
-            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false)
+            new JavaScriptBuilderElementBuilder(loggerFactory)
                 .setObjectName(name)
                 .build();
 
         String script = render(element);
 
-        assertTrue(script.contains("var " + name + " = new"),
+        assertTrue(Pattern.compile(
+                "var " + Pattern.quote(name) + "\\s*=\\s*new")
+                .matcher(script).find(),
             "the script should declare '" + name + "'");
         assertEquals(0, warnings().size());
     }
@@ -334,11 +336,11 @@ public class JavaScriptObjectNameTests {
     @Test
     public void ObjectName_NotConfigured_DefaultUsed() {
         String fromBuilder = render(
-            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false).build());
+            new JavaScriptBuilderElementBuilder(loggerFactory).build());
         assertWorkingObject(fromBuilder, Constants.DEFAULT_OBJECT_NAME);
 
         String fromNull = render(
-            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false)
+            new JavaScriptBuilderElementBuilder(loggerFactory)
                 .setObjectName(null)
                 .build());
         assertWorkingObject(fromNull, Constants.DEFAULT_OBJECT_NAME);
@@ -356,16 +358,20 @@ public class JavaScriptObjectNameTests {
     }
 
     private void assertWorkingObject(String script, String name) {
+        // The script is minified by default, so the patterns allow for the
+        // white space around '=' being taken out.
         assertTrue(Pattern.compile(
                 "var " + Pattern.quote(name) +
-                " = new fiftyoneDegreesManager\\(\\);")
+                "\\s*=\\s*new fiftyoneDegreesManager\\(\\);")
                 .matcher(script).find(),
             "the script should declare var " + name);
         if (name.equals("fod") == false) {
             assertFalse(Pattern.compile("var fod\\b").matcher(script).find(),
                 "the script should not declare var fod");
         }
-        assertTrue(script.contains("var sessionKey = \"" + name + "\";"),
+        assertTrue(Pattern.compile(
+                "var sessionKey\\s*=\\s*\"" + Pattern.quote(name) + "\";")
+                .matcher(script).find(),
             "the storage key should be " + name);
         assertTrue(script.contains("window[\"" + name + "Evidence\"]"),
             "the evidence lookup should use " + name);
@@ -406,25 +412,27 @@ public class JavaScriptObjectNameTests {
     }
 
     /**
-     * The script with the line that assigns its request parameters taken
-     * out. The script sends the page's query evidence, the requested object
-     * name included, back with its own request. The builder url encodes
-     * each value and the line holds them as JSON strings, so the requested
-     * name there is data and not code, and it is left out of the checks
-     * that the name was not written into the code. The line is found as the
-     * existing tests find it, by the word and a brace, because the template
-     * has named the declaration differently over time.
+     * The script with the object holding its request parameters taken out.
+     * The script sends the page's query evidence, the requested object name
+     * included, back with its own request. The builder url encodes each
+     * value, so no value holds a brace, and the object holds them as JSON
+     * strings, so the requested name there is data and not code, and it is
+     * left out of the checks that the name was not written into the code.
+     * The object is found by the word parameters and a brace, because the
+     * template has named the declaration differently over time, and not by
+     * line, because the script is minified by default.
      */
+    private static final Pattern PARAMETERS = Pattern.compile(
+        "(?i)\\w*parameters\\s*=\\s*" +
+        "(?:function\\s*\\(\\)\\s*\\{\\s*return\\s*)?\\{[^}]*\\}");
+
     private static String withoutParameters(String script) {
-        StringBuilder rest = new StringBuilder();
-        for (String line : script.split("\\r?\\n")) {
-            if (line.toLowerCase().contains("parameters =") &&
-                line.contains("{")) {
-                continue;
-            }
-            rest.append(line).append('\n');
-        }
-        return rest.toString();
+        Matcher matcher = PARAMETERS.matcher(script);
+        assertTrue(matcher.find(), "the script should assign its parameters");
+        String rest = matcher.replaceFirst("");
+        assertFalse(PARAMETERS.matcher(rest).find(),
+            "the script should assign its parameters once");
+        return rest;
     }
 
     private static int count(String text, String find) {

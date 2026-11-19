@@ -65,8 +65,8 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     protected double maxRecoveryDelaySeconds = Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT;
     protected double recoveryMultiplier = Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT;
     protected boolean shareAllEvidence;
-    // On by default, as the specification's configuration options give it.
-    protected boolean shareAllQueryStringParameters = true;
+    protected boolean shareAllQueryStringParameters =
+        Constants.SHARE_USAGE_DEFAULT_SHARE_ALL_QUERY_STRING_PARAMETERS;
 
     /**
      * Constructor
@@ -91,9 +91,8 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     }
 
     /**
-     * By default every query string parameter is shared. When share all
-     * query string parameters is turned off, only those that start with 51D_
-     * and those named here are shared.
+     * By default, only query string parameters that start with 51D_ are
+     * shared.
      * <p>
      * This setter replaces the current list, if any
      * <p>
@@ -105,7 +104,7 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      * @return this builder
      */
 
-    @DefaultValue("Every parameter is shared, unless share all query string parameters is off")
+    @DefaultValue("No sharing unless the parameter starts with 51D_")
     public ShareUsageBuilderBase<T> setIncludedQueryStringParameters(
         List<String> queryStringParameterNames) {
         includedQueryStringParameters.clear();
@@ -114,9 +113,8 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     }
 
     /**
-     * By default every query string parameter is shared. When share all
-     * query string parameters is turned off, only those that start with 51D_
-     * and those named here are shared.
+     * By default, only query string parameters that start with 51D_ are
+     * shared.
      * <p>
      * This setter replaces the current list, if any
      * <p>
@@ -127,7 +125,7 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      *                                  query string parameters to include
      * @return this builder
      */
-    @DefaultValue("Every parameter is shared, unless share all query string parameters is off")
+    @DefaultValue("No sharing unless the parameter starts with 51D_")
     public ShareUsageBuilderBase<T> setIncludedQueryStringParameters(
             String queryStringParameterNames) {
         includedQueryStringParameters.clear();
@@ -137,9 +135,8 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     }
 
     /**
-     * By default every query string parameter is shared. When share all
-     * query string parameters is turned off, only those that start with 51D_
-     * and those named here are shared.
+     * By default, only query string parameters that start with 51D_ are
+     * shared.
      * <p>
      * This setting adds the name of a parameter to share with 51Degrees
      * if needed.
@@ -147,7 +144,7 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      *                                 query string parameter to include
      * @return this builder
      */
-    @DefaultValue("Every parameter is shared, unless share all query string parameters is off")
+    @DefaultValue("No sharing unless the parameter starts with 51D_")
     public ShareUsageBuilderBase<T> setIncludedQueryStringParameter(
         String queryStringParameterName) {
         includedQueryStringParameters.add(queryStringParameterName.trim());
@@ -158,10 +155,10 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      * If set to true, every query string and HTTP form parameter is shared,
      * rather than only those that start with 51D_ or are named in the
      * included parameters. The whole query string and the parameters that are
-     * never shared are still not shared.
+     * never shared are still not shared. Set it to false to share only the
+     * 51D_ parameters and those named.
      * <p>
-     * Default value is true. Set it to false to share only the parameters
-     * that start with 51D_ or are named in the included parameters.
+     * Default value is true
      * @param shareAll true to share all query string parameters
      * @return this builder
      */
@@ -186,7 +183,7 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      * parameters. The keys that are never shared (an email address, the salt
      * for hashed email identifiers, the whole query string, the path and the
      * Cookie header) are still not shared, and nor is any cookie whose name
-     * does not start with 51D_, the session cookie among them.
+     * does not start with 51D_.
      * <p>
      * Default value is false
      * @param shareAll true to share all Evidence
@@ -453,7 +450,8 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      * If exactly the same evidence values are seen multiple times within this
      * time limit then they will only be shared once.
      * <p>
-     * The default value for this is 0 - meaning always share.
+     * The default is 20 minutes. An interval of 0, or a negative one,
+     * shares every repeat.
      * @param interval the interval in minutes
      * @return this builder
      */

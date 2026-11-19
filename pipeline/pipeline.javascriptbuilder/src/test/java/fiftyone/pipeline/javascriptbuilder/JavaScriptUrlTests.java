@@ -55,7 +55,9 @@ import static org.mockito.Mockito.when;
 
 /**
  * Checks the callback URL the rendered script is given. These tests render
- * the script only and need no browser.
+ * the script only and need no browser. The script is not minified, so it is
+ * read as the template writes it. {@link JavaScriptMinifyTests} checks that
+ * the minified script carries the same values.
  */
 public class JavaScriptUrlTests {
     private final TestLoggerFactory loggerFactory;
@@ -69,10 +71,11 @@ public class JavaScriptUrlTests {
 
     private String render(String contextRoot) throws Exception {
         JavaScriptBuilderElementBuilder builder =
-            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false)
+            new JavaScriptBuilderElementBuilder(loggerFactory)
                 .setEndpoint("/json")
                 .setHost("example.com")
-                .setProtocol("https");
+                .setProtocol("https")
+                .setMinify(false);
         if (contextRoot != null) {
             builder.setContextRoot(contextRoot);
         }
@@ -140,19 +143,18 @@ public class JavaScriptUrlTests {
     }
 
     /**
-     * "Keys MUST be case-insensitive and will usually be split into
-     * &lt;prefix&gt;.&lt;field&gt;." (pipeline-specification/features/evidence.md
-     * line 10) Query evidence whose prefix is not in lower case still
-     * reaches the parameters object, and the session id and sequence are
-     * still left out whatever their case.
+     * Evidence keys ignore case, so query Evidence whose prefix is not in
+     * lower case reaches the parameters object, and the session id and
+     * sequence stay out of it whatever their case.
      */
     @Test
-    public void Parameters_QueryPrefixIsCaseInsensitive() throws Exception {
+    public void Parameters_QueryPrefixInAnyCase() throws Exception {
         JavaScriptBuilderElement jsElement =
-            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false)
+            new JavaScriptBuilderElementBuilder(loggerFactory)
                 .setEndpoint("/json")
                 .setHost("example.com")
                 .setProtocol("https")
+                .setMinify(false)
                 .build();
         String javaScript;
         try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
@@ -161,8 +163,9 @@ public class JavaScriptUrlTests {
             .addFlowElement(jsElement)
             .build();
              FlowData flowData = pipeline.createFlowData()) {
-            flowData.addEvidence("Query.Upper", "kept");
-            flowData.addEvidence("QUERY.SESSION-ID", "left-out");
+            flowData.addEvidence("Query.Extra", "one");
+            flowData.addEvidence("QUERY.Other", "two");
+            flowData.addEvidence("Query.Session-Id", "a-session");
             flowData.process();
             javaScript = flowData.getFromElement(jsElement).getJavaScript();
         }
@@ -175,10 +178,53 @@ public class JavaScriptUrlTests {
             }
         }
         assertNotNull(parameters, "No parameters object in the script.");
-        assertTrue(parameters.contains("\"Upper\":\"kept\""),
-            "Query evidence with prefix 'Query.' was dropped: " + parameters);
-        assertFalse(parameters.contains("left-out"),
-            "The session id was sent as a parameter: " + parameters);
+        assertTrue(parameters.contains("\"Extra\":\"one\""),
+            "Query.Extra is not in the parameters: " + parameters);
+        assertTrue(parameters.contains("\"Other\":\"two\""),
+            "QUERY.Other is not in the parameters: " + parameters);
+        assertFalse(parameters.toLowerCase().contains("session-id"),
+            "The session id is in the parameters: " + parameters);
+    }
+
+    /**
+     * Only a key whose prefix is "query" followed by the separator is a
+     * query parameter, so a key such as "queryx.field" is left out.
+     */
+    @Test
+    public void Parameters_PrefixWithoutSeparator_IsLeftOut()
+        throws Exception {
+        JavaScriptBuilderElement jsElement =
+            new JavaScriptBuilderElementBuilder(loggerFactory)
+                .setEndpoint("/json")
+                .setHost("example.com")
+                .setProtocol("https")
+                .setMinify(false)
+                .build();
+        String javaScript;
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+            .addFlowElement(new SequenceElementBuilder(loggerFactory).build())
+            .addFlowElement(new JsonBuilderElementBuilder(loggerFactory).build())
+            .addFlowElement(jsElement)
+            .build();
+             FlowData flowData = pipeline.createFlowData()) {
+            flowData.addEvidence("query.kept", "yes");
+            flowData.addEvidence("queryx.field", "not-a-query");
+            flowData.process();
+            javaScript = flowData.getFromElement(jsElement).getJavaScript();
+        }
+        String parameters = null;
+        for (String line : javaScript.split("\\r?\\n")) {
+            if (line.toLowerCase().contains("parameters =")
+                    && line.contains("{")) {
+                parameters = line;
+                break;
+            }
+        }
+        assertNotNull(parameters, "No parameters object in the script.");
+        assertTrue(parameters.contains("\"kept\":\"yes\""),
+            "query.kept is not in the parameters: " + parameters);
+        assertFalse(parameters.contains("not-a-query"),
+            "queryx.field is in the parameters: " + parameters);
     }
 
     /**
@@ -208,8 +254,9 @@ public class JavaScriptUrlTests {
     private List<String> renderWithHosts(String... hosts) throws Exception {
         TestLoggerFactory factory = hostLoggerFactory;
         JavaScriptBuilderElement jsElement =
-            new JavaScriptBuilderElementBuilder(factory).setMinify(false)
+            new JavaScriptBuilderElementBuilder(factory)
                 .setEndpoint("/json")
+                .setMinify(false)
                 .build();
         List<String> scripts = new ArrayList<>();
         try (Pipeline pipeline = new PipelineBuilder(factory)
@@ -310,8 +357,9 @@ public class JavaScriptUrlTests {
     public void Url_RefusedProtocol_NoCallbackAndLoggedOnce() throws Exception {
         TestLoggerFactory factory = hostLoggerFactory;
         JavaScriptBuilderElement jsElement =
-            new JavaScriptBuilderElementBuilder(factory).setMinify(false)
+            new JavaScriptBuilderElementBuilder(factory)
                 .setEndpoint("/json")
+                .setMinify(false)
                 .build();
         try (Pipeline pipeline = new PipelineBuilder(factory)
             .addFlowElement(new SequenceElementBuilder(factory).build())
@@ -349,7 +397,7 @@ public class JavaScriptUrlTests {
     public void Protocol_ConfiguredOtherThanHttpOrHttps_IsRefused(
         String protocol) {
         JavaScriptBuilderElementBuilder builder =
-            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false);
+            new JavaScriptBuilderElementBuilder(loggerFactory);
         assertThrows(PipelineConfigurationException.class,
             () -> builder.setProtocol(protocol));
     }
@@ -357,7 +405,7 @@ public class JavaScriptUrlTests {
     @ParameterizedTest
     @ValueSource(strings = {"http", "https", "HTTPS"})
     public void Protocol_ConfiguredHttpOrHttps_IsAccepted(String protocol) {
-        assertNotNull(new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false)
+        assertNotNull(new JavaScriptBuilderElementBuilder(loggerFactory)
             .setProtocol(protocol));
     }
 

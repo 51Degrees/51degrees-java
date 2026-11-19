@@ -40,6 +40,9 @@ import org.slf4j.Logger;
 @ElementBuilder
 public class JavaScriptBuilderElementBuilder {
     public static final boolean ENABLE_COOKIES = true;
+    /**
+     * Whether the script is minified when nothing else is configured.
+     */
     public static final boolean MINIFY = true;
     private final ILoggerFactory loggerFactory;
     private final Logger logger;
@@ -174,9 +177,10 @@ public class JavaScriptBuilderElementBuilder {
     }
 
     /**
-     * Set whether the JavaScript that is produced is minified. Minification
-     * removes comments, indentation and empty lines, and keeps line breaks
-     * between statements.
+     * Set whether the JavaScript that is produced is minified. Minifying
+     * takes out the template's comments and white space, so the script is
+     * smaller to send. The values the script carries, such as the JSON, are
+     * not changed.
      * <p>
      * Default is true
      * @param minify true to minify the JavaScript

@@ -76,11 +76,14 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class SessionIdAndSequenceTests {
 
+    // The script is minified by default, so the patterns allow for the
+    // white space around '=' being taken out and for the rest of the
+    // script following on the same line.
     private static final Pattern SESSION_ID_LINE =
-        Pattern.compile("var sessionId = \"(.*)\";");
+        Pattern.compile("var sessionId\\s*=\\s*\"([^\"]*)\";");
 
     private static final Pattern SEQUENCE_LINE =
-        Pattern.compile("var sequence = (.*);");
+        Pattern.compile("var sequence\\s*=\\s*([^;]*);");
 
     private final TestLoggerFactory loggerFactory =
         new TestLoggerFactory(null);
@@ -333,7 +336,7 @@ public class SessionIdAndSequenceTests {
     private String renderWithSequenceData(Object sessionId, Object sequence)
         throws Exception {
         JavaScriptBuilderElement jsElement =
-            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false).build();
+            new JavaScriptBuilderElementBuilder(loggerFactory).build();
         PipelineBuilder builder = new PipelineBuilder(loggerFactory);
         builder.addFlowElement(new SequenceStandIn(
             loggerFactory.getLogger("sequence"), sessionId, sequence));
@@ -361,7 +364,7 @@ public class SessionIdAndSequenceTests {
         String sessionId,
         Object sequence) throws Exception {
         JavaScriptBuilderElement jsElement =
-            new JavaScriptBuilderElementBuilder(loggerFactory).setMinify(false).build();
+            new JavaScriptBuilderElementBuilder(loggerFactory).build();
         PipelineBuilder builder = new PipelineBuilder(loggerFactory);
         if (sequenceElement) {
             builder.addFlowElement(

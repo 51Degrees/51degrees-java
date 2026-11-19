@@ -137,9 +137,8 @@ public abstract class AspectEngineBuilderBase<
      * <p>
      * By default, all properties will be populated.
      * @param properties The properties that we want the engine to populate,
-     *                   as a comma-separated list. White space around each
-     *                   name is ignored, so "IsMobile,BrowserName" and
-     *                   "IsMobile, BrowserName" are the same list
+     *                   separated by commas as a configuration file gives a
+     *                   list, with any spaces round each name ignored
      * @return this builder
      */
     @DefaultValue("All properties")

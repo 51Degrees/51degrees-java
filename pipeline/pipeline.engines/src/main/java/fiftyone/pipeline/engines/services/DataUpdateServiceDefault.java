@@ -266,8 +266,9 @@ public class DataUpdateServiceDefault implements DataUpdateService {
      * Handle an error that ended a check started by update polling or by the
      * file watcher. The error is logged rather than left in the task's
      * future, where nothing reads it. An error in the check itself is then
-     * reported to the callbacks as {@link AutoUpdateStatus#AUTO_UPDATE_UNKNOWN_ERROR}.
-     * An error raised by a callback has been reported already.
+     * reported to the callbacks as
+     * {@link AutoUpdateStatus#AUTO_UPDATE_UNKNOWN_ERROR}. An error raised by
+     * a callback has been reported already.
      */
     private void handleAutomaticFailure(
             AspectEngineDataFile dataFile,
@@ -367,11 +368,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             if (newDataAvailable == false &&
                     dataFile.getConfiguration().getDataUpdateUrl() != null &&
                     dataFile.getConfiguration().getDataUpdateUrl().isEmpty() == false) {
-                // A failed update is tried again only when the timer is on.
-                result = checkForUpdateFromUrl(
-                        dataFile,
-                        manualUpdate == false &&
-                                dataFile.getAutomaticUpdatesEnabled());
+                result = checkForUpdateFromUrl(dataFile);
                 newDataAvailable =
                         result == AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS ||
                                 result == AutoUpdateStatus.AUTO_UPDATE_SUCCESS;
@@ -573,11 +570,10 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 fileWrapperFactory.build(dataFile.getDataFilePath()).getWriter()
                         .writeBytes(data);
             } catch (Exception ex) {
-                // The engine is still refreshed from the data in memory.
                 logger.warn("An error occurred when writing to '" +
-                                dataFile.getDataFilePath() + "'. The engine " +
-                                "will be updated to use the new data but the " +
-                                "file on disk will still contain old data.", ex);
+                        dataFile.getDataFilePath() + "'. The engine will be " +
+                        "updated to use the new data but the file on disk " +
+                        "will still contain old data.", ex);
             }
         }
 
@@ -739,7 +735,8 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                                             // changes are still applied.
                                             handleAutomaticFailure(aspectDataFile, e);
                                         } finally {
-                                            // make sure to reset the watch key or we are not called again
+                                            // Reset the watch key, or this task
+                                            // is not called again.
                                             watchKey.reset();
                                         }
                                     }
@@ -923,13 +920,11 @@ public class DataUpdateServiceDefault implements DataUpdateService {
      *
      * @param dataFile  the data file to use
      * @param tempFile  the temp file to write the data to
-     * @param automatic true if the update will be tried again if it fails
      * @return the {@link AutoUpdateStatus} value indicating the result
      */
     private AutoUpdateStatus downloadFile(
             AspectEngineDataFile dataFile,
-            FileWrapper tempFile,
-            boolean automatic) {
+            FileWrapper tempFile) {
 
         String url = dataFile.getFormattedUrl();
         String engineType = getEngineType(dataFile);
@@ -1090,7 +1085,9 @@ public class DataUpdateServiceDefault implements DataUpdateService {
      * <p>
      * A failure reading the download is thrown, for the caller to report.
      * A failure writing {@code tempFile} is logged here as the
-     * specification's write error.
+     * specification's write error. With MD5 verification on, a response
+     * with no Content-MD5 header is warned about and applied, and one whose
+     * hash does not match is the Errors table's integrity row.
      */
     private AutoUpdateStatus downloadOkResponse(
             HttpURLConnection connection,
@@ -1132,12 +1129,11 @@ public class DataUpdateServiceDefault implements DataUpdateService {
 
         if (verifyMd5) {
             String header = connection.getHeaderField("Content-MD5");
-            String computed = DatatypeConverter.printHexBinary(md.digest());
-            if (header == null || header.isEmpty()) {
-                // Nothing to check against, so the check goes on.
+            String computed = DatatypeConverter.printHexBinary(md.digest())
+                    .toLowerCase(Locale.ROOT);
+            if (header == null) {
                 logger.warn("No MD5 hash included in data update response " +
-                        "for '" + loggedUrl + "'. Unable to verify data " +
-                        "integrity");
+                        "for '{}'. Unable to verify data integrity", loggedUrl);
             } else if (header.equalsIgnoreCase(computed) == false) {
                 logCheckFailure("Integrity check failed. MD5 hash in HTTP " +
                         "response '" + header + "' for '" +
@@ -1242,8 +1238,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     }
 
     private AutoUpdateStatus checkForUpdateFromUrl(
-            AspectEngineDataFile dataFile,
-            boolean automatic) {
+            AspectEngineDataFile dataFile) {
         if (dataFile.getDataFilePath() == null || dataFile.getDataFilePath().isEmpty()) {
             // There is no data file path specified so perform the
             // update entirely in memory.
@@ -1251,7 +1246,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 FileWrapper uncompressedData = new FileWrapperMemory();
 
                 AutoUpdateStatus memoryDownloadResult =
-                        downloadFile(dataFile, uncompressedData, automatic);
+                        downloadFile(dataFile, uncompressedData);
                 if (memoryDownloadResult != AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS) {
                     return memoryDownloadResult;
                 }
@@ -1279,9 +1274,9 @@ public class DataUpdateServiceDefault implements DataUpdateService {
 
         if (dataFile.getTempDataDirPath() == null ||
                 dataFile.getTempDataDirPath().isEmpty()) {
-            logger.error("The data file '" + dataFile.getIdentifier() +
+            logCheckFailure("The data file '" + dataFile.getIdentifier() +
                     "' is checking for updates but does not have a temporary " +
-                    "file path configured.");
+                    "file path configured.", null);
             return AutoUpdateStatus.AUTO_UPDATE_TEMP_PATH_NOT_SET;
         }
         Path uncompressedTempFile = Paths.get(
@@ -1291,7 +1286,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
         try {
             // Check if there is an update and download it if there is
             AutoUpdateStatus result =
-                    downloadFile(dataFile, uncompressedData, automatic);
+                    downloadFile(dataFile, uncompressedData);
 
             if (result == AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS) {
                 WatchKey watchKey = dataFile.getConfiguration().getWatchKey();

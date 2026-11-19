@@ -38,13 +38,16 @@ import fiftyone.pipeline.javascriptbuilder.Constants;
 import fiftyone.pipeline.javascriptbuilder.data.JavaScriptBuilderData;
 import fiftyone.pipeline.javascriptbuilder.templates.JavaScriptResource;
 import fiftyone.pipeline.jsonbuilder.data.JsonBuilderData;
+import net.logicsquad.minifier.js.JSMinifier;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
 import java.io.*;
 import java.net.URLEncoder;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static fiftyone.pipeline.core.Constants.*;
@@ -69,11 +72,49 @@ public class JavaScriptBuilderElement
     protected String contextRoot;
     protected final String objName;
     protected final boolean enableCookies;
-    /**
-     * True if the script is minified before it is returned.
-     */
     protected final boolean minify;
     private final Mustache mustache;
+
+    /**
+     * The minified forms of the template, one for each combination of its
+     * sections, with a placeholder where each value goes. Minifying is done
+     * once for each form and not for each request, so minification costs
+     * almost nothing per request, and the values the script carries are
+     * never passed through the minifier, so it cannot change them.
+     */
+    private final ConcurrentHashMap<Integer, String> minifiedForms =
+        new ConcurrentHashMap<>();
+
+    /**
+     * Set once minification has failed and been logged, after which the
+     * script is not minified.
+     */
+    private final AtomicBoolean minifyFailed = new AtomicBoolean(false);
+
+    /**
+     * The text each value is given when the template is minified. Each is
+     * an identifier, so the minifier leaves it as it is, whether it is in
+     * code or in a string.
+     */
+    private static final String PLACEHOLDER_PREFIX =
+        "fiftyoneDegreesMinifyPlaceholder";
+
+    /**
+     * The values of the template that differ for each request, in the
+     * order of {@link #PLACEHOLDER_NAMES}.
+     */
+    private static final String[] VALUE_KEYS = {
+        "_objName", "_jsonObject", "_sessionId", "_sequence", "_url",
+        "_parameters"};
+
+    /**
+     * The placeholder for each of {@link #VALUE_KEYS}.
+     */
+    private static final String[] PLACEHOLDER_NAMES = {
+        "ObjName", "Json", "SessionId", "Sequence", "Url", "Parameters"};
+
+    private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile(
+        PLACEHOLDER_PREFIX + "(" + String.join("|", PLACEHOLDER_NAMES) + ")");
 
     /**
      * Set once a callback URL that is not valid has been logged, because a
@@ -210,8 +251,7 @@ public class JavaScriptBuilderElement
             String protocol,
             String contextRoot) {
         this(logger, elementDataFactory, endpoint, objName, enableCookies,
-            host, protocol, contextRoot,
-            JavaScriptBuilderElementBuilder.MINIFY);
+            host, protocol, contextRoot, true);
     }
     //! [constructor]
 
@@ -233,11 +273,14 @@ public class JavaScriptBuilderElement
      *                 then the protocol from the request will be used
      * @param contextRoot The &lt;context-root&gt; setting from the web.xml.
      *                 This is needed when creating the callback URL.
-     * @param minify True if the script is minified before it is returned
+     * @param minify True to minify the JavaScript that is produced. The other
+     *               constructors minify it.
      * @throws PipelineConfigurationException if protocol is not null or empty
      * and is neither http nor https in any case of its ASCII letters, white
      * space included, or if objName is not null and is
      * not a valid JavaScript identifier, see {@link #isValidObjectName}.
+     * A null name means the default name is used, as no name was
+     * configured, and an empty name is refused
      */
     public JavaScriptBuilderElement(
             Logger logger,
@@ -250,8 +293,7 @@ public class JavaScriptBuilderElement
             String contextRoot,
             boolean minify) {
         super(logger, elementDataFactory);
-        this.minify = minify;
-
+        
         MustacheFactory mf = new DefaultMustacheFactory();
         InputStream in = getClass().getResourceAsStream(Constants.TEMPLATE);
         BufferedReader reader = new BufferedReader(new InputStreamReader(in));
@@ -277,6 +319,7 @@ public class JavaScriptBuilderElement
         }
         this.enableCookies = enableCookies;
         this.contextRoot = contextRoot;
+        this.minify = minify;
     }
     //! [constructor]
 
@@ -452,11 +495,16 @@ public class JavaScriptBuilderElement
                 .getEvidence()
                 .asKeyMap();
 
+        // The prefix with its separator, so that a key such as "querystring"
+        // is not taken for a query parameter.
+        String queryPrefix = EVIDENCE_QUERY_PREFIX + EVIDENCE_SEPERATOR;
         for(Map.Entry<String, Object> entry : queryEvidence.entrySet()){
-            // Evidence keys are case-insensitive.
-            String lowerKey = entry.getKey().toLowerCase(Locale.ROOT);
-            if(lowerKey.startsWith(EVIDENCE_QUERY_PREFIX + EVIDENCE_SEPERATOR) &&
-                    EXCLUDED_PARAMETERS.contains(lowerKey) == false){
+            // Evidence keys ignore case, so the prefix and the excluded
+            // keys are matched whatever the case the key was added in.
+            if(entry.getKey().regionMatches(true, 0,
+                    queryPrefix, 0, queryPrefix.length()) &&
+                    EXCLUDED_PARAMETERS.contains(
+                        entry.getKey().toLowerCase(Locale.ROOT)) == false){
                 String key = entry.getKey().substring(entry.getKey().indexOf(EVIDENCE_SEPERATOR) + 1);
                 key = URLEncoder.encode(key, "UTF-8");
                 String value = URLEncoder.encode(entry.getValue().toString(), "UTF-8");
@@ -666,16 +714,88 @@ public class JavaScriptBuilderElement
             cookies,
             updateEnabled,
             hasDelayedProperties);
-      
-        StringWriter stringWriter = new StringWriter();
-        mustache.execute(stringWriter, javaScriptObj.asMap());
 
-        String content = stringWriter.toString();
+        Map<String, Object> values = javaScriptObj.asMap();
+        String content = null;
         if (minify) {
-            content = JavaScriptMinifier.minify(content);
+            content = renderMinified(values);
+        }
+        if (content == null) {
+            content = render(values);
         }
 
         elementData.setJavaScript(content);
+    }
+
+    /**
+     * Renders the template as written.
+     */
+    private String render(Map<String, Object> values) {
+        StringWriter stringWriter = new StringWriter();
+        mustache.execute(stringWriter, values);
+        return stringWriter.toString();
+    }
+
+    /**
+     * Renders the minified template. The minified form of the template for
+     * the request's sections is made once and kept, and the request's values
+     * are put in place of its placeholders.
+     * @return the minified script, or null if minification failed
+     */
+    private String renderMinified(Map<String, Object> values) {
+        if (minifyFailed.get()) {
+            return null;
+        }
+        // The form depends only on the template's sections, being every
+        // value that is not one of the placeholders. The URL is a value, and
+        // whether it is present is the section _updateEnabled.
+        int key = 0;
+        for (String section : new String[] {
+            "_supportsPromises", "_enableCookies", "_updateEnabled",
+            "_hasDelayedProperties"}) {
+            key = (key << 1) | (Boolean.TRUE.equals(values.get(section)) ? 1 : 0);
+        }
+        String form = minifiedForms.computeIfAbsent(key, k -> minifyForm(values));
+        if (form.isEmpty()) {
+            return null;
+        }
+
+        Matcher matcher = PLACEHOLDER_PATTERN.matcher(form);
+        StringBuffer script = new StringBuffer(form.length() +
+            String.valueOf(values.get("_jsonObject")).length());
+        while (matcher.find()) {
+            String valueKey = VALUE_KEYS[
+                Arrays.asList(PLACEHOLDER_NAMES).indexOf(matcher.group(1))];
+            matcher.appendReplacement(script,
+                Matcher.quoteReplacement(String.valueOf(values.get(valueKey))));
+        }
+        matcher.appendTail(script);
+        return script.toString();
+    }
+
+    /**
+     * Renders the template with the given sections and a placeholder for
+     * each value, and minifies it.
+     * @return the minified form, or an empty string if minification failed
+     */
+    private String minifyForm(Map<String, Object> values) {
+        Map<String, Object> placeholders = new HashMap<>(values);
+        for (int i = 0; i < VALUE_KEYS.length; i++) {
+            placeholders.put(VALUE_KEYS[i],
+                PLACEHOLDER_PREFIX + PLACEHOLDER_NAMES[i]);
+        }
+        try {
+            StringWriter minified = new StringWriter();
+            new JSMinifier(new StringReader(render(placeholders)))
+                .minify(minified);
+            return minified.toString();
+        } catch (Exception e) {
+            if (minifyFailed.compareAndSet(false, true)) {
+                logger.error("The JavaScript could not be minified, so it " +
+                    "is sent as it is written.", e);
+            }
+            return "";
+        }
     }
 }
 //! [class]

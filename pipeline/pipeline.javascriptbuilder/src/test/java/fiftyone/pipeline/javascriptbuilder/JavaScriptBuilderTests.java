@@ -256,7 +256,7 @@ public class JavaScriptBuilderTests {
     public void JavaScriptBuilderElement_VerifySession() throws Exception {
         configureMocks();
 
-        // The rendered text is read, so it is not minified.
+        // Not minified, so the declarations read as the template writes them.
         javaScriptBuilderElement =
                 new JavaScriptBuilderElementBuilder(loggerFactory)
                         .setMinify(false)
@@ -328,7 +328,7 @@ public class JavaScriptBuilderTests {
             throws Exception {
         configureMocks();
 
-        // The rendered text is read, so it is not minified.
+        // Not minified, so the script is read line by line as written.
         javaScriptBuilderElement =
                 new JavaScriptBuilderElementBuilder(loggerFactory)
                         .setMinify(false)
@@ -382,7 +382,7 @@ public class JavaScriptBuilderTests {
         evidence.remove("query.latitude");
         evidence.remove("query.longitude");
 
-        // The rendered text is read, so it is not minified.
+        // Not minified, so the script is read line by line as written.
         javaScriptBuilderElement =
                 new JavaScriptBuilderElementBuilder(loggerFactory)
                         .setEndpoint("/json")

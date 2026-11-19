@@ -96,6 +96,9 @@ public class Example extends HttpServlet {
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException, NoValueException {
+        // A Flow Data cannot be used by two threads at once. Work handed to
+        // another thread or task gets the values it needs, read here on the
+        // request's thread, not the Flow Data.
         FlowData data = flowDataProvider.getFlowData(request);
         GeoData geo = data.get(GeoData.class);
         response.setContentType("text/html;charset=UTF-8");

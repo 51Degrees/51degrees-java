@@ -23,10 +23,10 @@
 package fiftyone.devicedetection.examples.console;
 
 import fiftyone.devicedetection.examples.shared.FindOutMore;
+import fiftyone.devicedetection.examples.shared.KeyHelper;
 import fiftyone.devicedetection.cloud.data.MultiDeviceDataCloud;
 import fiftyone.devicedetection.shared.Constants;
 import fiftyone.devicedetection.shared.DeviceData;
-import fiftyone.devicedetection.shared.testhelpers.KeyUtils;
 import fiftyone.pipeline.core.configuration.PipelineOptions;
 import fiftyone.pipeline.core.configuration.PipelineOptionsFactory;
 import fiftyone.pipeline.core.data.FlowData;
@@ -70,7 +70,21 @@ public class TacCloud {
 
     public static void main (String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
-        String resourceKey = args.length > 0 ? args[0] : null;
+        String resourceKey = KeyHelper.findResourceKey(
+                args.length > 0 ? args[0] : null,
+                TAC_EXAMPLE_RESOURCE_KEY_NAME);
+        // A key typed into the options file is used as it is.
+        String fileResourceKey = PipelineOptionsFactory.getOptionsFromFile(
+                getFilePath("tacCloud.xml"))
+                .find("CloudRequestEngine", "ResourceKey");
+        if (resourceKey == null && isInvalidKey(fileResourceKey)) {
+            KeyHelper.writeNoResourceKey(System.out, EXAMPLE_TAG,
+                    TAC_EXAMPLE_RESOURCE_KEY_NAME,
+                    KeyHelper.PAID_PROPERTIES_CONFIGURATION);
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES);
+            return;
+        }
         run(resourceKey, System.out);
     }
 
@@ -87,7 +101,7 @@ public class TacCloud {
         // use the one supplied to this method
         PipelineOptions pipelineOptions = PipelineOptionsFactory.getOptionsFromFile(optionsFile);
         String fileResourceKey = pipelineOptions.find("CloudRequestEngine", "ResourceKey");
-        if (KeyUtils.isInvalidKey(fileResourceKey)) {
+        if (isInvalidKey(fileResourceKey)) {
             getOrSetSuperResourceKey(resourceKey, TAC_EXAMPLE_RESOURCE_KEY_NAME);
         }
         try (PrintWriter writer = new PrintWriter(os)) {

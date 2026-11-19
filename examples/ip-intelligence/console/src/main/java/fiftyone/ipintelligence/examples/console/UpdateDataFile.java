@@ -39,6 +39,7 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.nio.file.*;
 import java.text.SimpleDateFormat;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Scanner;
 
@@ -275,7 +276,7 @@ public class UpdateDataFile {
                     "in your licensed allocation.");
             System.out.print("Do you wish to continue with this example (y)? ");
             String input = scanner.nextLine();
-            if ((input.isEmpty() || input.toLowerCase().startsWith("y")) == false) {
+            if ((input.isEmpty() || input.toLowerCase(Locale.ROOT).startsWith("y")) == false) {
                 logger.info("Stopping example without download");
                 return;
             }
@@ -303,6 +304,10 @@ public class UpdateDataFile {
                     // overwritten the pipeline must be configured to copy the supplied
                     // file to a temporary file (createTempDataCopy parameter == true.
                     .useOnPremise(dataFilename, true)
+                    // Usage sharing is off because this example's evidence is already
+                    // known to 51Degrees. In production, leave usage sharing on, which adds
+                    // a Usage Sharing Element to the Pipeline and helps improve the service.
+                    .setShareUsage(false)
                     // Use the low memory profile, because this example
                     // downloads the Enterprise data file, which is over 6 GB,
                     // and MaxPerformance would load all of it into memory.
