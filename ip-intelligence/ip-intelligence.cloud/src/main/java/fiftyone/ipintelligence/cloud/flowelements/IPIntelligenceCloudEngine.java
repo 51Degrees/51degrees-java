@@ -162,7 +162,7 @@ public class IPIntelligenceCloudEngine
                 continue;
             }
             if (weightedPropertyNames.contains(
-                    property.getName().toLowerCase())) {
+                    property.getName().toLowerCase(Locale.ROOT))) {
                 propertyMap.put(
                     property.getName(),
                     getWeightedListAspectPropertyValue(ipiObj, property));
@@ -282,7 +282,7 @@ public class IPIntelligenceCloudEngine
             for (AccessiblePropertyMetaData.PropertyMetaData item :
                 product.properties) {
                 if (item.type != null && item.type.startsWith("Weighted")) {
-                    weightedPropertyNames.add(item.name.toLowerCase());
+                    weightedPropertyNames.add(item.name.toLowerCase(Locale.ROOT));
                 }
                 AspectPropertyMetaData property = new AspectPropertyMetaDataDefault(
                     item.name,
@@ -357,7 +357,7 @@ public class IPIntelligenceCloudEngine
     private AspectPropertyValue<Integer> getIntegerAspectPropertyValue(
         JSONObject ipiObj,
         AspectPropertyMetaData property) {
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<Integer> intValue = new AspectPropertyValueDefault<>();
         if(ipiObj.isNull(key)){
             intValue.setNoValueMessage(getNoValueReason(ipiObj, key));
@@ -369,7 +369,7 @@ public class IPIntelligenceCloudEngine
     }
 
     private AspectPropertyValue<Double> getDoubleAspectPropertyValue(JSONObject ipiObj, AspectPropertyMetaData property) {
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<Double> doubleValue = new AspectPropertyValueDefault<>();
         if(ipiObj.isNull(key)){
             doubleValue.setNoValueMessage(getNoValueReason(ipiObj, key));
@@ -390,7 +390,7 @@ public class IPIntelligenceCloudEngine
      * for the value not being present
      */
     private AspectPropertyValue<Float> getFloatAspectPropertyValue(JSONObject ipiObj, AspectPropertyMetaData property) {
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<Float> floatValue = new AspectPropertyValueDefault<>();
         if(ipiObj.isNull(key)){
             floatValue.setNoValueMessage(getNoValueReason(ipiObj, key));
@@ -412,7 +412,7 @@ public class IPIntelligenceCloudEngine
     private AspectPropertyValue<Boolean> getBooleanAspectPropertyValue(
         JSONObject ipiObj,
         AspectPropertyMetaData property) {
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<Boolean> booleanValue = new AspectPropertyValueDefault<>();
         if(ipiObj.isNull(key)){
             booleanValue.setNoValueMessage(getNoValueReason(ipiObj, key));
@@ -434,7 +434,7 @@ public class IPIntelligenceCloudEngine
     private AspectPropertyValue<List<String>> getListAspectPropertyValue(
         JSONObject ipiObj,
         AspectPropertyMetaData property){
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<List<String>> listValue = new AspectPropertyValueDefault<>();
         if(ipiObj.isNull(key))
         {
@@ -467,7 +467,7 @@ public class IPIntelligenceCloudEngine
         getWeightedListAspectPropertyValue(
             JSONObject deviceObj,
             AspectPropertyMetaData property) {
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<List<IWeightedValue<String>>> weightedValue =
             new AspectPropertyValueDefault<>();
         if (deviceObj.isNull(key)) {
@@ -502,7 +502,7 @@ public class IPIntelligenceCloudEngine
     private AspectPropertyValue<InetAddress> getInetAddressAspectPropertyValue(
         JSONObject deviceObj,
         AspectPropertyMetaData property) {
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<InetAddress> ipValue = new AspectPropertyValueDefault<>();
         if (deviceObj.isNull(key)) {
             ipValue.setNoValueMessage(getNoValueReason(deviceObj, key));
@@ -528,7 +528,7 @@ public class IPIntelligenceCloudEngine
     private AspectPropertyValue<JavaScript> getJavaScriptAspectPropertyValue(
         JSONObject ipiObj,
         AspectPropertyMetaData property){
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<JavaScript> jsValue = new AspectPropertyValueDefault<>();
         if(ipiObj.isNull(key)){
             jsValue.setNoValueMessage(getNoValueReason(ipiObj, key));
@@ -553,7 +553,7 @@ public class IPIntelligenceCloudEngine
     private AspectPropertyValue<WktString> getWktStringAspectPropertyValue(
         JSONObject ipiObj,
         AspectPropertyMetaData property){
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<WktString> wktValue = new AspectPropertyValueDefault<>();
         if(ipiObj.isNull(key)){
             wktValue.setNoValueMessage(getNoValueReason(ipiObj, key));
@@ -581,7 +581,7 @@ public class IPIntelligenceCloudEngine
     private AspectPropertyValue<String> getStringAspectPropertyValue(
         JSONObject ipiObj,
         AspectPropertyMetaData property){
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<String> stringValue = new AspectPropertyValueDefault<>();
         if(ipiObj.isNull(key)){
             stringValue.setNoValueMessage(getNoValueReason(ipiObj, key));

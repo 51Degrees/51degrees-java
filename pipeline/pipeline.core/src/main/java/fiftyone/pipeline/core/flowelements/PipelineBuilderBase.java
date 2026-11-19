@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.core.flowelements;
 
+import fiftyone.pipeline.annotations.AlternateName;
 import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.core.Constants;
 import fiftyone.pipeline.core.configuration.PipelineOptions;
@@ -235,11 +236,15 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
     /**
      * Configure the {@link Pipeline} to either call dispose on it's child
      * {@link FlowElement}s when it is disposed or not.
+     * <p>
+     * A configuration file may also give this option as 'AutoDisposeElements'
+     * or 'SetAutoDisposeElements', the name other languages use.
      * @param autoClose true if the Pipeline should call dispose on it's child
      *                  elements when it is disposed
      * @return this builder
      */
     @SuppressWarnings("unchecked")
+    @AlternateName("SetAutoDisposeElements")
     public T setAutoCloseElements(boolean autoClose) {
         this.autoCloseElements = autoClose;
         return (T) this;
