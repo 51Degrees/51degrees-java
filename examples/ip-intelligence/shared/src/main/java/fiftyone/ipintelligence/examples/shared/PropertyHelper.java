@@ -46,9 +46,10 @@ public class PropertyHelper {
      * property.
      */
     public static final String PRICING_MESSAGE = "Some properties used " +
-            "by this example are not available with a free resource key. " +
-            "See https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-propertyhelper.java&utm_term=pricing_message to get a paid subscription " +
-            "with more properties.";
+            "by this example are not available with a free resource key or " +
+            "the free data file. Contact us about a key or a data file " +
+            "that has them at " +
+            "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-propertyhelper.java&utm_term=paid-properties";
 
     static Logger logger = LoggerFactory.getLogger(PropertyHelper.class);
 
@@ -120,8 +121,9 @@ public class PropertyHelper {
         } catch (PropertyMissingException e) {
             String message =
                     "The property '" + e.getPropertyName() + "' is not " +
-                    "available in this data file. See data file options " +
-                    "<a href=\"https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-propertyhelper.java&utm_term=property-missing\">here</a>";
+                    "available with the data file or resource key in use. " +
+                    "Contact us about one that has it at " +
+                    "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-propertyhelper.java&utm_term=property-missing";
             AspectPropertyValue<T> result = new AspectPropertyValueDefault<>();
             result.setNoValueMessage(message);
             return result;
