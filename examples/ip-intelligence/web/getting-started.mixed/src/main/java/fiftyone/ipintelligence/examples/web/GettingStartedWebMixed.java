@@ -154,6 +154,9 @@ public class GettingStartedWebMixed extends HttpServlet {
         // The detection has already been carried out by the PipelineFilter,
         // which closes the FlowData at the end of the request, so it is not
         // closed here.
+        // A Flow Data cannot be used by two threads at once. Work handed to
+        // another thread or task gets the values it needs, read here on the
+        // request's thread, not the Flow Data.
         FlowData flowData = flowDataProvider.getFlowData(request);
 
         // Determine target IP for display.

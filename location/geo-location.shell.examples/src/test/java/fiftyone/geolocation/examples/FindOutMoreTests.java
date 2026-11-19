@@ -49,7 +49,8 @@ public class FindOutMoreTests {
     private static final String REPOSITORY =
         "https://github.com/51Degrees/51degrees-java";
 
-    private static final String NO_KEY = "You need to create a resource key";
+    private static final String NO_KEY =
+        "needs a resource key, and none is set";
 
     private static final Pattern TAGGED = Pattern.compile(
         "https://51degrees\\.com/[^?\\s]*\\?utm_source=code"
