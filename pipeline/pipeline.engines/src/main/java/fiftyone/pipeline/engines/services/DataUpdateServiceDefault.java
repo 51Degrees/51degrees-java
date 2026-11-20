@@ -201,121 +201,13 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     @Override
     public AutoUpdateStatus checkForUpdate(OnPremiseAspectEngine<? extends AspectData, ?
             extends AspectPropertyMetaData> engine) {
-        try {
-            return checkForUpdate(engine.getDataFileMetaData(), true);
-        } catch (CallbackFailure failure) {
-            // A programmatic check passes the error to its caller.
-            throw failure.getCause();
-        }
+        return checkForUpdate(engine.getDataFileMetaData(), true);
     }
 
     @Override
     public AutoUpdateStatus checkForUpdate(OnPremiseAspectEngine<? extends AspectData, ?
             extends AspectPropertyMetaData> engine, String identifier) {
-        try {
-            return checkForUpdate(engine.getDataFileMetaData(identifier), true);
-        } catch (CallbackFailure failure) {
-            throw failure.getCause();
-        }
-    }
-
-    /**
-     * An error raised by an onUpdateComplete callback, carried out of a
-     * check so that it is told apart from an error in the check itself.
-     */
-    private static final class CallbackFailure extends RuntimeException {
-        private static final long serialVersionUID = 1L;
-
-        CallbackFailure(RuntimeException cause) {
-            super(cause);
-        }
-
-        @Override
-        public synchronized RuntimeException getCause() {
-            return (RuntimeException) super.getCause();
-        }
-    }
-
-    /**
-     * Report a finished check to each onUpdateComplete callback in turn. A
-     * callback that throws is carried out as a {@link CallbackFailure}, and
-     * the callbacks after it are not called.
-     */
-    private void reportComplete(Object sender, DataUpdateCompleteArgs args) {
-        for (OnUpdateComplete onUpdateComplete : onUpdateCompleteList) {
-            try {
-                onUpdateComplete.call(sender, args);
-            } catch (RuntimeException e) {
-                throw new CallbackFailure(e);
-            }
-        }
-    }
-
-    /**
-     * Log an error that ended a check started by update polling or by the
-     * file watcher, with the message the specification gives for an error
-     * of any other kind and for an error raised by a callback.
-     */
-    private void logUnhandled(AspectEngineDataFile dataFile, Throwable error) {
-        logger.error("An unhandled error occurred while checking for " +
-                "automatic updates for engine '" + getEngineType(dataFile) +
-                "'", error);
-    }
-
-    /**
-     * Handle an error that ended a check started by update polling or by the
-     * file watcher. The error is logged rather than left in the task's
-     * future, where nothing reads it. An error in the check itself is then
-     * reported to the callbacks as
-     * {@link AutoUpdateStatus#AUTO_UPDATE_UNKNOWN_ERROR}. An error raised by
-     * a callback has been reported already.
-     */
-    private void handleAutomaticFailure(
-            AspectEngineDataFile dataFile,
-            RuntimeException error) {
-        if (error instanceof CallbackFailure) {
-            logUnhandled(dataFile, error.getCause());
-            return;
-        }
-        logUnhandled(dataFile, error);
-        try {
-            reportComplete(dataFile, new DataUpdateCompleteArgs(
-                    AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR,
-                    dataFile));
-        } catch (CallbackFailure failure) {
-            logUnhandled(dataFile, failure.getCause());
-        }
-    }
-
-    /**
-     * Run a check started by update polling. A failure is caught and logged,
-     * and the next check is still scheduled, so a later good data file is
-     * still applied.
-     */
-    private void runPollingCheck(AspectEngineDataFileDefault dataFile) {
-        try {
-            checkForUpdate(dataFile, false);
-        } catch (CallbackFailure failure) {
-            // The check finished and set the next one before reporting.
-            handleAutomaticFailure(dataFile, failure);
-        } catch (RuntimeException e) {
-            // The check may have ended before it set the next one.
-            try {
-                if (dataFile.getIsRegistered()) {
-                    synchronized (futureLock) {
-                        if (dataFile.getFuture() != null) {
-                            dataFile.getFuture().cancel(false);
-                            dataFile.setFuture(null);
-                        }
-                    }
-                    registerDataFile(dataFile);
-                }
-            } catch (RuntimeException scheduling) {
-                logger.error("Exception when scheduling update check",
-                        scheduling);
-            }
-            handleAutomaticFailure(dataFile, e);
-        }
+        return checkForUpdate(engine.getDataFileMetaData(identifier), true);
     }
 
     /**
@@ -676,13 +568,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
         if (dataFile.getConfiguration().getUpdateOnStartup() && isFalse(alreadyRegistered)) {
             logger.info("Updating on start-up");
             logger.debug("Checking for Update on Startup {}", dataFile.getDataFilePath());
-            AutoUpdateStatus status;
-            try {
-                status = checkForUpdate(dataFile, false);
-            } catch (CallbackFailure failure) {
-                // The update on start-up passes the error to its caller.
-                throw failure.getCause();
-            }
+            AutoUpdateStatus status = checkForUpdate(dataFile, false);
             if (ObjectUtils.notEqual(status, AUTO_UPDATE_SUCCESS) &&
                     Check.notFileExists(dataFile.getDataFilePath())){
                 throw new IllegalStateException("Update on start up failed and there is no " +
@@ -790,24 +676,15 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                                         if (watchKey == null) {
                                             return;
                                         }
-                                        try {
-                                            for (WatchEvent<?> event : watchKey.pollEvents()) {
-                                                if (event.kind() == StandardWatchEventKinds.ENTRY_MODIFY) {
-                                                    if (((Path) event.context()).endsWith(aspectDataFilePath.getFileName())) {
-                                                        dataFileUpdated(aspectDataFile);
-                                                    }
+                                        for (WatchEvent<?> event : watchKey.pollEvents()) {
+                                            if (event.kind() == StandardWatchEventKinds.ENTRY_MODIFY) {
+                                                if (((Path) event.context()).endsWith(aspectDataFilePath.getFileName())) {
+                                                    dataFileUpdated(aspectDataFile);
                                                 }
                                             }
-                                        } catch (RuntimeException e) {
-                                            // A failure is logged and must not
-                                            // end this repeating task, so later
-                                            // changes are still applied.
-                                            handleAutomaticFailure(aspectDataFile, e);
-                                        } finally {
-                                            // Reset the watch key, or this task
-                                            // is not called again.
-                                            watchKey.reset();
                                         }
+                                        // make sure to reset the watch key or we are not called again
+                                        watchKey.reset();
                                     }
                                 },
                                 pollingInterval));
@@ -1467,7 +1344,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             }
             return result;
         } catch (Throwable e) {
-            logUnhandled(dataFile, e);
+            logUnhandledError(dataFile, e);
             return AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR;
         } finally {
             // Make sure the temp files are cleaned up
