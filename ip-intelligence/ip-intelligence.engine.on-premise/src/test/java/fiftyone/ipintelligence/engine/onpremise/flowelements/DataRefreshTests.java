@@ -146,4 +146,29 @@ public class DataRefreshTests extends TestsBase {
         assertTrue(refresh.get(WAIT_SECONDS, TimeUnit.SECONDS));
         assertTrue(closing.get(WAIT_SECONDS, TimeUnit.SECONDS));
     }
+
+    /**
+     * A refresh that gets the engine's monitor after the engine is closed,
+     * from either overload, fails with an error and does not use the native
+     * objects that closing freed.
+     */
+    @Test
+    public void Refresh_AfterClose_FailsWithoutUsingTheFreedEngine()
+        throws Exception {
+        IPIntelligenceOnPremiseEngine engine = getWrapper().getEngine();
+        String identifier = engine.getDataFileMetaData().getIdentifier();
+        engine.close();
+        try {
+            engine.refreshData(identifier);
+            fail("A refresh from file ran after the engine was closed.");
+        } catch (IllegalStateException e) {
+            // As it should.
+        }
+        try {
+            engine.refreshData(identifier, new byte[] { 0 });
+            fail("A refresh from memory ran after the engine was closed.");
+        } catch (IllegalStateException e) {
+            // As it should.
+        }
+    }
 }
