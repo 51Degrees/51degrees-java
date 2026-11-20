@@ -107,6 +107,10 @@ public class GettingStartedWebCloud extends HttpServlet {
             "web-getting-started.cloud-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedwebcloud.java";
 
     private static final long serialVersionUID = 1734154705981153542L;
+    /**
+     * The port the example listens on.
+     */
+    public static final int DEFAULT_PORT = 5151;
     public static Logger logger = LoggerFactory.getLogger(GettingStartedWebCloud.class);
 
     public static void main(String[] args) throws Exception {
@@ -127,7 +131,7 @@ public class GettingStartedWebCloud extends HttpServlet {
         KeyHelper.getOrSetTestResourceKey(resourceKey, true);
 
         // start Jetty with this WebApp
-        EmbedJetty.runWebApp(getResourceBase(), 8083);
+        EmbedJetty.runWebApp(getResourceBase(), DEFAULT_PORT);
     }
 
     public static String getResourceBase() {
