@@ -53,7 +53,9 @@ import static org.apache.commons.lang3.BooleanUtils.isFalse;
 public class IPIntelligenceOnPremiseEngine
     extends FiftyOneOnPremiseAspectEngineBase<IPIntelligenceDataHash,
     FiftyOneAspectPropertyMetaData> {
-    private EngineIpiSwig engine = null;
+    // Volatile, so a thread that processes sees the native engine a
+    // refresh on another thread made.
+    private volatile EngineIpiSwig engine = null;
     private final List<FiftyOneAspectPropertyMetaData> properties = new ArrayList<>();
     private final ConfigIpiSwig config;
     private final RequiredPropertiesConfigSwig propertiesConfigSwig;
@@ -332,8 +334,10 @@ public class IPIntelligenceOnPremiseEngine
      * refresh.
      * <p>
      * The lock is this engine's own monitor, held for the whole refresh.
-     * Nothing else in the engine or the Pipeline takes it, and no other
-     * lock is taken while it is held, so it cannot deadlock. It is not a
+     * Closing the engine takes it too, so the native objects are freed
+     * only once a refresh that is running has finished. Nothing else in
+     * the engine or the Pipeline takes it, and no other lock is taken
+     * while it is held, so it cannot deadlock. It is not a
      * field, so an engine built by a mock that skips field initializers
      * still has it.
      */
@@ -428,14 +432,19 @@ public class IPIntelligenceOnPremiseEngine
                 }
             }
         }
-        if (config != null) {
-            config.delete();
-        }
-        if (propertiesConfigSwig != null) {
-            propertiesConfigSwig.delete();
-        }
-        if (engine != null) {
-            engine.delete();
+        // A refresh holds this engine's monitor while it uses the native
+        // objects, so taking it here waits for a refresh that is running
+        // before they are freed.
+        synchronized (this) {
+            if (config != null) {
+                config.delete();
+            }
+            if (propertiesConfigSwig != null) {
+                propertiesConfigSwig.delete();
+            }
+            if (engine != null) {
+                engine.delete();
+            }
         }
     }
 
