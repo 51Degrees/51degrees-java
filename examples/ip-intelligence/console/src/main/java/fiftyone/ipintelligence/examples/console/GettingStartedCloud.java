@@ -54,7 +54,9 @@ import fiftyone.ipintelligence.examples.shared.KeyHelper;
 import fiftyone.ipintelligence.shared.IPIntelligenceData;
 import fiftyone.ipintelligence.shared.testhelpers.KeyUtils;
 import fiftyone.pipeline.core.data.FlowData;
+import fiftyone.pipeline.core.data.IWeightedValue;
 import fiftyone.pipeline.core.flowelements.Pipeline;
+import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,12 +66,9 @@ import java.util.List;
 import java.util.Map;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
-import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asFloatProperty;
-import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asIPAddressProperty;
-import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asIntegerProperty;
-import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asStringProperty;
-import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asWktStringProperty;
+import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asWeightedString;
 import static fiftyone.ipintelligence.examples.shared.PropertyHelper.tryGet;
+import static fiftyone.ipintelligence.examples.shared.PropertyHelper.weightedValues;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
 /**
@@ -205,24 +204,51 @@ public class GettingStartedCloud {
             /* Display the results of the lookup, which are called IP Intelligence properties.
             See the property dictionary at https://51degrees.com/developers/property-dictionary?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedcloud.java&utm_term=property-dictionary
             for details of all available properties. */
-            writer.println("\tRegisteredName: " + asStringProperty(tryGet(ipData::getRegisteredName)));
-            writer.println("\tRegisteredOwner: " + asStringProperty(tryGet(ipData::getRegisteredOwner)));
-            writer.println("\tRegisteredCountry: " + asStringProperty(tryGet(ipData::getRegisteredCountry)));
-            writer.println("\tIpRangeStart: " + asIPAddressProperty(tryGet(ipData::getIpRangeStart)));
-            writer.println("\tIpRangeEnd: " + asIPAddressProperty(tryGet(ipData::getIpRangeEnd)));
-            writer.println("\tCountry: " + asStringProperty(tryGet(ipData::getCountry)));
-            writer.println("\tCountryCode: " + asStringProperty(tryGet(ipData::getCountryCode)));
-            writer.println("\tCountryCode3: " + asStringProperty(tryGet(ipData::getCountryCode3)));
-            writer.println("\tRegion: " + asStringProperty(tryGet(ipData::getRegion)));
-            writer.println("\tState: " + asStringProperty(tryGet(ipData::getState)));
-            writer.println("\tTown: " + asStringProperty(tryGet(ipData::getTown)));
-            writer.println("\tLatitude: " + asFloatProperty(tryGet(ipData::getLatitude)));
-            writer.println("\tLongitude: " + asFloatProperty(tryGet(ipData::getLongitude)));
-            writer.println("\tAreas: " + asWktStringProperty(tryGet(ipData::getAreas)));
-            writer.println("\tAccuracyRadiusMin: " + asIntegerProperty(tryGet(ipData::getAccuracyRadiusMin)));
-            writer.println("\tTimeZoneOffset: " + asIntegerProperty(tryGet(ipData::getTimeZoneOffset)));
+            writeValue(writer, "RegisteredName", tryGet(ipData::getRegisteredName));
+            writeValue(writer, "RegisteredOwner", tryGet(ipData::getRegisteredOwner));
+            writeValue(writer, "RegisteredCountry", tryGet(ipData::getRegisteredCountry));
+            writeValue(writer, "IpRangeStart", tryGet(ipData::getIpRangeStart));
+            writeValue(writer, "IpRangeEnd", tryGet(ipData::getIpRangeEnd));
+            writeValue(writer, "Country", tryGet(ipData::getCountry));
+            writeValue(writer, "CountryCode", tryGet(ipData::getCountryCode));
+            writeValue(writer, "CountryCode3", tryGet(ipData::getCountryCode3));
+            writeValue(writer, "Region", tryGet(ipData::getRegion));
+            writeValue(writer, "State", tryGet(ipData::getState));
+            writeValue(writer, "Town", tryGet(ipData::getTown));
+            writeValue(writer, "Latitude", tryGet(ipData::getLatitude));
+            writeValue(writer, "Longitude", tryGet(ipData::getLongitude));
+            writeValue(writer, "Areas", tryGet(ipData::getAreas));
+            writeValue(writer, "AccuracyRadiusMin", tryGet(ipData::getAccuracyRadiusMin));
+            writeValue(writer, "TimeZoneOffset", tryGet(ipData::getTimeZoneOffset));
         }
         writer.println();
         writer.flush();
+    }
+
+    /**
+     * Writes each value of a property with its weighting, or why it has no
+     * value.
+     */
+    private static void writeValue(PrintWriter writer,
+                                   String property,
+                                   AspectPropertyValue<?> result) {
+        if (result.hasValue() == false) {
+            writer.println("\t" + property + ": " + asWeightedString(result));
+            return;
+        }
+        /* IP Intelligence properties return weighted values. Each value comes
+        with a weighting between 0 and 1, which says how much of the IP range
+        the value applies to, and a property with a single answer returns it
+        with a weighting of 1. */
+        StringBuilder line = new StringBuilder();
+        for (IWeightedValue<?> weighted : weightedValues(result)) {
+            if (line.length() > 0) {
+                line.append(", ");
+            }
+            line.append(asWeightedString(
+                    weighted.getValue(),
+                    weighted.getWeighting()));
+        }
+        writer.println("\t" + property + ": " + line);
     }
 }
