@@ -239,7 +239,10 @@ with its "Find out more" section and exits with code 0. The tests named
   product's `GettingStartedOnPrem` jar from the repository root with no
   settings. On Ubuntu the free data file is downloaded, as from a fresh
   clone, and the Windows and macOS jobs take that file from the run's cache,
-  so each file is downloaded once a run. It runs on each push to `main` and
+  so each file is downloaded once a run. The Ubuntu job then builds every
+  example module, the web examples too, with its tests compiled against
+  the published packages, so a test that uses a class only this
+  repository has fails there. It runs on each push to `main` and
   `rc`, daily, and on a pull request that changes the examples. Its check
   runs by hand from the repository root after the build, with
   `-ExpectDownload` only when the data file is still a link:

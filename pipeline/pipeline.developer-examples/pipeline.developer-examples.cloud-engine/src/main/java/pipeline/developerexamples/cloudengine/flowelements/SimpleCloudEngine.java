@@ -34,6 +34,8 @@ import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
+import static fiftyone.pipeline.cloudrequestengine.Constants.Messages.NoCloudResponse;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -89,6 +91,14 @@ public class SimpleCloudEngine extends CloudAspectEngineBase<StarSignData> {
 
         CloudRequestData requestData = data.getFromElement(cloudRequestEngine);
         String json = requestData.getJsonResponse();
+
+        // A failed cloud request leaves no response. The Cloud Request
+        // Engine reports why, so this engine adds no error of its own.
+        if (json == null || json.isEmpty()) {
+            logger.warn(String.format(
+                NoCloudResponse, getClass().getSimpleName()));
+            return;
+        }
 
         // Extract data from json to the aspectData instance. A cloud
         // service answers only for the products the resource key covers,
