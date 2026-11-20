@@ -107,7 +107,10 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  */
 public class GettingStartedApi extends HttpServlet {
     private static final long serialVersionUID = 1734154705981153543L;
-    public static final int DEFAULT_PORT = 5151;
+    // A local stand-in for the cloud service, not a web page, so it keeps
+    // 5225, as the .NET version does: a cloud example pointed at it can run
+    // beside a web example on 5151.
+    public static final int DEFAULT_PORT = 5225;
     public static final String DATA_FILE_INIT_PARAM = "dataFile";
     public static Logger logger = LoggerFactory.getLogger(GettingStartedApi.class);
 
