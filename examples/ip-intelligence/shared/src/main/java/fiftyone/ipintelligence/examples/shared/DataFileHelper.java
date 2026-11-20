@@ -47,7 +47,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
@@ -137,17 +136,13 @@ public class DataFileHelper {
     public static final String IPI_PATH_VARIABLE = "_51DEGREES_IPI_PATH";
 
     /**
-     * The old name of {@link #IPI_PATH_VARIABLE}, read only when that one
-     * is not set.
+     * The old name of {@link #IPI_PATH_VARIABLE}. It is no longer read.
      * @deprecated use {@link #IPI_PATH_VARIABLE}, and set the variable it
      * names in place of this one.
      */
     @Deprecated
     public static final String IPI_PATH_ENV_VAR = "51DEGREES_IPI_PATH";
 
-    // Set once the use of the deprecated name has been logged.
-    private static final AtomicBoolean OLD_NAME_LOGGED =
-            new AtomicBoolean(false);
 
     /**
      * The value of the environment variable of this name, or of the system
@@ -420,9 +415,7 @@ public static class DatafileInfo {
      * An absolute path supplied by the caller is used as is. Otherwise an
      * explicit path supplied via the {@link #IPI_PATH_VARIABLE} environment
      * variable or system property is checked before the folder hierarchy is
-     * searched for the passed filename. When neither is set the deprecated
-     * {@link #IPI_PATH_ENV_VAR} is read, and its first use is logged as a
-     * warning.
+     * searched for the passed filename.
      * @param dataFilename a filename to find (can be absolute or relative path)
      * @return a full pathname
      * @throws Exception if the file was not found
@@ -435,19 +428,6 @@ public static class DatafileInfo {
                 Paths.get(dataFilename).isAbsolute() == false) {
             String envName = IPI_PATH_VARIABLE;
             String envDataFile = environmentOrProperty(envName);
-            if (Objects.isNull(envDataFile)) {
-                envName = IPI_PATH_ENV_VAR;
-                envDataFile = environmentOrProperty(envName);
-                if (Objects.nonNull(envDataFile)
-                        && OLD_NAME_LOGGED.compareAndSet(false, true)) {
-                    logger.warn(
-                            "The environment variable " + IPI_PATH_ENV_VAR
-                            + " is deprecated and " + IPI_PATH_VARIABLE
-                            + " replaces it. Set " + IPI_PATH_VARIABLE
-                            + " to the same value, as a later release may no longer "
-                            + "read " + IPI_PATH_ENV_VAR + ".");
-                }
-            }
             if (Objects.nonNull(envDataFile)) {
                 if (Files.exists(Paths.get(envDataFile))) {
                     return envDataFile;

@@ -183,7 +183,7 @@ class FlowDataDefault implements FlowData {
                     error.getFlowElement().getClass().getSimpleName() +
                     "-" + error.getFlowElement().hashCode();
             }
-            logger.error(message);
+            logger.error(message, error.getThrowable());
         }
     }
 

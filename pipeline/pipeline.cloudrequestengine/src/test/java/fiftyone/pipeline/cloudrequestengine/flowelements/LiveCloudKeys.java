@@ -42,7 +42,6 @@ final class LiveCloudKeys {
         "_51DEGREES_RESOURCE_KEY",
         "_51DEGREES_RESOURCE_KEY_BESPOKE",
         "TestResourceKey",
-        "SUPER_RESOURCE_KEY",
     };
 
     /**
