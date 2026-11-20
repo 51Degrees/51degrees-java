@@ -54,12 +54,6 @@ public class IPIntelligenceOnPremiseEngine
     extends FiftyOneOnPremiseAspectEngineBase<IPIntelligenceDataHash,
     FiftyOneAspectPropertyMetaData> {
     private EngineIpiSwig engine = null;
-    /**
-     * Held for the whole of each refresh, so that only one refresh of this
-     * engine runs in the native code at a time. Nothing else takes it, and
-     * no other lock is taken while it is held, so it cannot deadlock.
-     */
-    private final Object refreshLock = new Object();
     private final List<FiftyOneAspectPropertyMetaData> properties = new ArrayList<>();
     private final ConfigIpiSwig config;
     private final RequiredPropertiesConfigSwig propertiesConfigSwig;
@@ -336,10 +330,16 @@ public class IPIntelligenceOnPremiseEngine
      * whichever route calls it. A second refresh waits for the first to
      * finish. Processing takes no part in this and never waits for a
      * refresh.
+     * <p>
+     * The lock is this engine's own monitor, held for the whole refresh.
+     * Nothing else in the engine or the Pipeline takes it, and no other
+     * lock is taken while it is held, so it cannot deadlock. It is not a
+     * field, so an engine built by a mock that skips field initializers
+     * still has it.
      */
     @Override
     public void refreshData(String dataFileIdentifier) {
-        synchronized (refreshLock) {
+        synchronized (this) {
             refreshFromFile();
         }
     }
@@ -383,7 +383,7 @@ public class IPIntelligenceOnPremiseEngine
      */
     @Override
     public void refreshData(String dataFileIdentifier, byte[] data) {
-        synchronized (refreshLock) {
+        synchronized (this) {
             if (engine == null) {
                 engine = new EngineIpiSwig(data, config, propertiesConfigSwig);
             } else {
