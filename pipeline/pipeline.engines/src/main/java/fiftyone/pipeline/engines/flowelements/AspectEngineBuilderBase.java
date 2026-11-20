@@ -95,6 +95,7 @@ public abstract class AspectEngineBuilderBase<
      * @param set The properties that we want the engine to populate
      * @return this builder
      */
+    @DefaultValue("All properties")
     @SuppressWarnings("unchecked")
     public TBuilder setProperties(Set<AspectPropertyMetaData> set) {
         for (AspectPropertyMetaData property : set) {
@@ -124,6 +125,7 @@ public abstract class AspectEngineBuilderBase<
      * @param properties The properties that we want the engine to populate
      * @return this builder
      */
+    @DefaultValue("All properties")
     @SuppressWarnings("unchecked")
     public TBuilder setProperties(List<String> properties) {
         for (String property : properties) {
@@ -159,6 +161,7 @@ public abstract class AspectEngineBuilderBase<
      * @param aspectProperty the property that we want the engine to populate
      * @return this builder
      */
+    @DefaultValue("All properties")
     @SuppressWarnings("unchecked")
     public TBuilder setProperty(AspectPropertyMetaData aspectProperty) {
         tryAddProperty(aspectProperty.getName());
@@ -170,6 +173,7 @@ public abstract class AspectEngineBuilderBase<
      * @param configuration the configuration to use
      * @return this builder
      */
+    @DefaultValue("No lazy loading")
     @SuppressWarnings("unchecked")
     public TBuilder setLazyLoading(LazyLoadingConfiguration configuration) {
         this.lazyLoadingConfig = configuration;
@@ -182,6 +186,7 @@ public abstract class AspectEngineBuilderBase<
      * @param cacheConfiguration the cache configuration to use
      * @return this builder
      */
+    @DefaultValue("No results cache")
     @SuppressWarnings("unchecked")
     public TBuilder setCache(CacheConfiguration cacheConfiguration) {
         this.cacheConfig = cacheConfiguration;
