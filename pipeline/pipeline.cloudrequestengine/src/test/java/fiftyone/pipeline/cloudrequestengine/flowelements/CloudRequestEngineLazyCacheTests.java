@@ -121,55 +121,12 @@ public class CloudRequestEngineLazyCacheTests
         return false;
     }
 
-    /**
-     * process returns while the cloud service has not answered. Before the
-     * fix the cache check read the response, which waited for it.
-     */
-    @Test
-    public void process_LazyCachedEngineDoesNotWaitForTheService()
-        throws Exception {
-        CountDownLatch called = new CountDownLatch(1);
-        CountDownLatch gate = new CountDownLatch(1);
-        mockService(called, gate, jsonResponse);
-        CloudRequestEngine engine = buildLazyCachedEngine();
-
-        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
-                .addFlowElement(engine).build();
-             FlowData data = pipeline.createFlowData()) {
-            data.addEvidence("query.User-Agent", "iPhone");
-            final AtomicBoolean returned = new AtomicBoolean(false);
-            final AtomicReference<Throwable> failure = new AtomicReference<>();
-            Thread processing = new Thread(() -> {
-                try {
-                    data.process();
-                    returned.set(true);
-                } catch (Throwable t) {
-                    failure.set(t);
-                }
-            });
-            processing.start();
-            called.await();
-            // Look until process has returned, or is seen waiting for the
-            // answer that is held back.
-            boolean waited = false;
-            while (returned.get() == false && failure.get() == null &&
-                processing.isAlive()) {
-                if (waitingForProcessing(processing)) {
-                    waited = true;
-                    break;
-                }
-                Thread.yield();
-            }
-            gate.countDown();
-            processing.join();
-            assertNull(failure.get());
-            assertFalse(waited,
-                "process waited for the cloud service's answer.");
-            assertTrue(returned.get());
-            assertEquals(jsonResponse,
-                data.get(CloudRequestData.class).getJsonResponse());
-        }
-    }
+    // Combined run only: rc's process_LazyCachedEngineDoesNotWaitForTheService
+    // is removed here. It checks that a lazy loading engine returns before
+    // the cloud service answers, which #202 ("make lazy loading have no
+    // effect") removes on purpose: process now runs on the calling thread,
+    // so the test's unbounded loop never ends. #202 must drop or rewrite it
+    // when it merges this rc.
 
     /**
      * With lazy loading, a response without a 51Did is still cached, so the
