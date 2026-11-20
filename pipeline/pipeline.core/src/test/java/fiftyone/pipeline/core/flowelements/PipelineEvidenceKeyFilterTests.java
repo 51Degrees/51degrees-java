@@ -23,6 +23,7 @@
 package fiftyone.pipeline.core.flowelements;
 
 import fiftyone.pipeline.core.data.EvidenceKeyFilter;
+import fiftyone.pipeline.core.testclasses.flowelements.MultiplyByFiveElement;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
@@ -35,14 +36,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 /**
- * The Pipeline builds its Evidence key filter on first use, and every request
- * then reads it with no lock, as usage sharing and the web integration do.
- * The filter is filled after it is created, so it is published through a
- * volatile field, and a thread that reads it sees the whole filter.
+ * The Pipeline's Evidence key filter depends only on the Flow Elements it
+ * holds, which never change after it is built. So the Pipeline builds the
+ * filter once, when it is built, and every request then reads it with no
+ * lock, as usage sharing and the web integration do. A final field set in
+ * the constructor is seen whole by every thread.
  * @see <a href="https://github.com/51Degrees/specifications/blob/52e9b047/pipeline-specification/features/thread-safety.md#flow-elements">Specification</a>
  */
 public class PipelineEvidenceKeyFilterTests {
@@ -50,13 +53,34 @@ public class PipelineEvidenceKeyFilterTests {
     private static final int THREADS = 8;
 
     @Test
-    public void evidenceKeyFilter_PublishedThroughAVolatileField()
-        throws Exception {
+    public void evidenceKeyFilter_HeldInAFinalField() throws Exception {
         Field field =
             PipelineDefault.class.getDeclaredField("evidenceKeyFilter");
         assertTrue(
-            "The filter is read with no lock, so its field must be volatile",
-            Modifier.isVolatile(field.getModifiers()));
+            "The filter is built with the Pipeline, so its field is final",
+            Modifier.isFinal(field.getModifiers()));
+    }
+
+    @Test
+    public void evidenceKeyFilter_BuiltWithThePipeline() throws Exception {
+        try (Pipeline pipeline = new PipelineBuilder(
+                LoggerFactory.getILoggerFactory())
+                .addFlowElement(new MultiplyByFiveElement(
+                    LoggerFactory.getLogger(MultiplyByFiveElement.class)))
+                .build()) {
+            Field field =
+                PipelineDefault.class.getDeclaredField("evidenceKeyFilter");
+            field.setAccessible(true);
+            // Read the field before anything asks for the filter.
+            Object built = field.get(pipeline);
+            assertNotNull(
+                "The filter exists as soon as the Pipeline is built",
+                built);
+            assertTrue(
+                "The filter accepts the Flow Element's Evidence",
+                ((EvidenceKeyFilter) built).include("value"));
+            assertSame(built, pipeline.getEvidenceKeyFilter());
+        }
     }
 
     @Test
