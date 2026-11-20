@@ -81,7 +81,15 @@ import static org.mockito.Mockito.when;
  */
 public class DataUpdateServiceCheckFailureTests {
 
-    private static final long WAIT_FOR_EVENT_MILLIS = 10000;
+    /**
+     * The longest a test waits for the file system watcher to see a change.
+     * On macOS, Java's watch service polls, by default every 10 seconds, so
+     * an event can take 10 seconds or more to arrive. A 10 second wait failed
+     * on macOS in RelativePathTests (java #190's release build, run
+     * 44702767584, at 10.21 s and 10.13 s). 30 seconds is three polls, and
+     * each wait ends as soon as the change is seen.
+     */
+    private static final long WAIT_FOR_EVENT_MILLIS = 30000;
 
     private static final long RETRY_MILLIS = 100;
 
