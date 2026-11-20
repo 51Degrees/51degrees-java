@@ -60,6 +60,12 @@ public class Wrapper51Degrees implements Wrapper {
 
     	cloudRequestEngine = new CloudRequestEngineBuilder(logger)
                 .setResourceKey(resourceKey)
+                // The live cloud service is shared with every CI run, and
+                // took over the 2 second default to answer at 08:38 UTC on
+                // 20 November 2026 (java #190's release build, run
+                // 44702767584). These tests check what the service answers,
+                // not how fast.
+                .setTimeOutSeconds(15)
                 .build();
         engine =  new GeoLocationCloudEngineBuilder(logger)
                 .setGeoLocationProvider("FiftyOneDegrees")
