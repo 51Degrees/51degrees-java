@@ -31,6 +31,7 @@ import fiftyone.pipeline.engines.exceptions.PropertyMissingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -48,9 +49,10 @@ public class PropertyHelper {
      * property.
      */
     public static final String PRICING_MESSAGE = "Some properties used " +
-            "by this example are not available with a free resource key. " +
-            "See https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-propertyhelper.java&utm_term=pricing_message to get a paid subscription " +
-            "with more properties.";
+            "by this example are not available with a free resource key or " +
+            "the free data file. Contact us about a key or a data file " +
+            "that has them at " +
+            "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-propertyhelper.java&utm_term=paid-properties";
 
     static Logger logger = LoggerFactory.getLogger(PropertyHelper.class);
 
@@ -84,11 +86,28 @@ public class PropertyHelper {
                                     weighted.getValue(),
                                     weighted.getWeighting());
                         }
-                        return item != null ? item.toString() : "Unknown";
+                        return toDisplayString(item);
                     })
                     .collect(Collectors.joining(", "));
         }
-        return value != null ? value.toString() : "Unknown";
+        return toDisplayString(value);
+    }
+
+    /**
+     * Text for a single value. An address is shown in its literal form, for
+     * example "8.8.8.0", because InetAddress.toString() puts the host name
+     * and a slash in front of it.
+     * @param value a single unwrapped value, may be null
+     * @return the text to display
+     */
+    private static String toDisplayString(Object value) {
+        if (value == null) {
+            return "Unknown";
+        }
+        if (value instanceof InetAddress) {
+            return ((InetAddress) value).getHostAddress();
+        }
+        return value.toString();
     }
     /**
      * Build the "no value" output for a property and log the
@@ -119,8 +138,9 @@ public class PropertyHelper {
         } catch (PropertyMissingException e) {
             String message =
                     "The property '" + e.getPropertyName() + "' is not " +
-                    "available in this data file. See data file options " +
-                    "<a href=\"https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-propertyhelper.java&utm_term=property-missing\">here</a>";
+                    "available with the data file or resource key in use. " +
+                    "Contact us about one that has it at " +
+                    "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-propertyhelper.java&utm_term=property-missing";
             AspectPropertyValue<T> result = new AspectPropertyValueDefault<>();
             result.setNoValueMessage(message);
             return result;
@@ -166,6 +186,7 @@ public class PropertyHelper {
     /**
      * Helper to get the value of an IP Intelligence InetAddress property.
      * Handles runtime List&lt;IWeightedValue&gt; values due to type erasure.
+     * The address is shown in its literal form, for example "8.8.8.0".
      */
     public static String asIPAddressProperty(AspectPropertyValue<java.net.InetAddress> property) {
         if (property == null || !property.hasValue()) {
@@ -249,7 +270,7 @@ public class PropertyHelper {
         return String.format(
                 Locale.ROOT,
                 "%s (weighting %.2f)",
-                value != null ? value.toString() : "Unknown",
+                toDisplayString(value),
                 weighting);
     }
 

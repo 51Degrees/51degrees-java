@@ -132,7 +132,7 @@ public interface DataUpdateService extends Closeable, PipelineService {
         AUTO_UPDATE_TIMEOUT,
         // The data file checking for updates has no temporary file path.
         AUTO_UPDATE_TEMP_PATH_NOT_SET,
-        // An error the service did not expect ended an automatic check.
+        // A check failed with an error that no other status covers.
         AUTO_UPDATE_UNKNOWN_ERROR
     }
 

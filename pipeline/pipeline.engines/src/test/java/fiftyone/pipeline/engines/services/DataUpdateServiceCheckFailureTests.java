@@ -22,294 +22,565 @@
 
 package fiftyone.pipeline.engines.services;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
-import fiftyone.common.wrappers.io.FileWrapperFactoryDefault;
+import fiftyone.common.wrappers.data.BinaryReader;
+import fiftyone.common.wrappers.data.BinaryWriter;
+import fiftyone.common.wrappers.io.FileWrapper;
+import fiftyone.common.wrappers.io.FileWrapperDefault;
+import fiftyone.common.wrappers.io.FileWrapperFactory;
 import fiftyone.pipeline.engines.configuration.DataFileConfigurationDefault;
 import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectEngineDataFileDefault;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import fiftyone.pipeline.engines.flowelements.OnPremiseAspectEngine;
+import fiftyone.pipeline.engines.services.DataUpdateService.AutoUpdateStatus;
 import fiftyone.pipeline.engines.services.update.FutureFactory;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardWatchEventKinds;
-import java.nio.file.WatchEvent;
-import java.nio.file.WatchKey;
+import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assume.assumeFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.mockingDetails;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * A failure in a check started by update polling or by the file watcher, as
- * the Errors section of the data update specification describes. The tasks
- * the service schedules are kept and run here directly, so nothing waits on
- * a timer.
- * @see <a href="https://github.com/51Degrees/specifications/blob/rc/pipeline-specification/features/data-updates.md#errors">Specification</a>
+ * A failure in a check started by update polling or by the file watcher is
+ * caught and logged at Error rather than lost with the scheduled task, is
+ * reported to the update callbacks unless one of them raised it, and does
+ * not stop later checks. See the Errors section of the data update
+ * specification.
  */
-@SuppressWarnings("unchecked")
 public class DataUpdateServiceCheckFailureTests {
 
-    private ch.qos.logback.classic.Logger logger;
-    private ListAppender<ILoggingEvent> appender;
-    private FutureFactory futureFactory;
-    private final List<Runnable> scheduled = new CopyOnWriteArrayList<>();
-    private final List<Runnable> repeating = new CopyOnWriteArrayList<>();
-    private DataUpdateServiceDefault dataUpdate;
-    private OnPremiseAspectEngine<? extends AspectData,
-        ? extends AspectPropertyMetaData> engine;
-    private String engineType;
-    private File dataFile;
-    private File tempFile;
+    private static final long WAIT_FOR_EVENT_MILLIS = 10000;
 
-    @Before
-    public void init() throws IOException {
-        logger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(
-            "DataUpdateServiceCheckFailureTests");
-        logger.setLevel(Level.INFO);
-        appender = new ListAppender<>();
-        appender.start();
-        logger.addAppender(appender);
+    private static final long RETRY_MILLIS = 100;
 
-        futureFactory = mock(FutureFactory.class);
+    /**
+     * How far past now the second data file's modified time is set, so it
+     * is later than the first on a file system that keeps whole seconds.
+     */
+    private static final long LATER_FILE_MILLIS = 2000;
+
+    /**
+     * Modified times for a data file that is newer than the copy the
+     * engine uses.
+     */
+    private static final long NEWER_MILLIS = 2000000;
+
+    private static final long OLDER_MILLIS = 1000000;
+
+    private static final String MAC_MESSAGE =
+        "File watchers are not well implemented in OS X, " +
+        "so don't run this unit test as it is unlikely to pass.";
+
+    /**
+     * The Errors table's message for an error no other row covers, and for
+     * an error raised by an update callback.
+     */
+    private static final String UNHANDLED =
+        "An unhandled error occurred while checking for automatic updates " +
+        "for engine '%s'";
+
+    /**
+     * A callback that fails on a check by the file watcher is logged, and
+     * the watcher goes on to apply a later data file. A repeating task that
+     * fails is never run again, so the failure must not leave the task.
+     */
+    @Test
+    public void WatcherCheck_CallbackFails_LoggedAndWatchingCarriesOn()
+        throws Exception {
+        assumeFalse(MAC_MESSAGE, isMac());
+        Logger logger = mock(Logger.class);
+        AtomicReference<Runnable> watcher = new AtomicReference<>();
+        DataUpdateService dataUpdate = new DataUpdateServiceDefault(
+            logger,
+            mock(HttpClient.class),
+            fileWrapperFactory(),
+            futureFactory(watcher));
+        RuntimeException failure =
+            new IllegalStateException("The callback failed");
+        dataUpdate.onUpdateComplete((sender, args) -> {
+            throw failure;
+        });
+
+        OnPremiseAspectEngine<? extends AspectData,
+            ? extends AspectPropertyMetaData> engine = engine();
+        Path directory = Files.createTempDirectory("watched");
+        Path dataFile = directory.resolve("data.dat");
+        Files.write(dataFile, "Old".getBytes());
+        AspectEngineDataFileDefault file = dataFile(engine, dataFile, true);
+
+        try {
+            dataUpdate.registerDataFile(file);
+            assertNotNull("Registering sets up the file watcher",
+                watcher.get());
+
+            Files.write(dataFile, "New".getBytes());
+            runWatcherUntilRefreshed(watcher.get(), engine, 1);
+            assertEquals("The watched file refreshes the engine",
+                1, refreshCount(engine));
+            verify(logger, atLeastOnce()).error(
+                eq(String.format(UNHANDLED, engineType(engine))),
+                same(failure));
+
+            Files.write(dataFile, "Newer".getBytes());
+            Files.setLastModifiedTime(dataFile, FileTime.fromMillis(
+                System.currentTimeMillis() + LATER_FILE_MILLIS));
+            runWatcherUntilRefreshed(watcher.get(), engine, 2);
+            assertEquals("A later data file is still applied",
+                2, refreshCount(engine));
+        }
+        finally {
+            cleanUp(file, directory, dataFile);
+        }
+    }
+
+    /**
+     * A check by the file watcher whose refresh throws an Error still leaves
+     * the data file with a polling timer. The refresh cancels the timer
+     * before it runs, so the file has to be registered again however the
+     * refresh ends, or polling for updates never runs again.
+     */
+    @Test
+    public void WatcherCheck_RefreshThrowsError_PollingTimerSetAgain()
+        throws Exception {
+        assumeFalse(MAC_MESSAGE, isMac());
+        Logger logger = mock(Logger.class);
+        AtomicReference<Runnable> watcher = new AtomicReference<>();
+        AtomicInteger pollingTimers = new AtomicInteger();
+        FutureFactory futureFactory = mock(FutureFactory.class);
         when(futureFactory.schedule(any(Runnable.class), anyLong()))
             .then(invocation -> {
-                scheduled.add(invocation.getArgument(0));
+                pollingTimers.incrementAndGet();
                 return mock(ScheduledFuture.class);
             });
         when(futureFactory.scheduleRepeating(any(Runnable.class), anyLong()))
             .then(invocation -> {
-                repeating.add(invocation.getArgument(0));
+                watcher.set((Runnable) invocation.getArgument(0));
                 return mock(ScheduledFuture.class);
             });
+        DataUpdateService dataUpdate = new DataUpdateServiceDefault(
+            logger,
+            mock(HttpClient.class),
+            fileWrapperFactory(),
+            futureFactory);
 
-        dataUpdate = new DataUpdateServiceDefault(
-            logger, null, new FileWrapperFactoryDefault(), futureFactory);
+        OnPremiseAspectEngine<? extends AspectData,
+            ? extends AspectPropertyMetaData> engine = engine();
+        doThrow(new Error("The refresh failed"))
+            .when(engine).refreshData(any());
+        Path directory = Files.createTempDirectory("watched");
+        Path dataFile = directory.resolve("data.dat");
+        Files.write(dataFile, "Old".getBytes());
+        AspectEngineDataFileDefault file = dataFile(engine, dataFile, true);
 
-        engine = mock(OnPremiseAspectEngine.class);
-        engineType = engine.getClass().getSimpleName();
-        dataFile = File.createTempFile("check-failure", ".dat");
-        tempFile = File.createTempFile("check-failure", ".tmp");
+        try {
+            dataUpdate.registerDataFile(file);
+            assertEquals("Registering sets one polling timer",
+                1, pollingTimers.get());
+
+            Files.write(dataFile, "New".getBytes());
+            runWatcherUntilRefreshed(watcher.get(), engine, 1);
+            assertEquals("The watched file was refreshed once",
+                1, refreshCount(engine));
+            assertEquals("A new polling timer is set after the failed refresh",
+                2, pollingTimers.get());
+        }
+        finally {
+            cleanUp(file, directory, dataFile);
+        }
     }
 
-    @After
-    public void cleanup() {
-        logger.detachAppender(appender);
-        dataFile.delete();
-        tempFile.delete();
+    /**
+     * A callback that fails on a check by update polling is logged rather
+     * than left with the timer's task, and polling goes on.
+     */
+    @Test
+    public void PollingCheck_CallbackFails_LoggedAndPollingCarriesOn()
+        throws Exception {
+        Logger logger = mock(Logger.class);
+        List<Runnable> timers = new ArrayList<>();
+        HttpURLConnection connection = mock(HttpURLConnection.class);
+        when(connection.getResponseCode())
+            .thenReturn(HttpURLConnection.HTTP_NOT_MODIFIED);
+        HttpClient httpClient = mock(HttpClient.class);
+        when(httpClient.connect(any(URL.class))).thenReturn(connection);
+        DataUpdateService dataUpdate = new DataUpdateServiceDefault(
+            logger,
+            httpClient,
+            fileWrapperFactory(),
+            timerFactory(timers));
+        RuntimeException failure =
+            new IllegalStateException("The callback failed");
+        List<AutoUpdateStatus> statuses = new ArrayList<>();
+        dataUpdate.onUpdateComplete((sender, args) -> {
+            statuses.add(args.getStatus());
+            throw failure;
+        });
+
+        OnPremiseAspectEngine<? extends AspectData,
+            ? extends AspectPropertyMetaData> engine = engine();
+        Path directory = Files.createTempDirectory("polled");
+        Path dataFile = directory.resolve("data.dat");
+        Files.write(dataFile, "Old".getBytes());
+        AspectEngineDataFileDefault file = dataFile(engine, dataFile, false);
+        file.setTempDataDirPath(directory.toString());
+        file.getConfiguration().setDataUpdateUrl("http://www.test.com");
+        file.getConfiguration().setVerifyModifiedSince(false);
+
+        try {
+            dataUpdate.registerDataFile(file);
+            assertEquals("Registering sets one polling timer",
+                1, timers.size());
+
+            timers.get(0).run();
+
+            assertEquals("The check is reported once",
+                Collections.singletonList(
+                    AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED),
+                statuses);
+            verify(logger).error(
+                eq(String.format(UNHANDLED, engineType(engine))),
+                same(failure));
+            assertEquals("The next check is scheduled", 2, timers.size());
+        }
+        finally {
+            cleanUp(file, directory, dataFile);
+        }
     }
 
-    private AspectEngineDataFileDefault newDataFile(boolean watcher) {
+    /**
+     * A check by update polling that fails is logged, reported as an
+     * unknown error, and the next check is still scheduled, so a later data
+     * file is applied.
+     */
+    @Test
+    public void PollingCheck_CheckFails_ReportedAndNextCheckScheduled()
+        throws Exception {
+        Logger logger = mock(Logger.class);
+        List<Runnable> timers = new ArrayList<>();
+        RuntimeException failure =
+            new IllegalStateException("The file system failed");
+        FileWrapperFactory fileWrapperFactory = fileWrapperFactory();
+        when(fileWrapperFactory.getLastModified(anyString()))
+            .thenThrow(failure);
+        DataUpdateService dataUpdate = new DataUpdateServiceDefault(
+            logger,
+            mock(HttpClient.class),
+            fileWrapperFactory,
+            timerFactory(timers));
+        List<String> statuses = new ArrayList<>();
+        dataUpdate.onUpdateComplete((sender, args) ->
+            statuses.add(args.getStatus().name()));
+
+        OnPremiseAspectEngine<? extends AspectData,
+            ? extends AspectPropertyMetaData> engine = engine();
+        Path directory = Files.createTempDirectory("polled");
+        Path dataFile = directory.resolve("data.dat");
+        Files.write(dataFile, "Old".getBytes());
+        AspectEngineDataFileDefault file = dataFile(engine, dataFile, false);
+        file.setTempDataFilePath(
+            directory.resolve("data-copy.dat").toString());
+
+        try {
+            dataUpdate.registerDataFile(file);
+            assertEquals("Registering sets one polling timer",
+                1, timers.size());
+
+            timers.get(0).run();
+
+            verify(logger).error(
+                eq(String.format(UNHANDLED, engineType(engine))),
+                same(failure));
+            assertEquals("The failed check is reported as an unknown error",
+                Collections.singletonList("AUTO_UPDATE_UNKNOWN_ERROR"),
+                statuses);
+            assertEquals("The next check is scheduled", 2, timers.size());
+        }
+        finally {
+            cleanUp(file, directory, dataFile);
+        }
+    }
+
+    /**
+     * An Error thrown by the engine's refresh during a check by update
+     * polling is caught like any other failure. It is logged, reported as
+     * an unknown error, and the next check is scheduled.
+     */
+    @Test
+    public void PollingCheck_RefreshThrowsError_ReportedAndNextCheckScheduled()
+        throws Exception {
+        Logger logger = mock(Logger.class);
+        List<Runnable> timers = new ArrayList<>();
+        Error failure = new Error("The refresh failed");
+        Path directory = Files.createTempDirectory("polled");
+        Path dataFile = directory.resolve("data.dat");
+        Path tempFile = directory.resolve("data-copy.dat");
+        Files.write(dataFile, "New".getBytes());
+        Files.write(tempFile, "Old".getBytes());
+        FileWrapperFactory fileWrapperFactory = fileWrapperFactory();
+        when(fileWrapperFactory.getLastModified(dataFile.toString()))
+            .thenReturn(NEWER_MILLIS);
+        when(fileWrapperFactory.getLastModified(tempFile.toString()))
+            .thenReturn(OLDER_MILLIS);
+        DataUpdateService dataUpdate = new DataUpdateServiceDefault(
+            logger,
+            mock(HttpClient.class),
+            fileWrapperFactory,
+            timerFactory(timers));
+        List<String> statuses = new ArrayList<>();
+        dataUpdate.onUpdateComplete((sender, args) ->
+            statuses.add(args.getStatus().name()));
+
+        OnPremiseAspectEngine<? extends AspectData,
+            ? extends AspectPropertyMetaData> engine = engine();
+        doThrow(failure).when(engine).refreshData(any());
+        AspectEngineDataFileDefault file = dataFile(engine, dataFile, false);
+        file.setTempDataFilePath(tempFile.toString());
+
+        try {
+            dataUpdate.registerDataFile(file);
+            assertEquals("Registering sets one polling timer",
+                1, timers.size());
+
+            timers.get(0).run();
+
+            verify(logger).error(
+                eq(String.format(UNHANDLED, engineType(engine))),
+                same(failure));
+            assertEquals("The failed check is reported as an unknown error",
+                Collections.singletonList("AUTO_UPDATE_UNKNOWN_ERROR"),
+                statuses);
+            assertEquals("The next check is scheduled", 2, timers.size());
+        }
+        finally {
+            if (tempFile.toFile().delete() == false) {
+                tempFile.toFile().deleteOnExit();
+            }
+            cleanUp(file, directory, dataFile);
+        }
+    }
+
+    /**
+     * A programmatic check that fails is reported as an unknown error, and
+     * the error then passes to the caller without being logged, as the
+     * Programmatic update steps of the data update specification say.
+     */
+    @Test
+    public void ProgrammaticCheck_CheckFails_ReportedAndPassedToCaller()
+        throws Exception {
+        Logger logger = mock(Logger.class);
+        RuntimeException failure =
+            new IllegalStateException("The file system failed");
+        FileWrapperFactory fileWrapperFactory = fileWrapperFactory();
+        when(fileWrapperFactory.getLastModified(anyString()))
+            .thenThrow(failure);
+        DataUpdateService dataUpdate = new DataUpdateServiceDefault(
+            logger,
+            mock(HttpClient.class),
+            fileWrapperFactory,
+            timerFactory(new ArrayList<>()));
+        List<String> statuses = new ArrayList<>();
+        dataUpdate.onUpdateComplete((sender, args) ->
+            statuses.add(args.getStatus().name()));
+
+        OnPremiseAspectEngine<? extends AspectData,
+            ? extends AspectPropertyMetaData> engine = engine();
+        Path directory = Files.createTempDirectory("checked");
+        Path dataFile = directory.resolve("data.dat");
+        Files.write(dataFile, "Old".getBytes());
+        AspectEngineDataFileDefault file = dataFile(engine, dataFile, false);
+        file.getConfiguration().setAutomaticUpdatesEnabled(false);
+        file.setTempDataFilePath(
+            directory.resolve("data-copy.dat").toString());
+        doReturn(file).when(engine).getDataFileMetaData();
+
+        try {
+            RuntimeException thrown = assertThrows(RuntimeException.class,
+                () -> dataUpdate.checkForUpdate(engine));
+
+            assertSame("The check's error passes to the caller",
+                failure, thrown);
+            assertEquals("The failed check is reported as an unknown error",
+                Collections.singletonList("AUTO_UPDATE_UNKNOWN_ERROR"),
+                statuses);
+            verify(logger, never()).error(anyString(), any(Throwable.class));
+        }
+        finally {
+            cleanUp(file, directory, dataFile);
+        }
+    }
+
+    private static void runWatcherUntilRefreshed(
+        Runnable watcher,
+        Object engine,
+        long count) throws InterruptedException {
+        long end = System.currentTimeMillis() + WAIT_FOR_EVENT_MILLIS;
+        while (refreshCount(engine) < count &&
+            System.currentTimeMillis() < end) {
+            watcher.run();
+            Thread.sleep(RETRY_MILLIS);
+        }
+    }
+
+    private static FutureFactory futureFactory(
+        final AtomicReference<Runnable> watcher) {
+        FutureFactory futureFactory = mock(FutureFactory.class);
+        when(futureFactory.schedule(any(Runnable.class), anyLong()))
+            .then(invocation -> mock(ScheduledFuture.class));
+        when(futureFactory.scheduleRepeating(any(Runnable.class), anyLong()))
+            .then(invocation -> {
+                watcher.set((Runnable) invocation.getArgument(0));
+                return mock(ScheduledFuture.class);
+            });
+        return futureFactory;
+    }
+
+    private static FutureFactory timerFactory(final List<Runnable> timers) {
+        FutureFactory futureFactory = mock(FutureFactory.class);
+        when(futureFactory.schedule(any(Runnable.class), anyLong()))
+            .then(invocation -> {
+                timers.add((Runnable) invocation.getArgument(0));
+                return mock(ScheduledFuture.class);
+            });
+        when(futureFactory.scheduleRepeating(any(Runnable.class), anyLong()))
+            .then(invocation -> mock(ScheduledFuture.class));
+        return futureFactory;
+    }
+
+    private static FileWrapperFactory fileWrapperFactory() {
+        FileWrapperFactory fileWrapperFactory = mock(FileWrapperFactory.class);
+        when(fileWrapperFactory.build(anyString())).then(invocation ->
+            new InMemoryReadFile((String) invocation.getArgument(0)));
+        when(fileWrapperFactory.getLastModified(anyString())).then(
+            invocation ->
+                new File((String) invocation.getArgument(0)).lastModified());
+        return fileWrapperFactory;
+    }
+
+    /**
+     * A file whose reader holds a copy of its bytes. The default reader maps
+     * the file, and Windows will not let a mapped file be written again
+     * until the mapping is collected, which the watcher tests need to do.
+     */
+    private static final class InMemoryReadFile implements FileWrapper {
+        private final FileWrapperDefault file;
+
+        InMemoryReadFile(String path) {
+            file = new FileWrapperDefault(path);
+        }
+
+        @Override
+        public BinaryReader getReader() throws IOException {
+            return new BinaryReader(ByteBuffer.wrap(
+                Files.readAllBytes(Paths.get(file.getPath()))));
+        }
+
+        @Override
+        public BinaryWriter getWriter() throws IOException {
+            return file.getWriter();
+        }
+
+        @Override
+        public long getLastModified() {
+            return file.getLastModified();
+        }
+
+        @Override
+        public String getPath() {
+            return file.getPath();
+        }
+
+        @Override
+        public boolean exists() {
+            return file.exists();
+        }
+
+        @Override
+        public void delete() {
+            file.delete();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static OnPremiseAspectEngine<? extends AspectData,
+        ? extends AspectPropertyMetaData> engine() {
+        return mock(OnPremiseAspectEngine.class);
+    }
+
+    private static String engineType(Object engine) {
+        return engine.getClass().getSimpleName();
+    }
+
+    private static AspectEngineDataFileDefault dataFile(
+        OnPremiseAspectEngine<? extends AspectData,
+            ? extends AspectPropertyMetaData> engine,
+        Path dataFile,
+        boolean watching) {
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
-        config.setAutomaticUpdatesEnabled(watcher == false);
-        config.setFileSystemWatcherEnabled(watcher);
-        config.setUpdateOnStartup(false);
-        config.setPollingIntervalSeconds(86400);
-        config.setMaxRandomisationSeconds(0);
-        config.setDataFilePath(dataFile.getAbsolutePath());
+        config.setAutomaticUpdatesEnabled(true);
+        config.setFileSystemWatcherEnabled(watching);
+        config.setPollingIntervalSeconds(1);
+        config.setDataFilePath(dataFile.toString());
         AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
-        file.setIdentifier("default");
         file.setEngine(engine);
         file.setConfiguration(config);
-        file.setTempDataFilePath(tempFile.getAbsolutePath());
-        when(engine.getDataFileMetaData()).thenReturn(file);
         return file;
     }
 
-    private String unhandled() {
-        return "An unhandled error occurred while checking for automatic " +
-            "updates for engine '" + engineType + "'";
-    }
-
-    private void assertLoggedAtError(String message, Throwable attached) {
-        List<String> errors = new ArrayList<>();
-        for (ILoggingEvent event : appender.list) {
-            if (event.getLevel() == Level.ERROR) {
-                errors.add(event.getFormattedMessage());
-                if (event.getFormattedMessage().equals(message) &&
-                    event.getThrowableProxy() != null &&
-                    event.getThrowableProxy().getMessage()
-                        .equals(attached.getMessage())) {
-                    return;
-                }
-            }
+    private static void cleanUp(
+        AspectEngineDataFileDefault file,
+        Path directory,
+        Path dataFile) {
+        if (file.getConfiguration().getWatchKey() != null) {
+            file.getConfiguration().getWatchKey().cancel();
         }
-        fail("Expected '" + message + "' at ERROR with '" +
-            attached.getMessage() + "' attached, but got " + errors);
-    }
-
-    /**
-     * Run a scheduled task as the executor would. A task that throws has its
-     * error kept in its future, where nothing reads it, and a repeating task
-     * that throws never runs again.
-     */
-    private static void runAsExecutor(Runnable task) {
-        try {
-            task.run();
-        } catch (Throwable t) {
-            fail("The scheduled task threw, so its error is lost and a " +
-                "repeating task stops: " + t);
+        // Whatever Windows still holds is deleted when the test run ends,
+        // in the reverse order it is registered, so the folder goes first.
+        directory.toFile().deleteOnExit();
+        if (dataFile.toFile().delete() == false) {
+            dataFile.toFile().deleteOnExit();
         }
+        directory.toFile().delete();
     }
 
-    /**
-     * "A failure in a check started by update polling or by the file watcher
-     * MUST be caught and logged, rather than being lost or ending the
-     * process, and is then reported to onUpdateCallbacks."
-     * (data-updates.md line 474) A callback that throws on update polling is
-     * logged at Error with the last row's message.
-     */
-    @Test
-    public void polling_CallbackThrows_IsCaughtAndLogged() {
-        AspectEngineDataFileDefault file = newDataFile(false);
-        assertTrue(dataFile.setLastModified(tempFile.lastModified() + 60000));
-        final RuntimeException thrown =
-            new IllegalStateException("callback failed");
-        final List<DataUpdateService.AutoUpdateStatus> reported =
-            new CopyOnWriteArrayList<>();
-        dataUpdate.onUpdateComplete((sender, args) -> {
-            reported.add(args.getStatus());
-            throw thrown;
-        });
-        dataUpdate.registerDataFile(file);
-        assertEquals(1, scheduled.size());
-
-        runAsExecutor(scheduled.get(0));
-
-        verify(engine, times(1)).refreshData("default");
-        assertEquals(Collections.singletonList(
-            DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_SUCCESS), reported);
-        assertLoggedAtError(unhandled(), thrown);
+    private static boolean isMac() {
+        return System.getProperty("os.name").contains("Mac OS X");
     }
 
-    /**
-     * "A failure in a check started by update polling or by the file watcher
-     * MUST be caught and logged, rather than being lost or ending the
-     * process, and is then reported to onUpdateCallbacks."
-     * (data-updates.md line 474) and "A failure MUST NOT stop later checks
-     * for updates" (line 476). An unexpected error in a polling check is
-     * logged, reported with AUTO_UPDATE_UNKNOWN_ERROR, and the next check is
-     * still scheduled.
-     */
-    @Test
-    public void polling_CheckThrows_IsLoggedReportedAndRescheduled() {
-        final RuntimeException thrown =
-            new IllegalStateException("check broke");
-        // An unchecked error that escapes the check itself.
-        FailingFile failing = new FailingFile(newDataFile(false), thrown);
-        final List<String> reported = new CopyOnWriteArrayList<>();
-        dataUpdate.onUpdateComplete(
-            (sender, args) -> reported.add(args.getStatus().name()));
-        dataUpdate.registerDataFile(failing);
-        assertEquals(1, scheduled.size());
-        Runnable check = scheduled.get(0);
-        int before = scheduled.size();
-
-        runAsExecutor(check);
-
-        assertLoggedAtError(unhandled(), thrown);
-        assertEquals(Collections.singletonList("AUTO_UPDATE_UNKNOWN_ERROR"),
-            reported);
-        assertTrue("No later check was scheduled",
-            scheduled.size() > before);
-    }
-
-    /**
-     * "A failure MUST NOT stop later checks for updates, so a later good
-     * data file is still applied." (data-updates.md line 476) A callback
-     * that throws during a watcher check must not end the repeating watcher
-     * task, and the watch key is reset so the next change is seen.
-     */
-    @Test
-    public void watcher_CallbackThrows_LaterFileStillApplied() {
-        AspectEngineDataFileDefault file = newDataFile(true);
-        final RuntimeException thrown =
-            new IllegalStateException("callback failed");
-        final boolean[] fail = {true};
-        dataUpdate.onUpdateComplete((sender, args) -> {
-            if (fail[0]) {
-                throw thrown;
-            }
-        });
-        dataUpdate.registerDataFile(file);
-        assertEquals(1, repeating.size());
-        assertNotNull(file.getConfiguration().getWatchKey());
-        file.getConfiguration().getWatchKey().cancel();
-
-        WatchEvent<Object> event = mock(WatchEvent.class);
-        doReturn(StandardWatchEventKinds.ENTRY_MODIFY).when(event).kind();
-        when(event.context()).thenReturn(
-            Paths.get(dataFile.getName()));
-        WatchKey key = mock(WatchKey.class);
-        when(key.pollEvents()).thenReturn(
-            Collections.<WatchEvent<?>>singletonList(event));
-        file.getConfiguration().setWatchKey(key);
-
-        assertTrue(dataFile.setLastModified(
-            System.currentTimeMillis() + 60000));
-        runAsExecutor(repeating.get(0));
-        verify(key, atLeastOnce()).reset();
-        assertLoggedAtError(unhandled(), thrown);
-
-        // A later good file is applied by the next run.
-        fail[0] = false;
-        assertTrue(dataFile.setLastModified(
-            System.currentTimeMillis() + 120000));
-        runAsExecutor(repeating.get(0));
-        verify(engine, times(2)).refreshData(anyString());
-    }
-
-    /**
-     * A data file whose check throws an unchecked error that the service
-     * does not expect, to stand for any such error in a polling check.
-     */
-    private static class FailingFile extends AspectEngineDataFileDefault {
-        private final RuntimeException error;
-        private volatile boolean armed = false;
-
-        FailingFile(AspectEngineDataFileDefault from, RuntimeException error) {
-            this.error = error;
-            setIdentifier(from.getIdentifier());
-            setEngine(from.getEngine());
-            setConfiguration(from.getConfiguration());
-            setTempDataFilePath(from.getTempDataFilePath());
-        }
-
-        @Override
-        public void setFuture(ScheduledFuture<?> future) {
-            super.setFuture(future);
-            armed = true;
-        }
-
-        @Override
-        public String getTempDataFilePath() {
-            if (armed) {
-                throw error;
-            }
-            return super.getTempDataFilePath();
-        }
+    private static long refreshCount(Object engine) {
+        return mockingDetails(engine).getInvocations().stream()
+            .filter(i -> i.getMethod().getName().equals("refreshData"))
+            .count();
     }
 }

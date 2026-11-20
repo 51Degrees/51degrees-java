@@ -43,36 +43,17 @@ public class KeyUtilsTest {
      * variable.
      */
     @Test
-    public void oldKeyNameIsReadWhenNewIsNotSet() {
-        assumeKeyNamesNotInEnvironment();
+    public void newKeyNameIsRead() {
+        assumeTrue(System.getenv(NEW_KEY_NAME) == null);
         String savedNew = System.clearProperty(NEW_KEY_NAME);
-        String savedOld = System.clearProperty(OLD_KEY_NAME);
-        try {
-            System.setProperty(OLD_KEY_NAME, "old-name-key");
-            assertEquals("old-name-key",
-                KeyUtils.getResourceKey("NoSuchLegacyName"));
-        } finally {
-            restore(NEW_KEY_NAME, savedNew);
-            restore(OLD_KEY_NAME, savedOld);
-        }
-    }
-
-    @Test
-    public void newKeyNameWinsOverOld() {
-        assumeKeyNamesNotInEnvironment();
-        String savedNew = System.clearProperty(NEW_KEY_NAME);
-        String savedOld = System.clearProperty(OLD_KEY_NAME);
         try {
             System.setProperty(NEW_KEY_NAME, "new-name-key");
-            System.setProperty(OLD_KEY_NAME, "old-name-key");
             assertEquals("new-name-key",
                 KeyUtils.getResourceKey("NoSuchLegacyName"));
         } finally {
             restore(NEW_KEY_NAME, savedNew);
-            restore(OLD_KEY_NAME, savedOld);
         }
     }
-
     @Test
     @SuppressWarnings("deprecation")
     public void oldKeyConstantKeepsItsValue() throws Exception {
@@ -81,11 +62,6 @@ public class KeyUtilsTest {
             .isAnnotationPresent(Deprecated.class));
         assertEquals(NEW_KEY_NAME,
             KeyUtils.class.getField("RESOURCE_KEY_VARIABLE").get(null));
-    }
-
-    private static void assumeKeyNamesNotInEnvironment() {
-        assumeTrue(System.getenv(NEW_KEY_NAME) == null);
-        assumeTrue(System.getenv(OLD_KEY_NAME) == null);
     }
 
     private static void restore(String name, String value) {

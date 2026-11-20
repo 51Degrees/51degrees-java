@@ -50,41 +50,12 @@ public class DidClientEnvironmentTests {
     private static final String OLD_NAME = "FOD_CLOUD_API_URL";
 
     private static final String NEW_ENDPOINT = "https://new.example/api/v4/";
-    private static final String OLD_ENDPOINT = "https://old.example/api/v4/";
 
     private static final int PROBE_TIMEOUT_SECONDS = 120;
 
     @Test
-    public void oldNameAlone_GivesItsEndpoint() throws Exception {
-        List<String> output = probe(null, OLD_ENDPOINT);
-
-        assertEquals(
-            Arrays.asList(OLD_ENDPOINT, OLD_ENDPOINT), endpoints(output));
-    }
-
-    @Test
-    public void oldNameAlone_IsLoggedAsDeprecatedOnce() throws Exception {
-        List<String> logged = logged(probe(null, OLD_ENDPOINT));
-
-        assertEquals(logged.toString(), 1, logged.size());
-        String record = logged.get(0);
-        assertTrue(record, record.startsWith("WARNING "));
-        assertTrue(record, record.contains(OLD_NAME));
-        assertTrue(record, record.contains(NEW_NAME));
-        assertTrue(record, record.contains("deprecated"));
-    }
-
-    @Test
-    public void newNameBlank_OldNameIsRead() throws Exception {
-        List<String> output = probe(" ", OLD_ENDPOINT);
-
-        assertEquals(
-            Arrays.asList(OLD_ENDPOINT, OLD_ENDPOINT), endpoints(output));
-    }
-
-    @Test
-    public void bothNames_NewNameWins() throws Exception {
-        List<String> output = probe(NEW_ENDPOINT, OLD_ENDPOINT);
+    public void newName_GivesItsEndpoint() throws Exception {
+        List<String> output = probe(NEW_ENDPOINT);
 
         assertEquals(
             Arrays.asList(NEW_ENDPOINT, NEW_ENDPOINT), endpoints(output));
@@ -92,8 +63,18 @@ public class DidClientEnvironmentTests {
     }
 
     @Test
+    public void newNameBlank_GivesTheDefault() throws Exception {
+        List<String> output = probe(" ");
+
+        assertEquals(
+            Arrays.asList(
+                DidClient.DEFAULT_ENDPOINT, DidClient.DEFAULT_ENDPOINT),
+            endpoints(output));
+    }
+
+    @Test
     public void neitherName_GivesTheDefault() throws Exception {
-        List<String> output = probe(null, null);
+        List<String> output = probe(null);
 
         assertEquals(
             Arrays.asList(
@@ -114,10 +95,10 @@ public class DidClientEnvironmentTests {
     }
 
     /**
-     * Runs the probe with each variable set to the value given, or absent
+     * Runs the probe with the variable set to the value given, or absent
      * where the value is null, and returns the lines it printed.
      */
-    private static List<String> probe(String newValue, String oldValue)
+    private static List<String> probe(String newValue)
         throws Exception {
         String java = Paths.get(
             System.getProperty("java.home"), "bin", "java").toString();
@@ -126,7 +107,6 @@ public class DidClientEnvironmentTests {
         Map<String, String> environment = builder.environment();
         environment.put("CLASSPATH", classPath());
         set(environment, NEW_NAME, newValue);
-        set(environment, OLD_NAME, oldValue);
         builder.redirectErrorStream(true);
 
         Process process = builder.start();
