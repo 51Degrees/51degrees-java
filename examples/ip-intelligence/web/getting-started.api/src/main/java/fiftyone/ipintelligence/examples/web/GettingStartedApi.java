@@ -107,7 +107,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  */
 public class GettingStartedApi extends HttpServlet {
     private static final long serialVersionUID = 1734154705981153543L;
-    public static final int DEFAULT_PORT = 5225;
+    public static final int DEFAULT_PORT = 5151;
     public static final String DATA_FILE_INIT_PARAM = "dataFile";
     public static Logger logger = LoggerFactory.getLogger(GettingStartedApi.class);
 

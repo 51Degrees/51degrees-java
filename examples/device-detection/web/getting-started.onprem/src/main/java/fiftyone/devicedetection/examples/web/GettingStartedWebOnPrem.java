@@ -53,12 +53,17 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * the free Lite file in cxx/data/device-detection is used, which is downloaded
  * before the server starts if it is missing.
  * <p>
- * The server listens on port 8081 and stops when Enter is pressed. If the PORT
+ * The server listens on port 5151 and stops when Enter is pressed. If the PORT
  * environment variable is set, the server listens on that port instead and runs
  * until the process is stopped, which is how automated tests start it.
  */
 public class GettingStartedWebOnPrem extends HttpServlet {
     private static final long serialVersionUID = 1734154705981153540L;
+    /**
+     * The port the example listens on when the PORT environment variable
+     * does not choose another.
+     */
+    public static final int DEFAULT_PORT = 5151;
     public static String resourceBase = "examples/device-detection/web/getting-started.onprem/src/main/webapp";
     public static Logger logger = LoggerFactory.getLogger(GettingStartedWebOnPrem.class);
 
@@ -74,7 +79,7 @@ public class GettingStartedWebOnPrem extends HttpServlet {
         } else {
             // start Jetty with this WebApp
             findDataFile();
-            EmbedJetty.runWebApp(getFilePath(resourceBase).getAbsolutePath(), 8081);
+            EmbedJetty.runWebApp(getFilePath(resourceBase).getAbsolutePath(), DEFAULT_PORT);
         }
     }
 
