@@ -91,10 +91,9 @@ The tables below describe the examples available in this repository.
 ### Cloud
 
 Cloud examples require a resource key, supplied via the `_51DEGREES_RESOURCE_KEY`
-environment variable or system property, the legacy `TestResourceKey` name, or a
-command line argument. Resource keys
+environment variable or system property, or a command line argument. Resource keys
 for IP Intelligence are not yet generally available, so these examples can also
-be pointed at a custom hosted cloud endpoint using the `TestCloudEndPoint`
+be pointed at a custom hosted cloud endpoint using the `_51DEGREES_CLOUD_ENDPOINT`
 environment variable or system property.
 
 | Example                  | Description                                                                                                                                 |
@@ -105,8 +104,8 @@ environment variable or system property.
 | MetadataCloud            | How to access the meta-data that relates to the properties available from the cloud IP intelligence service.                                 |
 
 Cloud examples need a resource key. The key is read from the
-`_51DEGREES_RESOURCE_KEY` environment variable or system property first. The
-legacy `TestResourceKey` name is still supported and is checked second.
+`_51DEGREES_RESOURCE_KEY` environment variable or system property, and no
+other name.
 
 The cloud property tiers changed in May 2026. The examples and this
 documentation now reflect what is free and what needs a paid subscription.

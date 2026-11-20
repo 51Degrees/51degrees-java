@@ -192,12 +192,10 @@
                         <!-- this sets the scope of file search (inter alia in Utils.getFilePath) to the project directory-->
                         <!--suppress UnresolvedMavenProperty -->
                         <project.root>${maven.multiModuleProjectDirectory}</project.root>
-                        <!-- these are defined in  settings.xml -->
-                        <SuperResourceKey>${SuperResourceKey}</SuperResourceKey>
-                        <AcceptChNoneKey>${AcceptChNoneKey}</AcceptChNoneKey>
-                        <AcceptChPlatformKey>${AcceptChPlatformKey}</AcceptChPlatformKey>
-                        <AcceptChBrowserKey>${AcceptChBrowserKey}</AcceptChBrowserKey>
-                        <AcceptChHardwareKey>${AcceptChHardwareKey}</AcceptChHardwareKey>
+                        <!-- The tests read their keys from the _51DEGREES_ environment
+                             variables, which the forked JVM inherits, or from these system
+                             properties, which can be defined in settings.xml -->
+                        <_51DEGREES_RESOURCE_KEY_SUPER>${_51DEGREES_RESOURCE_KEY_SUPER}</_51DEGREES_RESOURCE_KEY_SUPER>
                     </systemPropertyVariables>
                     <properties>
                         <property>

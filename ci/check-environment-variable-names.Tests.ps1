@@ -49,6 +49,30 @@ Describe 'Find-EnvironmentNameProblem' {
         Get-Kind $Line | Should -Contain 'fallback'
     }
 
+    # The names this repository's tests, examples and CI scripts used for
+    # keys and the cloud address before each had a _51DEGREES_ name, read as
+    # a Java string, a system property passed with -D, a PowerShell
+    # parameter or variable, a placeholder in a configuration file, or a key
+    # in a hashtable.
+    It 'finds the old key name <Line>' -ForEach @(
+        @{ Line = '.setResourceKey(TestKeyUtils.getNamedKey("TestResourceKey"))' }
+        @{ Line = 'public static final String RESOURCE_KEY_ENV_VAR = "SuperResourceKey";' }
+        @{ Line = 'UPDATE_EXAMPLE_LICENSE_KEY_NAME = "LicenseKey";' }
+        @{ Line = '        "TestLicenseKey",' }
+        @{ Line = '        "_51DEGREES_LICENSE_KEY_CLOUDV5BESPOKE",' }
+        @{ Line = 'CLOUD_END_POINT_NAME = "TestCloudEndPoint";' }
+        @{ Line = '<EndPoint>${TestCloudEndpoint:-https://cloud.51degrees.com/api/v4}</EndPoint>' }
+        @{ Line = '<ResourceKey>${SuperResourceKey}</ResourceKey>' }
+        @{ Line = '<AcceptChNoneKey>${AcceptChNoneKey}</AcceptChNoneKey>' }
+        @{ Line = '    "-DTestResourceKey=$TestResourceKey"' }
+        @{ Line = '    "-DLicenseKey=$DeviceDetection"' }
+        @{ Line = '    [string]$TestResourceKey,' }
+        @{ Line = '                TestResourceKey = $TestResourceKey' }
+        @{ Line = 'mvn clean test -DTestResourceKey=[Resource Key]' }
+    ) {
+        Get-Kind $Line | Should -Contain 'fallback'
+    }
+
     # The cloud request engine's tests name the query string parameter
     # resource_key, which is on the wire and not in the environment, so the
     # old names keep their case.
@@ -65,6 +89,12 @@ Describe 'Find-EnvironmentNameProblem' {
         @{ Line = '  PAID_RESOURCE_KEY: ${{ env.PAID_RESOURCE_KEY }}' }
         @{ Line = 'System.getenv("SUPER_RESOURCE_KEY")' }
         @{ Line = 'Set the key with !!YOUR_RESOURCE_KEY!! in the readme.' }
+        @{ Line = ' * https://distributor.51degrees.com/api/v2/download?LicenseKeys=<your_license_key>' }
+        @{ Line = '                    .setDataUpdateLicenseKey(licenseKey)' }
+        @{ Line = ' * method for a configuration option named ''LicenseKey''. If the' }
+        @{ Line = '        "_51DEGREES_LICENSE_KEY_BESPOKE",' }
+        @{ Line = '        resourceKey = KeyHelper.getOrSetTestResourceKey(resourceKey);' }
+        @{ Line = '<ResourceKey>${_51DEGREES_RESOURCE_KEY_SUPER}</ResourceKey>' }
     ) {
         Get-Kind $Line | Should -BeNullOrEmpty
     }

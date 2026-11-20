@@ -230,10 +230,13 @@ You will need [resource keys](https://51degrees.com/documentation/_services__clo
 To verify the code:
 
 ```
-mvn clean test -DTestResourceKey=[Resource Key]
+mvn clean test -D_51DEGREES_RESOURCE_KEY=[Resource Key]
 ```
-For tests and examples that require a license key add the following option:
-- `-DLicenseKey=[License Key]`
+The key can be set as the `_51DEGREES_RESOURCE_KEY` environment variable
+instead. The TAC and native model examples read a key with every property
+from `_51DEGREES_RESOURCE_KEY_SUPER`. For tests and examples that require a
+license key, set `_51DEGREES_LICENSE_KEY` or add the following option:
+- `-D_51DEGREES_LICENSE_KEY=[License Key]`
 
 ## Projects
 

@@ -149,13 +149,12 @@
                         <!-- this sets the scope of file search (inter alia in getFilePath) to the project directory-->
                         <!--suppress UnresolvedMavenProperty -->
                         <project.root>${maven.multiModuleProjectDirectory}</project.root>
-                        <!-- cloud resource key for running tests - this can be defined in  settings.xml -->
-                        <TestResourceKey>${TestResourceKey}</TestResourceKey>
-                        <!-- special resource key with license for running TAC and Native Model examples
-                             - can be defined in settings.xml-->
-                        <SuperResourceKey>${SuperResourceKey}</SuperResourceKey>
-                        <!-- license key required for running UpdateDataFile example -->
-                        <LicenseKey>${LicenseKey}</LicenseKey>
+                        <!-- The tests read their keys from the _51DEGREES_ environment
+                             variables, which the forked JVM inherits, or from these system
+                             properties, which can be defined in settings.xml -->
+                        <_51DEGREES_RESOURCE_KEY>${_51DEGREES_RESOURCE_KEY}</_51DEGREES_RESOURCE_KEY>
+                        <_51DEGREES_RESOURCE_KEY_SUPER>${_51DEGREES_RESOURCE_KEY_SUPER}</_51DEGREES_RESOURCE_KEY_SUPER>
+                        <_51DEGREES_LICENSE_KEY>${_51DEGREES_LICENSE_KEY}</_51DEGREES_LICENSE_KEY>
                     </systemPropertyVariables>
                     <properties>
                         <property>
