@@ -65,9 +65,10 @@ public abstract class PrePackagedPipelineBuilderBase
     }
 
     /**
-     * Enable lazy loading of results, with the timeout
-     * {@link Constants#DEFAULT_LAZY_LOADING_TIMEOUT_MILLIS}.
+     * Deprecated, and has no effect. Every Engine processes on the thread
+     * that processes the Flow Data, whether this is set or not.
      * @return this builder instance
+     * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/advanced-features/lazy-loading.md">Specification</a>
      */
     @SuppressWarnings("unchecked")
     public TBuilder useLazyLoading() {
@@ -76,10 +77,12 @@ public abstract class PrePackagedPipelineBuilderBase
     }
 
     /**
-     * Enable lazy loading of results.
-     * @param timeoutMillis the timeout to use when attempting to access
-     *                      lazy-loaded values
+     * Deprecated, and has no effect. Every Engine processes on the thread
+     * that processes the Flow Data, whether this is set or not, so the
+     * timeout is not used.
+     * @param timeoutMillis kept, but not used
      * @return this builder
+     * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/advanced-features/lazy-loading.md">Specification</a>
      */
     @SuppressWarnings("unchecked")
     public TBuilder useLazyLoading(long timeoutMillis) {

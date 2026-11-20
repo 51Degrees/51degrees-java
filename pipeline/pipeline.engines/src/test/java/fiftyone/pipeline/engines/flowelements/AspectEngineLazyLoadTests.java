@@ -29,12 +29,10 @@ import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.typed.TypedKey;
 import fiftyone.pipeline.engines.configuration.ExecutorServiceFactory;
 import fiftyone.pipeline.engines.configuration.LazyLoadingConfiguration;
-import fiftyone.pipeline.engines.exceptions.LazyLoadTimeoutException;
 import fiftyone.pipeline.engines.testhelpers.data.EmptyEngineData;
 import fiftyone.pipeline.engines.testhelpers.data.MockFlowData;
 import fiftyone.pipeline.engines.testhelpers.flowelements.EmptyEngine;
 import fiftyone.pipeline.engines.testhelpers.flowelements.EmptyEngineBuilder;
-import fiftyone.pipeline.exceptions.AggregateException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -45,7 +43,6 @@ import org.slf4j.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -121,21 +118,17 @@ public class AspectEngineLazyLoadTests {
 
         // Process the data.
         engine.process(mockData);
-        // Check that the task is not complete when process returns.
-        boolean processReturnedBeforeTaskComplete =
-            engineData[0].getProcessFuture().isDone() == false;
+        // Lazy loading has no effect, so processing has finished when
+        // process returns.
+        boolean processReturnedAfterTaskComplete =
+            engineData[0].getProcessFuture().isDone();
 
         // Assert
         assertEquals(1, engineData[0].getValueOne());
-        // Check that the task is now complete (because the code to get
-        // the property value will wait until it is complete)
-        boolean valueReturnedAfterTaskComplete =
-            engineData[0].getProcessFuture().isDone() == true;
-        assertTrue(processReturnedBeforeTaskComplete);
-        assertTrue(valueReturnedAfterTaskComplete);
+        assertTrue(processReturnedAfterTaskComplete);
     }
 
-    @Test(expected = LazyLoadTimeoutException.class)
+    @Test
     public void AspectEngineLazyLoad_PropertyTimeout() throws Exception {
         // Arrange
         // Set the process time to double the configured timeout
@@ -163,15 +156,14 @@ public class AspectEngineLazyLoadTests {
 
         // Process the data
         engine.process(mockData);
-        // Attempt to get the value. This should cause the timeout
-        // to be triggered.
+        // Lazy loading has no effect, so nothing waits and the value is
+        // there, however long processing took.
         int result = engineData[0].getValueOne();
 
-        // No asserts needed. Just the ExpectedException attribute
-        // on the method.
+        assertEquals(1, result);
     }
 
-    @Test(expected = CancellationException.class)
+    @Test
     public void AspectEngineLazyLoad_ProcessCancelled() throws Exception {
         // Arrange
         // Set the process time to half the configured timeout
@@ -198,12 +190,13 @@ public class AspectEngineLazyLoadTests {
 
         // Process the data
         engine.process(mockData);
-        // Trigger a cancellation.
+        // Processing has finished, so there is nothing to cancel.
         mockData.stop();
         engineData[0].getProcessFuture().cancel(true);
 
         // Attempt to get the value.
         int result = engineData[0].getValueOne();
+        assertEquals(1, result);
     }
 
     @Test
@@ -231,18 +224,17 @@ public class AspectEngineLazyLoadTests {
             any(TypedKey.class),
             any(FlowElement.DataFactory.class));
 
-        // Process the data
-        engine.process(mockData);
-
-        // Attempt to get the value.
+        // Process the data. Lazy loading has no effect, so the Engine's
+        // exception comes from process.
+        Exception thrown = null;
         try {
-            int result = engineData[0].getValueOne();
+            engine.process(mockData);
         }
         catch (Exception e) {
-            assertTrue(e instanceof RuntimeException);
-            assertTrue(e.getCause() != null);
-            assertEquals("java.lang.Exception: " + exceptionMessage, e.getCause().getMessage());
+            thrown = e;
         }
+        assertTrue(thrown != null);
+        assertEquals(exceptionMessage, thrown.getMessage());
     }
 
     @Test
@@ -283,19 +275,18 @@ public class AspectEngineLazyLoadTests {
             any(TypedKey.class),
             any(FlowElement.DataFactory.class));
 
-        // Process the data twice
-        engine.process(mockData);
-        engine2.process(mockData);
-
-        // Attempt to get the value.
-        try {
-            int result = engineData[0].getValueOne();
+        // Process the data twice. Lazy loading has no effect, so each
+        // Engine's exception comes from its own process call.
+        int thrown = 0;
+        for (EmptyEngine each : new EmptyEngine[] {engine, engine2}) {
+            try {
+                each.process(mockData);
+            }
+            catch (Exception e) {
+                assertEquals(exceptionMessage, e.getMessage());
+                thrown++;
+            }
         }
-        catch (Exception e) {
-            assertTrue(e instanceof AggregateException);
-            assertEquals(2, e.getSuppressed().length);
-            assertEquals("java.lang.Exception: " + exceptionMessage, e.getSuppressed()[0].getMessage());
-            assertEquals("java.lang.Exception: " + exceptionMessage, e.getSuppressed()[0].getMessage());
-        }
+        assertEquals(2, thrown);
     }
 }

@@ -65,21 +65,25 @@ public interface AspectEngine<
     String getDataSourceTier();
 
     /**
-     * Configure lazy loading of results.
-     * @param configuration the configuration to use
+     * Deprecated, and has no effect. Every Engine processes on the thread
+     * that processes the Flow Data, whether this is set or not. Long-running
+     * work is a lazy property of the Engine's own Element Data instead.
+     * @param configuration kept, but not used
+     * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/advanced-features/lazy-loading.md">Specification</a>
      */
     void setLazyLoading(LazyLoadingConfiguration configuration);
 
     /**
-     * Get the lazy loading configuration used for loading of results.
-     * @return lazy loading configuration
+     * Deprecated. Get the lazy loading configuration that was set, which has
+     * no effect.
+     * @return lazy loading configuration, or null if none was set
      */
     LazyLoadingConfiguration getLazyLoadingConfiguration();
 
     /**
-     * Get the executor service to use when starting processing threads which
-     * are lazily loaded.
-     * @return an {@link ExecutorService}
+     * Deprecated. Lazy loading has no effect, so an Engine starts no
+     * processing threads.
+     * @return null, as no executor is used
      */
     ExecutorService getExecutor();
 }

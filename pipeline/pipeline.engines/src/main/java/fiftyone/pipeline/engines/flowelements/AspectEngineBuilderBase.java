@@ -169,9 +169,12 @@ public abstract class AspectEngineBuilderBase<
     }
 
     /**
-     * Configure lazy loading of results.
-     * @param configuration the configuration to use
+     * Deprecated, and has no effect. The Engine processes on the thread that
+     * processes the Flow Data, whether this is set or not. Long-running work
+     * is a lazy property of the Engine's own Element Data instead.
+     * @param configuration kept, but not used
      * @return this builder
+     * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/advanced-features/lazy-loading.md">Specification</a>
      */
     @DefaultValue("No lazy loading")
     @SuppressWarnings("unchecked")

@@ -26,7 +26,6 @@ package fiftyone.pipeline.engines.data;
     import fiftyone.pipeline.core.data.FlowData;
     import fiftyone.pipeline.core.data.FlowError;
     import fiftyone.pipeline.core.data.TryGetResult;
-    import fiftyone.pipeline.engines.exceptions.LazyLoadTimeoutException;
     import fiftyone.pipeline.engines.exceptions.PropertyMissingException;
     import fiftyone.pipeline.engines.flowelements.AspectEngine;
     import fiftyone.pipeline.engines.services.MissingPropertyResult;
@@ -180,8 +179,10 @@ public abstract class AspectDataBase extends ElementDataBase implements AspectDa
      * Record that the cloud request for the Flow Data failed, so that a
      * property this instance does not hold is missing with the
      * CloudRequestFailed reason.
+     * @throws IllegalStateException if the Flow Element has finished
      */
     public void setCloudRequestFailed() {
+        checkWriting();
         cloudRequestFailed = true;
     }
 
@@ -189,22 +190,25 @@ public abstract class AspectDataBase extends ElementDataBase implements AspectDa
      * Add an engine to the list of engines which have generated the data within
      * this instance.
      * @param engine engine adding data
+     * @throws IllegalStateException if the Flow Element has finished
      */
     public void addEngine(AspectEngine<? extends AspectData,? extends AspectPropertyMetaData> engine) {
+        checkWriting();
         engines.add(engine);
     }
 
     /**
-     * Add a callable which will run a {@link AspectEngine#process(FlowData)}
-     * method to populate this instance. The property accessors will only
-     * complete once all such tasks have completed.
+     * Deprecated. Runs the callable on the calling thread, as lazy loading
+     * has no effect. An exception it throws is given to each later read of a
+     * property value, as before.
      * @param runnable processing runnable
+     * @throws IllegalStateException if the Flow Element has finished
      */
     public void addProcessCallable(ProcessCallable runnable) {
-        Future<?> future = runnable.engine.getExecutor().submit(runnable);
-        processFutures.put(
-            runnable.engine,
-            future);
+        checkWriting();
+        FutureTask<Void> task = new FutureTask<>(runnable);
+        task.run();
+        processFutures.put(runnable.engine, task);
     }
 
     @Override
@@ -247,7 +251,7 @@ public abstract class AspectDataBase extends ElementDataBase implements AspectDa
         }
         TryGetResult<T> result;
         List<FlowError> errors;
-        if (anyLazyLoaded(engines) == false ||
+        if (processFutures.isEmpty() ||
             (errors = waitOnAllProcessFutures()).size() == 0) {
             result = tryGetValue(key, type, parameterisedTypes);
             if (result.hasValue() == false &&
@@ -272,35 +276,17 @@ public abstract class AspectDataBase extends ElementDataBase implements AspectDa
         } else {
             Throwable e;
             if (errors.size() == 1) {
+                // A callable added through addProcessCallable threw.
                 e = errors.get(0).getThrowable();
-                if (e instanceof CancellationException) {
-                    // The property is being lazy loaded but been canceled, so
-                    // pass the exception up.
-                    throw (CancellationException)e;
-                }
-                else if (e instanceof TimeoutException) {
-                    // The property is being lazy loaded but has timed out
-                    // or been canceled so throw the appropriate exception.
-                    throw new LazyLoadTimeoutException(
-                        "Failed to retrieve property '" + key + "' " +
-                            "because the processing for engine(s) " +
-                            stringJoin(getDistinctEngineNames(), ", ") +
-                            " took longer than the specified timeout.",
-                        e);
-                }
-                else {
-                    // The property is being lazy loaded but an error
-                    // occurred in the engine's process method
-                    throw new RuntimeException(
-                        "Failed to retrieve property '" + key + "' " +
-                            "because processing threw an exception in engine(s) " +
-                            stringJoin(getDistinctEngineNames(), ", ") + ".",
-                        e);
-                }
+                throw new RuntimeException(
+                    "Failed to retrieve property '" + key + "' " +
+                        "because processing threw an exception in engine(s) " +
+                        stringJoin(getDistinctEngineNames(), ", ") + ".",
+                    e);
             }
             else {
-                // The property is being lazy loaded but multiple errors have
-                // occurred in the engine's process method
+                // More than one callable added through addProcessCallable
+                // threw.
                 throw new AggregateException(
                     "Failed to retrieve property '" + key + "' " +
                         "because processing threw multiple exceptions in engine(s) " +
@@ -346,23 +332,8 @@ public abstract class AspectDataBase extends ElementDataBase implements AspectDa
     }
 
     /**
-     * Returns true if any of the engines added have lazy loading configured.
-     * @param engines2 the engines to check
-     * @return true if any engines have lazy loading
-     */
-    private static boolean anyLazyLoaded(List<AspectEngine<? extends AspectData,? extends AspectPropertyMetaData>> engines2) {
-        for (AspectEngine<? extends AspectData,? extends AspectPropertyMetaData> engine : engines2) {
-            if (engine.getLazyLoadingConfiguration() != null) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Waits for all the process futures in {@link #processFutures} to finish
-     * then returns a list containing any errors which were thrown by the
-     * futures.
+     * Returns a list containing any errors thrown by the callables in
+     * {@link #processFutures}, each of which has already run.
      * @return list of errors
      */
     private List<FlowError> waitOnAllProcessFutures() {
@@ -370,9 +341,7 @@ public abstract class AspectDataBase extends ElementDataBase implements AspectDa
         for (Map.Entry<AspectEngine<? extends AspectData,? extends AspectPropertyMetaData>, Future<?>> entry :
             processFutures.entrySet()) {
             try {
-                entry.getValue().get(
-                    entry.getKey().getLazyLoadingConfiguration().getPropertyTimeoutMillis(),
-                    TimeUnit.MILLISECONDS);
+                entry.getValue().get();
             } catch (Exception e) {
                 errors.add(new FlowError.Default(e, entry.getKey()));
             }

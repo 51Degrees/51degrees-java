@@ -41,7 +41,6 @@ import fiftyone.pipeline.engines.services.HttpClient;
 import fiftyone.pipeline.engines.services.HttpClientDefault;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
-import java.util.concurrent.Future;
 
 import static fiftyone.geolocation.core.Constants.EVIDENCE_GEO_LAT_PARAM_KEY;
 import static fiftyone.geolocation.core.Constants.EVIDENCE_GEO_LON_PARAM_KEY;
@@ -176,10 +175,6 @@ public class CombiningServices {
 
                 AspectPropertyValue<Boolean> isMobile = flowData.get(DeviceData.class).getIsMobile();
 
-                Future<?> future = flowData.get(GeoData.class).getProcessFuture();
-                System.out.print("Awaiting response");
-                outputUntilCancelled(".", 1000, future);
-                System.out.println();
                 System.out.println("Country: " + country.toString());
                 System.out.println("IsMobile: " + isMobile.toString());
             }
@@ -188,16 +183,5 @@ public class CombiningServices {
             System.out,
             "https://51degrees.com/documentation/_reverse_geocoding__examples__combining_services.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-combiningservices.java&utm_term=find-out-more",
             "https://51degrees.com/location?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-combiningservices.java&utm_term=find-out-more");
-    }
-
-    private static void outputUntilCancelled(
-        String text,
-        int intervalMs,
-        Future<?> future) throws InterruptedException {
-        while (future.isDone() == false) {
-            System.out.print(text);
-            Thread.sleep(intervalMs);
-        }
-        future.cancel(true);
     }
 }

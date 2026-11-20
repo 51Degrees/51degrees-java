@@ -40,10 +40,30 @@ import java.util.TreeMap;
  * </p>
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/conceptual-overview.md#element-data">Specification</a>
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/thread-safety.md#element-data">Thread safety</a>
+  * <p>
+ * Element Data is written only by the Flow Element that provides it, or the
+ * Flow Elements that share it, and only while they process. Once a Flow
+ * Element that writes it has finished, {@link #put(String, Object)},
+ * {@link #populateFromMap(Map)} and every setter built on them fail with an
+ * {@link IllegalStateException}. Values kept once they have been read, with
+ * {@link #keepValues(Map)}, are not writes. Like the Flow Data that holds
+ * it, Element Data is not safe to use from several threads at once.
+ * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/thread-safety.md#element-data">Specification</a>
  */
 public abstract class ElementDataBase extends DataBase implements ElementData {
 
     private Pipeline pipeline;
+
+    /**
+     * Set once a Flow Element that writes this instance has finished, after
+     * which a write fails. A write tests it, and nothing waits on it.
+     */
+    private volatile boolean finished = false;
+
+    private static final String FINISHED_MESSAGE =
+        "This Element Data's Flow Element has finished processing, so it " +
+        "is read only. Element Data is written only by the Flow Element " +
+        "that provides it, while it processes.";
 
     /**
      * Constructs a new instance with a non-thread-safe, case-insensitive
@@ -81,5 +101,76 @@ public abstract class ElementDataBase extends DataBase implements ElementData {
     @Override
     public void setPipeline(Pipeline pipeline) {
         this.pipeline = pipeline;
+    }
+
+    /**
+     * Record that a Flow Element that writes this instance has finished, so
+     * that a later write fails. Called by the Flow Element when it finishes
+     * processing, whether or not it succeeded.
+     */
+    public void finishWriting() {
+        finished = true;
+    }
+
+    /**
+     * Open this instance for writing again, as a Flow Element that shares it
+     * does when it starts to process.
+     */
+    public void startWriting() {
+        finished = false;
+    }
+
+    /**
+     * @return true once a Flow Element that writes this instance has
+     * finished, until one that shares it starts to process
+     */
+    public boolean isFinishedWriting() {
+        return finished;
+    }
+
+    /**
+     * Store a value, which only the Flow Element that provides this instance,
+     * or one that shares it, does while it processes.
+     * @throws IllegalStateException if the Flow Element has finished
+     */
+    @Override
+    public void put(String key, Object value) {
+        if (finished) {
+            throw new IllegalStateException(FINISHED_MESSAGE);
+        }
+        super.put(key, value);
+    }
+
+    /**
+     * Store values, which only the Flow Element that provides this instance,
+     * or one that shares it, does while it processes.
+     * @throws IllegalStateException if the Flow Element has finished
+     */
+    @Override
+    public void populateFromMap(Map<String, Object> values) {
+        checkWriting();
+        super.populateFromMap(values);
+    }
+
+    /**
+     * Keep values this instance has read, such as those read from a results
+     * instance, so they are not read again. Keeping them is not a write, so
+     * it works once the Flow Element has finished.
+     * @param values the values read
+     */
+    protected void keepValues(Map<String, Object> values) {
+        super.populateFromMap(values);
+    }
+
+    /**
+     * Fail a write once a Flow Element that writes this instance has
+     * finished. A write method that does not go through
+     * {@link #put(String, Object)} calls it first.
+     * @throws IllegalStateException if the Flow Element has finished
+     */
+    protected void checkWriting() {
+        if (finished) {
+            throw new IllegalStateException(FINISHED_MESSAGE);
+        }
     }
 }

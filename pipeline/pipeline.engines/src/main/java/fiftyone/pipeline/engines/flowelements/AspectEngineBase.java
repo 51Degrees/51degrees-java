@@ -32,7 +32,6 @@ import fiftyone.pipeline.engines.configuration.LazyLoadingConfiguration;
 import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectDataBase;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
-import fiftyone.pipeline.engines.data.ProcessCallable;
 import fiftyone.pipeline.engines.services.MissingPropertyService;
 import fiftyone.pipeline.util.Types;
 import org.slf4j.Logger;
@@ -40,7 +39,6 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Base class for {@link AspectEngine}s to extend. This implements the data
@@ -55,8 +53,6 @@ public abstract class AspectEngineBase<
     implements AspectEngine<TData, TProperty> {
 
     private LazyLoadingConfiguration lazyLoadingConfiguration = null;
-
-    private ExecutorService executor = null;
 
     protected MissingPropertyService missingPropertyService;
 
@@ -97,10 +93,17 @@ public abstract class AspectEngineBase<
         cache.setFlowElement(this);
     }
 
+    /**
+     * Deprecated, and has no effect. The configuration is kept so that it can
+     * be read back, but the Engine always processes on the thread that
+     * processes the Flow Data, and no executor is created. Long-running work
+     * is a lazy property of the Engine's own Element Data instead.
+     * @param configuration ignored apart from being kept
+     * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/advanced-features/lazy-loading.md">Specification</a>
+     */
     @Override
     public void setLazyLoading(LazyLoadingConfiguration configuration) {
         this.lazyLoadingConfiguration = configuration;
-        this.executor = lazyLoadingConfiguration.getExecutorService();
     }
 
     @Override
@@ -108,9 +111,13 @@ public abstract class AspectEngineBase<
         return lazyLoadingConfiguration;
     }
 
+    /**
+     * Deprecated. Lazy loading has no effect, so no executor is created.
+     * @return always null
+     */
     @Override
     public ExecutorService getExecutor() {
-        return executor;
+        return null;
     }
 
     /**
@@ -191,33 +198,11 @@ public abstract class AspectEngineBase<
                 ((AspectDataBase) aspectData).addEngine(this);
             }
 
-            // Start the engine processing
-            if (lazyLoadingConfiguration != null) {
-                // If lazy loading is configured then create a task
-                // to do the processing and assign the task to the
-                // aspect data property.
-                ((AspectDataBase) aspectData).addProcessCallable(
-                    new ProcessCallable(this) {
-                        @Override
-                        public Void call() throws Exception {
-                            processEngine(flowData, aspectData);
-                            return null;
-                        }
-                    }
-                );
-                // The cache key is made from the Flow Data's Evidence, so
-                // the result is stored here, on the processing thread, and
-                // not by the task. It is not processed yet, so the check
-                // before serving keeps out a result that may not be cached.
-                if (cache != null) {
-                    cache.put(flowData, aspectData);
-                }
-            }
-            else {
-                // If not lazy loading, just start processing.
-                processEngine(flowData, aspectData);
-                putInCache(flowData, aspectData);
-            }
+            // Process on this thread, whether or not the deprecated lazy
+            // loading option is set, then add the result to the cache if
+            // there is one and the result may be cached.
+            processEngine(flowData, aspectData);
+            putInCache(flowData, aspectData);
         } else {
             // We have a result from the cache so add it
             // into the flow data.
@@ -244,18 +229,6 @@ public abstract class AspectEngineBase<
                 cache.close();
             } catch (IOException e) {
                 logger.warn("Exception closing the cache", e);
-            }
-        }
-        if (executor != null) {
-            executor.shutdown();
-            try {
-                if (executor.awaitTermination(
-                    lazyLoadingConfiguration.getPropertyTimeoutMillis(),
-                    TimeUnit.MILLISECONDS) == false) {
-                    executor.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                executor.shutdownNow();
             }
         }
     }
