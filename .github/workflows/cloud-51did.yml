@@ -61,7 +61,7 @@ jobs:
         shell: pwsh
         env:
           _51DEGREES_RESOURCE_KEY_BESPOKE: ${{ secrets._51DEGREES_RESOURCE_KEY_BESPOKE }}
-          _51DEGREES_RESOURCE_KEY_51DID: ${{ vars._51DEGREES_RESOURCE_KEY_51DID }}
+          _51DEGREES_RESOURCE_KEY_51DID: ${{ secrets._51DEGREES_RESOURCE_KEY_BESPOKE }}
           # Without a license key the tests that redeem a sealed verdict skip.
           # The service only redeems with a license key of the resource key's
           # own account, so each one is paired by suffix with the resource
