@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -82,7 +83,8 @@ public class ShareUsageParameterTests {
     }
 
     /**
-     * Accepts query.user-agent, so the Pipeline uses it.
+     * Accepts query.user-agent and the form parameter query.used-form-field,
+     * so the Pipeline uses them.
      */
     private static class Acceptor
         extends FlowElementBase<ElementData, ElementPropertyMetaData> {
@@ -103,7 +105,7 @@ public class ShareUsageParameterTests {
         @Override
         public EvidenceKeyFilter getEvidenceKeyFilter() {
             return new EvidenceKeyFilterWhitelist(
-                Collections.singletonList("query.user-agent"));
+                Arrays.asList("query.user-agent", "query.used-form-field"));
         }
 
         @Override
@@ -145,6 +147,7 @@ public class ShareUsageParameterTests {
         Map<String, Object> post = new HashMap<>();
         post.put("query.formpassword", "form-secret-value");
         post.put("query.51D_FormValue", "form-51d-value");
+        post.put("query.used-form-field", "form-accepted-value");
         post.put("header.user-agent", "header-value");
 
         try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
@@ -223,5 +226,19 @@ public class ShareUsageParameterTests {
         assertTrue(record.contains("accepted-value"), record);
         assertFalse(record.contains("query-secret-value"), record);
         assertFalse(record.contains("form-secret-value"), record);
+    }
+
+    /**
+     * A form parameter sent only in the body of a POST, which a Flow Element
+     * in the Pipeline accepts, is shared under every setup, just as a used
+     * query string parameter in the Evidence is.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {"none", "included", "shareall", "everything"})
+    public void postParameter_UsedByThePipeline_Shared(String options)
+        throws Exception {
+        String record = share(options);
+
+        assertTrue(record.contains("form-accepted-value"), record);
     }
 }
