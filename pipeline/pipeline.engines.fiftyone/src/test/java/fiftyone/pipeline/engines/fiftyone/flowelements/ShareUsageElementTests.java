@@ -25,7 +25,13 @@ package fiftyone.pipeline.engines.fiftyone.flowelements;
 import fiftyone.common.testhelpers.LogbackHelper;
 import fiftyone.common.testhelpers.TestLogger;
 import fiftyone.common.testhelpers.TestLoggerFactory;
+import fiftyone.pipeline.core.data.ElementData;
+import fiftyone.pipeline.core.data.ElementPropertyMetaData;
+import fiftyone.pipeline.core.data.EvidenceKeyFilter;
+import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import fiftyone.pipeline.core.data.FlowData;
+import fiftyone.pipeline.core.flowelements.FlowElement;
+import fiftyone.pipeline.core.flowelements.FlowElementBase;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
 import fiftyone.pipeline.engines.services.DataUploader;
@@ -312,6 +318,173 @@ public class ShareUsageElementTests {
         while ((length = source.read(buf)) > 0) {
             target.write(buf, 0, length);
         }
+    }
+
+    /**
+     * The record carries a Package element for each 51Degrees package in
+     * use, named by its Maven group and artifact id, with its version, after
+     * the FlowElement elements and before Language, as the specification's
+     * Processing section sets out. The packages are asked for with this
+     * element's class among the classes in use.
+     */
+    @Test
+    public void ShareUsageElement_Packages_EachWithItsVersion() throws Exception {
+        createShareUsage(
+                1,
+                1,
+                1,
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>());
+        shareUsageElement.httpClient = new TestHttpClient();
+        shareUsageElement.dataUploader = null;
+        SortedMap<String, String> packages = new TreeMap<>();
+        packages.put("com.51degrees:pipeline.core", "4.5.131");
+        packages.put("com.51degrees:pipeline.engines.fiftyone", "4.5.132");
+        List<Collection<Class<?>>> asked = new ArrayList<>();
+        shareUsageElement.packageFinder = classes -> {
+            asked.add(classes);
+            return packages;
+        };
+
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
+            shareUsageElement.process(data);
+            assertNotNull(shareUsageElement.getSendDataFuture());
+            shareUsageElement.getSendDataFuture().get();
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte[] zip = ((TestHttpClient)shareUsageElement.httpClient).getBuffer();
+            copy(new GZIPInputStream(new ByteArrayInputStream(zip)), baos);
+            Document doc = docBuilderFactory.newDocumentBuilder().parse(
+                new ByteArrayInputStream(baos.toByteArray()));
+
+            NodeList found = (NodeList) xpath.compile("//Devices/Device/Package")
+                .evaluate(doc, XPathConstants.NODESET);
+            assertEquals(2, found.getLength(), "One Package element for each package");
+            int i = 0;
+            for (Map.Entry<String, String> entry : packages.entrySet()) {
+                org.w3c.dom.Element element = (org.w3c.dom.Element) found.item(i++);
+                assertEquals(entry.getKey(), element.getAttribute("Name"));
+                assertEquals(entry.getValue(), element.getTextContent());
+            }
+            assertEquals("Product", previousElement(found.item(0)).getNodeName(),
+                "With no Flow Elements the Package elements follow Product");
+            assertEquals("Language", nextElement(found.item(1)).getNodeName(),
+                "Language follows the Package elements");
+        }
+        assertEquals(1, asked.size(), "The packages are found once");
+        assertTrue(asked.get(0).contains(ShareUsageElement.class),
+            "This element's own package is among those in use");
+    }
+
+    /**
+     * A Flow Element of the test's own, which processes nothing. Each
+     * subclass is a class of its own, so the classes the packages are asked
+     * for show which elements were found.
+     */
+    private static class GroupMember
+        extends FlowElementBase<ElementData, ElementPropertyMetaData> {
+        private final String key;
+
+        GroupMember(String key) {
+            super(LoggerFactory.getLogger(GroupMember.class), null);
+            this.key = key;
+        }
+
+        @Override
+        protected void processInternal(FlowData data) {
+        }
+
+        @Override
+        public String getElementDataKey() {
+            return key;
+        }
+
+        @Override
+        public EvidenceKeyFilter getEvidenceKeyFilter() {
+            return new EvidenceKeyFilterWhitelist(new ArrayList<String>());
+        }
+
+        @Override
+        public List<ElementPropertyMetaData> getProperties() {
+            return Collections.emptyList();
+        }
+
+        @Override
+        protected void managedResourcesCleanup() {
+        }
+
+        @Override
+        protected void unmanagedResourcesCleanup() {
+        }
+    }
+
+    private static class FirstGroupMember extends GroupMember {
+        FirstGroupMember() {
+            super("first");
+        }
+    }
+
+    private static class SecondGroupMember extends GroupMember {
+        SecondGroupMember() {
+            super("second");
+        }
+    }
+
+    /**
+     * A Flow Element in a parallel group is in use as much as one the
+     * Pipeline lists itself, so the packages are asked for with its class
+     * too. The specification's Package element is written "for every
+     * 51Degrees package in use, being the package that holds the Pipeline,
+     * the package that holds each FlowElement in the Pipeline, and every
+     * 51Degrees package those depend on".
+     */
+    @Test
+    @SuppressWarnings("rawtypes")
+    public void ShareUsageElement_Packages_IncludeParallelGroupMembers() throws Exception {
+        pipeline.close();
+        pipeline = new PipelineBuilder()
+            .addFlowElementsParallel(new FlowElement[] {
+                new FirstGroupMember(),
+                new SecondGroupMember() })
+            .build();
+        createShareUsage(
+                1,
+                1,
+                1,
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>());
+        List<Collection<Class<?>>> asked = new ArrayList<>();
+        shareUsageElement.packageFinder = classes -> {
+            asked.add(new ArrayList<>(classes));
+            return new TreeMap<>();
+        };
+
+        shareUsageElement.getPackages();
+
+        assertEquals(1, asked.size(), "The packages are found once");
+        assertTrue(asked.get(0).contains(FirstGroupMember.class),
+            "The first member of the group is among the classes in use");
+        assertTrue(asked.get(0).contains(SecondGroupMember.class),
+            "The second member of the group is among the classes in use");
+    }
+
+    private static Node previousElement(Node node) {
+        Node sibling = node.getPreviousSibling();
+        while (sibling != null && sibling.getNodeType() != Node.ELEMENT_NODE) {
+            sibling = sibling.getPreviousSibling();
+        }
+        return sibling;
+    }
+
+    private static Node nextElement(Node node) {
+        Node sibling = node.getNextSibling();
+        while (sibling != null && sibling.getNodeType() != Node.ELEMENT_NODE) {
+            sibling = sibling.getNextSibling();
+        }
+        return sibling;
     }
 
     // duplicate above test, only using legacy HttpClient approach
@@ -865,7 +1038,7 @@ public class ShareUsageElementTests {
                 names.add(child.getNodeName());
             }
         }
-        String[] expected = {"SessionId", "Sequence", "DateSent", "Version",
+        String[] expected = {"ProcessId", "SessionId", "Sequence", "DateSent", "Version",
             "Product", "FlowElement", "Language", "LanguageVersion",
             "ClientIP", "ServerIP", "Platform"};
         // Every element is always written, empty when there is no value.

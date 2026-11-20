@@ -26,13 +26,22 @@ import fiftyone.pipeline.core.data.DataBase;
 import fiftyone.pipeline.core.data.Evidence;
 import org.slf4j.Logger;
 
+import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 /**
- * Default implementation of the {@link Evidence} interface.
+ * Default implementation of the {@link Evidence} interface. Once the Flow
+ * Data that holds it has finished processing, a write fails with an
+ * {@link IllegalStateException}.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/evidence.md">Specification</a>
  */
 class EvidenceDefault extends DataBase implements Evidence {
+
+    /**
+     * Set when the Flow Data that holds this Evidence finishes processing. A
+     * write tests it, and nothing waits on it.
+     */
+    private volatile boolean finished = false;
 
     /**
      * Construct a new instance of the internal {@link Evidence} class using a
@@ -40,5 +49,31 @@ class EvidenceDefault extends DataBase implements Evidence {
      */
     EvidenceDefault(Logger logger) {
         super(logger, new ConcurrentSkipListMap<>(String.CASE_INSENSITIVE_ORDER));
+    }
+
+    /**
+     * Make this Evidence read only, because its Flow Data has finished
+     * processing.
+     */
+    void finish() {
+        finished = true;
+    }
+
+    @Override
+    public void put(String key, Object value) {
+        checkNotFinished();
+        super.put(key, value);
+    }
+
+    @Override
+    public void populateFromMap(Map<String, Object> values) {
+        checkNotFinished();
+        super.populateFromMap(values);
+    }
+
+    private void checkNotFinished() {
+        if (finished) {
+            throw new IllegalStateException(FlowDataDefault.FINISHED_MESSAGE);
+        }
     }
 }
