@@ -84,6 +84,11 @@ public class DeviceDetectionHashEngine
     private volatile boolean propertyIndexesFixed;
 
     /**
+     * The Metrics component, made the first time it is needed.
+     */
+    private volatile MetricsComponentMetaData metricsComponent;
+
+    /**
      * Construct a new instance of the {@link DeviceDetectionHashEngine}.
      * @param logger logger instance to use for logging
      * @param dataFile data file to read the data set from
@@ -259,11 +264,42 @@ public class DeviceDetectionHashEngine
             null : new ProfileMetaDataHash(this, profile);
     }
 
+    /**
+     * Get the ids of the profiles that hold a value of a property, such as a
+     * TAC or a native model name, from the native engine. The property name
+     * and the value are both matched exactly, as the data file holds them,
+     * so a value in another case does not match. The ids are in ascending
+     * order and each appears once. A property named with
+     * {@link DeviceDetectionHashEngineBuilder#setIndexedProperties(List)} is
+     * found through the native index, and any other by reading every
+     * profile, which gives the same ids more slowly.
+     * @see <a href="https://github.com/51Degrees/specifications/blob/main/device-detection-specification/pipeline-elements/device-detection-on-premise.md#profiles-for-a-property-value">Specification</a>
+     * @param propertyName name of the property, such as TAC or NativeModel
+     * @param valueName the value of the property
+     * @return ids of the profiles holding the value, empty when none do
+     */
+    public List<Long> getProfileIdsForPropertyValue(
+        String propertyName,
+        String valueName) {
+        List<Long> result = new ArrayList<>();
+        try (VectorUInt32Swig ids =
+                 engine.getProfileIdsForPropertyValue(propertyName, valueName)) {
+            int size = ids.size();
+            for (int i = 0; i < size; i++) {
+                result.add(ids.get(i));
+            }
+        }
+        return result;
+    }
+
     @Override
     public CloseableIterable<ComponentMetaData> getComponents() {
+        // The Metrics component holds the match metrics, which the data file
+        // does not have, so it is given after the data file's components.
         return new ComponentIterable(
             this,
-            engine.getMetaData().getComponents());
+            engine.getMetaData().getComponents(),
+            getMetricsComponent());
     }
 
     @Override
@@ -334,8 +370,27 @@ public class DeviceDetectionHashEngine
         return evidenceKeyFilter;
     }
 
+    /**
+     * {@inheritDoc}
+     * Only one refresh of this engine runs at a time, from either overload,
+     * whichever route calls it. A second refresh waits for the first to
+     * finish. Processing takes no part in this and never waits for a
+     * refresh.
+     * <p>
+     * The lock is this engine's own monitor, held for the whole refresh.
+     * Nothing else in the engine or the Pipeline takes it, and no other
+     * lock is taken while it is held, so it cannot deadlock. It is not a
+     * field, so an engine built by a mock that skips field initializers
+     * still has it.
+     */
     @Override
     public void refreshData(String dataFileIdentifier) {
+        synchronized (this) {
+            refreshFromFile();
+        }
+    }
+
+    private void refreshFromFile() {
         AspectEngineDataFile dataFile = getDataFiles().get(0);
 
         if (Objects.isNull(engine)) {
@@ -367,14 +422,21 @@ public class DeviceDetectionHashEngine
         setEngineMetaData();
     }
 
+    /**
+     * {@inheritDoc}
+     * Only one refresh of this engine runs at a time, as
+     * {@link #refreshData(String)} describes.
+     */
     @Override
     public void refreshData(String dataFileIdentifier, byte[] data) {
-        if (engine == null) {
-            engine = new EngineHashSwig(data, config, propertiesConfigSwig);
-        } else {
-            engine.refreshData(data);
+        synchronized (this) {
+            if (engine == null) {
+                engine = new EngineHashSwig(data, config, propertiesConfigSwig);
+            } else {
+                engine.refreshData(data);
+            }
+            setEngineMetaData();
         }
-        setEngineMetaData();
     }
 
     @Override
@@ -449,6 +511,32 @@ public class DeviceDetectionHashEngine
      * @return meta data for metric properties
      */
     private List<FiftyOneAspectPropertyMetaData> getMetricProperties() {
+        return getMetricsComponent().getPropertyList();
+    }
+
+    /**
+     * Get the Metrics component, which holds the match metric properties. It
+     * does not depend on the data file, so it is made once. Two threads that
+     * both find it missing each make one the same as the other.
+     * @return the Metrics component
+     */
+    private MetricsComponentMetaData getMetricsComponent() {
+        MetricsComponentMetaData component = metricsComponent;
+        if (component == null) {
+            component = newMetricsComponent();
+            metricsComponent = component;
+        }
+        return component;
+    }
+
+    /**
+     * Make the Metrics component and the match metric properties in it, which
+     * the native code does not include in its metadata, as the table of match
+     * metric properties gives them.
+     * @return new Metrics component
+     */
+    private MetricsComponentMetaData newMetricsComponent() {
+        MetricsComponentMetaData component = new MetricsComponentMetaData();
         List<String> dataFileList = Arrays.asList(
             "Lite", "Premium", "Enterprise", "TAC");
         FiftyOneAspectPropertyMetaData[] metricProperties =
@@ -469,7 +557,7 @@ public class DeviceDetectionHashEngine
                 false,
                 false,
                 Constants.MatchMetrics.MATCHED_NODES_DESCRIPTION,
-                null,
+                component,
                 Arrays.asList(),
                 new ValueMetaDataDefault("0")),
             new FiftyOneAspectPropertyMetaDataDefault(
@@ -487,7 +575,7 @@ public class DeviceDetectionHashEngine
                 false,
                 false,
                 Constants.MatchMetrics.DIFFERENCE_DESCRIPTION,
-                null,
+                component,
                 Arrays.asList(),
                 new ValueMetaDataDefault("0")),
             new FiftyOneAspectPropertyMetaDataDefault(
@@ -505,7 +593,7 @@ public class DeviceDetectionHashEngine
                 false,
                 false,
                 Constants.MatchMetrics.DRIFT_DESCRIPTION,
-                null,
+                component,
                 Arrays.asList(),
                 new ValueMetaDataDefault("0")),
             new FiftyOneAspectPropertyMetaDataDefault(
@@ -523,7 +611,7 @@ public class DeviceDetectionHashEngine
                 false,
                 false,
                 Constants.MatchMetrics.DEVICE_ID_DESCRIPTION,
-                null,
+                component,
                 Arrays.asList(),
                 new ValueMetaDataDefault("0-0-0-0")),
             new FiftyOneAspectPropertyMetaDataDefault(
@@ -541,7 +629,7 @@ public class DeviceDetectionHashEngine
                 false,
                 false,
                 Constants.MatchMetrics.USER_AGENTS_DESCRIPTION,
-                null,
+                component,
                 Arrays.asList(),
                 new ValueMetaDataDefault("n/a")),
             new FiftyOneAspectPropertyMetaDataDefault(
@@ -559,7 +647,7 @@ public class DeviceDetectionHashEngine
                 false,
                 false,
                 Constants.MatchMetrics.ITERATIONS_DESCRIPTION,
-                null,
+                component,
                 Arrays.asList(),
                 new ValueMetaDataDefault("0")),
             new FiftyOneAspectPropertyMetaDataDefault(
@@ -572,12 +660,12 @@ public class DeviceDetectionHashEngine
                 null,
                 (byte) 0,
                 true,
-                true,
+                false,
                 false,
                 false,
                 false,
                 Constants.MatchMetrics.METHOD_DESCRIPTION,
-                null,
+                component,
                 Arrays.asList(
                     new ValueMetaDataDefault("NONE"),
                     new ValueMetaDataDefault("PERFORMANCE"),
@@ -585,7 +673,10 @@ public class DeviceDetectionHashEngine
                     new ValueMetaDataDefault( "PREDICTIVE")),
                 new ValueMetaDataDefault("NONE"))
         };
-        return Arrays.asList(metricProperties);
+        for (FiftyOneAspectPropertyMetaData property : metricProperties) {
+            component.addProperty(property);
+        }
+        return component;
     }
 
     @Override

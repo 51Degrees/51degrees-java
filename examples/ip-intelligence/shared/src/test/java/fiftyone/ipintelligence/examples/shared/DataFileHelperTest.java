@@ -68,43 +68,19 @@ public class DataFileHelperTest {
      * variable.
      */
     @Test
-    public void getDataFileLocation_OldNameWhenNewIsNotSet()
-            throws Exception {
-        assumePathNamesNotInEnvironment();
+    public void getDataFileLocation_NewName() throws Exception {
+        assumeTrue(System.getenv(NEW_PATH_NAME) == null);
         String savedNew = System.clearProperty(NEW_PATH_NAME);
-        String savedOld = System.clearProperty(OLD_PATH_NAME);
-        File file = File.createTempFile("old-path-name", ".ipi");
-        try {
-            System.setProperty(OLD_PATH_NAME, file.getPath());
-            assertEquals(file.getPath(),
-                    DataFileHelper.getDataFileLocation(null));
-        } finally {
-            restore(NEW_PATH_NAME, savedNew);
-            restore(OLD_PATH_NAME, savedOld);
-            file.delete();
-        }
-    }
-
-    @Test
-    public void getDataFileLocation_NewNameWinsOverOld() throws Exception {
-        assumePathNamesNotInEnvironment();
-        String savedNew = System.clearProperty(NEW_PATH_NAME);
-        String savedOld = System.clearProperty(OLD_PATH_NAME);
         File newFile = File.createTempFile("new-path-name", ".ipi");
-        File oldFile = File.createTempFile("old-path-name", ".ipi");
         try {
             System.setProperty(NEW_PATH_NAME, newFile.getPath());
-            System.setProperty(OLD_PATH_NAME, oldFile.getPath());
             assertEquals(newFile.getPath(),
                     DataFileHelper.getDataFileLocation(null));
         } finally {
             restore(NEW_PATH_NAME, savedNew);
-            restore(OLD_PATH_NAME, savedOld);
             newFile.delete();
-            oldFile.delete();
         }
     }
-
     @Test
     @SuppressWarnings("deprecation")
     public void oldPathConstantKeepsItsValue() throws Exception {
@@ -113,11 +89,6 @@ public class DataFileHelperTest {
                 .isAnnotationPresent(Deprecated.class));
         assertEquals(NEW_PATH_NAME,
                 DataFileHelper.class.getField("IPI_PATH_VARIABLE").get(null));
-    }
-
-    private static void assumePathNamesNotInEnvironment() {
-        assumeTrue(System.getenv(NEW_PATH_NAME) == null);
-        assumeTrue(System.getenv(OLD_PATH_NAME) == null);
     }
 
     private static void restore(String name, String value) {
