@@ -74,7 +74,9 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <scope>test</scope>
+            <!-- KeyHelper skips a cloud test that has no key, with JUnit's
+                 AssumptionViolatedException. -->
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>jakarta.xml.bind</groupId>

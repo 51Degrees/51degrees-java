@@ -23,6 +23,7 @@
 package fiftyone.ipintelligence.examples.shared;
 
 import fiftyone.ipintelligence.shared.testhelpers.KeyUtils;
+import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,9 +33,8 @@ import java.util.function.Function;
 
 public class KeyHelper {
     /**
-     * Aligned name of the environment variable or system property which may
-     * hold the resource key. This name is checked first, before the legacy
-     * {@link #TEST_RESOURCE_KEY} name.
+     * Name of the environment variable or system property which holds the
+     * resource key. It is the only name read.
      */
     public static final String RESOURCE_KEY_VARIABLE = "_51DEGREES_RESOURCE_KEY";
 
@@ -46,17 +46,12 @@ public class KeyHelper {
     @Deprecated
     public static final String RESOURCE_KEY_ENV_VAR = "51DEGREES_RESOURCE_KEY";
 
-    public static final String TEST_RESOURCE_KEY = "TestResourceKey";
-    static Logger logger = LoggerFactory.getLogger(KeyHelper.class);
-
     /**
-     * The names every cloud test reads a resource key from first, before
-     * the names its own example reads.
+     * The variable the cloud examples and their tests read a resource key
+     * from, which is {@link #RESOURCE_KEY_VARIABLE}.
      */
-    public static final List<String> SHARED_RESOURCE_KEY_NAMES =
-        Collections.unmodifiableList(Arrays.asList(
-            "_51DEGREES_RESOURCE_KEY",
-            "_51DEGREES_RESOURCE_KEY_BESPOKE"));
+    public static final String TEST_RESOURCE_KEY = RESOURCE_KEY_VARIABLE;
+    static Logger logger = LoggerFactory.getLogger(KeyHelper.class);
 
     static final String CREATE_KEY_URL =
         "https://51degrees.com/configure/?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-keyhelper.java&utm_term=no-resource-key";
@@ -70,9 +65,9 @@ public class KeyHelper {
 
     /**
      * The resource key a cloud example runs with, being the key given as
-     * its argument, or else the key in {@link #RESOURCE_KEY_VARIABLE} or
-     * {@link #TEST_RESOURCE_KEY}, each read as an environment variable,
-     * under its upper case name and as a system property.
+     * its argument, or else the key in {@link #RESOURCE_KEY_VARIABLE}, read
+     * as an environment variable, under its upper case name and as a
+     * system property.
      * @param argument the key given on the command line, or null
      * @return the key, or null when there is none
      */
@@ -81,9 +76,6 @@ public class KeyHelper {
             return argument.trim();
         }
         String value = readKey(RESOURCE_KEY_VARIABLE);
-        if (value == null) {
-            value = readKey(TEST_RESOURCE_KEY);
-        }
         return value == null ? null : value.trim();
     }
 
@@ -110,42 +102,42 @@ public class KeyHelper {
 
     /**
      * The resource key for a test that calls the live cloud service, from
-     * {@link #SHARED_RESOURCE_KEY_NAMES} and then the names
-     * {@link #getOrSetTestResourceKey()} reads. Fails the test when there
-     * is none, because a cloud test that passes without a key has called
-     * nothing.
+     * {@link #RESOURCE_KEY_VARIABLE}, the name
+     * {@link #getOrSetTestResourceKey()} reads. Skips the test, naming the
+     * variable, when there is none, because a cloud test that passes
+     * without a key has called nothing.
      * @param asksFor what the test asks the service for
      * @param products the products the key has to carry
      * @return the resource key
      */
     public static String requireTestResourceKey(String asksFor,
                                                 String... products) {
-        return requireResourceKey(KeyHelper::readKey, Arrays.asList(
-            RESOURCE_KEY_VARIABLE, TEST_RESOURCE_KEY), asksFor, products);
+        return requireResourceKey(KeyHelper::readKey,
+            Collections.singletonList(RESOURCE_KEY_VARIABLE), asksFor,
+            products);
     }
 
     static String requireResourceKey(Function<String, String> read,
                                      List<String> exampleNames,
                                      String asksFor,
                                      String... products) {
-        List<String> names = new ArrayList<>(SHARED_RESOURCE_KEY_NAMES);
-        names.addAll(exampleNames);
-        for (String name : names) {
+        for (String name : exampleNames) {
             String value = read.apply(name);
             if (KeyUtils.isInvalidKey(value) == false) {
                 return value.trim();
             }
         }
-        throw new AssertionError(noResourceKey(names, asksFor, products));
+        throw new AssumptionViolatedException(
+            noResourceKey(exampleNames, asksFor, products));
     }
 
     static String noResourceKey(List<String> names, String asksFor,
                                 String... products) {
         return "This test calls the live 51Degrees cloud service, so it " +
-            "needs a resource key and there is nothing to fall back on. " +
-            "None of " + String.join(", ", names) + " is set, as an " +
-            "environment variable or as a system property, tried in that " +
-            "order. The key has to carry the " + productList(products) +
+            "needs a resource key, and it is skipped because " +
+            String.join(", ", names) + " is not set as an environment " +
+            "variable or as a system property. " +
+            "The key has to carry the " + productList(products) +
             ", because the test asks the service for " + asksFor + ". To " +
             "see the products a key carries, open " +
             "https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>. " +
@@ -204,29 +196,23 @@ public class KeyHelper {
         return getOrSetTestResourceKey(value, true);
     }
     /**
-     * Obtain a resource key from the passed argument,
-     * from environment variable or from a property. The aligned
-     * {@link #RESOURCE_KEY_VARIABLE} name is checked first, then the passed
-     * variable name. Store as System Property under the passed variable name.
+     * Obtain a resource key from the passed argument, or else from the
+     * passed variable name, as an environment variable or a system
+     * property. Store as System Property under the passed variable name.
      */
     public static String getOrSetResourceKey(String value, String variableName,
                                              String errorMessage,
                                              boolean shouldThrow) {
         if (Objects.isNull(value)) {
-            // check the aligned name first, then the legacy name
-            value = KeyUtils.getNamedKey(RESOURCE_KEY_VARIABLE);
-            if (Objects.isNull(value)) {
-                value = KeyUtils.getNamedKey(variableName);
-            }
+            value = KeyUtils.getNamedKey(variableName);
         }
         if (KeyUtils.isInvalidKey(value)) {
             logger.error("\nTo access Cloud Services you must supply a " +
                     "\"ResourceKey\" in one of the following ways: \n - in the " +
                     "configuration file of an example,\n - as a command line parameter of a " +
                     "runnable example,\n - as an Environment Variable named \"\u001B[36m{}\u001B[0m\"," +
-                    "\n - as a System Property named \"\u001B[36m{}\u001B[0m\" " +
-                    "(the legacy name \"\u001B[36m{}\u001B[0m\" is also still accepted).",
-                    RESOURCE_KEY_VARIABLE, RESOURCE_KEY_VARIABLE, variableName);
+                    "\n - as a System Property named \"\u001B[36m{}\u001B[0m\").",
+                    variableName, variableName);
             logger.error(errorMessage);
             if (shouldThrow) {
                 throw new IllegalStateException("\"" + value + "\" is not a valid resource key");

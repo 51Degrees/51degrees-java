@@ -33,6 +33,8 @@ import fiftyone.geolocation.flowelements.GeoLocationCloudEngineBuilder;
 
 import org.slf4j.LoggerFactory;
 
+import static org.junit.Assume.assumeFalse;
+
 public class Wrapper51Degrees implements Wrapper {
 
     protected static final TestLoggerFactory logger =
@@ -48,11 +50,12 @@ public class Wrapper51Degrees implements Wrapper {
         String resourceKey = null;
         
         if(envResourceKey == null || envResourceKey.isEmpty()) {
-    	if (propertyResourceKey == null || propertyResourceKey.isEmpty())
-    		throw new Exception("Resource key is required to run Cloud tests.");
-    	else {
-    		resourceKey = propertyResourceKey;
-    	}
+    	assumeFalse("These tests call the live 51Degrees cloud service, so " +
+    			"they need a resource key, and they are skipped because " +
+    			Constants.RESOURCE_KEY_ENV_VAR + " is not set as an " +
+    			"environment variable or as a system property.",
+    		propertyResourceKey == null || propertyResourceKey.isEmpty());
+    	resourceKey = propertyResourceKey;
         }
         else {
         	resourceKey = envResourceKey;

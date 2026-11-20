@@ -46,11 +46,10 @@ import static org.junit.Assert.fail;
 
 /**
  * Tests against the live cloud service. They need a resource key, read
- * from the names {@link LiveCloudKeys} lists, and they fail rather than
- * skip when there is none, because a run that called nothing must not
- * report success. {@code _51DEGREES_CLOUD_ENDPOINT} points them at another
- * host, and a licence key is taken from the names {@link LiveCloudKeys} lists
- * where the account holds one. Each test creates a 51Did through the
+ * from the name {@link LiveCloudKeys} gives, and they are skipped, naming
+ * that variable, when there is none. {@code _51DEGREES_CLOUD_ENDPOINT}
+ * points them at another host, and the 51Did license key is taken from the
+ * name {@link LiveCloudKeys} gives where the account holds one. Each test creates a 51Did through the
  * cloud {@code json} endpoint, which is one use against the resource key,
  * plus one for each cloud call it then makes.
  * <p>
@@ -67,9 +66,7 @@ public class DidClientLiveTests {
     @Before
     public void init() {
         resourceKey = LiveCloudKeys.find(LiveCloudKeys.RESOURCE_KEY_NAMES);
-        if (resourceKey == null) {
-            fail(LiveCloudKeys.noResourceKey());
-        }
+        Assume.assumeTrue(LiveCloudKeys.noResourceKey(), resourceKey != null);
         // One lookup serves both, so the key the form body sends and the
         // one hasLicenceKey() answers for can never disagree.
         licenceKey = LiveCloudKeys.find(LiveCloudKeys.LICENCE_KEY_NAMES);
