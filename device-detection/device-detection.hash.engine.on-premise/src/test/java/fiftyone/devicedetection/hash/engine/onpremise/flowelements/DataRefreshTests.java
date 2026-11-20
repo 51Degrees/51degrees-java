@@ -42,6 +42,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.assertEquals;
@@ -247,5 +248,39 @@ public class DataRefreshTests extends TestsBase {
             }
         }
         return values;
+    }
+
+    /**
+     * Closing the engine while a refresh runs waits for the refresh to
+     * finish, so the native engine is never freed under it. The test holds
+     * the engine's own monitor, which a refresh holds while it runs.
+     */
+    @Test
+    public void Close_WhileARefreshRuns_WaitsForTheRefresh()
+        throws Exception {
+        DeviceDetectionHashEngine engine = getWrapper().getEngine();
+        CountDownLatch held = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        Future<Boolean> refresh = executor.submit(() -> {
+            synchronized (engine) {
+                held.countDown();
+                return release.await(WAIT_SECONDS, TimeUnit.SECONDS);
+            }
+        });
+        assertTrue(held.await(WAIT_SECONDS, TimeUnit.SECONDS));
+        Future<Boolean> closing = executor.submit(() -> {
+            engine.close();
+            return true;
+        });
+        try {
+            closing.get(2, TimeUnit.SECONDS);
+            fail("The engine closed while a refresh was running.");
+        } catch (TimeoutException e) {
+            // Closing waits for the refresh, as it should.
+        } finally {
+            release.countDown();
+        }
+        assertTrue(refresh.get(WAIT_SECONDS, TimeUnit.SECONDS));
+        assertTrue(closing.get(WAIT_SECONDS, TimeUnit.SECONDS));
     }
 }
