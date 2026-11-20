@@ -53,7 +53,7 @@ import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_US
 
 /**
  * Flow element that sends usage data to 51Degrees for analysis. 
- * @see <a href="https://github.com/51Degrees/specifications/blob/c8128ca4fa68c6348d76ddb2889bb5087de1aa5f/pipeline-specification/pipeline-elements/usage-sharing-element.md">Specification</a>
+ * @see <a href="https://github.com/51Degrees/specifications/blob/07e1fcedc2cbd83a60cd245c137747686e58da41/pipeline-specification/pipeline-elements/usage-sharing-element.md">Specification</a>
  */
 public class ShareUsageElement extends ShareUsageBase {
     // max time to wait to send data
@@ -543,30 +543,48 @@ public class ShareUsageElement extends ShareUsageBase {
         // The elements follow the order of the specification's example, and
         // each one the example does not mark optional is always written,
         // empty when there is no value.
+        // The values that do not change while the element lives are written
+        // to its first record, and again to the first record once an hour
+        // has passed since they were last written. The ProcessId ties the
+        // records that leave them out to them.
+        boolean invariant = writeInvariantValuesNow();
+        // The identifier of this element, the same in every record
+        writeXmlElement(writer, "ProcessId", getProcessId());
         // The SessionID used to track a series of requests
         writeRequiredXmlElement(writer, "SessionId", data.sessionId);
         // The sequence number of the request in a series of requests.
         writeXmlElement(writer, "Sequence", String.valueOf(data.sequence));
         // The UTC date/time this entry was written
         writeXmlElement(writer, "DateSent", dateSentNow());
-        // The version number of the Pipeline API
-        writeRequiredXmlElement(writer, "Version", coreVersion);
-        // Write Pipeline information
-        // The product name
-        writeXmlElement(writer, "Product", "Pipeline");
-        // The flow elements in the current pipeline
-        for (String element : getFlowElements()) {
-            writeXmlElement(writer, "FlowElement", element);
+        if (invariant) {
+            // The version number of the Pipeline API
+            writeRequiredXmlElement(writer, "Version", coreVersion);
+            // Write Pipeline information
+            // The product name
+            writeXmlElement(writer, "Product", "Pipeline");
+            // The flow elements in the current pipeline
+            for (String element : getFlowElements()) {
+                writeXmlElement(writer, "FlowElement", element);
+            }
+            // The version of every 51Degrees package in use
+            for (Map.Entry<String, String> entry : getPackages().entrySet()) {
+                writer.writeStartElement("Package");
+                writer.writeAttribute("Name", entry.getKey());
+                writer.writeCharacters(entry.getValue());
+                writer.writeEndElement();
+            }
+            writeXmlElement(writer, "Language", "java");
+            // The software language version
+            writeRequiredXmlElement(writer, "LanguageVersion", languageVersion);
         }
-        writeXmlElement(writer, "Language", "java");
-        // The software language version
-        writeRequiredXmlElement(writer, "LanguageVersion", languageVersion);
         // The client IP of the request
         writeRequiredXmlElement(writer, "ClientIP", data.clientIP);
-        // The IP of this server
-        writeRequiredXmlElement(writer, "ServerIP", getHostAddress());
-        // The OS name and version
-        writeRequiredXmlElement(writer, "Platform", osVersion);
+        if (invariant) {
+            // The IP of this server
+            writeRequiredXmlElement(writer, "ServerIP", getHostAddress());
+            // The OS name and version
+            writeRequiredXmlElement(writer, "Platform", osVersion);
+        }
 
         // Write all other evidence data that has been included.
         for (Map.Entry<String, Map<String, String>> category : data.evidenceData.entrySet()) {
