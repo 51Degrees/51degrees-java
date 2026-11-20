@@ -56,6 +56,11 @@ public class DeviceDetectionHashEngine
     // Volatile, so a thread that processes sees the native engine a
     // refresh on another thread made.
     private volatile EngineHashSwig engine = null;
+    // Set, while this engine's monitor is held, once closing has freed the
+    // native objects, so a refresh that gets the monitor afterwards fails
+    // instead of using them. It has no initializer, so an engine built by
+    // a mock that skips field initializers still has it, as false.
+    private boolean freed;
     private final List<FiftyOneAspectPropertyMetaData> properties = new ArrayList<>();
     private final ConfigHashSwig config;
     private final RequiredPropertiesConfigSwig propertiesConfigSwig;
@@ -390,7 +395,20 @@ public class DeviceDetectionHashEngine
     @Override
     public void refreshData(String dataFileIdentifier) {
         synchronized (this) {
+            refuseIfFreed();
             refreshFromFile();
+        }
+    }
+
+    /**
+     * Called with this engine's monitor held, before a refresh uses the
+     * native objects.
+     * @throws IllegalStateException if the engine has been closed
+     */
+    private void refuseIfFreed() {
+        if (freed) {
+            throw new IllegalStateException(
+                "The engine has been closed, so its data cannot be refreshed.");
         }
     }
 
@@ -434,6 +452,7 @@ public class DeviceDetectionHashEngine
     @Override
     public void refreshData(String dataFileIdentifier, byte[] data) {
         synchronized (this) {
+            refuseIfFreed();
             if (engine == null) {
                 engine = new EngineHashSwig(data, config, propertiesConfigSwig);
             } else {
@@ -484,6 +503,10 @@ public class DeviceDetectionHashEngine
         // objects, so taking it here waits for a refresh that is running
         // before they are freed.
         synchronized (this) {
+            if (freed) {
+                return;
+            }
+            freed = true;
             if (config != null) {
                 config.delete();
             }
