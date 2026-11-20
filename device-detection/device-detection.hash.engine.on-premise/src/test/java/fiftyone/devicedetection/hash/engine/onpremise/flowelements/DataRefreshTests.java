@@ -31,6 +31,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -98,6 +100,40 @@ public class DataRefreshTests extends TestsBase {
                 start.await();
                 for (int i = 0; i < REFRESHES; i++) {
                     engine.refreshData(identifier);
+                }
+                return REFRESHES;
+            }));
+        }
+        start.countDown();
+        for (Future<Integer> refresher : refreshers) {
+            assertEquals(Integer.valueOf(REFRESHES),
+                refresher.get(WAIT_SECONDS, TimeUnit.SECONDS));
+        }
+        assertEquals(expected, isMobile());
+    }
+
+    /**
+     * Several threads refresh the engine at once from the same data held in
+     * memory, and every refresh completes and the engine then gives the
+     * values it gave before. A refresh from memory leaves the native engine
+     * without a file path, so this test doesn't mix it with refreshes from
+     * the file.
+     */
+    @Test
+    public void Refresh_FromMemoryOnSeveralThreads_EngineStillWorks()
+        throws Exception {
+        List<Boolean> expected = isMobile();
+        DeviceDetectionHashEngine engine = getWrapper().getEngine();
+        String identifier = engine.getDataFileMetaData().getIdentifier();
+        byte[] data = Files.readAllBytes(Paths.get(
+            engine.getDataFileMetaData().getDataFilePath()));
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<Integer>> refreshers = new ArrayList<>();
+        for (int t = 0; t < THREADS; t++) {
+            refreshers.add(executor.submit(() -> {
+                start.await();
+                for (int i = 0; i < REFRESHES; i++) {
+                    engine.refreshData(identifier, data);
                 }
                 return REFRESHES;
             }));
