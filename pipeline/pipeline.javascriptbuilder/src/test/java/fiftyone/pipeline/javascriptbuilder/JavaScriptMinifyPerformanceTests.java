@@ -78,6 +78,10 @@ public class JavaScriptMinifyPerformanceTests {
         try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
             .addFlowElement(new SequenceElementBuilder(loggerFactory).build())
             .addFlowElement(new JsonBuilderElementBuilder(loggerFactory).build())
+            // Adds the JavaScript Builder's Element Data while the Flow Data
+            // is processed, as it is read only afterwards. Both elements
+            // below write that one instance.
+            .addFlowElement(minified)
             .build();
              FlowData data = pipeline.createFlowData()) {
             data.addEvidence("query.user-agent", "iPhone");
