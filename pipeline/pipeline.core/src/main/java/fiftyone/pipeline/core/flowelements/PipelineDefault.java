@@ -109,12 +109,11 @@ class PipelineDefault implements PipelineInternal {
 
     /**
      * A filter that will only include the evidence keys that can be used by at
-     * least one {@link FlowElement} within this pipeline.
-     * (Will only be populated after the {@link #getEvidenceKeyFilter()} method
-     * is called.) Volatile because requests read it with no lock, and it is
-     * filled after it is created.
+     * least one {@link FlowElement} within this pipeline. Built once in the
+     * constructor, because the elements do not change after that, and final
+     * so every request can read it with no lock.
      */
-    private volatile EvidenceKeyFilter evidenceKeyFilter = null;
+    private final EvidenceKeyFilter evidenceKeyFilter;
 
     /**
      * The pipeline maintains a map of the elements it contains indexed by type.
@@ -162,6 +161,13 @@ class PipelineDefault implements PipelineInternal {
         for (FlowElement element : this.flowElements) {
             isConcurrent = isConcurrent || element.isConcurrent();
         }
+
+        EvidenceKeyFilterAggregator filter = new EvidenceKeyFilterAggregator();
+        for (FlowElement element : this.flowElements) {
+            filter.addFilter(element.getEvidenceKeyFilter());
+        }
+        evidenceKeyFilter = filter;
+
         getElementAvailableProperties();
 
         logger.debug("Pipeline '" + hashCode() + "' created.");
@@ -193,18 +199,6 @@ class PipelineDefault implements PipelineInternal {
 
     @Override
     public EvidenceKeyFilter getEvidenceKeyFilter() {
-        if (evidenceKeyFilter == null) {
-            synchronized (lock) {
-                if (evidenceKeyFilter == null) {
-                    EvidenceKeyFilterAggregator filter =
-                        new EvidenceKeyFilterAggregator();
-                    for (FlowElement element : flowElements) {
-                        filter.addFilter(element.getEvidenceKeyFilter());
-                    }
-                    evidenceKeyFilter = filter;
-                }
-            }
-        }
         return evidenceKeyFilter;
     }
 
