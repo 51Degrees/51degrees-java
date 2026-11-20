@@ -130,10 +130,11 @@ public class ParallelElementsTests {
             mock(Logger.class),
             pipeline,
             new EvidenceDefault(mock(Logger.class)))) {
-            data.process();
-
             // Act
             parallelElements.process(data);
+            // The members add their Element Data before processing
+            // finishes, as a Flow Data is read only afterwards.
+            data.process();
 
             List<Date> startTimes = new ArrayList<>();
             startTimes.add((Date) data.get("element1").get("start"));

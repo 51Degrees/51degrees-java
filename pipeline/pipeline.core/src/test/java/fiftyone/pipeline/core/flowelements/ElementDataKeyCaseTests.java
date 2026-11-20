@@ -58,7 +58,9 @@ public class ElementDataKeyCaseTests {
             mock(Logger.class),
             mock(PipelineInternal.class),
             new EvidenceDefault(mock(Logger.class)));
-        flowData.process();
+        // Element Data is added before processing, because a Flow Data
+        // that has finished processing refuses new Element Data. Each test
+        // processes once its own adds are done.
         data = flowData.getOrAdd(
             "device",
             (FlowElement.DataFactory<ElementData>) fd ->
@@ -72,12 +74,15 @@ public class ElementDataKeyCaseTests {
 
     @Test
     public void get_StringKeyInAnotherCase_ReturnsTheData() {
+        flowData.process();
+
         assertSame(data, flowData.get("Device"));
         assertSame(data, flowData.get("DEVICE"));
     }
 
     @Test
     public void get_TypedKeyInAnotherCase_ReturnsTheData() {
+        flowData.process();
         TypedKey<TestElementData> key = new TypedKeyDefault<>(
             "Device",
             TestElementData.class);
@@ -94,6 +99,7 @@ public class ElementDataKeyCaseTests {
             "DEVICE",
             (FlowElement.DataFactory<ElementData>) fd ->
                 new TestElementData(mock(Logger.class), fd));
+        flowData.process();
 
         assertSame(data, again);
         assertEquals(1, flowData.elementDataAsMap().size());
@@ -108,6 +114,7 @@ public class ElementDataKeyCaseTests {
                 "ip",
                 (FlowElement.DataFactory<ElementData>) fd ->
                     new TestElementData(mock(Logger.class), fd));
+            flowData.process();
             assertSame(ip, flowData.get("IP"));
         } finally {
             Locale.setDefault(original);
