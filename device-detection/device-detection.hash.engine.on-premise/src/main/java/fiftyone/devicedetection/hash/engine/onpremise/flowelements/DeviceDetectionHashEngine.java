@@ -370,8 +370,27 @@ public class DeviceDetectionHashEngine
         return evidenceKeyFilter;
     }
 
+    /**
+     * {@inheritDoc}
+     * Only one refresh of this engine runs at a time, from either overload,
+     * whichever route calls it. A second refresh waits for the first to
+     * finish. Processing takes no part in this and never waits for a
+     * refresh.
+     * <p>
+     * The lock is this engine's own monitor, held for the whole refresh.
+     * Nothing else in the engine or the Pipeline takes it, and no other
+     * lock is taken while it is held, so it cannot deadlock. It is not a
+     * field, so an engine built by a mock that skips field initializers
+     * still has it.
+     */
     @Override
     public void refreshData(String dataFileIdentifier) {
+        synchronized (this) {
+            refreshFromFile();
+        }
+    }
+
+    private void refreshFromFile() {
         AspectEngineDataFile dataFile = getDataFiles().get(0);
 
         if (Objects.isNull(engine)) {
@@ -403,14 +422,21 @@ public class DeviceDetectionHashEngine
         setEngineMetaData();
     }
 
+    /**
+     * {@inheritDoc}
+     * Only one refresh of this engine runs at a time, as
+     * {@link #refreshData(String)} describes.
+     */
     @Override
     public void refreshData(String dataFileIdentifier, byte[] data) {
-        if (engine == null) {
-            engine = new EngineHashSwig(data, config, propertiesConfigSwig);
-        } else {
-            engine.refreshData(data);
+        synchronized (this) {
+            if (engine == null) {
+                engine = new EngineHashSwig(data, config, propertiesConfigSwig);
+            } else {
+                engine.refreshData(data);
+            }
+            setEngineMetaData();
         }
-        setEngineMetaData();
     }
 
     @Override
