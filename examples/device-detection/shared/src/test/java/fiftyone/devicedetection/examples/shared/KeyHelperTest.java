@@ -25,11 +25,14 @@ package fiftyone.devicedetection.examples.shared;
 import org.junit.AssumptionViolatedException;
 import org.junit.Test;
 
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
@@ -150,5 +153,46 @@ public class KeyHelperTest {
                 "the device product gets.",
             KeyHelper.answeredWithout("BrowserName",
                 "BrowserName is a paid feature", "device"));
+    }
+
+    /**
+     * A cloud example runs as an application, with no test library on its
+     * class path, and reads its key with KeyHelper. So KeyHelper has to
+     * load, and find a key, where JUnit cannot be found.
+     */
+    @Test
+    public void findResourceKey_NoJUnitOnTheClassPath_FindsTheKey()
+        throws Exception {
+        try (URLClassLoader loader = withoutJUnit()) {
+            Class<?> helper = Class.forName(KeyHelper.class.getName(), true,
+                loader);
+            assertNotSame(KeyHelper.class, helper);
+            String key = (String) helper
+                .getMethod("findResourceKey", String.class, String[].class)
+                .invoke(null, KEY_A, new String[0]);
+            assertEquals(KEY_A, key);
+        }
+    }
+
+    /**
+     * A class loader with KeyHelper's own class files, that cannot see
+     * JUnit.
+     */
+    private static URLClassLoader withoutJUnit() {
+        String helpers = KeyHelper.class.getPackage().getName() + ".";
+        ClassLoader parent = new ClassLoader(
+            KeyHelper.class.getClassLoader()) {
+            @Override
+            protected Class<?> loadClass(String name, boolean resolve)
+                throws ClassNotFoundException {
+                if (name.startsWith("org.junit.") ||
+                    name.startsWith(helpers)) {
+                    throw new ClassNotFoundException(name);
+                }
+                return super.loadClass(name, resolve);
+            }
+        };
+        return new URLClassLoader(new URL[]{KeyHelper.class
+            .getProtectionDomain().getCodeSource().getLocation()}, parent);
     }
 }

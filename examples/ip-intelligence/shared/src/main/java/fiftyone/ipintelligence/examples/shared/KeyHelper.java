@@ -23,7 +23,6 @@
 package fiftyone.ipintelligence.examples.shared;
 
 import fiftyone.ipintelligence.shared.testhelpers.KeyUtils;
-import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -127,8 +126,28 @@ public class KeyHelper {
                 return value.trim();
             }
         }
-        throw new AssumptionViolatedException(
-            noResourceKey(exampleNames, asksFor, products));
+        throw skipTest(noResourceKey(exampleNames, asksFor, products));
+    }
+
+    /**
+     * The exception that skips a test, being JUnit's
+     * AssumptionViolatedException. It is made by name, because the
+     * examples use KeyHelper too, and run with no test library on their
+     * class path. Where JUnit cannot be found, the exception is an
+     * IllegalStateException with the same message.
+     * @param message why the test is skipped
+     * @return the exception to throw
+     */
+    static RuntimeException skipTest(String message) {
+        try {
+            return (RuntimeException) Class.forName(
+                    "org.junit.AssumptionViolatedException")
+                .getConstructor(String.class)
+                .newInstance(message);
+        } catch (ReflectiveOperationException | LinkageError |
+                 ClassCastException e) {
+            return new IllegalStateException(message);
+        }
     }
 
     static String noResourceKey(List<String> names, String asksFor,
