@@ -355,6 +355,87 @@ public class CloudRequestEngineLazyCacheTests
             "The processing task read the Flow Data to cache the result.");
     }
 
+    /**
+     * After a failed request, the next result for the same Evidence takes
+     * the failed entry's place, so the request after that is served from the
+     * cache.
+     */
+    @Test
+    public void process_ResultAfterAFailureIsCached() throws Exception {
+        String second = "{'device':{'value':'1'}}";
+        CountDownLatch gate = new CountDownLatch(1);
+        mockService(new CountDownLatch(2), gate, null, second);
+        CloudRequestEngine engine = buildLazyCachedEngine();
+
+        assertEquals(Arrays.asList(FAILED, second, second),
+            processThreeTimes(engine, gate));
+        verifyDataRequests(2);
+    }
+
+    /**
+     * After a response with a 51Did, the next result for the same Evidence
+     * takes its place, so the request after that is served from the cache.
+     * The cache is configured as the cloud pipeline builders configure it.
+     */
+    @Test
+    public void process_ResultAfterAFodIdIsCached() throws Exception {
+        String first = "{'device':{'value':'1'},'fodid':'first'}";
+        String second = "{'device':{'value':'1'}}";
+        CountDownLatch gate = new CountDownLatch(1);
+        mockService(new CountDownLatch(2), gate, first, second);
+        CloudRequestEngine engine =
+            new CloudRequestEngineBuilder(loggerFactory, httpClient)
+                .setResourceKey("resourcekey")
+                .setCache(new CacheConfiguration(10))
+                .build();
+
+        assertEquals(Arrays.asList(first, second, second),
+            processThreeTimes(engine, gate));
+        verifyDataRequests(2);
+    }
+
+    /**
+     * What processThreeTimes records for a request whose response could not
+     * be read.
+     */
+    private static final String FAILED = "failed";
+
+    /**
+     * Process three Flow Data with the same Evidence and read each response.
+     * The first request is held back until its process has returned, so its
+     * result is offered to the cache while the request is still running.
+     */
+    private List<String> processThreeTimes(
+        CloudRequestEngine engine,
+        CountDownLatch firstGate) throws Exception {
+        List<String> answers = new ArrayList<>();
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+                .addFlowElement(engine).build()) {
+            for (int i = 0; i < 3; i++) {
+                try (FlowData data = pipeline.createFlowData()) {
+                    data.addEvidence("query.User-Agent", "iPhone");
+                    data.process();
+                    firstGate.countDown();
+                    try {
+                        answers.add(data.get(CloudRequestData.class)
+                            .getJsonResponse());
+                    } catch (RuntimeException e) {
+                        answers.add(FAILED);
+                    }
+                }
+            }
+        }
+        return answers;
+    }
+
+    private void verifyDataRequests(int count) throws Exception {
+        verify(httpClient, times(count)).postData(
+            argThat(c -> c.getURL().getPath().endsWith("properties") == false &&
+                c.getURL().getPath().endsWith("evidencekeys") == false),
+            any(),
+            any());
+    }
+
     private List<String> processTwice(CloudRequestEngine engine)
         throws Exception {
         List<String> answers = new ArrayList<>();

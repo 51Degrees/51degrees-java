@@ -23,6 +23,7 @@
 package fiftyone.pipeline.cloudrequestengine.flowelements;
 
 
+import fiftyone.caching.PutCacheBuilder;
 import fiftyone.pipeline.annotations.DefaultValue;
 import fiftyone.pipeline.annotations.ElementBuilder;
 import fiftyone.pipeline.cloudrequestengine.Constants.Messages;
@@ -420,5 +421,27 @@ public class CloudRequestEngineBuilder extends
     public CloudRequestEngineBuilder setCacheSize(int size) {
         this.cacheConfig = new CacheConfiguration(size);
         return this;
+    }
+
+    /**
+     * Where the cache is built by a {@link PutCacheBuilder}, as it is by
+     * {@link #setCacheSize(int)} and by a {@link CacheConfiguration} made
+     * with a size, the cache is set to replace an entry when a result is put
+     * for its key. A result is stored while its cloud request is still
+     * running, and an entry whose request then fails, or answers with a
+     * 51Did, is never served, so the next result for that key must take its
+     * place.
+     * @param engine the engine to configure
+     * @throws Exception if the engine could not be configured
+     */
+    @Override
+    protected void configureEngine(CloudRequestEngine engine)
+        throws Exception {
+        if (cacheConfig != null &&
+            cacheConfig.getCacheBuilder() instanceof PutCacheBuilder) {
+            ((PutCacheBuilder) cacheConfig.getCacheBuilder())
+                .setUpdateExisting(true);
+        }
+        super.configureEngine(engine);
     }
 }
