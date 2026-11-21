@@ -165,8 +165,11 @@ public abstract class LruCacheBase<K, V> implements Cache<K,V>, Closeable {
         }
         else {
             if (updateExisting) {
-                newNode.list.replace(node, newNode);
-                node = newNode;
+                // The replacement takes the existing item's place in the
+                // existing item's list, so it must belong to that list.
+                CachedItem replacement = new CachedItem(node.list, key, value);
+                node.list.replace(node, replacement);
+                node = replacement;
             }
             // The item is in the dictionary.
             // Move the item to the head of it's LRU list.

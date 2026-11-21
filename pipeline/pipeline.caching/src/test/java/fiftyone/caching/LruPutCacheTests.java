@@ -218,4 +218,72 @@ public class LruPutCacheTests {
             "The existing value was not overwritten in the cache",
             "replacement", result);
     }
+
+    /**
+     * A replaced item stays in the linked list the item it replaces was in,
+     * so a cache with several lists stays whole through replacements and the
+     * evictions after them. Each new item is put on a list chosen at random,
+     * so with four lists and forty replacements, a replacement that joined
+     * another list is all but certain to break the lists checked here.
+     */
+    @Test
+    public void LruPutCache_ReplaceWithSeveralLists() {
+        final int size = 10;
+        PutCache<Integer, String> cache = null;
+        cache = new LruPutCache.Builder()
+            .setUpdateExisting(true)
+            .setConcurrency(4)
+            .build(cache, size);
+        for (int i = 0; i < size; i++) {
+            cache.put(i, "first " + i);
+        }
+        for (int round = 0; round < 4; round++) {
+            for (int i = 0; i < size; i++) {
+                cache.put(i, "replacement " + round + " " + i);
+            }
+        }
+        assertListsWhole((LruPutCache<Integer, String>) cache);
+        for (int i = 0; i < size; i++) {
+            assertEquals("replacement 3 " + i, cache.get(i));
+        }
+
+        // Put past the cache's size, which removes items from the ends of
+        // the lists, and read the items back.
+        for (int i = size; i < size * 10; i++) {
+            cache.put(i, "value " + i);
+            cache.get(i);
+        }
+        assertListsWhole((LruPutCache<Integer, String>) cache);
+    }
+
+    /**
+     * More items than any list in LruPutCache_ReplaceWithSeveralLists can
+     * hold, so a walk that takes more steps has found a loop.
+     */
+    private static final int MAX_LIST_STEPS = 1000;
+
+    /**
+     * Each linked list runs from its first item to its last through items
+     * that belong to it, with each item's previous item the one before it.
+     */
+    private static void assertListsWhole(LruPutCache<Integer, String> cache) {
+        for (LruCacheBase<Integer, String>.CacheLinkedList list :
+            cache.linkedLists) {
+            LruCacheBase<Integer, String>.CachedItem previous = null;
+            LruCacheBase<Integer, String>.CachedItem item = list.first;
+            int steps = 0;
+            while (item != null) {
+                assertTrue("A list loops back on itself",
+                    ++steps <= MAX_LIST_STEPS);
+                assertSame("An item is in a list it does not belong to",
+                    list, item.list);
+                assertSame("An item's previous item is not the one before it",
+                    previous, item.previous);
+                previous = item;
+                item = item.next;
+            }
+            assertSame("The list's last item is not the end of its chain",
+                previous, list.last);
+        }
+    }
 }
