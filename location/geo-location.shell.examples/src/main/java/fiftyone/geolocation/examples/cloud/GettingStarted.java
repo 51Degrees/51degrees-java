@@ -34,7 +34,6 @@ import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.Future;
 
 import static fiftyone.geolocation.core.Constants.EVIDENCE_GEO_LAT_PARAM_KEY;
 import static fiftyone.geolocation.core.Constants.EVIDENCE_GEO_LON_PARAM_KEY;
@@ -49,12 +48,10 @@ import static fiftyone.geolocation.core.Constants.EVIDENCE_GEO_LON_PARAM_KEY;
  * Required Maven Dependencies:
  * - [com.51degrees.geo-location](https://central.sonatype.com/artifact/com.51degrees/geo-location/)
  *
- * 1. Build a new Pipeline to use the 51Degrees cloud service, with lazy loading
- * configured to allow up to a second for a response from the service.
+ * 1. Build a new Pipeline to use the 51Degrees cloud service.
  * ```
  * Pipeline pipeline = new GeoLocationPipelineBuilder(loggerFactory)
  *     .useCloud(resourceKey, Enums.GeoLocationProvider.FiftyOneDegrees)
- *     .useLazyLoading(1000)
  *     .build();
  * ```
  *
@@ -103,7 +100,6 @@ public class GettingStarted {
             try (Pipeline pipeline = new GeoLocationPipelineBuilder(loggerFactory)
                 .useCloud(resourceKey, Enums.GeoLocationProvider.FiftyOneDegrees)
                 .setEndPoint("https://cloud.51degrees.com/api/v4")
-                .useLazyLoading(1000)
                 .setAutoCloseElements(true)
                 .build();
                 FlowData flowData = pipeline.createFlowData()) {
@@ -112,10 +108,6 @@ public class GettingStarted {
                     .process();
 
                 AspectPropertyValue<String> country = flowData.get(GeoData.class).getCountry();
-
-                Future<?> future = flowData.get(GeoData.class).getProcessFuture();
-                System.out.print("Awaiting response");
-                outputUntilCancelled(".", 1000, future);
 
                 System.out.println(flowData.get(CloudRequestData.class).getJsonResponse());
 
@@ -128,16 +120,5 @@ public class GettingStarted {
             System.out,
             "https://51degrees.com/documentation/_reverse_geocoding__examples__getting_started_51_degrees_cloud.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-gettingstarted.java&utm_term=find-out-more",
             "https://51degrees.com/location?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-gettingstarted.java&utm_term=find-out-more");
-    }
-
-    private static void outputUntilCancelled(
-        String text,
-        int intervalMs,
-        Future<?> future) throws InterruptedException {
-        while (future.isDone() == false) {
-            System.out.print(text);
-            Thread.sleep(intervalMs);
-        }
-        future.cancel(true);
     }
 }

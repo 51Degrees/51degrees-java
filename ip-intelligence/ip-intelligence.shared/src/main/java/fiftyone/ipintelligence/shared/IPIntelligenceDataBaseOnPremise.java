@@ -261,7 +261,7 @@ public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceData
                                 AspectPropertyValue.class,
                                 toWeightedListType(property.getType(), false)));
                     }
-                    populateFromMap(map);
+                    keepValues(map);
                     mapPopulated = true;
                 }
             }

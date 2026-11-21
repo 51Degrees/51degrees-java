@@ -85,8 +85,12 @@ public final class MultiDeviceDataCloud
         return getDeviceList();
     }
 
+    /**
+     * @throws IllegalStateException if the Flow Element has finished
+     */
     @Override
     public void addProfile(DeviceData profile) {
+        checkWriting();
         getDeviceList().add(profile);
     }
 

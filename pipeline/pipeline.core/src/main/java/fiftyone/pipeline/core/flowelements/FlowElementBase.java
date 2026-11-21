@@ -138,13 +138,62 @@ public abstract class FlowElementBase<
             logger.debug("FlowElement '{}-{}' started processing.", getClass().getSimpleName(), hashCode());
             startTime = System.currentTimeMillis();
         }
-        processInternal(data);
+        // A Flow Element that shares an instance another has finished with
+        // opens it for writing again, and every Flow Element closes its own
+        // Element Data to writes once it has finished, even if it threw.
+        ElementDataBase own = ownElementData(data);
+        if (own != null) {
+            own.startWriting();
+        }
+        try {
+            processInternal(data);
+        } finally {
+            own = ownElementData(data);
+            if (own != null) {
+                own.finishWriting();
+            }
+        }
 
         logger.debug("FlowElement '{}}-{}' finished processing. Elapsed time: {}ms",
                 getClass().getSimpleName(), hashCode(), (System.currentTimeMillis() - startTime));
 
     }
 
+
+    /**
+     * True once getting the typed key has failed, as it does for a Flow
+     * Element with no Element Data of its own, so it is not tried again.
+     */
+    private volatile boolean noOwnElementData = false;
+
+    /**
+     * Get the Element Data this Flow Element writes, if the Flow Data holds
+     * it yet.
+     * @param data the Flow Data being processed
+     * @return the Element Data, or null if there is none
+     */
+    private ElementDataBase ownElementData(FlowData data) {
+        if (noOwnElementData || this instanceof ParallelElements) {
+            return null;
+        }
+        TypedKey<TData> key;
+        try {
+            key = getTypedDataKey();
+        } catch (RuntimeException e) {
+            noOwnElementData = true;
+            return null;
+        }
+        if (key == null) {
+            return null;
+        }
+        TryGetResult<TData> result = data.tryGetValue(key);
+        if (result != null &&
+            result.hasValue() &&
+            result.getValue() instanceof ElementDataBase) {
+            return (ElementDataBase) result.getValue();
+        }
+        return null;
+    }
 
     @Override
     public DataFactory<TData> getDataFactory() {

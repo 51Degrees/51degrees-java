@@ -50,26 +50,31 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * A lazy loading Cloud Request Engine with a cache returns from process
- * without waiting for the cloud service, and still never serves a response
- * with a 51Did from the cache. Lazy loading means "the Engine returns from process
- * at once and the work is done on another thread", which the check of
+ * A Cloud Request Engine with a cache and the deprecated lazy loading option
+ * set processes on the thread that processes the Flow Data, and never serves
+ * a response with a 51Did from the cache. See
+ * <a href="https://github.com/51Degrees/specifications/blob/d79bbe3b2aef86273570742f6b660f29bfe72816/pipeline-specification/advanced-features/lazy-loading.md#L3-L5">lazy-loading.md</a>
+ * ("Lazy loading is deprecated, and setting it has no effect.") and
  * <a href="https://github.com/51Degrees/specifications/blob/d79bbe3b2aef86273570742f6b660f29bfe72816/pipeline-specification/features/caching.md#L151-L156">caching.md</a>
  * ("A cache MUST NOT store a result that holds such a value, and MUST NOT
- * serve one that it finds.") must not undo.
+ * serve one that it finds.").
  * <p>
  * No result depends on timing: the cloud service's answer is held back until
- * the test releases it, and the test reads the processing thread's stack to
- * see whether it is waiting for that answer.
+ * the test releases it.
  */
 public class CloudRequestEngineLazyCacheTests
     extends CloudRequestEngineTestsBase {
 
     /**
-     * Long enough that a process which waits for the held back answer is
-     * still waiting when the test looks.
+     * The timeout given with the lazy loading option, which has no effect.
      */
     private static final int LAZY_TIMEOUT_MILLIS = 600000;
+
+    /**
+     * The thread each data request to the cloud service was made on.
+     */
+    private final List<Thread> requestThreads =
+        Collections.synchronizedList(new ArrayList<>());
 
     public CloudRequestEngineLazyCacheTests() throws MalformedURLException {
         super();
@@ -96,6 +101,7 @@ public class CloudRequestEngineLazyCacheTests
             if (path.endsWith("evidencekeys")) {
                 return evidenceKeysResponse;
             }
+            requestThreads.add(Thread.currentThread());
             called.countDown();
             gate.await();
             return remaining.remove(0);
@@ -110,23 +116,12 @@ public class CloudRequestEngineLazyCacheTests
             .build();
     }
 
-    private static boolean waitingForProcessing(Thread thread) {
-        for (StackTraceElement frame : thread.getStackTrace()) {
-            if (frame.getMethodName().equals("waitOnAllProcessFutures") ||
-                frame.getClassName().endsWith("FutureTask") &&
-                    frame.getMethodName().equals("get")) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     /**
-     * process returns while the cloud service has not answered. Before the
-     * fix the cache check read the response, which waited for it.
+     * process makes the request to the cloud service on the thread that
+     * called it, and returns only once the service has answered.
      */
     @Test
-    public void process_LazyCachedEngineDoesNotWaitForTheService()
+    public void process_LazyCachedEngineProcessesOnTheCallingThread()
         throws Exception {
         CountDownLatch called = new CountDownLatch(1);
         CountDownLatch gate = new CountDownLatch(1);
@@ -149,22 +144,16 @@ public class CloudRequestEngineLazyCacheTests
             });
             processing.start();
             called.await();
-            // Look until process has returned, or is seen waiting for the
-            // answer that is held back.
-            boolean waited = false;
-            while (returned.get() == false && failure.get() == null &&
-                processing.isAlive()) {
-                if (waitingForProcessing(processing)) {
-                    waited = true;
-                    break;
-                }
-                Thread.yield();
-            }
+            // The answer is held back, so a process that waits for it has
+            // not returned yet.
+            boolean returnedBeforeAnswer = returned.get();
             gate.countDown();
             processing.join();
             assertNull(failure.get());
-            assertFalse(waited,
-                "process waited for the cloud service's answer.");
+            assertSame(processing, requestThreads.get(0),
+                "The request was not made on the thread that called process.");
+            assertFalse(returnedBeforeAnswer,
+                "process returned before the cloud service answered.");
             assertTrue(returned.get());
             assertEquals(jsonResponse,
                 data.get(CloudRequestData.class).getJsonResponse());
@@ -195,8 +184,7 @@ public class CloudRequestEngineLazyCacheTests
     /**
      * With lazy loading, a response with a 51Did is not served from the
      * cache, so the second identical request goes to the cloud service and
-     * gets its own. The result is stored before it is processed, so the
-     * check before serving is the one that keeps it out.
+     * gets its own.
      */
     @Test
     public void process_LazyFodIdResponseIsNotServed() throws Exception {
@@ -213,9 +201,8 @@ public class CloudRequestEngineLazyCacheTests
     }
 
     /**
-     * With lazy loading, the result is offered to the cache on the thread
-     * that called process, so the processing task never reads the Flow Data
-     * to make the cache key once process has returned.
+     * With lazy loading, the result is offered to the cache once, on the
+     * thread that called process.
      */
     @Test
     public void process_LazyResultIsStoredOnTheProcessingThread()
@@ -261,7 +248,6 @@ public class CloudRequestEngineLazyCacheTests
              FlowData data = pipeline.createFlowData()) {
             data.addEvidence("query.User-Agent", "iPhone");
             data.process();
-            // Waits for the processing task to finish.
             assertEquals(jsonResponse,
                 data.get(CloudRequestData.class).getJsonResponse());
         }
