@@ -34,6 +34,15 @@ public class JsonBuilderDataInternal extends ElementDataBase implements JsonBuil
         super(logger, flowData);
     }
 
+    /**
+     * Holds only its values, so it is reused through its Flow Element's
+     * pool once the Flow Data that holds it is closed.
+     */
+    @Override
+    protected boolean isPoolable() {
+        return true;
+    }
+
     @Override
     public String getJson() {
         return getAs("json", String.class);

@@ -198,6 +198,18 @@ public abstract class AspectDataBase extends ElementDataBase implements AspectDa
     }
 
     /**
+     * Keep only the engine that made this instance, and forget the process
+     * tasks and failed cloud request of the request it served before.
+     */
+    @Override
+    protected void onReuse() {
+        super.onReuse();
+        engines.subList(1, engines.size()).clear();
+        processFutures.clear();
+        cloudRequestFailed = false;
+    }
+
+    /**
      * Deprecated. Runs the callable on the calling thread, as lazy loading
      * has no effect. An exception it throws is given to each later read of a
      * property value, as before.

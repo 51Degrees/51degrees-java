@@ -80,6 +80,14 @@ public abstract class DataBase implements Data {
         data.put(key, value);
     }
 
+    /**
+     * Remove every value, so a pooled instance holds nothing of the request
+     * it served before.
+     */
+    protected void clearValues() {
+        data.clear();
+    }
+
     @Override
     public Map<String, Object> asKeyMap() {
         return Collections.unmodifiableMap(data);

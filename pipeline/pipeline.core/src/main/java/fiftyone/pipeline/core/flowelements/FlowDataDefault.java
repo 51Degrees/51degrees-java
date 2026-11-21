@@ -72,6 +72,11 @@ class FlowDataDefault implements FlowData {
     private final AtomicBoolean processed = new AtomicBoolean(false);
 
     /**
+     * Set by the first call to close, so later calls do nothing.
+     */
+    private final AtomicBoolean closed = new AtomicBoolean(false);
+
+    /**
      * Set when processing ends, after which the Flow Data is read only. A
      * write tests it, and nothing waits on it.
      */
@@ -530,11 +535,26 @@ class FlowDataDefault implements FlowData {
         return pipeline.getEvidenceKeyFilter();
     }
 
+    /**
+     * Close the Element Data that needs it and give pooled Element Data back
+     * to its pool. Only the first call does anything, because by a second
+     * call the pool may have given an instance to another request.
+     */
     @Override
     public void close() throws Exception {
+        if (closed.getAndSet(true)) {
+            return;
+        }
         for (Object elementData : data.asStringKeyMap().values()) {
             if (AutoCloseable.class.isAssignableFrom(elementData.getClass())) {
                 ((AutoCloseable) elementData).close();
+            }
+        }
+        // Pooled Element Data goes back to its Flow Element's pool. A
+        // reference kept after this point is not supported.
+        for (Object elementData : data.asStringKeyMap().values()) {
+            if (elementData instanceof ElementDataBase) {
+                ((ElementDataBase) elementData).release();
             }
         }
     }

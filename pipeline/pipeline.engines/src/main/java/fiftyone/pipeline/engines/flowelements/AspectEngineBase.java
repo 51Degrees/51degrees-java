@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.engines.flowelements;
 
+import fiftyone.pipeline.core.data.ElementDataBase;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
@@ -222,12 +223,16 @@ public abstract class AspectEngineBase<
 
     /**
      * Add a processed result to the cache, if there is one and the result
-     * may be cached.
+     * may be cached. A result that is stored is kept out of its pool,
+     * because the cache holds it after this Flow Data is closed.
      * @param flowData the {@link FlowData} whose Evidence makes the key
      * @param aspectData the processed result
      */
     private void putInCache(FlowData flowData, TData aspectData) {
         if (cache != null && isCacheable(aspectData)) {
+            if (aspectData instanceof ElementDataBase) {
+                ((ElementDataBase) aspectData).keepFromPool();
+            }
             cache.put(flowData, aspectData);
         }
     }

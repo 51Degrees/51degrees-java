@@ -32,6 +32,8 @@ import org.slf4j.Logger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 /**
  * Provides a base class from which authors may create new FlowElements. The
@@ -271,8 +273,23 @@ public abstract class FlowElementBase<
  */
 protected static class DataFactoryInternal<T extends ElementData>
         implements DataFactory<T> {
+    /**
+     * The most instances a pool keeps. More than run at once on most
+     * servers, so a busy server rarely allocates, and bounded so a burst
+     * does not hold memory for ever.
+     */
+    static final int POOL_SIZE =
+        Math.max(64, Runtime.getRuntime().availableProcessors() * 8);
+
     private final ElementDataFactory<T> elementDataFactory;
     private final FlowElement<T, ?> element;
+
+    /**
+     * Element Data given back when its Flow Data was closed, ready to be
+     * given out again. Only instances that can be pooled go in.
+     */
+    private final BlockingQueue<T> pool =
+        new ArrayBlockingQueue<>(POOL_SIZE);
 
     /**
      * Construct a new instance for the calling element.
@@ -289,7 +306,19 @@ protected static class DataFactoryInternal<T extends ElementData>
 
     @Override
     public T create(FlowData flowData) {
-        return elementDataFactory.create(flowData, element);
+        T result = pool.poll();
+        if (result != null) {
+            ((ElementDataBase) result).reuse(flowData);
+        } else {
+            result = elementDataFactory.create(flowData, element);
+        }
+        if (result instanceof ElementDataBase &&
+            ((ElementDataBase) result).canBePooled()) {
+            final T pooled = result;
+            // A full pool drops the instance for the garbage collector.
+            ((ElementDataBase) result).setOnRelease(() -> pool.offer(pooled));
+        }
+        return result;
     }
 }
 

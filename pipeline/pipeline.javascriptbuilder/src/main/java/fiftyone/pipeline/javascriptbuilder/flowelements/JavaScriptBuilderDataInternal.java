@@ -40,6 +40,15 @@ public class JavaScriptBuilderDataInternal
         super(logger, flowData);
     }
 
+    /**
+     * Holds only its values, so it is reused through its Flow Element's
+     * pool once the Flow Data that holds it is closed.
+     */
+    @Override
+    protected boolean isPoolable() {
+        return true;
+    }
+
     @Override
     public String getJavaScript() {
         return getAs("javascript", String.class);

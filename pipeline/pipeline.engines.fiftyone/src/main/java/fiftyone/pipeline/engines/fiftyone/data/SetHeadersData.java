@@ -53,6 +53,15 @@ public class SetHeadersData extends ElementDataBase {
 //! [constructor]
 
 	/**
+	 * Holds only its values, so it is reused through its Flow Element's
+	 * pool once the Flow Data that holds it is closed.
+	 */
+	@Override
+	protected boolean isPoolable() {
+		return true;
+	}
+
+	/**
 	 * Get the response headers to be set.
 	 * @return table of response headers
 	 */

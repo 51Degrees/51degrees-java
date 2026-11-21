@@ -39,6 +39,10 @@ import java.util.Map;
  * A Flow Data is used by one thread at a time. It is not safe to use from
  * several threads at once, even once processing has finished, and a caller
  * that shares one across threads is responsible for any locking.
+ * <p>
+ * Closing a Flow Data may return its Element Data to an object pool, from
+ * which another request can take it. Keeping a reference to Element Data
+ * after its Flow Data is closed is not supported.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/conceptual-overview.md#flow-data">Specification</a>
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/thread-safety.md#flow-data">Thread safety</a>
  */
