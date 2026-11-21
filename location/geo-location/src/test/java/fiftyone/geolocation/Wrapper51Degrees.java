@@ -33,6 +33,8 @@ import fiftyone.geolocation.flowelements.GeoLocationCloudEngineBuilder;
 
 import org.slf4j.LoggerFactory;
 
+import static org.junit.Assume.assumeFalse;
+
 public class Wrapper51Degrees implements Wrapper {
 
     protected static final TestLoggerFactory logger =
@@ -48,18 +50,30 @@ public class Wrapper51Degrees implements Wrapper {
         String resourceKey = null;
         
         if(envResourceKey == null || envResourceKey.isEmpty()) {
-    	if (propertyResourceKey == null || propertyResourceKey.isEmpty())
-    		throw new Exception("Resource key is required to run Cloud tests.");
-    	else {
-    		resourceKey = propertyResourceKey;
-    	}
+    	assumeFalse("These tests call the live 51Degrees cloud service, so " +
+    			"they need a resource key, and they are skipped because " +
+    			Constants.RESOURCE_KEY_ENV_VAR + " is not set as an " +
+    			"environment variable or as a system property.",
+    		propertyResourceKey == null || propertyResourceKey.isEmpty());
+    	resourceKey = propertyResourceKey;
         }
         else {
         	resourceKey = envResourceKey;
         }
 
-    	cloudRequestEngine = new CloudRequestEngineBuilder(logger)
+    	cloudRequestEngine = new CloudRequestEngineBuilder(logger, new TimedHttpClient())
                 .setResourceKey(resourceKey)
+                // The live cloud service is shared with every CI run. In run
+                // 44881631156 its slowest answer was 0.77 s, over 540
+                // requests on all 15 Build and Test jobs (TimedHttpClient
+                // prints each one). In java #190's release build (run
+                // 44702767584, about 08:38 UTC on 20 November 2026) device
+                // detection's ValueCloudTests got "Read timed out" past the
+                // 2 second default on two jobs. How long those answers took
+                // was not measured. 15 seconds is about 20 times the slowest
+                // answer measured. These tests check what the service
+                // answers, not how fast.
+                .setTimeOutSeconds(15)
                 .build();
         engine =  new GeoLocationCloudEngineBuilder(logger)
                 .setGeoLocationProvider("FiftyOneDegrees")

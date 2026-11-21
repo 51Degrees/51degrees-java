@@ -25,7 +25,10 @@ package fiftyone.geolocation;
 public class Constants {
     public static final String TEST_LAT = "51.457714";
     public static final String TEST_LON = "-0.975973";    
-    public static final String RESOURCE_KEY_ENV_VAR = "SuperResourceKey";
+    /**
+     * The key with every property, which the value tests need.
+     */
+    public static final String RESOURCE_KEY_ENV_VAR = "_51DEGREES_RESOURCE_KEY_SUPER";
     // For some reason, the value of the 'county' property returned
     // by the call to the cloud is always null on the build agent,
     // despite working correctly locally.

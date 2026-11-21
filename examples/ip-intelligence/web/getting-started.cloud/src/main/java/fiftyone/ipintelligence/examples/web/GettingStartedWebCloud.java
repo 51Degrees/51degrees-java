@@ -96,7 +96,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * <p>
  * The configuration file for the pipeline is at
  * src/main/webapp/WEB-INF/51Degrees-Cloud.xml. The resource key is taken from the
- * environment variable or system property "TestResourceKey" unless supplied as a command
+ * environment variable or system property "_51DEGREES_RESOURCE_KEY" unless supplied as a command
  * line argument.
  */
 public class GettingStartedWebCloud extends HttpServlet {
@@ -118,7 +118,7 @@ public class GettingStartedWebCloud extends HttpServlet {
         logger.info("Running Example {}", GettingStartedWebCloud.class);
 
         // Get the resource key from the command line, environment variable or
-        // system property. This sets the "TestResourceKey" system property
+        // system property. This sets the "_51DEGREES_RESOURCE_KEY" system property
         // which is interpolated in the pipeline configuration file.
         String resourceKey = KeyHelper.findResourceKey(
                 args.length > 0 ? args[0] : null);

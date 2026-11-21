@@ -22,15 +22,19 @@
 
 package fiftyone.ipintelligence.examples.shared;
 
+import org.junit.AssumptionViolatedException;
 import org.junit.Test;
 
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assume.assumeTrue;
@@ -42,11 +46,14 @@ public class KeyHelperTest {
     private static final String KEY_A = "AQAAAAAAAAAAAAAAAAAAAAAA";
     private static final String KEY_B = "AgAAAAAAAAAAAAAAAAAAAAAA";
 
+    private static final String NEW_KEY_NAME = "_51DEGREES_RESOURCE_KEY";
+    private static final String OLD_KEY_NAME = "51DEGREES_RESOURCE_KEY";
+
     /**
      * The names getOrSetTestResourceKey reads, in its order.
      */
-    private static final List<String> EXAMPLE_NAMES = Arrays.asList(
-        KeyHelper.RESOURCE_KEY_VARIABLE, KeyHelper.TEST_RESOURCE_KEY);
+    private static final List<String> EXAMPLE_NAMES =
+        Collections.singletonList(KeyHelper.RESOURCE_KEY_VARIABLE);
 
     /**
      * With no key anywhere, the lookup logs that there is none and stores
@@ -81,64 +88,73 @@ public class KeyHelperTest {
     }
 
     @Test
-    public void requireResourceKey_NoKey_FailsNamingEveryName() {
-        AssertionError error = assertThrows(AssertionError.class, () ->
-            KeyHelper.requireResourceKey(name -> null, EXAMPLE_NAMES,
-                "the network and location of an IP address, and whether a " +
-                    "device is mobile",
-                "ip", "device"));
-        assertEquals("This test calls the live 51Degrees cloud service, so " +
-                "it needs a resource key and there is nothing to fall back " +
-                "on. None of _51DEGREES_RESOURCE_KEY, " +
-                "_51DEGREES_RESOURCE_KEY_BESPOKE, _51DEGREES_RESOURCE_KEY, " +
-                "TestResourceKey is set, as an environment variable or as a " +
-                "system property, tried in that order. The key has to carry " +
-                "the ip and device products, because the test asks the " +
-                "service for the network and location of an IP address, and " +
-                "whether a device is mobile. To see the products a key " +
-                "carries, open " +
-                "https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>. " +
-                "Create a key at " + KeyHelper.CREATE_KEY_URL + ".",
-            error.getMessage());
+    public void testResourceKey_IsTheSharedName() {
+        assertEquals(NEW_KEY_NAME, KeyHelper.TEST_RESOURCE_KEY);
     }
 
     /**
-     * A name holding something that is not a key, such as the empty
-     * string the example poms pass for a key that is not set, is passed
-     * over.
+     * A test with no key is skipped, naming the variable to set, rather
+     * than failed.
      */
     @Test
-    public void requireResourceKey_FirstValidNameWins() {
+    public void requireResourceKey_NoKey_SkipsNamingTheVariable() {
+        AssumptionViolatedException skipped = assertThrows(
+            AssumptionViolatedException.class, () ->
+                KeyHelper.requireResourceKey(name -> null, EXAMPLE_NAMES,
+                    "the network and location of an IP address, and " +
+                        "whether a device is mobile",
+                    "ip", "device"));
+        assertEquals("This test calls the live 51Degrees cloud service, so " +
+                "it needs a resource key, and it is skipped because " +
+                "_51DEGREES_RESOURCE_KEY is not set as an environment " +
+                "variable or as a system property. The key has to carry the " +
+                "ip and device products, because the test asks the service " +
+                "for the network and location of an IP address, and whether " +
+                "a device is mobile. To see the products a key carries, open " +
+                "https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>. " +
+                "Create a key at " + KeyHelper.CREATE_KEY_URL + ".",
+            skipped.getMessage());
+    }
+
+    /**
+     * Only the names the test gives are read, and a name holding something
+     * that is not a key, such as the empty string a pom passes for a key
+     * that is not set, is passed over.
+     */
+    @Test
+    public void requireResourceKey_ReadsOnlyTheNamesGiven() {
         Map<String, String> values = new HashMap<>();
-        values.put("_51DEGREES_RESOURCE_KEY", "");
+        values.put(NEW_KEY_NAME, "");
         values.put("_51DEGREES_RESOURCE_KEY_BESPOKE", KEY_A);
-        values.put(KeyHelper.TEST_RESOURCE_KEY, KEY_B);
-        assertEquals(KEY_A, KeyHelper.requireResourceKey(values::get,
-            EXAMPLE_NAMES, "every IP Intelligence property", "ip"));
-    }
-
-    @Test
-    public void requireResourceKey_ExampleNamesInTheirOrder() {
-        Map<String, String> values = new HashMap<>();
-        values.put(KeyHelper.RESOURCE_KEY_VARIABLE, KEY_A);
-        values.put(KeyHelper.TEST_RESOURCE_KEY, KEY_B);
-        assertEquals(KEY_A, KeyHelper.requireResourceKey(values::get,
-            EXAMPLE_NAMES, "every IP Intelligence property", "ip"));
-        values.remove(KeyHelper.RESOURCE_KEY_VARIABLE);
-        assertEquals(KEY_B, KeyHelper.requireResourceKey(values::get,
-            EXAMPLE_NAMES, "every IP Intelligence property", "ip"));
-    }
-
-    private static final String NEW_KEY_NAME = "_51DEGREES_RESOURCE_KEY";
-    private static final String OLD_KEY_NAME = "51DEGREES_RESOURCE_KEY";
-
-    @Test
-    public void requireResourceKey_NewName() {
-        Map<String, String> values = new HashMap<>();
+        assertThrows(AssumptionViolatedException.class, () ->
+            KeyHelper.requireResourceKey(values::get, EXAMPLE_NAMES,
+                "every IP Intelligence property", "ip"));
         values.put(NEW_KEY_NAME, KEY_B);
         assertEquals(KEY_B, KeyHelper.requireResourceKey(values::get,
-            Arrays.asList(NEW_KEY_NAME, KeyHelper.TEST_RESOURCE_KEY),
-            "every IP Intelligence property", "ip"));
+            EXAMPLE_NAMES, "every IP Intelligence property", "ip"));
+    }
+
+    /**
+     * A cloud example reads its key from _51DEGREES_RESOURCE_KEY alone.
+     */
+    @Test
+    public void findResourceKey_ReadsOnlyTheSharedName() {
+        assumeTrue(System.getenv(NEW_KEY_NAME) == null);
+        String other = "AnyOtherResourceKeyName";
+        String saved = System.clearProperty(NEW_KEY_NAME);
+        try {
+            System.setProperty(other, KEY_A);
+            assertNull(KeyHelper.findResourceKey(null));
+            System.setProperty(NEW_KEY_NAME, KEY_B);
+            assertEquals(KEY_B, KeyHelper.findResourceKey(null));
+        } finally {
+            System.clearProperty(other);
+            if (saved == null) {
+                System.clearProperty(NEW_KEY_NAME);
+            } else {
+                System.setProperty(NEW_KEY_NAME, saved);
+            }
+        }
     }
 
     @Test
@@ -149,5 +165,46 @@ public class KeyHelperTest {
             .isAnnotationPresent(Deprecated.class));
         assertEquals(NEW_KEY_NAME,
             KeyHelper.class.getField("RESOURCE_KEY_VARIABLE").get(null));
+    }
+
+    /**
+     * A cloud example runs as an application, with no test library on its
+     * class path, and reads its key with KeyHelper. So KeyHelper has to
+     * load, and find a key, where JUnit cannot be found.
+     */
+    @Test
+    public void findResourceKey_NoJUnitOnTheClassPath_FindsTheKey()
+        throws Exception {
+        try (URLClassLoader loader = withoutJUnit()) {
+            Class<?> helper = Class.forName(KeyHelper.class.getName(), true,
+                loader);
+            assertNotSame(KeyHelper.class, helper);
+            String key = (String) helper
+                .getMethod("findResourceKey", String.class)
+                .invoke(null, KEY_A);
+            assertEquals(KEY_A, key);
+        }
+    }
+
+    /**
+     * A class loader with KeyHelper's own class files, that cannot see
+     * JUnit.
+     */
+    private static URLClassLoader withoutJUnit() {
+        String helpers = KeyHelper.class.getPackage().getName() + ".";
+        ClassLoader parent = new ClassLoader(
+            KeyHelper.class.getClassLoader()) {
+            @Override
+            protected Class<?> loadClass(String name, boolean resolve)
+                throws ClassNotFoundException {
+                if (name.startsWith("org.junit.") ||
+                    name.startsWith(helpers)) {
+                    throw new ClassNotFoundException(name);
+                }
+                return super.loadClass(name, resolve);
+            }
+        };
+        return new URLClassLoader(new URL[]{KeyHelper.class
+            .getProtectionDomain().getCodeSource().getLocation()}, parent);
     }
 }

@@ -29,31 +29,27 @@ package fiftyone.pipeline.cloudrequestengine.flowelements;
  * <p>
  * Every name is tried as an environment variable first and then as a
  * system property, so a developer can export one and a build can pass one
- * on the command line with {@code -D}. There is no fallback to a skip,
- * because a cloud test that quietly passes with no key reports success
- * having called nothing.
+ * on the command line with {@code -D}. Each key is read under its one
+ * _51DEGREES_ name and no other. A test with no key is skipped, naming
+ * the variable to set, rather than passed having called nothing.
  */
 final class LiveCloudKeys {
 
     /**
-     * The resource key names, in the order they are tried.
+     * The name the resource key is read from.
      */
     static final String[] RESOURCE_KEY_NAMES = {
         "_51DEGREES_RESOURCE_KEY",
-        "_51DEGREES_RESOURCE_KEY_BESPOKE",
-        "TestResourceKey",
     };
 
     /**
-     * The licence key names, in the order they are tried. A licence key
-     * is optional, because an account can hold its products on the
-     * resource key alone.
+     * The name the license key is read from. A license key is optional,
+     * because an account can hold its products on the resource key alone.
+     * It is the license for the cloud products, and not
+     * _51DEGREES_LICENSE_KEY, which holds the license for the data files.
      */
     static final String[] LICENCE_KEY_NAMES = {
-        "_51DEGREES_LICENSE_KEY",
         "_51DEGREES_LICENSE_KEY_BESPOKE",
-        "_51DEGREES_LICENSE_KEY_CLOUDV5BESPOKE",
-        "TestLicenseKey",
     };
 
     private LiveCloudKeys() {
@@ -77,15 +73,15 @@ final class LiveCloudKeys {
     }
 
     /**
-     * What to fail with when no resource key is set, naming every place
-     * that was looked and what the key has to be entitled to.
+     * Why the test is skipped when no resource key is set, naming the
+     * variable to set and what the key has to be entitled to.
      */
     static String noResourceKey() {
         return "This test calls the live 51Degrees cloud service, so it "
-            + "needs a resource key and there is nothing to fall back on. "
-            + "None of " + String.join(", ", RESOURCE_KEY_NAMES) + " is set, "
-            + "as an environment variable or as a system property, tried in "
-            + "that order. The key has to carry the device product, because "
+            + "needs a resource key, and it is skipped because "
+            + String.join(", ", RESOURCE_KEY_NAMES) + " is not set as an "
+            + "environment variable or as a system property. "
+            + "The key has to carry the device product, because "
             + "the test asks the service for device detection properties. "
             + "Create a key at https://51degrees.com/configure.";
     }

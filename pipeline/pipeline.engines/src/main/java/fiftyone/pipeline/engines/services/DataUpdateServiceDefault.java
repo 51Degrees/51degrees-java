@@ -1373,8 +1373,8 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             }
             return result;
         } catch (Throwable e) {
-            logger.error("Exception thrown", e);
-            return AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED;
+            logUnhandledError(dataFile, e);
+            return AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR;
         } finally {
             // Make sure the temp files are cleaned up
             try {
