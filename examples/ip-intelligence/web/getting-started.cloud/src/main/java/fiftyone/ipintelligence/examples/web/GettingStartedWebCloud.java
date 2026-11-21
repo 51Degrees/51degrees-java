@@ -59,6 +59,7 @@
 
 package fiftyone.ipintelligence.examples.web;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.examples.shared.KeyHelper;
 import fiftyone.ipintelligence.shared.IPIntelligenceData;
 import fiftyone.pipeline.core.data.FlowData;
@@ -99,7 +100,17 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * line argument.
  */
 public class GettingStartedWebCloud extends HttpServlet {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "web-getting-started.cloud-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedwebcloud.java";
+
     private static final long serialVersionUID = 1734154705981153542L;
+    /**
+     * The port the example listens on.
+     */
+    public static final int DEFAULT_PORT = 5151;
     public static Logger logger = LoggerFactory.getLogger(GettingStartedWebCloud.class);
 
     public static void main(String[] args) throws Exception {
@@ -109,10 +120,18 @@ public class GettingStartedWebCloud extends HttpServlet {
         // Get the resource key from the command line, environment variable or
         // system property. This sets the "TestResourceKey" system property
         // which is interpolated in the pipeline configuration file.
-        KeyHelper.getOrSetTestResourceKey(args.length > 0 ? args[0] : null, true);
+        String resourceKey = KeyHelper.findResourceKey(
+                args.length > 0 ? args[0] : null);
+        if (resourceKey == null) {
+            KeyHelper.writeNoResourceKey(System.out, EXAMPLE_TAG);
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES);
+            return;
+        }
+        KeyHelper.getOrSetTestResourceKey(resourceKey, true);
 
         // start Jetty with this WebApp
-        EmbedJetty.runWebApp(getResourceBase(), 8083);
+        EmbedJetty.runWebApp(getResourceBase(), DEFAULT_PORT);
     }
 
     public static String getResourceBase() {
@@ -140,6 +159,9 @@ public class GettingStartedWebCloud extends HttpServlet {
         // The lookup has already been carried out by the PipelineFilter
         // which closes the FlowData at the end of the request, so it is not
         // closed here.
+        // A Flow Data cannot be used by two threads at once. Work handed to
+        // another thread or task gets the values it needs, read here on the
+        // request's thread, not the Flow Data.
         FlowData flowData = flowDataProvider.getFlowData(request);
 
         // Determine target IP for display.
@@ -203,6 +225,8 @@ public class GettingStartedWebCloud extends HttpServlet {
             .replace("${AREAS_JS}", escapeForJs(asWktStringProperty(tryGet(ipiData::getAreas))))
             .replace("${ACCURACY_RADIUS}", asIntegerProperty(tryGet(ipiData::getAccuracyRadiusMin)))
             .replace("${TIME_ZONE_OFFSET}", asIntegerProperty(tryGet(ipiData::getTimeZoneOffset)))
+            .replace("${FIND_OUT_MORE}", FindOutMore.html(EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES))
             .replace("${EVIDENCE_ROWS}", buildEvidenceRows(flowData));
     }
 

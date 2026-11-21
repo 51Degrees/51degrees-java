@@ -42,6 +42,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
@@ -129,13 +130,9 @@ public class DidClientTests {
     }
 
     @Test
-    @SuppressWarnings("deprecation")
     public void endpoint_DefaultsToTheCloudOrTheEnvironment() {
         String fromEnvironment =
             System.getenv(DidClient.CLOUD_ENDPOINT_VARIABLE);
-        if (fromEnvironment == null || fromEnvironment.trim().isEmpty()) {
-            fromEnvironment = System.getenv(DidClient.ENDPOINT_VARIABLE);
-        }
         String expected = fromEnvironment == null
             || fromEnvironment.trim().isEmpty()
             ? DidClient.DEFAULT_ENDPOINT
@@ -1036,6 +1033,45 @@ public class DidClientTests {
 
         assertEquals(RedeemResult.Factor.MISMATCH,
             result.getFactors().get("transport"));
+    }
+
+    /**
+     * The comparison of a factor word ignores case, so each word in other
+     * letters reads as its own outcome rather than as a mismatch. The
+     * default locale is Turkish, where lower-casing an I in the default
+     * locale gives a dotless i.
+     */
+    @Test
+    public void redeem_FactorWordsInOtherLetters_ReadAsTheirOutcome()
+            throws Exception {
+        Locale saved = Locale.getDefault();
+        Locale.setDefault(Locale.forLanguageTag("tr-TR"));
+        try {
+            transport.queue(200, "{\"signature\":\"verified\","
+                + "\"context\":\"mismatch\","
+                + "\"factors\":{\"transport\":\"Verified\","
+                + "\"device\":\"NotRecorded\","
+                + "\"browserip\":\"MISCONFIGURED\","
+                + "\"connectionip\":\"VERIFIED\","
+                + "\"asn\":\"Mismatch\"}}");
+            FodId fodId = key2.fodIdAt(canonicalPayload(), WEEK2);
+
+            RedeemResult result =
+                client.redeem(fodId, "sealed", "abc").join();
+
+            assertEquals(RedeemResult.Factor.VERIFIED,
+                result.getFactors().get("transport"));
+            assertEquals(RedeemResult.Factor.NOT_RECORDED,
+                result.getFactors().get("device"));
+            assertEquals(RedeemResult.Factor.MISCONFIGURED,
+                result.getFactors().get("browserip"));
+            assertEquals(RedeemResult.Factor.VERIFIED,
+                result.getFactors().get("connectionip"));
+            assertEquals(RedeemResult.Factor.MISMATCH,
+                result.getFactors().get("asn"));
+        } finally {
+            Locale.setDefault(saved);
+        }
     }
 
     /** Every outcome reports the cloud's own word for itself. */

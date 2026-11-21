@@ -28,6 +28,7 @@ import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaDataDefault;
 import fiftyone.pipeline.engines.flowelements.AspectEngine;
 import fiftyone.pipeline.engines.flowelements.CloudAspectEngine;
+import fiftyone.pipeline.engines.flowelements.OnPremiseAspectEngine;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -51,13 +52,14 @@ public class MissingPropertyServiceTests {
 
     /**
      * Check that an "upgrade required" reason is returned when a property is
-     * available, but in another data tier.
+     * available, but in another data tier, which only an on-premise engine
+     * has.
      */
     @SuppressWarnings("unchecked")
     @Test
     public void MissingPropertyService_GetReason_Upgrade() {
         // Arrange
-        AspectEngine<? extends AspectData, AspectPropertyMetaData> engine = mock(AspectEngine.class);
+        AspectEngine<? extends AspectData, AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
         when(engine.getDataSourceTier()).thenReturn("lite");
         when(engine.getElementDataKey()).thenReturn("testElement");
         configureProperty(engine);
@@ -156,6 +158,7 @@ public class MissingPropertyServiceTests {
         // Arrange
         CloudAspectEngine<? extends AspectData, AspectPropertyMetaData> engine = mock(CloudAspectEngine.class);
         when(engine.getElementDataKey()).thenReturn("testElement");
+        when(engine.hasLoadedProperties()).thenReturn(true);
         when(engine.getProperties()).thenReturn(Collections.emptyList());
 
         // Act
@@ -188,6 +191,7 @@ public class MissingPropertyServiceTests {
         // Arrange
         CloudAspectEngine<? extends AspectData, AspectPropertyMetaData> engine = mock(CloudAspectEngine.class);
         when(engine.getElementDataKey()).thenReturn("testElement");
+        when(engine.hasLoadedProperties()).thenReturn(true);
         configureProperty(engine);
 
         // Act

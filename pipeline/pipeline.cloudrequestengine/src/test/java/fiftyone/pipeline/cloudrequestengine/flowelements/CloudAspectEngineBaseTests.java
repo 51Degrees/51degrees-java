@@ -131,6 +131,23 @@ public class CloudAspectEngineBaseTests {
         }
     }
 
+    /**
+     * A property keyed cloud engine that declares no Evidence of its own
+     * takes the base class's default, which accepts no Evidence.
+     */
+    @Test
+    public void propertyKeyedDefault_AcceptsNoEvidence() {
+        EvidenceKeyFilter filter = new TestKeyedInstance().getEvidenceKeyFilter();
+        for (String key : Arrays.asList(
+            "header.user-agent",
+            "query.client-ip",
+            "server.client-ip",
+            "cookie.51D_example")) {
+            assertFalse(filter.include(key),
+                "The default Evidence filter accepted '" + key + "'.");
+        }
+    }
+
     private class TestKeyedInstance
         extends PropertyKeyedCloudEngineBase<TestProfiles, TestData> {
         public TestKeyedInstance() {

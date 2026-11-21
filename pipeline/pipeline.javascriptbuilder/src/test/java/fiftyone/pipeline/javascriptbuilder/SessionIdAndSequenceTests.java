@@ -76,11 +76,14 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class SessionIdAndSequenceTests {
 
+    // The script is minified by default, so the patterns allow for the
+    // white space around '=' being taken out and for the rest of the
+    // script following on the same line.
     private static final Pattern SESSION_ID_LINE =
-        Pattern.compile("var sessionId = \"(.*)\";");
+        Pattern.compile("var sessionId\\s*=\\s*\"([^\"]*)\";");
 
     private static final Pattern SEQUENCE_LINE =
-        Pattern.compile("var sequence = (.*);");
+        Pattern.compile("var sequence\\s*=\\s*([^;]*);");
 
     private final TestLoggerFactory loggerFactory =
         new TestLoggerFactory(null);

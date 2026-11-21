@@ -24,6 +24,8 @@ package fiftyone.pipeline.web.mvc.configuration;
 
 import fiftyone.pipeline.web.mvc.components.FiftyOneInterceptor;
 
+import static fiftyone.pipeline.web.Constants.DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS;
+
 /**
  * Configuration class for the {@link FiftyOneInterceptor}.
  */
@@ -40,6 +42,15 @@ public interface FiftyOneInterceptorConfig {
      * @return true if client-side properties are enabled
      */
     boolean getClientsidePropertiesEnabled();
+
+    /**
+     * Get how many seconds a browser may keep the client-side JavaScript or
+     * JSON before it asks again, the max-age of their Cache-Control header.
+     * @return the max-age in seconds, 0 or more
+     */
+    default int getClientsideCacheMaxAge() {
+        return DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS;
+    }
 
     /**
      * Get the end of the request path the JavaScript is served for.

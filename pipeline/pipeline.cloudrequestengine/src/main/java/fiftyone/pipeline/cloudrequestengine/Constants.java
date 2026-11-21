@@ -32,7 +32,7 @@ public class Constants {
             + "to authenticate with, as the cloud service answers 401 to a "
             + "request that carries neither. Use setResourceKey(String) with "
             + "a resource key created for free at "
-            + "https://configure.51degrees.com?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=pipeline.cloudrequestengine-src-main-java-fiftyone-pipeline-cloudrequestengine-constants.java&utm_term=no-credential";
+            + "https://51degrees.com/configure?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=pipeline.cloudrequestengine-src-main-java-fiftyone-pipeline-cloudrequestengine-constants.java&utm_term=no-credential";
 
         public static final String LicenseKeyNeedsProperties =
             "The Cloud Request Engine has a license key and no requested "
@@ -58,6 +58,16 @@ public class Constants {
 
         public static final String EvidenceConflict =
             "'%s:%s' evidence conflicts with %s";
+
+        /**
+         * Warning a cloud engine logs when the Cloud Request Engine has no
+         * response for it to read. The argument is the engine's class name.
+         */
+        public static final String NoCloudResponse =
+            "The %s did not process, as the Cloud Request Engine has no "
+            + "response. The Cloud Request Engine's error in the log says "
+            + "why.";
+
         public static final String MessageNoDataInResponse =
             "No data in response from cloud service at '%s'";
         public static final String MessageErrorCodeReturned =

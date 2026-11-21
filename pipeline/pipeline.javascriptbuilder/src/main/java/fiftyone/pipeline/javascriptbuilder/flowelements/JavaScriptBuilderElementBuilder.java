@@ -40,6 +40,10 @@ import org.slf4j.Logger;
 @ElementBuilder
 public class JavaScriptBuilderElementBuilder {
     public static final boolean ENABLE_COOKIES = true;
+    /**
+     * Whether the script is minified when nothing else is configured.
+     */
+    public static final boolean MINIFY = true;
     private final ILoggerFactory loggerFactory;
     private final Logger logger;
     
@@ -49,6 +53,7 @@ public class JavaScriptBuilderElementBuilder {
     protected String contextRoot = "";
     protected String objName = Constants.DEFAULT_OBJECT_NAME;
     private boolean enableCookies = ENABLE_COOKIES;
+    private boolean minify = MINIFY;
 
     /**
      * Construct a new instance.
@@ -172,6 +177,22 @@ public class JavaScriptBuilderElementBuilder {
     }
 
     /**
+     * Set whether the JavaScript that is produced is minified. Minifying
+     * takes out the template's comments and white space, so the script is
+     * smaller to send. The values the script carries, such as the JSON, are
+     * not changed.
+     * <p>
+     * Default is true
+     * @param minify true to minify the JavaScript
+     * @return this builder
+     */
+    @DefaultValue(booleanValue = MINIFY)
+    public JavaScriptBuilderElementBuilder setMinify(boolean minify) {
+        this.minify = minify;
+        return this;
+    }
+
+    /**
      * Build the {@link JavaScriptBuilderElement}
      * @return new {@link JavaScriptBuilderElement} instance
      */
@@ -194,7 +215,8 @@ public class JavaScriptBuilderElementBuilder {
             enableCookies,
             host,
             protocol,
-            contextRoot);
-    } 
+            contextRoot,
+            minify);
+    }
 }
 //! [class]

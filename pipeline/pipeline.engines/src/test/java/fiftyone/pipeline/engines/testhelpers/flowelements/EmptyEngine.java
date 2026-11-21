@@ -37,11 +37,13 @@ import org.slf4j.Logger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class EmptyEngine
     extends AspectEngineBase<EmptyEngineData, AspectPropertyMetaData> {
 
     private long processCost = 0;
+    private final AtomicInteger processCount = new AtomicInteger();
     private Exception exception = null;
     private List<AspectPropertyMetaData> properties = null;
     private EvidenceKeyFilterWhitelist evidenceWhitelist =
@@ -68,6 +70,14 @@ public class EmptyEngine
     }
     public void setProcessCost(long milliseconds) {
         processCost = milliseconds;
+    }
+
+    /**
+     * @return the number of times the engine has processed, which does not
+     * count results taken from the cache
+     */
+    public int getProcessCount() {
+        return processCount.get();
     }
 
     public void setException(Exception exception) {
@@ -101,6 +111,7 @@ public class EmptyEngine
 
     @Override
     protected void processEngine(FlowData data, EmptyEngineData aspectData) throws Exception {
+        processCount.incrementAndGet();
         if (exception != null) {
             throw exception;
         }

@@ -3,31 +3,21 @@ param (
     [Parameter(Mandatory)][string]$VariableName
 )
 $ErrorActionPreference = "Stop"
+. "$PSScriptRoot/release.ps1"
 
-# The whole repository has one version, tagged as a plain version such as
-# 4.5.127. Only the patch number moves here. The major and minor numbers
-# change only when someone edits FirstVersion before the first release or
-# pushes a tag by hand.
-
-# The version used while the repository has no version tag. It is above every
-# version the absorbed repositories published, so the first release from here
-# is an ordinary upgrade for each package.
-$FirstVersion = '4.5.127'
-
-$tags = @(git -C $RepoName tag --list |
-    Where-Object { $_ -match '^\d+\.\d+\.\d+$' } |
-    Sort-Object { [version]$_ })
-$headTags = @(git -C $RepoName tag --points-at HEAD |
-    Where-Object { $_ -match '^\d+\.\d+\.\d+$' })
-
-if ($headTags) {
-    # Already released, so the publish sees the tag and does nothing.
-    $next = $headTags | Sort-Object { [version]$_ } | Select-Object -Last 1
-} elseif ($tags) {
-    $highest = [version]$tags[-1]
-    $next = "$($highest.Major).$($highest.Minor).$($highest.Build + 1)"
+# common-ci's publish carries one version through its jobs. This repository
+# releases each package at its own version (see release.ps1), so that one
+# version is only a label for the run, being the highest version this publish
+# releases. Whether anything is released is decided by
+# package-update-required.ps1, and each package's version and tag by
+# build-package.ps1 and publish-package.ps1, all from the same release plan.
+$plan = @(Get-ReleasePlan $RepoName)
+if ($plan.Count -gt 0) {
+    $label = ($plan.Version | Sort-Object { [version]$_ })[-1]
 } else {
-    $next = $FirstVersion
+    # Nothing to release. Any valid version will do, because
+    # package-update-required.ps1 stops the publish before it is used.
+    $label = '4.5.0'
 }
 
-Set-Variable -Scope Global -Name $VariableName -Value $next
+Set-Variable -Scope Global -Name $VariableName -Value $label

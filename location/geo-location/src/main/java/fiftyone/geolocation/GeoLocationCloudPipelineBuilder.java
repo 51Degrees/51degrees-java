@@ -75,6 +75,10 @@ public class GeoLocationCloudPipelineBuilder
         if (licenseKey != null && licenseKey.isEmpty() == false) {
             cloudRequestEngineBuilder.setLicenseKey(licenseKey);
         }
+        if (requestedProperties.isEmpty() == false) {
+            cloudRequestEngineBuilder.setRequestedProperties(
+                requestedProperties);
+        }
         if (cloudRequestOrigin != null && cloudRequestOrigin.isEmpty() == false) {
             cloudRequestEngineBuilder.setCloudRequestOrigin(cloudRequestOrigin);
         }

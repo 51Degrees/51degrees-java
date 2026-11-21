@@ -46,6 +46,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -126,6 +127,7 @@ public class ShareUsageOptionsTests {
         evidence.put("header.x-blocked", "blocked");
         evidence.put("header.cookie", "a=b");
         evidence.put("cookie.plain", "cookie");
+        evidence.put("cookie.51D_plain", "51d-cookie");
         evidence.put("session.plain", "session");
         evidence.put("query.plain", "query");
         evidence.put("query.id.email", "a@example.com");
@@ -177,7 +179,9 @@ public class ShareUsageOptionsTests {
         assertTrue(shared(sent, "header", "user-agent"));
         assertFalse(shared(sent, "header", "x-blocked"));
         assertFalse(shared(sent, "cookie", "plain"));
+        assertTrue(shared(sent, "cookie", "51D_plain"));
         assertFalse(shared(sent, "session", "plain"));
+        // No Flow Element in the Pipeline accepts the parameter.
         assertFalse(shared(sent, "query", "plain"));
     }
 
@@ -188,9 +192,12 @@ public class ShareUsageOptionsTests {
 
         assertTrue(shared(sent, "header", "user-agent"));
         assertTrue(shared(sent, "header", "x-blocked"));
-        assertTrue(shared(sent, "cookie", "plain"));
+        assertFalse(shared(sent, "cookie", "plain"));
+        assertTrue(shared(sent, "cookie", "51D_plain"));
         assertTrue(shared(sent, "session", "plain"));
-        assertTrue(shared(sent, "query", "plain"));
+        // Not even all Evidence shares a parameter the Pipeline does not
+        // use.
+        assertFalse(shared(sent, "query", "plain"));
         assertFalse(shared(sent, "query", "id.email"));
         assertFalse(shared(sent, "id", "email"));
         assertFalse(shared(sent, "id", "salt"));
@@ -209,14 +216,18 @@ public class ShareUsageOptionsTests {
         assertFalse(shared(sent, "query", "plain"));
     }
 
+    /**
+     * The deprecated share all query string parameters option has no
+     * effect, so a parameter the Pipeline does not use is not shared.
+     */
     @Test
-    public void shareAllQueryStringParameters_FromConfiguration_SharesEveryParameter()
+    public void shareAllQueryStringParameters_FromConfiguration_HasNoEffect()
         throws Exception {
         Document sent = send(
             options("ShareAllQueryStringParameters", "true"),
             evidence());
 
-        assertTrue(shared(sent, "query", "plain"));
+        assertFalse(shared(sent, "query", "plain"));
         assertFalse(shared(sent, "query", "id.email"));
         assertFalse(shared(sent, "server", "request-query"));
         // The other rules still apply.
@@ -236,13 +247,17 @@ public class ShareUsageOptionsTests {
         assertFalse(shared(sent, "query", "plain"));
     }
 
+    /**
+     * Share all Evidence is off by default and share all query string
+     * parameters is on.
+     */
     @Test
-    public void builder_ShareOptionsDefaultToFalse() {
+    public void builder_ShareOptionDefaults() {
         ShareUsageBuilder builder = new ShareUsageBuilder(
             LoggerFactory.getILoggerFactory());
 
         assertFalse(builder.isShareAllEvidence());
-        assertFalse(builder.isShareAllQueryStringParameters());
+        assertTrue(builder.isShareAllQueryStringParameters());
     }
 
     @Test
@@ -251,8 +266,14 @@ public class ShareUsageOptionsTests {
         evidence.put("Server.Client-IP", "1.2.3.4");
         evidence.put("Query.Session-ID", "session-1");
         evidence.put("Query.Sequence", "5");
+        // The Sequence Element accepts the session id and sequence, so the
+        // Pipeline uses them and they are shared.
+        PipelineOptions options = options();
+        ElementOptions sequence = new ElementOptions();
+        sequence.builderName = "SequenceElement";
+        options.elements.add(0, sequence);
 
-        Document sent = send(options(), evidence);
+        Document sent = send(options, evidence);
 
         assertEquals("1.2.3.4",
             sent.getElementsByTagName("ClientIP").item(0).getTextContent());
@@ -260,6 +281,41 @@ public class ShareUsageOptionsTests {
             sent.getElementsByTagName("SessionId").item(0).getTextContent());
         assertEquals("5",
             sent.getElementsByTagName("Sequence").item(0).getTextContent());
+    }
+
+    /**
+     * The never-shared keys are matched without regard to case under any
+     * default locale. Under a Turkish default locale "I" lower-cases to a
+     * dotless "i", so a comparison in the default locale would let
+     * "ID.EMAIL" through.
+     */
+    @Test
+    public void neverSharedKeys_TurkishLocale_StillRefused() {
+        Locale original = Locale.getDefault();
+        Locale.setDefault(Locale.forLanguageTag("tr-TR"));
+        try {
+            EvidenceKeyFilterShareUsage filter = new EvidenceKeyFilterShareUsage(
+                new ArrayList<String>(),
+                new ArrayList<String>(),
+                false,
+                DEFAULT_SESSION_COOKIE_NAME);
+            EvidenceKeyFilterShareUsage shareAll =
+                new EvidenceKeyFilterShareUsage(
+                    new ArrayList<String>(),
+                    new ArrayList<String>(),
+                    false,
+                    DEFAULT_SESSION_COOKIE_NAME,
+                    true,
+                    true);
+            for (String key : new String[] {
+                "ID.EMAIL", "Query.ID.Email", "HEADER.COOKIE",
+                "Server.Request-Path", "SERVER.REQUEST-QUERY", "ID.SALT"}) {
+                assertFalse(filter.include(key), key);
+                assertFalse(shareAll.include(key), key);
+            }
+        } finally {
+            Locale.setDefault(original);
+        }
     }
 
     @Test

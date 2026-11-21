@@ -36,7 +36,9 @@ import java.util.TreeMap;
  * for a request, accepted or not, keyed the way Evidence is keyed, such as
  * header.user-agent. It is added to Evidence as
  * {@link ShareUsageEvidence#HTTP_REQUEST_KEY} for the usage sharing element,
- * which accepts no Evidence and reads the request here instead.
+ * which accepts no Evidence and reads the request here instead. The
+ * client-side endpoints make their ETag from it too, because it holds the
+ * values as the request supplied them, before any Flow Element adds its own.
  * <p>
  * It is a map rather than the HttpServletRequest because the usage sharing
  * element does not depend on the servlet API, and the values are copied so

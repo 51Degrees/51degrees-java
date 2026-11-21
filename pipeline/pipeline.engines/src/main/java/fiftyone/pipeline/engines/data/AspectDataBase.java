@@ -54,6 +54,11 @@ public abstract class AspectDataBase extends ElementDataBase implements AspectDa
     private final Map<AspectEngine<? extends AspectData,? extends AspectPropertyMetaData>, Future<?>> processFutures;
 
     /**
+     * Whether the cloud request for the Flow Data failed.
+     */
+    private volatile boolean cloudRequestFailed = false;
+
+    /**
      * Constructs a new instance with a non-thread-safe, case-insensitive
      * {@link Map} as the underlying storage.
      * @param logger used for logging
@@ -172,6 +177,15 @@ public abstract class AspectDataBase extends ElementDataBase implements AspectDa
     }
 
     /**
+     * Record that the cloud request for the Flow Data failed, so that a
+     * property this instance does not hold is missing with the
+     * CloudRequestFailed reason.
+     */
+    public void setCloudRequestFailed() {
+        cloudRequestFailed = true;
+    }
+
+    /**
      * Add an engine to the list of engines which have generated the data within
      * this instance.
      * @param engine engine adding data
@@ -197,6 +211,18 @@ public abstract class AspectDataBase extends ElementDataBase implements AspectDa
     public Map<String, Object> asKeyMap() {
         waitOnAllProcessFutures();
         return super.asKeyMap();
+    }
+
+    /**
+     * Get the value stored for the key as it is now, without waiting for any
+     * lazy loading processing to finish, so it can be read from inside that
+     * processing. The value is null when nothing has been stored for the key,
+     * including when processing has not stored it yet.
+     * @param key the key to read
+     * @return the value stored for the key, or null
+     */
+    protected Object getWithoutWaiting(String key) {
+        return super.asKeyMap().get(key);
     }
 
     /**
@@ -228,8 +254,13 @@ public abstract class AspectDataBase extends ElementDataBase implements AspectDa
                 missingPropertyService != null) {
                 // If there was no entry for the key then use the missing
                 // property service to find out why.
-                MissingPropertyResult missingReason = missingPropertyService
-                    .getMissingPropertyReason(key, engines);
+                MissingPropertyResult missingReason = cloudRequestFailed ?
+                    missingPropertyService.getCloudRequestFailedReason(
+                        key,
+                        engines) :
+                    missingPropertyService.getMissingPropertyReason(
+                        key,
+                        engines);
                 logger.debug("Property '" + key + "' missing from " +
                     "aspect data '" + getClass().getName() + "'-'" +
                     hashCode() + "'. " + missingReason.getReason());

@@ -63,7 +63,7 @@
         <devicedetection.version>4.5.130</devicedetection.version>
 
         <junit.version>4.13.2</junit.version>
-        <slf4j-api.version>1.7.36</slf4j-api.version>
+        <slf4j-api.version>2.0.20</slf4j-api.version>
         <logback-classic.version>1.3.16</logback-classic.version>
         <mockito-core.version>4.3.1</mockito-core.version>
         <org.json.version>20211205</org.json.version>
@@ -78,7 +78,7 @@
         <maven-jarsigner-plugin.version>3.0.0</maven-jarsigner-plugin.version>
         <maven-gpg-plugin.version>3.0.1</maven-gpg-plugin.version>
         <central-publishing-maven-plugin.version>0.7.0</central-publishing-maven-plugin.version>
-        <maven-pmd-plugin.version>3.26.0</maven-pmd-plugin.version>
+        <maven-pmd-plugin.version>3.28.0</maven-pmd-plugin.version>
 
         <skippackagesign>true</skippackagesign>
         <skipPublishing>false</skipPublishing>
@@ -344,9 +344,11 @@
             <url>https://opensource.org/licenses/EUPL-1.2</url>
         </license>
     </licenses>
-    <scm>
-        <url>https://github.com/51Degrees/location-java</url>
-        <connection>scm:git:git://github.com/51Degrees/location-java.git</connection>
-        <developerConnection>scm:git:info@51degrees.com:51Degrees/location-java.git</developerConnection>
+    <scm child.scm.connection.inherit.append.path="false"
+         child.scm.developerConnection.inherit.append.path="false"
+         child.scm.url.inherit.append.path="false">
+        <url>https://github.com/51Degrees/51degrees-java</url>
+        <connection>scm:git:https://github.com/51Degrees/51degrees-java.git</connection>
+        <developerConnection>scm:git:https://github.com/51Degrees/51degrees-java.git</developerConnection>
     </scm>
 </project>

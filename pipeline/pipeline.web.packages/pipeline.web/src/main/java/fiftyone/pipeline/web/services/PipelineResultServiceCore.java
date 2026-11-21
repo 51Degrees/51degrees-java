@@ -43,6 +43,17 @@ public interface PipelineResultServiceCore {
     void process(HttpServletRequest request);
 
     /**
+     * Create a FlowData holding the Evidence from the request, as
+     * {@link #process(HttpServletRequest)} would, without processing it. The
+     * caller closes it.
+     * @param request the {@link HttpServletRequest} to take the Evidence from
+     * @return the FlowData, or null if this service cannot create one
+     */
+    default FlowData createFlowData(HttpServletRequest request) {
+        return null;
+    }
+
+    /**
      * Default implementation of the {@link PipelineResultServiceCore} service.
      */
     class Default implements PipelineResultServiceCore {
@@ -79,23 +90,38 @@ public interface PipelineResultServiceCore {
         @Override
         @SuppressWarnings("PMD.FlowDataInTryWithResources")
         public void process(HttpServletRequest request) {
-            // Create the flowData
-            FlowData flowData = pipeline.createFlowData();
+            FlowData flowData = createFlowData(request);
             try {
-                // Extract the required pieces of evidence from the request
-                evidenceService.addEvidenceFromRequest(flowData, request);
                 // Start processing the data
                 flowData.process();
             } catch (RuntimeException | Error e) {
-                try {
-                    flowData.close();
-                } catch (Exception closeException) {
-                    e.addSuppressed(closeException);
-                }
+                closeAfterFailure(flowData, e);
                 throw e;
             }
             // Store the FlowData in the request
             request.setAttribute(HTTPCONTEXT_FLOWDATA, flowData);
+        }
+
+        @Override
+        @SuppressWarnings("PMD.FlowDataInTryWithResources")
+        public FlowData createFlowData(HttpServletRequest request) {
+            FlowData flowData = pipeline.createFlowData();
+            try {
+                // Extract the required pieces of evidence from the request
+                evidenceService.addEvidenceFromRequest(flowData, request);
+            } catch (RuntimeException | Error e) {
+                closeAfterFailure(flowData, e);
+                throw e;
+            }
+            return flowData;
+        }
+
+        private static void closeAfterFailure(FlowData flowData, Throwable e) {
+            try {
+                flowData.close();
+            } catch (Exception closeException) {
+                e.addSuppressed(closeException);
+            }
         }
     }
 }

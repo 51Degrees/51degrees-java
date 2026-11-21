@@ -123,11 +123,13 @@ public class FlowDataTests {
 
     @Test
     public void FlowData_AddDataString_GetDataString() {
-        flowData.process();
         String key = "key";
         ElementData data = flowData.getOrAdd(
             key,
             (FlowElement.DataFactory<ElementData>) flowData -> new TestElementData(mock(Logger.class), flowData));
+        // Element Data is added before processing finishes, as a Flow Data
+        // is read only afterwards.
+        flowData.process();
 
         Object result = flowData.get(key);
 
@@ -135,13 +137,44 @@ public class FlowDataTests {
     }
 
     @Test
-    public void FlowData_AddDataString_GetDataTypedKey() {
+    public void FlowData_AddDataString_GetDataStringOtherCase() {
+        ElementData data = flowData.getOrAdd(
+            "device",
+            (FlowElement.DataFactory<ElementData>) flowData -> new TestElementData(mock(Logger.class), flowData));
+        // Element Data is added before processing finishes, as a Flow Data
+        // is read only afterwards.
         flowData.process();
+
+        assertEquals(data, flowData.get("Device"));
+        assertEquals(data, flowData.get("DEVICE"));
+    }
+
+    @Test
+    public void FlowData_GetOrAddOtherCase_SameData() {
+        ElementData data = flowData.getOrAdd(
+            "device",
+            (FlowElement.DataFactory<ElementData>) flowData -> new TestElementData(mock(Logger.class), flowData));
+        // Element Data is added before processing finishes, as a Flow Data
+        // is read only afterwards.
+        flowData.process();
+
+        ElementData again = flowData.getOrAdd(
+            "Device",
+            (FlowElement.DataFactory<ElementData>) flowData -> new TestElementData(mock(Logger.class), flowData));
+
+        assertSame(data, again);
+    }
+
+    @Test
+    public void FlowData_AddDataString_GetDataTypedKey() {
         String key = "key";
         TypedKey<TestElementData> typedKey = new TypedKeyDefault<>(key);
         ElementData data = flowData.getOrAdd(
             key,
             (FlowElement.DataFactory<ElementData>) flowData -> new TestElementData(mock(Logger.class), flowData));
+        // Element Data is added before processing finishes, as a Flow Data
+        // is read only afterwards.
+        flowData.process();
 
         Object result = flowData.get(typedKey);
 
@@ -150,8 +183,6 @@ public class FlowDataTests {
 
     @Test
     public void FlowData_AddDataString_GetDataElement() {
-        flowData.process();
-
         TestElement element = new TestElement(
             mock(Logger.class),
             (flowData, flowElement) -> new TestElementData(
@@ -160,6 +191,9 @@ public class FlowDataTests {
         ElementData data = flowData.getOrAdd(
             element.getElementDataKey(),
             element.getDataFactory());
+        // Element Data is added before processing finishes, as a Flow Data
+        // is read only afterwards.
+        flowData.process();
 
         Object result = flowData.getFromElement(element);
 
@@ -168,12 +202,14 @@ public class FlowDataTests {
 
     @Test
     public void FlowData_AddDataTypedKey_GetDataString() {
-        flowData.process();
         String key = "key";
         TypedKey<TestElementData> typedKey = new TypedKeyDefault<>(key);
         TestElementData data = flowData.getOrAdd(
             typedKey,
             flowData -> new TestElementData(mock(Logger.class), flowData));
+        // Element Data is added before processing finishes, as a Flow Data
+        // is read only afterwards.
+        flowData.process();
 
         Object result = flowData.get(key);
 
@@ -182,12 +218,14 @@ public class FlowDataTests {
 
     @Test
     public void FlowData_AddDataTypedKey_GetDataTypedKey() {
-        flowData.process();
         String key = "key";
         TypedKey<TestElementData> typedKey = new TypedKeyDefault<>(key);
         TestElementData data = flowData.getOrAdd(
             typedKey,
             flowData -> new TestElementData(mock(Logger.class), flowData));
+        // Element Data is added before processing finishes, as a Flow Data
+        // is read only afterwards.
+        flowData.process();
 
         Object result = flowData.get(typedKey);
 
@@ -196,7 +234,6 @@ public class FlowDataTests {
 
     @Test
     public void FlowData_AddDataTypedKey_GetDataElement() {
-        flowData.process();
         TestElement element = new TestElement(
             mock(Logger.class),
             (flowData, flowElement) -> new TestElementData(
@@ -207,6 +244,9 @@ public class FlowDataTests {
         TestElementData data = flowData.getOrAdd(
             typedKey,
             element.getDataFactory());
+        // Element Data is added before processing finishes, as a Flow Data
+        // is read only afterwards.
+        flowData.process();
 
 
         Object result = flowData.getFromElement(element);
@@ -229,11 +269,13 @@ public class FlowDataTests {
 
     @Test
     public void FlowData_GetDataAsEnumerable() {
-        flowData.process();
         String key = "key";
         TestElementData data = flowData.getOrAdd(
             key,
             flowData -> new TestElementData(mock(Logger.class), flowData));
+        // Element Data is added before processing finishes, as a Flow Data
+        // is read only afterwards.
+        flowData.process();
 
         Iterable<ElementData> result = flowData.elementDataAsIterable();
 
@@ -247,12 +289,14 @@ public class FlowDataTests {
 
     @Test
     public void FlowData_UpdateDataAsMap() {
-        flowData.process();
         String key = "key";
         TestElementData data = new TestElementData(mock(Logger.class), flowData);
         Map<String, Object> dataAsMap = flowData.elementDataAsMap();
 
         dataAsMap.put(key, data);
+        // Element Data is added before processing finishes, as a Flow Data
+        // is read only afterwards.
+        flowData.process();
         Object result = flowData.get(key);
 
         assertEquals(data, result);
@@ -315,6 +359,25 @@ public class FlowDataTests {
             new TestElement(mock(Logger.class), mock(ElementDataFactory.class))
         );
         assertNull(result);
+    }
+
+    /**
+     * The error logged for a processing failure carries the exception, so
+     * the log says why processing failed.
+     */
+    @Test
+    public void FlowData_AddError_LogsTheException() throws Exception {
+        Logger logger = mock(Logger.class);
+        when(logger.isErrorEnabled()).thenReturn(true);
+        Exception cause = new Exception("The cause of the failure.");
+        try (FlowData data = new FlowDataDefault(
+            logger,
+            pipeline,
+            new EvidenceDefault(mock(Logger.class)))) {
+
+            data.addError(cause, mock(FlowElement.class));
+        }
+        verify(logger).error(anyString(), same(cause));
     }
 
     @Test(expected = IllegalStateException.class)
@@ -653,13 +716,14 @@ public class FlowDataTests {
      */
     @Test
     public void FlowData_Close() throws Exception {
-        flowData.process();
-
         CloseableData data = mock(CloseableData.class);
 
         flowData.getOrAdd(
             "test",
             (FlowElement.DataFactory<ElementData>) flowData -> data);
+        // Element Data is added before processing finishes, as a Flow Data
+        // is read only afterwards.
+        flowData.process();
         CloseFlowData();
         verify(data, times(1)).close();
     }
@@ -671,11 +735,12 @@ public class FlowDataTests {
      */
     @Test
     public void FlowData_CloseNotCloseable() throws Exception {
-        flowData.process();
-
         ElementData data = mock(ElementData.class);
 
         flowData.getOrAdd("test", flowData -> data);
+        // Element Data is added before processing finishes, as a Flow Data
+        // is read only afterwards.
+        flowData.process();
         CloseFlowData();
     }
 }

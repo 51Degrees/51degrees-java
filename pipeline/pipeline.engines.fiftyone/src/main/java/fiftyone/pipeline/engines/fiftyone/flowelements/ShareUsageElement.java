@@ -43,6 +43,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPOutputStream;
 
 import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT;
+import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_DEFAULT_SHARE_ALL_QUERY_STRING_PARAMETERS;
 import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_INITIAL_DELAY_SECONDS_DEFAULT;
 import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT;
 import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT;
@@ -52,7 +53,7 @@ import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_US
 
 /**
  * Flow element that sends usage data to 51Degrees for analysis. 
- * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/pipeline-elements/usage-sharing-element.md">Specification</a>
+ * @see <a href="https://github.com/51Degrees/specifications/blob/07e1fcedc2cbd83a60cd245c137747686e58da41/pipeline-specification/pipeline-elements/usage-sharing-element.md">Specification</a>
  */
 public class ShareUsageElement extends ShareUsageBase {
     // max time to wait to send data
@@ -332,7 +333,7 @@ public class ShareUsageElement extends ShareUsageBase {
                 SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT,
                 SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT,
                 false,
-                false);
+                SHARE_USAGE_DEFAULT_SHARE_ALL_QUERY_STRING_PARAMETERS);
     }
 
     /**
@@ -377,7 +378,9 @@ public class ShareUsageElement extends ShareUsageBase {
      * @param recoveryMultiplier            what the pause is multiplied by each time the send
      *                                      tried when a pause ends fails
      * @param shareAllEvidence              if true then all Evidence is shared, apart from
-     *                                      the keys that are never shared
+     *                                      the keys that are never shared and
+     *                                      the cookies other than the
+     *                                      51Degrees ones
      * @param shareAllQueryStringParameters if true then all query string
      *                                      parameters are shared
      */
@@ -426,7 +429,7 @@ public class ShareUsageElement extends ShareUsageBase {
                 shareAllEvidence,
                 shareAllQueryStringParameters);
 
-        headers.put("Content-Type", "text/xml; charset=utf-8");
+        headers.put("Content-Type", "text/xml");
         // assume default GZIP connection
         headers.put("Content-Encoding", "gzip");
 
@@ -467,7 +470,7 @@ public class ShareUsageElement extends ShareUsageBase {
                 // final consumer but the consumer that was already running has
                 // drained everything - and there is no point posting a document
                 // with no entries in it.
-                if (allData.isEmpty() == false) {
+                if (allData.isEmpty() == false && isDiscarding() == false) {
                     boolean accepted = false;
                     try {
                         sendAsXML(allData);
@@ -485,8 +488,9 @@ public class ShareUsageElement extends ShareUsageBase {
                 logger.error("Exception sending usage data", exception);
             }
           // send in minEntries batches unless closing in which case drain the queue
-        } while (evidenceCollection.size() >= minEntriesPerMessage ||
-                isStopping() && evidenceCollection.size() > 0);
+        } while (isDiscarding() == false &&
+                (evidenceCollection.size() >= minEntriesPerMessage ||
+                isStopping() && evidenceCollection.size() > 0));
         logger.debug(threadMarker, "Stopping sending. Queue size is {}", evidenceCollection.size());
     }
 
@@ -521,7 +525,6 @@ public class ShareUsageElement extends ShareUsageBase {
     private void streamXml(List<ShareUsageData> allData, OutputStream os) throws XMLStreamException {
         XMLStreamWriter writer = xmlOutputFactory.createXMLStreamWriter(os, "UTF-8");
         writer.writeStartElement("Devices");
-        writer.writeAttribute("version", "1.1");
         for (ShareUsageData data : allData) {
             writeXmlData(writer, data);
         }
@@ -537,31 +540,51 @@ public class ShareUsageElement extends ShareUsageBase {
      */
     protected void writeXmlData(XMLStreamWriter writer, ShareUsageData data) throws XMLStreamException {
         writer.writeStartElement("Device");
-        // The elements follow the order of the specification's example.
+        // The elements follow the order of the specification's example, and
+        // each one the example does not mark optional is always written,
+        // empty when there is no value.
+        // The values that do not change while the element lives are written
+        // to its first record, and again to the first record once an hour
+        // has passed since they were last written. The ProcessId ties the
+        // records that leave them out to them.
+        boolean invariant = writeInvariantValuesNow();
+        // The identifier of this element, the same in every record
+        writeXmlElement(writer, "ProcessId", getProcessId());
         // The SessionID used to track a series of requests
-        writeXmlElement(writer, "SessionId", data.sessionId);
+        writeRequiredXmlElement(writer, "SessionId", data.sessionId);
         // The sequence number of the request in a series of requests.
         writeXmlElement(writer, "Sequence", String.valueOf(data.sequence));
         // The UTC date/time this entry was written
-        writeXmlElement(writer, "DateSent", DATE_FMT.format(new Date()));
-        // The version number of the Pipeline API
-        writeXmlElement(writer, "Version", coreVersion);
-        // Write Pipeline information
-        // The product name
-        writeXmlElement(writer, "Product", "Pipeline");
-        // The flow elements in the current pipeline
-        for (String element : getFlowElements()) {
-            writeXmlElement(writer, "FlowElement", element);
+        writeXmlElement(writer, "DateSent", dateSentNow());
+        if (invariant) {
+            // The version number of the Pipeline API
+            writeRequiredXmlElement(writer, "Version", coreVersion);
+            // Write Pipeline information
+            // The product name
+            writeXmlElement(writer, "Product", "Pipeline");
+            // The flow elements in the current pipeline
+            for (String element : getFlowElements()) {
+                writeXmlElement(writer, "FlowElement", element);
+            }
+            // The version of every 51Degrees package in use
+            for (Map.Entry<String, String> entry : getPackages().entrySet()) {
+                writer.writeStartElement("Package");
+                writer.writeAttribute("Name", entry.getKey());
+                writer.writeCharacters(entry.getValue());
+                writer.writeEndElement();
+            }
+            writeXmlElement(writer, "Language", "java");
+            // The software language version
+            writeRequiredXmlElement(writer, "LanguageVersion", languageVersion);
         }
-        writeXmlElement(writer, "Language", "java");
-        // The software language version
-        writeXmlElement(writer, "LanguageVersion", languageVersion);
         // The client IP of the request
-        writeXmlElement(writer, "ClientIP", data.clientIP);
-        // The IP of this server
-        writeXmlElement(writer, "ServerIP", getHostAddress());
-        // The OS name and version
-        writeXmlElement(writer, "Platform", osVersion);
+        writeRequiredXmlElement(writer, "ClientIP", data.clientIP);
+        if (invariant) {
+            // The IP of this server
+            writeRequiredXmlElement(writer, "ServerIP", getHostAddress());
+            // The OS name and version
+            writeRequiredXmlElement(writer, "Platform", osVersion);
+        }
 
         // Write all other evidence data that has been included.
         for (Map.Entry<String, Map<String, String>> category : data.evidenceData.entrySet()) {
@@ -595,6 +618,20 @@ public class ShareUsageElement extends ShareUsageBase {
             writer.writeCharacters(elementContent);
             writer.writeEndElement();
         }
+    }
+
+    /**
+     * Write an element the record always holds, empty when there is no
+     * value.
+     */
+    private void writeRequiredXmlElement(
+        XMLStreamWriter writer,
+        String elementName,
+        String elementContent) throws XMLStreamException {
+        writeXmlElement(
+            writer,
+            elementName,
+            elementContent == null ? "" : elementContent);
     }
 
     /**

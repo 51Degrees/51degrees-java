@@ -25,7 +25,7 @@ package fiftyone.devicedetection.cloud;
 import fiftyone.devicedetection.shared.testhelpers.UserAgentGenerator;
 import fiftyone.pipeline.util.FileFinder;
 
-import static fiftyone.devicedetection.shared.testhelpers.FileUtils.UA_FILE_PATH;
+import static fiftyone.devicedetection.shared.testhelpers.TestFileUtils.UA_FILE_PATH;
 
 public class TestsBase {
 

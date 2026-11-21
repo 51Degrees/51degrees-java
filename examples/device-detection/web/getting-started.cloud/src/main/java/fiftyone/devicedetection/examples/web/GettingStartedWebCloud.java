@@ -22,6 +22,8 @@
 
 package fiftyone.devicedetection.examples.web;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
+import fiftyone.devicedetection.examples.shared.KeyHelper;
 import fiftyone.devicedetection.shared.DeviceData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.web.Constants;
@@ -45,20 +47,47 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * <p>
  * To use this example you must obtain a resource key. A resource key suitable for
  * use with the example can be obtained here:
- * <a href="https://configure.51degrees.com/jqz435Nc?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=web-getting-started.cloud-src-main-java-fiftyone-devicedetection-examples-web-gettingstartedwebcloud.java&amp;utm_term=gettingstartedwebcloud">https://configure.51degrees.com/jqz435Nc?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-getting-started.cloud-src-main-java-fiftyone-devicedetection-examples-web-gettingstartedwebcloud.java&utm_term=gettingstartedwebcloud-2</a>.
+ * <a href="https://51degrees.com/configure/jqz435Nc?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=web-getting-started.cloud-src-main-java-fiftyone-devicedetection-examples-web-gettingstartedwebcloud.java&amp;utm_term=gettingstartedwebcloud">https://51degrees.com/configure/jqz435Nc?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-getting-started.cloud-src-main-java-fiftyone-devicedetection-examples-web-gettingstartedwebcloud.java&utm_term=gettingstartedwebcloud-2</a>.
  * <p>
  * The configuration file for the pipeline is at src/main/webapp/WEB-INF/51Degrees-Cloud.xml
+ * <p>
+ * The server listens on port 5151 and stops when Enter is pressed. If the PORT
+ * environment variable is set, the server listens on that port instead and runs
+ * until the process is stopped, which is how automated tests start it.
  */
 public class GettingStartedWebCloud extends HttpServlet {
+    /**
+     * This example's tag in the links it writes when it has no resource
+     * key.
+     */
+    private static final String EXAMPLE_TAG =
+        "web-getting-started.cloud-src-main-java-fiftyone-devicedetection-examples-web-gettingstartedwebcloud.java";
+
     private static final long serialVersionUID = 1734154705981153540L;
+    /**
+     * The port the example listens on when the PORT environment variable
+     * does not choose another.
+     */
+    public static final int DEFAULT_PORT = 5151;
     public static String resourceBase = "examples/device-detection/web/getting-started.cloud/src/main/webapp";
     public static Logger logger = LoggerFactory.getLogger(GettingStartedWebCloud.class);
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
-        String resourceKey = args.length > 0 ? args[0] : null;
+        String resourceKey = KeyHelper.findResourceKey(
+                args.length > 0 ? args[0] : null,
+                KeyHelper.RESOURCE_KEY_VARIABLE,
+                KeyHelper.TEST_RESOURCE_KEY);
+        if (resourceKey == null) {
+            KeyHelper.writeNoResourceKey(System.out, EXAMPLE_TAG,
+                    KeyHelper.RESOURCE_KEY_VARIABLE,
+                    KeyHelper.FREE_PROPERTIES_CONFIGURATION);
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES);
+            return;
+        }
         logger.info("Running Example {}", GettingStartedWebCloud.class);
-        // check resource key and set as System Property
+        // Set the key as the system property the options file reads.
         getOrSetTestResourceKey(resourceKey);
 
         String portEnv = System.getenv("PORT");
@@ -68,7 +97,7 @@ public class GettingStartedWebCloud extends HttpServlet {
             EmbedJetty.startWebApp(getFilePath(resourceBase).getAbsolutePath(), Integer.parseInt(portEnv)).join();
         } else {
             // start Jetty with this WebApp
-            EmbedJetty.runWebApp(getFilePath(resourceBase).getAbsolutePath(), 8081);
+            EmbedJetty.runWebApp(getFilePath(resourceBase).getAbsolutePath(), DEFAULT_PORT);
         }
     }
 
@@ -84,6 +113,9 @@ public class GettingStartedWebCloud extends HttpServlet {
             throws Exception {
         // the detection has already been carried out by the Filter
         // which is responsible to the lifecycle of the flowData - do NOT dispose
+        // A Flow Data cannot be used by two threads at once. Work handed to
+        // another thread or task gets the values it needs, read here on the
+        // request's thread, not the Flow Data.
         FlowData flowData = flowDataProvider.getFlowData(request);
         // retrieve the device data from the flowdata
         DeviceData device = flowData.get(DeviceData.class);

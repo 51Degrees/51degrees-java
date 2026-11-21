@@ -24,7 +24,9 @@ package fiftyone.devicedetection;
 
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngineBuilder;
+import fiftyone.pipeline.annotations.DefaultValue;
 import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
+import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.Constants;
 import fiftyone.pipeline.engines.data.AspectData;
@@ -48,7 +50,9 @@ import java.util.List;
 public class DeviceDetectionOnPremisePipelineBuilder
     extends PrePackagedPipelineBuilderBase<DeviceDetectionOnPremisePipelineBuilder> {
 
-    protected boolean shareUsageEnabled = true;
+    protected boolean shareUsageEnabled =
+        fiftyone.pipeline.engines.fiftyone.flowelements.Constants
+            .SHARE_USAGE_DEFAULT_ENABLED;
     private String filename;
     private boolean createTempDataCopy;
     private byte[] engineData;
@@ -136,6 +140,8 @@ public class DeviceDetectionOnPremisePipelineBuilder
      * @param enabled True to enable usage sharing. False to disable.
      * @return This builder instance.
      */
+    @DefaultValue(booleanValue = fiftyone.pipeline.engines.fiftyone
+        .flowelements.Constants.SHARE_USAGE_DEFAULT_ENABLED)
     public DeviceDetectionOnPremisePipelineBuilder setShareUsage(
         boolean enabled) {
         shareUsageEnabled = enabled;
@@ -150,6 +156,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
      * @param enabled True to enable auto update. False to disable.
      * @return This builder instance.
      */
+    @DefaultValue(booleanValue = Constants.DEFAULT_AUTOUPDATE_ENABLED)
     public DeviceDetectionOnPremisePipelineBuilder setAutoUpdate(
         boolean enabled) {
         autoUpdateEnabled = enabled;
@@ -164,6 +171,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
      * @param enabled True to enable file system watcher. False to disable.
      * @return This builder instance.
      */
+    @DefaultValue(booleanValue = Constants.DEFAULT_WATCHER_ENABLED)
     public DeviceDetectionOnPremisePipelineBuilder setDataFileSystemWatcher(
             boolean enabled) {
         dataFileSystemWatcher = enabled;
@@ -175,6 +183,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
      * @param dataUpdateService an instance of a dataUpdateService
      * @return This builder instance.
      */
+    @DefaultValue("The DataUpdateService given to the constructor")
     public DeviceDetectionOnPremisePipelineBuilder setDataUpdateService(
             DataUpdateService dataUpdateService) {
         this.dataUpdateService = dataUpdateService;
@@ -183,7 +192,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
 
     /**
      * Enable/Disable update on startup.
-     * Defaults to enabled.
+     * Defaults to disabled.
      * If enabled, the auto update system will be used to check for
      * an update before the device detection engine is created.
      * If an update is available, it will be downloaded and applied
@@ -192,6 +201,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
      * @param enabled True to enable update on startup. False to disable.
      * @return This builder instance.
      */
+    @DefaultValue(booleanValue = Constants.DEFAULT_UPDATE_ON_STARTUP)
     public DeviceDetectionOnPremisePipelineBuilder setDataUpdateOnStartup(
         boolean enabled) {
         dataUpdateOnStartup = enabled;
@@ -205,6 +215,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
      * @param pollingIntervalSeconds The number of seconds between checks.
      * @return This builder instance.
      */
+    @DefaultValue(intValue = Constants.DATA_UPDATE_POLLING_DEFAULT)
     public DeviceDetectionOnPremisePipelineBuilder setUpdatePollingInterval(
         int pollingIntervalSeconds) {
         
@@ -218,6 +229,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
      * @param pollingIntervalMillis The number of milliseconds between checks.
      * @return This builder instance.
      */
+    @DefaultValue(intValue = Constants.DATA_UPDATE_POLLING_DEFAULT * 1000)
     public DeviceDetectionOnPremisePipelineBuilder setUpdatePollingIntervalMillis(
         long pollingIntervalMillis) {
         updatePollingInterval = pollingIntervalMillis;
@@ -232,6 +244,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
      * polling interval in seconds.
      * @return This builder instance.
      */
+    @DefaultValue(intValue = Constants.DATA_UPDATE_RANDOMISATION_DEFAULT)
     public DeviceDetectionOnPremisePipelineBuilder setUpdateRandomisationMax(
         int randomisationMaxSeconds) {
         updateRandomisationMax = (long)randomisationMaxSeconds * 1000;
@@ -246,6 +259,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
      * polling interval in milliseconds.
      * @return This builder instance.
      */
+    @DefaultValue(intValue = Constants.DATA_UPDATE_RANDOMISATION_DEFAULT * 1000)
     public DeviceDetectionOnPremisePipelineBuilder setUpdateRandomisationMaxMillis(
         long randomisationMaxMillis) {
         updateRandomisationMax = randomisationMaxMillis;
@@ -259,6 +273,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
      * @param key The license key.
      * @return This builder instance.
      */
+    @DefaultValue("No license key")
     public DeviceDetectionOnPremisePipelineBuilder setDataUpdateLicenseKey(
         String key) {
         dataUpdateLicenseKey = key;
@@ -271,6 +286,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
      * @param profile The performance profile to use.
      * @return This builder instance.
      */
+    @DefaultValue("Balanced")
     public DeviceDetectionOnPremisePipelineBuilder setPerformanceProfile(
         Constants.PerformanceProfiles profile) {
         performanceProfile = profile;
@@ -284,6 +300,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
      * @param concurrency expected concurrent accesses
      * @return this builder
      */
+    @DefaultValue("The result of Runtime#getRuntime().getAvailableProcessors()")
     public DeviceDetectionOnPremisePipelineBuilder setConcurrency(int concurrency) {
         this.concurrency = concurrency;
         return this;
@@ -298,6 +315,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
      * @param difference to allow
      * @return this builder
      */
+    @DefaultValue(intValue = 0)
     public DeviceDetectionOnPremisePipelineBuilder setDifference(int difference) {
         this.difference = difference;
         return this;
@@ -314,6 +332,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
      *              considered valid
      * @return this builder
      */
+    @DefaultValue(booleanValue = false)
     public DeviceDetectionOnPremisePipelineBuilder setAllowUnmatched(boolean allow) {
         this.allowUnmatched = allow;
         return this;
@@ -326,6 +345,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
      * @param drift to set
      * @return this builder
      */
+    @DefaultValue(intValue = 0)
     public DeviceDetectionOnPremisePipelineBuilder setDrift(int drift) {
         this.drift = drift;
         return this;
@@ -343,6 +363,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
      * @param use true if the performance graph should be used
      * @return this builder
      */
+    @DefaultValue(booleanValue = false)
     public DeviceDetectionOnPremisePipelineBuilder setUsePerformanceGraph(boolean use) {
         this.usePerformanceGraph = use;
         return this;
@@ -359,6 +380,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
      * @param use true if the predictive graph should be used
      * @return this builder
      */
+    @DefaultValue(booleanValue = true)
     public DeviceDetectionOnPremisePipelineBuilder setUsePredictiveGraph(boolean use) {
         this.usePredictiveGraph = use;
         return this;
@@ -370,6 +392,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
      * @param property the property that we want the engine to populate
      * @return this builder
      */
+    @DefaultValue("All properties")
     public DeviceDetectionOnPremisePipelineBuilder setProperty(String property) {
         this.properties.add(property);
         return this;
@@ -384,6 +407,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
      * @param url the URL to check for a new data file
      * @return this builder
      */
+    @DefaultValue("51Degrees default, set by the engine's builder")
     public DeviceDetectionOnPremisePipelineBuilder setDataUpdateUrl(String url) {
         dataUpdateUrl = url;
         return this;
@@ -400,6 +424,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
      *               False otherwise
      * @return this builder
      */
+    @DefaultValue(booleanValue = Constants.DEFAULT_VERIFY_MD5)
     public DeviceDetectionOnPremisePipelineBuilder setDataUpdateVerifyMd5(Boolean verify) {
         dataUpdateVerifyMd5 = verify;
         return this;
@@ -413,6 +438,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
      * @param formatter the formatter to use
      * @return this builder
      */
+    @DefaultValue("51Degrees default, set by the engine's builder")
     public DeviceDetectionOnPremisePipelineBuilder setDataUpdateUrlFormatter(DataUpdateUrlFormatter formatter) {
         dataUpdateUrlFormatter = formatter;
         return this;
@@ -431,22 +457,33 @@ public class DeviceDetectionOnPremisePipelineBuilder
                 new DeviceDetectionHashEngineBuilder(loggerFactory, dataUpdateService);
         deviceDetectionEngine = configureAndBuild(hashBuilder);
 
+        List<FlowElement<?, ?>> made = new ArrayList<>();
         if (deviceDetectionEngine != null) {
-            // Add the share usage element to the list if enabled
-            if (shareUsageEnabled) {
-                getFlowElements().add(
-                    new ShareUsageBuilder(loggerFactory).build());
-            }
             // Add the device detection engine to the list
+            made.add(deviceDetectionEngine);
             getFlowElements().add(deviceDetectionEngine);
+            // Usage sharing goes last, so that it shares what every other
+            // Flow Element has added to the Evidence.
+            if (shareUsageEnabled) {
+                FlowElement<?, ?> shareUsage =
+                    new ShareUsageBuilder(loggerFactory).build();
+                made.add(shareUsage);
+                getFlowElements().add(shareUsage);
+            }
         } else {
             throw new RuntimeException("Unexpected error creating device detection engine.");
         }
 
         setAutoCloseElements(true);
 
-        // Create and return the pipeline
-        return super.build();
+        // Create and return the pipeline, closing what this builder made if
+        // the Pipeline is refused.
+        try {
+            return super.build();
+        } catch (Exception e) {
+            closeMadeElements(made, e);
+            throw e;
+        }
     }
 
     /**

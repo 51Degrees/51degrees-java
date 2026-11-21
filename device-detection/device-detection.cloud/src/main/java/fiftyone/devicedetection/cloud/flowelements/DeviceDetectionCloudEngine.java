@@ -41,8 +41,17 @@ import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
+import static fiftyone.pipeline.cloudrequestengine.Constants.Messages.NoCloudResponse;
+
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
@@ -55,6 +64,13 @@ import org.json.JSONArray;
  */
 public class DeviceDetectionCloudEngine
     extends CloudAspectEngineBase<DeviceDataCloud> {
+    /**
+     * The type of value each typed accessor of the device data gives, keyed
+     * by the property name in lower case, so that a value the metadata does
+     * not describe can be given as the type its accessor declares.
+     */
+    private static final Map<String, Type> DECLARED_TYPES = declaredTypes();
+
     volatile List<AspectPropertyMetaData> aspectProperties;
     private String dataSourceTier;
     CloudRequestEngine cloudRequestEngine;
@@ -135,8 +151,16 @@ public class DeviceDetectionCloudEngine
         else {
             CloudRequestData requestData =
                 data.getFromElement(cloudRequestEngine);
-            String json = "";
-            json = requestData.getJsonResponse();
+            setCloudRequestFailed(data, aspectData, cloudRequestEngine);
+            String json = requestData.getJsonResponse();
+
+            // A failed cloud request leaves no response. The Cloud Request
+            // Engine reports why, so this engine adds no error of its own.
+            if (json == null || json.isEmpty()) {
+                logger.warn(String.format(
+                    NoCloudResponse, getClass().getSimpleName()));
+                return;
+            }
 
             // Extract data from json to the aspectData instance.
             JSONObject jsonObj = new JSONObject(json);
@@ -146,6 +170,12 @@ public class DeviceDetectionCloudEngine
                 new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
             for (AspectPropertyMetaData property : getProperties()) {
+                // A property the response leaves out has no entry, so
+                // reading it throws a PropertyMissingException.
+                if (deviceObj.has(
+                    property.getName().toLowerCase(Locale.ROOT)) == false) {
+                    continue;
+                }
                 String type = property.getType().getSimpleName();
                 switch(type) {
                     case ("List"):
@@ -183,6 +213,18 @@ public class DeviceDetectionCloudEngine
                             property.getName(),
                             getStringAspectPropertyValue(deviceObj, property));
                             break;
+                }
+            }
+
+            // A value the metadata does not describe, as when the metadata
+            // is empty before discovery has completed, takes its type from
+            // the value itself.
+            for (String key : deviceObj.keySet()) {
+                if (key.endsWith("nullreason") == false &&
+                    deviceMap.containsKey(key) == false) {
+                    deviceMap.put(
+                        key,
+                        getInferredAspectPropertyValue(deviceObj, key));
                 }
             }
 
@@ -272,7 +314,7 @@ public class DeviceDetectionCloudEngine
     private AspectPropertyValue<Integer> getIntegerAspectPropertyValue(
         JSONObject deviceObj,
         AspectPropertyMetaData property) {
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<Integer> intValue = new AspectPropertyValueDefault<>();
         if(deviceObj.isNull(key)){
             intValue.setNoValueMessage(getNoValueReason(deviceObj, key));
@@ -284,7 +326,7 @@ public class DeviceDetectionCloudEngine
     }
 
     private AspectPropertyValue<Double> getDoubleAspectPropertyValue(JSONObject deviceObj, AspectPropertyMetaData property) {
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<Double> doubleValue = new AspectPropertyValueDefault<>();
         if(deviceObj.isNull(key)){
             doubleValue.setNoValueMessage(getNoValueReason(deviceObj, key));
@@ -306,7 +348,7 @@ public class DeviceDetectionCloudEngine
     private AspectPropertyValue<Boolean> getBooleanAspectPropertyValue(
         JSONObject deviceObj,
         AspectPropertyMetaData property) {
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<Boolean> booleanValue = new AspectPropertyValueDefault<>();
         if(deviceObj.isNull(key)){
             booleanValue.setNoValueMessage(getNoValueReason(deviceObj, key));
@@ -328,7 +370,7 @@ public class DeviceDetectionCloudEngine
     private AspectPropertyValue<List<String>> getListAspectPropertyValue(
         JSONObject deviceObj,
         AspectPropertyMetaData property){
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<List<String>> listValue = new AspectPropertyValueDefault<>();
         if(deviceObj.isNull(key))
         {
@@ -357,7 +399,7 @@ public class DeviceDetectionCloudEngine
     private AspectPropertyValue<JavaScript> getJavaScriptAspectPropertyValue(
         JSONObject deviceObj,
         AspectPropertyMetaData property){
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<JavaScript> jsValue = new AspectPropertyValueDefault<>();
         if(deviceObj.isNull(key)){
             jsValue.setNoValueMessage(getNoValueReason(deviceObj, key));
@@ -378,7 +420,7 @@ public class DeviceDetectionCloudEngine
     private AspectPropertyValue<String> getStringAspectPropertyValue(
         JSONObject deviceObj,
         AspectPropertyMetaData property){
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<String> stringValue = new AspectPropertyValueDefault<>();
         if(deviceObj.isNull(key)){
             stringValue.setNoValueMessage(getNoValueReason(deviceObj, key));
@@ -390,6 +432,100 @@ public class DeviceDetectionCloudEngine
     }
 
     /**
+     * Get a value from the cloud engine's JSON response that the metadata
+     * does not describe, with its type taken from the value: a string, a
+     * boolean, a number, a list of strings, or an object as a map. A
+     * number is an Integer where the typed accessor of
+     * {@link DeviceDataCloud} declares one and the number is a whole
+     * number an Integer can hold, and a Double where the accessor declares
+     * one or the number has a decimal point. A null is no value, with the
+     * reason the response gives.
+     * @param deviceObj to get the value from
+     * @param key to get the value of
+     * @return {@link AspectPropertyValue} with the value, or the reason for
+     * the value not being present
+     */
+    private AspectPropertyValue<?> getInferredAspectPropertyValue(
+        JSONObject deviceObj,
+        String key) {
+        Object value = deviceObj.opt(key);
+        if (value == null || value == JSONObject.NULL) {
+            AspectPropertyValue<Object> noValue =
+                new AspectPropertyValueDefault<>();
+            noValue.setNoValueMessage(getNoValueReason(deviceObj, key));
+            return noValue;
+        }
+        if (value instanceof JSONArray) {
+            JSONArray jsonArray = (JSONArray) value;
+            List<String> strings = new ArrayList<>(jsonArray.length());
+            for (Object item : jsonArray.toList()) {
+                strings.add(Objects.toString(item, null));
+            }
+            return new AspectPropertyValueDefault<>(strings);
+        }
+        if (value instanceof JSONObject) {
+            return new AspectPropertyValueDefault<>(
+                ((JSONObject) value).toMap());
+        }
+        if (value instanceof Number) {
+            Number number = (Number) value;
+            Type declared = DECLARED_TYPES.get(key.toLowerCase(Locale.ROOT));
+            if (Integer.class.equals(declared) && isWholeInteger(number)) {
+                return new AspectPropertyValueDefault<>(number.intValue());
+            }
+            if (Double.class.equals(declared) ||
+                value instanceof BigDecimal ||
+                value instanceof Double ||
+                value instanceof Float) {
+                return new AspectPropertyValueDefault<>(
+                    number.doubleValue());
+            }
+        }
+        return new AspectPropertyValueDefault<>(value);
+    }
+
+    /**
+     * True when the number is a whole number an Integer can hold, such as
+     * 24 or 24.0, and false for 24.5 or a number beyond an Integer's range.
+     * @param number the number
+     * @return true if the number can be an Integer without changing it
+     */
+    private static boolean isWholeInteger(Number number) {
+        double value = number.doubleValue();
+        return value == Math.rint(value) &&
+            value >= Integer.MIN_VALUE &&
+            value <= Integer.MAX_VALUE;
+    }
+
+    /**
+     * The type of value each typed accessor of {@link DeviceDataCloud}
+     * gives, being the type argument of the {@link AspectPropertyValue} it
+     * returns, keyed by the property name in lower case.
+     * @return the declared types
+     */
+    private static Map<String, Type> declaredTypes() {
+        Map<String, Type> types = new HashMap<>();
+        for (Method method : DeviceDataCloud.class.getMethods()) {
+            Type returned = method.getGenericReturnType();
+            if (method.getParameterCount() == 0 &&
+                method.getName().startsWith("get") &&
+                AspectPropertyValue.class.equals(method.getReturnType()) &&
+                returned instanceof ParameterizedType) {
+                types.put(
+                    method.getName().substring(3).toLowerCase(Locale.ROOT),
+                    ((ParameterizedType) returned).getActualTypeArguments()[0]);
+            }
+        }
+        return Collections.unmodifiableMap(types);
+    }
+
+    /**
+     * The message for a property with no value when the response gives no
+     * reason.
+     */
+    private static final String UNKNOWN_NULL_REASON = "Unknown";
+
+    /**
      * Get the reason for the value of a property not being present in the cloud
      * engine's JSON response.
      * @param deviceObj to get the null reason from
@@ -398,7 +534,9 @@ public class DeviceDetectionCloudEngine
      */
     private String getNoValueReason(JSONObject deviceObj, String key){
         Object reason = tryToGet(deviceObj, key + "nullreason");
-        return reason == null ? null : reason.toString();
+        return reason == null || reason == JSONObject.NULL ?
+            UNKNOWN_NULL_REASON :
+            reason.toString();
     }
 
     /**

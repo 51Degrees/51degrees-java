@@ -29,8 +29,8 @@ import static org.junit.Assert.*;
 public class KeyUtilsTest {
     @Test
     public void testGetEnv(){
-        assertNotNull(KeyUtils.getNamedKey("path"));
-        System.out.println(KeyUtils.getNamedKey("path"));
+        assertNotNull(TestKeyUtils.getNamedKey("path"));
+        System.out.println(TestKeyUtils.getNamedKey("path"));
     }
 
 }

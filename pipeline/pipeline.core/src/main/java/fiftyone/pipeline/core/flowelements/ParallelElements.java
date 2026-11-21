@@ -32,10 +32,14 @@ import java.util.concurrent.*;
 
 /**
  * ParallelElements executes it's child {@link FlowElement} objects in parallel.
+ * A {@link Pipeline} lists a parallel group as one of these, so code that
+ * needs every Flow Element in use, such as the usage sharing element, reads
+ * the group's members with {@link #getFlowElements()}. The constructor is
+ * package-private, so only the Pipeline builders create one.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/advanced-features/parallel-processing.md">Specification</a>
  */
 @SuppressWarnings("rawtypes")
-class ParallelElements
+public class ParallelElements
     extends FlowElementBase<ElementData, ElementPropertyMetaData> {
 
     private final ExecutorService threadPool;
@@ -59,7 +63,7 @@ class ParallelElements
      * Get an unmodifiable list of the child {@link FlowElement} instances.
      * @return child {@link FlowElement}s
      */
-    List<FlowElement> getFlowElements() {
+    public List<FlowElement> getFlowElements() {
         return Collections.unmodifiableList(flowElements);
     }
 
@@ -70,7 +74,8 @@ class ParallelElements
             parallelCallers.add(new FlowElementCallable(element, flowData));
         }
         try {
-            List<Future<FlowError>> results = threadPool.invokeAll(parallelCallers);
+            List<Future<FlowError>> results =
+                runMembers(flowData, parallelCallers);
             // all threads are now done
             for (Future<FlowError> future : results) {
                 FlowError error;
@@ -80,6 +85,29 @@ class ParallelElements
             }
         } catch (InterruptedException | ExecutionException e) {
             flowData.addError(e, this);
+        }
+    }
+
+    /**
+     * Run every member and wait for them all to stop. While they run, the
+     * Flow Data adds the errors members record under its errors lock.
+     */
+    private List<Future<FlowError>> runMembers(
+        FlowData flowData,
+        List<FlowElementCallable> parallelCallers)
+        throws InterruptedException {
+        FlowDataDefault running = flowData instanceof FlowDataDefault ?
+            (FlowDataDefault) flowData :
+            null;
+        if (running != null) {
+            running.groupStarted();
+        }
+        try {
+            return threadPool.invokeAll(parallelCallers);
+        } finally {
+            if (running != null) {
+                running.groupStopped();
+            }
         }
     }
 

@@ -36,6 +36,14 @@ import java.util.Optional;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
+/**
+ * Finds the data and evidence files the tests use.
+ * @deprecated These are test helpers, which the published package should
+ * not hold. Example code takes the data file names from
+ * {@code fiftyone.devicedetection.examples.shared.DataFileHelper}, in the
+ * device-detection-java-examples.shared module.
+ */
+@Deprecated
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public class FileUtils {
     public static final String ENTERPRISE_HASH_DATA_FILE_NAME = "Enterprise-HashV41.hash";

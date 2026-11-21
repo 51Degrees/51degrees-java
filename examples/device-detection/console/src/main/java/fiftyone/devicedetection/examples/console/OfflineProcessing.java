@@ -22,6 +22,7 @@
 
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.devicedetection.DeviceDetectionPipelineBuilder;
 import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
@@ -67,6 +68,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * predictive power using Performance Profile, Graph and Difference and Drift settings.
  */
 public class OfflineProcessing {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-devicedetection-examples-console-offlineprocessing.java";
+
     static final Logger logger = LoggerFactory.getLogger(OfflineProcessing.class);
     // This 51degrees "Lite" file is used from the data repository in
     // cxx/data, and is downloaded if it is missing
@@ -238,6 +245,10 @@ public class OfflineProcessing {
                 }
                 // finish the last YAML document
                 writer.write("...\n");
+                // The section is written as comments, so the output stays a
+                // valid YAML stream.
+                FindOutMore.writeCommented(new PrintWriter(writer), "# ",
+                        EXAMPLE_TAG, FindOutMore.ON_PREMISE_REPOSITORIES);
                 writer.flush();
                 logger.info("Finished processing {} records", count);
             }

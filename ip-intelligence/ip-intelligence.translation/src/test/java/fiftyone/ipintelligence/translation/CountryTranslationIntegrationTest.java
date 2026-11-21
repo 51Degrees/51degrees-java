@@ -50,8 +50,7 @@ import static org.junit.Assume.assumeTrue;
  * complete, localized, ordered country dropdown is produced.
  * <p>
  * The data file is resolved from the {@code TestDataFile} system property, the
- * {@code _51DEGREES_IPI_PATH} environment variable (or its deprecated
- * name {@code 51DEGREES_IPI_PATH} when that is not set), or a few well known
+ * {@code _51DEGREES_IPI_PATH} environment variable, or a few well known
  * locations, and the test is skipped if none is found.
  * <p>
  * The IP Intelligence element data key has differed between engine versions
@@ -65,31 +64,12 @@ public class CountryTranslationIntegrationTest {
     private static final String SAMPLE_IP = "8.8.8.8";
 
     private static final String IPI_PATH_VARIABLE = "_51DEGREES_IPI_PATH";
-    private static final String OLD_IPI_PATH_VARIABLE = "51DEGREES_IPI_PATH";
-
-    private static boolean oldNameReported = false;
 
     /**
-     * The path the environment gives, from the deprecated name when the
-     * name that replaces it is not set, saying so on standard error the
-     * first time.
+     * The path the environment gives.
      */
     private static String pathFromEnvironment() {
-        String path = System.getenv(IPI_PATH_VARIABLE);
-        if (path == null || path.isEmpty()) {
-            path = System.getenv(OLD_IPI_PATH_VARIABLE);
-            if (path != null && path.isEmpty() == false
-                && oldNameReported == false) {
-                oldNameReported = true;
-                System.err.println(
-                    "The environment variable " + OLD_IPI_PATH_VARIABLE
-                    + " is deprecated and " + IPI_PATH_VARIABLE
-                    + " replaces it. Set " + IPI_PATH_VARIABLE
-                    + " to the same value, as a later release may no longer "
-                    + "read " + OLD_IPI_PATH_VARIABLE + ".");
-            }
-        }
-        return path;
+        return System.getenv(IPI_PATH_VARIABLE);
     }
 
     private static String resolveDataFile() {

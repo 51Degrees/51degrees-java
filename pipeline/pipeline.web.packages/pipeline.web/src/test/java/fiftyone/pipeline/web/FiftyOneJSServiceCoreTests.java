@@ -22,8 +22,10 @@
 
 package fiftyone.pipeline.web;
 
+import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.web.services.ClientsidePropertyServiceCore;
 import fiftyone.pipeline.web.services.FiftyOneJSServiceCore;
+import fiftyone.pipeline.web.services.PipelineResultServiceCore;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -184,5 +186,96 @@ public class FiftyOneJSServiceCoreTests {
 
         verify(clientside, never()).serveJavascript(request, response);
         verify(clientside, never()).serveJson(request, response);
+    }
+
+    // The tests below stub and verify createFlowData on a mock, which
+    // creates nothing to close, so the FlowData rule does not apply.
+
+    /**
+     * A request with no If-None-Match is left to be processed, and no
+     * FlowData is created for it.
+     */
+    @Test
+    @SuppressWarnings("PMD.FlowDataInTryWithResources")
+    public void NotModified_NoIfNoneMatch_NothingCreated() throws IOException {
+        FiftyOneJSServiceCore service =
+            new FiftyOneJSServiceCore.Default(clientside, true);
+        PipelineResultServiceCore results =
+            mock(PipelineResultServiceCore.class);
+        requestPath("/51Degrees.core.js");
+
+        assertFalse(service.serveNotModified(request, response, results));
+
+        verify(results, never()).createFlowData(request);
+    }
+
+    /**
+     * A request for another path is left to be processed, whatever its
+     * If-None-Match.
+     */
+    @Test
+    @SuppressWarnings("PMD.FlowDataInTryWithResources")
+    public void NotModified_OtherPath_NothingCreated() throws IOException {
+        FiftyOneJSServiceCore service =
+            new FiftyOneJSServiceCore.Default(clientside, true);
+        PipelineResultServiceCore results =
+            mock(PipelineResultServiceCore.class);
+        when(request.getHeader("If-None-Match")).thenReturn("*");
+        requestPath("/page");
+
+        assertFalse(service.serveNotModified(request, response, results));
+
+        verify(results, never()).createFlowData(request);
+    }
+
+    /**
+     * With the client-side features off, nothing is answered early.
+     */
+    @Test
+    @SuppressWarnings("PMD.FlowDataInTryWithResources")
+    public void NotModified_ClientSideDisabled_NothingCreated()
+        throws IOException {
+        FiftyOneJSServiceCore service =
+            new FiftyOneJSServiceCore.Default(clientside, false);
+        PipelineResultServiceCore results =
+            mock(PipelineResultServiceCore.class);
+        when(request.getHeader("If-None-Match")).thenReturn("*");
+        requestPath("/51Degrees.core.js");
+
+        assertFalse(service.serveNotModified(request, response, results));
+
+        verify(results, never()).createFlowData(request);
+    }
+
+    /**
+     * A revalidation of the JavaScript or the JSON goes to its own endpoint
+     * with a FlowData created for it, which is closed afterwards.
+     */
+    @Test
+    @SuppressWarnings("PMD.FlowDataInTryWithResources")
+    public void NotModified_JavaScriptAndJson_AskTheirEndpoint()
+        throws Exception {
+        FiftyOneJSServiceCore service =
+            new FiftyOneJSServiceCore.Default(clientside, true);
+        PipelineResultServiceCore results =
+            mock(PipelineResultServiceCore.class);
+        FlowData flowData = mock(FlowData.class);
+        when(results.createFlowData(request)).thenReturn(flowData);
+        when(request.getHeader("If-None-Match")).thenReturn("*");
+        when(clientside.serveJavascriptNotModified(flowData, request, response))
+            .thenReturn(true);
+        when(clientside.serveJsonNotModified(flowData, request, response))
+            .thenReturn(true);
+
+        requestPath("/51Degrees.core.js");
+        assertTrue(service.serveNotModified(request, response, results));
+        requestPath("/51dpipeline/json");
+        assertTrue(service.serveNotModified(request, response, results));
+
+        verify(clientside, times(1))
+            .serveJavascriptNotModified(flowData, request, response);
+        verify(clientside, times(1))
+            .serveJsonNotModified(flowData, request, response);
+        verify(flowData, times(2)).close();
     }
 }

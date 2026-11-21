@@ -257,28 +257,34 @@ public final class FodId {
      * already read or signed. This is the one walk of the payload that every
      * reader, throwing or not, goes through.
      * <p>
-     * The rules are lower bounds only. The header must be present before the
-     * type can be read, and the type then sets the least the payload can
-     * hold. Anything longer is accepted as it stands, because the bytes past
-     * the match key are the Terms and then a creator context section whose
-     * shape the cloud judges. The Terms adds nothing to those bounds, since
-     * a payload that ends at the match key reads as a Terms of zero.
+     * The version is read from the first byte before anything else, so a
+     * payload of a version this package does not know is refused naming
+     * that version however short it is. The other rules are lower bounds
+     * only. The header must be present before the type can be read, and the
+     * type then sets the least the payload can hold. Anything longer is
+     * accepted as it stands, because the bytes past the match key are the
+     * Terms and then a creator context section whose shape the cloud
+     * judges. The Terms adds nothing to those bounds, since a payload that
+     * ends at the match key reads as a Terms of zero.
      */
     private static FodIdParseResult read(Owid owid) {
         byte[] payload = owid.getPayload();
-        if (payload.length < HEADER_LENGTH) {
+        if (payload.length <= FLAGS_OFFSET) {
             return FodIdParseResult.failed(FodIdParseStatus.PAYLOAD_TOO_SHORT);
         }
         int flags = payload[FLAGS_OFFSET] & 0xFF;
-        // The version is read before any field, because a later version
-        // exists precisely because a field moved. Reading a payload of a
-        // version this package does not know under the layout it does know
-        // would answer with values that are wrong rather than absent,
-        // which is worse than refusing, and a version that nothing checks
-        // protects nothing.
+        // The version is read before any field, and before the header's
+        // length is checked, because a later version exists precisely
+        // because a field moved. Reading a payload of a version this package
+        // does not know under the layout it does know would answer with
+        // values that are wrong rather than absent, which is worse than
+        // refusing, and a version that nothing checks protects nothing.
         int payloadVersion = payloadVersionOf(flags);
         if (payloadVersion != SUPPORTED_PAYLOAD_VERSION) {
             return FodIdParseResult.unsupportedPayloadVersion(payloadVersion);
+        }
+        if (payload.length < HEADER_LENGTH) {
+            return FodIdParseResult.failed(FodIdParseStatus.PAYLOAD_TOO_SHORT);
         }
         // A payload with no usage bit set states no usage at all. The cloud
         // never writes one, so it is damaged or forged, and it is refused

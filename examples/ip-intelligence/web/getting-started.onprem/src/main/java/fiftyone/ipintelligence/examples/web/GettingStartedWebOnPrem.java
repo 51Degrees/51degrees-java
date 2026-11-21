@@ -61,6 +61,7 @@
 
 package fiftyone.ipintelligence.examples.web;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
 import fiftyone.ipintelligence.shared.IPIntelligenceData;
@@ -107,7 +108,17 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * obtain an Enterprise data file, please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-getting-started.onprem-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedwebonprem.java&utm_term=gettingstartedwebonprem).
  */
 public class GettingStartedWebOnPrem extends HttpServlet {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "web-getting-started.onprem-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedwebonprem.java";
+
     private static final long serialVersionUID = 1734154705981153540L;
+    /**
+     * The port the example listens on.
+     */
+    public static final int DEFAULT_PORT = 5151;
     public static Logger logger = LoggerFactory.getLogger(GettingStartedWebOnPrem.class);
 
     public static void main(String[] args) throws Exception {
@@ -131,7 +142,7 @@ public class GettingStartedWebOnPrem extends HttpServlet {
         }
 
         // start Jetty with this WebApp
-        EmbedJetty.runWebApp(getResourceBase(), 8082);
+        EmbedJetty.runWebApp(getResourceBase(), DEFAULT_PORT);
     }
 
     public static String getResourceBase() {
@@ -159,6 +170,9 @@ public class GettingStartedWebOnPrem extends HttpServlet {
         // The lookup has already been carried out by the PipelineFilter
         // which closes the FlowData at the end of the request, so it is not
         // closed here.
+        // A Flow Data cannot be used by two threads at once. Work handed to
+        // another thread or task gets the values it needs, read here on the
+        // request's thread, not the Flow Data.
         FlowData flowData = flowDataProvider.getFlowData(request);
         
         // Determine target IP for display.
@@ -227,6 +241,8 @@ public class GettingStartedWebOnPrem extends HttpServlet {
                 escapeForJs(asString(ipiData.getAreas())) : "")
             .replace("${ACCURACY_RADIUS}", value(ipiEngine, "AccuracyRadiusMin", ipiData::getAccuracyRadiusMin))
             .replace("${TIME_ZONE_OFFSET}", value(ipiEngine, "TimeZoneOffset", ipiData::getTimeZoneOffset))
+            .replace("${FIND_OUT_MORE}", FindOutMore.html(EXAMPLE_TAG,
+                    FindOutMore.ON_PREMISE_REPOSITORIES))
             .replace("${EVIDENCE_ROWS}", buildEvidenceRows(flowData))
             // On-premise engine: only invite the user to contact us about the
             // Enterprise data file when running on a free data file.

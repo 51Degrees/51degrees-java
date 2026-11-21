@@ -24,7 +24,9 @@ the native engines from `cxx` and does need them, as the README says.
 ### Prerequisites
 
 - Git.
-- A JDK, 8 or later. CI tests 8, 11, 17 and 21 (`ci/options.json`).
+- A JDK, 8 or later. CI tests 8, 11, 17 and 21 (`ci/options.json`), and
+  builds and runs the examples on the JDK each runner has (see
+  [What CI tests](#pitfalls)).
 - Maven 3.8 or later, or the `mvnw` wrapper at the root.
 - Network access to GitHub, to Maven Central for the packages the examples
   use, and to `distributor.51degrees.com` for the data files.
@@ -104,29 +106,33 @@ where `<version>` is the `<version>` in that examples folder's `pom.xml`,
 
 ### Run
 
-Run the examples from the repository root. They find `logback.xml`, the data
-file and their options file with `FileFinder`, which searches only below the
-folder Java runs in (`pipeline/pipeline.core/src/main/java/fiftyone/pipeline/util/FileFinder.java`).
-When a free data file is not there, the example finds its `.link` the same way
-and runs the download script for it (`findDataFile` in each examples folder's
-`shared` module, `DataFileHelper.java`), with Windows PowerShell on Windows and
-`sh` on Linux and macOS. The same commands work on Windows, Linux and macOS.
+Run the examples from the repository root, or from a product's examples
+folder as its README does. They look for the data repository, `cxx/data`, in
+the folder Java runs in and then in each folder above it, and find a data file
+or its `.link` there (`findDataFile` in each examples folder's `shared`
+module, `DataFileHelper.java`). When a free data file is not there, the
+example runs the download script for its `.link`, with Windows PowerShell on
+Windows and `sh` on Linux and macOS. They find `logback.xml` with
+`FileFinder`, which searches below the folder Java runs in
+(`pipeline/pipeline.core/src/main/java/fiftyone/pipeline/util/FileFinder.java`),
+and the root and both examples folders have one. The same commands work on
+Windows, Linux and macOS.
 
 ```
 java -cp examples/device-detection/console/target/device-detection-java-examples.console-4.5.127-SNAPSHOT-jar-with-dependencies.jar fiftyone.devicedetection.examples.console.GettingStartedOnPrem
 ```
 
-The IP Intelligence example looks for the paid Enterprise file,
-`ip-intelligence/51Degrees-EnterpriseIpiV41.ipi`, so give it the Lite file as
-its first argument.
+The IP Intelligence example uses the free Lite file,
+`ip-intelligence/51Degrees-LiteV41.ipi`, when it is given no argument, and
+downloads it first when it is not there.
 
 ```
-java -cp examples/ip-intelligence/console/target/ip-intelligence-java-examples.console-4.5.127-SNAPSHOT-jar-with-dependencies.jar fiftyone.ipintelligence.examples.console.GettingStartedOnPrem cxx/data/ip-intelligence/51Degrees-LiteV41.ipi
+java -cp examples/ip-intelligence/console/target/ip-intelligence-java-examples.console-4.5.127-SNAPSHOT-jar-with-dependencies.jar fiftyone.ipintelligence.examples.console.GettingStartedOnPrem
 ```
 
-The example downloads the Lite file first when it is not there. In place of
-the argument, the `_51DEGREES_IPI_PATH` environment variable or system property
-can give the absolute path of a data file that is already there.
+An absolute path as the first argument names another data file. Otherwise the
+`_51DEGREES_IPI_PATH` environment variable or system property, when it names
+a file that is there, comes before the argument or the Lite file.
 
 On Java 24 or later, add `--enable-native-access=ALL-UNNAMED` before the class
 name, as
@@ -141,50 +147,58 @@ and the script's `Downloading` and `Saved` lines follow.
 
 The Device Detection example processes five sets of evidence. For each it
 prints `Input values:` and the evidence, then `Results:` with
-`Mobile Device`, `Platform Name`, `Platform Version`, `Browser Name` and
-`Browser Version`. Logback lines come before and after. The last ones report
-the data file and end the run, with these messages.
-
-```
-Used a 'Lite' data file, created <date>, <n> days ago, from location '<path>'
-This example is using the 'Lite ' data file. This is used for illustration, ...
-All done
-```
-
-A warning that the data file is more than 28 days old may come too, which is
-expected with the Lite file. The exit code is 0.
+`Mobile Device`, `Platform Name`, `Platform Version`, `Browser Name`,
+`Browser Version`, `Hardware Vendor`, `Hardware Name` and `Device Type`. The
+Lite file does not have the last three, so each of them reads
+`needs the Enterprise data file`.
 
 The IP Intelligence example looks up `116.154.188.222`, `45.236.48.61` and an
 IPv6 address. For each it prints `Input values:` with `query.client-ip`, then
 `Results:` with a line for each property, from `RegisteredName` to
-`TimeZoneOffset`. The Lite file has RegisteredCountry, RegisteredName and
-RegisteredOwner, so a line for a property it does not have reads
-`Unknown. The property '<name>' is not available in this data file.` followed
-by a link, and the first such line also logs a warning that some properties
-need a paid subscription. It then logs the data file in the same way, and
-`All done`.
+`TimeZoneOffset`. Each value is followed by its weighting, as in
+`RegisteredCountry: CN (weighting 1.00)`. The Lite file has RegisteredName,
+RegisteredOwner and RegisteredCountry, so every other line reads `needs the
+Enterprise data file`.
 
-The paid data files have many more properties, as the
-[pricing page](https://51degrees.com/pricing?utm_source=github&utm_medium=docs&utm_campaign=51degrees-java&utm_content=agents.md&utm_term=correct-output)
-describes.
+Both then end the same way, where `<tier>` is `Lite` for Device Detection and
+`IPIV4Lite` for IP Intelligence.
+
+```
+Some of these properties need the Enterprise data file. Contact us for a copy at <the tagged contact-us link>
+INFO  ... Used a '<tier>' data file, created <date>, <n> days ago, from location '<path>'
+INFO  ... All done
+```
+
+Then comes the "Find out more" section, between two rules, with the
+product's pages on 51degrees.com and the repositories. A warning that the
+data file is more than 28 days old may come before `All done`, which is
+expected with the Lite file. The exit code is 0.
 
 ### Cloud examples
 
-The cloud examples need a resource key, which a person creates in the
-configurator, so ask for one if none is set. A key with the properties most of
-the Device Detection examples use can be made
-[here](https://configure.51degrees.com/jqz435Nc?utm_source=github&utm_medium=docs&utm_campaign=51degrees-java&utm_content=agents.md&utm_term=cloud-examples).
-The Device Detection cloud example takes the key as its first argument, or
-from a `TestResourceKey` environment variable or system property.
+The cloud examples need a resource key, which a person creates on the
+configuration page, so ask for one if none is set. A key with the properties
+most of the Device Detection examples use can be made
+[here](https://51degrees.com/configure/jqz435Nc?utm_source=github&utm_medium=docs&utm_campaign=51degrees-java&utm_content=agents.md&utm_term=cloud-examples).
+The Device Detection, IP Intelligence and Location cloud examples take the
+key as their first argument, or from the `_51DEGREES_RESOURCE_KEY`
+environment variable or system property. The Device Detection and IP
+Intelligence examples read the older `TestResourceKey` after it. The TAC and
+native model examples need a key with paid properties and read it from a
+variable of their own, which each names when it has no key.
 
 ```
 java -cp examples/device-detection/console/target/device-detection-java-examples.console-4.5.127-SNAPSHOT-jar-with-dependencies.jar fiftyone.devicedetection.examples.console.GettingStartedCloud <key>
 ```
 
 It prints the same `Input values:` and `Results:` blocks as the on-premise
-example. The IP Intelligence cloud examples read their key from
-`_51DEGREES_RESOURCE_KEY` first and `TestResourceKey` second, and
-`examples/ip-intelligence/README.md` gives the keys to create for them.
+example. `examples/ip-intelligence/README.md` gives the keys to create for
+the IP Intelligence examples.
+
+With no key, a cloud example does not fail. It says that it needs a resource
+key, names the variable to set, gives the page where a key is created, ends
+with its "Find out more" section and exits with code 0. The tests named
+`WithoutKey` run each one that way.
 
 ### Pitfalls
 
@@ -196,16 +210,14 @@ example. The IP Intelligence cloud examples read their key from
   'device-detection/51Degrees-LiteV4.1.hash' which must be somewhere in the
   project space to be found.` Run `git submodule update --init --recursive`. A
   zip download of the repository has no submodules, so clone with Git.
-- **Running from another folder.** `FileFinder` looks only below the folder
-  Java runs in, so `java` started in `examples/device-detection`, as the
-  examples' README shows, cannot find the data file or its link in `cxx`.
-  Start it from the repository root. The same applies to `mvn exec:java`,
+- **Running from outside the repository.** An example started in a folder
+  outside the repository, such as one the jar was copied to, finds no
+  `cxx/data` above it and no `logback.xml` below it. Start it in the
+  repository root or a folder inside it. The same applies to `mvn exec:java`,
   which runs in the folder Maven starts in.
-- **The version in the jar name.** The examples' READMEs show jar names with
-  `4.4.20` and `4.4.19`, which are out of date. Use the name in `target`.
-- **The IP Intelligence example without an argument.** It searches for the
-  Enterprise file, logs `Failed to find IP Intelligence data file` and stops,
-  even when the Lite file is in place.
+- **The version in the jar name.** A jar carries the examples folder's own
+  `<version>`, `4.5.127-SNAPSHOT` on `rc` today, not the version of the
+  packages the examples use, `4.5.130`. Use the name in `target`.
 - **The `dev` profile.** `-Pdev`, which CI uses, builds the examples against
   the libraries here, which needs `mvn install` at the root first and so the
   native build, with CMake 3.10 or later and a C++ toolchain. It is not needed
@@ -215,25 +227,58 @@ example. The IP Intelligence cloud examples read their key from
   for Windows x64 and x86, Linux x64 and aarch64, and macOS x64 and aarch64.
   The `ip-intelligence.engine.on-premise` 4.5.128 jar has the same, without
   Windows x86. On a platform a jar lacks, the example cannot load the engine.
-- **What CI does not test.** On a pull request CI builds and tests the
-  examples with the `dev` profile (`ci/build-project.ps1` and
-  `ci/run-unit-tests.ps1`), and against the published packages only when it
-  publishes (`ci/run-integration-tests.ps1`). It never runs the console
-  example jars as above, and the example tests use the paid data files when
-  CI has them.
+- **What CI tests.** On a pull request CI builds and tests the examples
+  with the `dev` profile (`ci/build-project.ps1` and
+  `ci/run-unit-tests.ps1`), and the example tests use the paid data files
+  when CI has them. Publish tests them against the packages it has just
+  built (`ci/run-integration-tests.ps1`).
+  [examples-fresh-clone.yml](.github/workflows/examples-fresh-clone.yml)
+  does what [Run the examples](#run-the-examples) says, with the JDK and
+  Maven each runner has. It
+  builds the console examples against the published packages and runs each
+  product's `GettingStartedOnPrem` jar from the repository root with no
+  settings. On Ubuntu the free data file is downloaded, as from a fresh
+  clone, and the Windows and macOS jobs take that file from the run's cache,
+  so each file is downloaded once a run. The Ubuntu job then builds every
+  example module, the web examples too, with its tests compiled against
+  the published packages, so a test that uses a class only this
+  repository has fails there. It runs on each push to `main` and
+  `rc`, daily, and on a pull request that changes the examples. Its check
+  runs by hand from the repository root after the build, with
+  `-ExpectDownload` only when the data file is still a link:
+  `pwsh -File ./ci/run-fresh-clone-example.ps1 -Product device-detection -Example fiftyone.devicedetection.examples.console.GettingStartedOnPrem -ExpectDownload`.
+
+## Environment variable names
+
+[common-ci's list of environment variable names](https://github.com/51Degrees/common-ci/blob/d8a9c596eabf69dd5581a08e9360cdd1c9b3d9e8/environment-variables.md)
+holds every environment variable name that the packages, tests, examples and
+CI scripts of every language read, with what each name holds and the
+deprecated names each replaced. The list decides. Use the names it gives, and
+when a change needs a new name, or reads an old name again, change
+[`environment-variables.json`](https://github.com/51Degrees/common-ci/blob/d8a9c596eabf69dd5581a08e9360cdd1c9b3d9e8/environment-variables.json)
+in common-ci in the same piece of work. This repository's own name
+check, [`ci/check-environment-variable-names.ps1`](ci/check-environment-variable-names.ps1), still keeps a
+list of its own. Where the two differ, common-ci's list is the one to
+follow.
 
 ## One reactor, six package trees
 
 The root `pom.xml` lists the six package trees as modules but is not their
 parent, so nothing from it reaches the published poms. Each tree keeps its own
-parent pom. They all carry the same version, and the libraries reference each
-other through `${project.version}`, so Maven resolves those dependencies from
-the reactor. The examples reference published versions unless the `dev`
-profile is active. Keep it that way: a reader of the examples should see the
-package versions a project of their own would use.
+parent pom. In the repository they all carry the same development version,
+and the libraries reference each other through `${project.version}`, so Maven
+resolves those dependencies from the reactor. The examples reference published
+versions unless the `dev` profile is active. Keep it that way, so that a
+reader of the examples sees the package versions a project of their own would
+use.
 
-Because the root is not a parent, `versions:set` has to run in each tree. CI
-does that. When changing versions by hand, run it in each of the six folders.
+Each published module is released at its own version, tagged
+`<package>/<version>`. The publish writes that version into the module's
+`pom.xml`, with the versions of its parent and of the packages it depends on,
+so leave the versions in the poms as they are. When a module is added, or one
+module starts to depend on another, add it to `ci/packages.json` as well, or
+the pull request build fails. `ci/README.md` describes how a release is
+planned.
 
 ## Data files and `project.root`
 
@@ -275,6 +320,14 @@ The Windows pre-build scripts take a toolset and SDK version from the pom.
 JavaScript templates and the OWID library are submodules inside `pipeline`,
 where the Pipeline API expects them.
 
+`pipeline/derived-properties` is the
+[derived-properties](https://github.com/51Degrees/derived-properties)
+repository. `pipeline.derivedproperty` packages the scripts in its `scripts`
+folder as resources, so a script added there needs a `BuiltInScript`
+constant, which `BuiltInScriptTests` checks. The package's tests run every
+case file and every rejection case in its `tests` folder, so its answers and
+its faults are checked against the other languages'.
+
 ## Releases
 
 Pull requests go to `rc`, not `main`, and stay drafts until they have been
@@ -287,3 +340,11 @@ into `main` from any other branch.
 
 Plain words, no em dashes, sentence case headings. Nothing in this public
 repository names a private repository or an issue in one.
+
+## Tests that fail on timing
+
+A test that fails on a time limit, a performance threshold or a timeout is
+fixed, not run again until it passes. Either the limit is set to fit the
+slowest runner the test runs on, with each runner's measurement behind it, or
+the reason it takes too long is found and fixed. A failure that comes and goes
+costs everyone who meets it the time to look into it.

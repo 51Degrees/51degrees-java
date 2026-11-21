@@ -22,13 +22,15 @@
 
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
+import fiftyone.devicedetection.examples.shared.KeyHelper;
 import fiftyone.devicedetection.DeviceDetectionPipelineBuilder;
 import fiftyone.devicedetection.shared.DeviceData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 
 /**
- * This is the code for the minimal example displayed in the configurator. Please see
+ * This is the code for the minimal example displayed on the configuration page. Please see
  * <a href="https://51degrees.com/documentation/_device_detection__examples__getting_started__console__cloud.html?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-minimalexample.java&amp;utm_term=minimalexample">
  * Getting Started Console Cloud</a> for a fuller example.
  */
@@ -44,9 +46,28 @@ import fiftyone.pipeline.core.flowelements.Pipeline;
  */
 public class MinimalExample {
 
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-devicedetection-examples-console-minimalexample.java";
+
     public static void main(String[] args) throws Exception {
-        String resource = args.length > 0 ? args[0] : null;
-        run(resource);
+        String resourceKey = KeyHelper.findResourceKey(
+                args.length > 0 ? args[0] : null,
+                KeyHelper.RESOURCE_KEY_VARIABLE,
+                KeyHelper.TEST_RESOURCE_KEY);
+        if (resourceKey == null) {
+            KeyHelper.writeNoResourceKey(System.out, EXAMPLE_TAG,
+                    KeyHelper.RESOURCE_KEY_VARIABLE,
+                    KeyHelper.FREE_PROPERTIES_CONFIGURATION);
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES);
+            return;
+        }
+        run(resourceKey);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.CLOUD_REPOSITORIES);
     }
 
     public static void run(String resource) throws Exception {

@@ -46,6 +46,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -470,6 +471,46 @@ public class CloudRequestEngineLicenseKeyTests {
         assertNull(evidence.get(0).url.getQuery());
     }
 
+    /**
+     * The property metadata is the accessibleproperties answer, never one
+     * made from the requested properties. A requested name the answer does
+     * not list has none, a product the answer lists but no name requested
+     * is kept, and each type is the answer's.
+     */
+    @Test
+    public void Discovery_LicenseKeyAlone_MetadataIsTheAnswerNotTheRequest()
+        throws Exception {
+        cloud.propertiesResponse =
+            "{\"Products\":{" +
+            "\"device\":{\"DataTier\":\"t\",\"Properties\":" +
+            "[{\"Name\":\"IsMobile\",\"Type\":\"Boolean\"," +
+            "\"Category\":\"Device\"}]}," +
+            "\"location\":{\"DataTier\":\"t\",\"Properties\":" +
+            "[{\"Name\":\"Town\",\"Type\":\"String\"," +
+            "\"Category\":\"Location\"}]}}}";
+        CloudRequestEngine engine = build(builder()
+            .setLicenseKey(LICENSE_KEY)
+            .setRequestedProperties(Arrays.asList(
+                "device.ismobile",
+                "device.iscrawler",
+                "device.hardwarevendor")));
+
+        Map<String, AccessiblePropertyMetaData.ProductMetaData> products =
+            engine.getPublicProperties();
+        assertEquals(
+            new TreeSet<>(Arrays.asList("device", "location")),
+            new TreeSet<>(products.keySet()));
+        List<AccessiblePropertyMetaData.PropertyMetaData> device =
+            products.get("device").properties;
+        assertEquals(1, device.size());
+        assertEquals("IsMobile", device.get(0).name);
+        assertEquals(boolean.class, device.get(0).getPropertyType());
+        List<AccessiblePropertyMetaData.PropertyMetaData> location =
+            products.get("location").properties;
+        assertEquals(1, location.size());
+        assertEquals("Town", location.get(0).name);
+    }
+
     @Test
     public void Discovery_ResourceKeyAndProperties_GetsWithTheKeyInTheQuery()
         throws Exception {
@@ -630,6 +671,53 @@ public class CloudRequestEngineLicenseKeyTests {
     @Test
     public void Process_ResourceKey_NothingToCompare() throws Exception {
         cloud.dataResponse = "{\"device\":{\"ismobile\":true}}";
+        CloudRequestEngine engine = build(builder()
+            .setResourceKey(RESOURCE_KEY));
+
+        assertEquals("", process(engine));
+
+        verify(logger, never()).warn(anyString());
+    }
+
+    // The warnings array of the response, which the specification's HTTP
+    // requests section says is logged as warnings, as the errors array is
+    // thrown.
+
+    @Test
+    public void Process_Warnings_EachLoggedAsAWarning() throws Exception {
+        cloud.dataResponse = "{\"device\":{\"ismobile\":true}," +
+            "\"warnings\":[\"First warning\",\"Second warning\"]}";
+        CloudRequestEngine engine = build(builder()
+            .setResourceKey(RESOURCE_KEY));
+
+        assertEquals("", process(engine));
+
+        verify(logger, times(1)).warn("First warning");
+        verify(logger, times(1)).warn("Second warning");
+    }
+
+    @Test
+    public void Process_WarningNamingTheLicenseKey_LoggedMasked()
+        throws Exception {
+        String warning = "License key " + LICENSE_KEY + " expires soon";
+        cloud.dataResponse = "{\"device\":{\"ismobile\":true," +
+            "\"iscrawler\":false},\"warnings\":[\"" + warning + "\"]}";
+        CloudRequestEngine engine = build(builder()
+            .setLicenseKey(LICENSE_KEY)
+            .setRequestedProperties(PROPERTY_LIST));
+
+        assertEquals("", process(engine));
+
+        verify(logger, times(1)).warn(argThat((String m) ->
+            m.startsWith("License key ") && m.endsWith(" expires soon")));
+        verify(logger, never()).warn(argThat((String m) ->
+            m.contains(LICENSE_KEY)));
+    }
+
+    @Test
+    public void Process_NoWarnings_NothingLogged() throws Exception {
+        cloud.dataResponse = "{\"device\":{\"ismobile\":true}," +
+            "\"warnings\":[]}";
         CloudRequestEngine engine = build(builder()
             .setResourceKey(RESOURCE_KEY));
 

@@ -22,6 +22,7 @@
 
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.devicedetection.DeviceDetectionPipelineBuilder;
 import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import fiftyone.devicedetection.examples.shared.EvidenceHelper;
@@ -45,7 +46,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
-import static fiftyone.devicedetection.shared.testhelpers.FileUtils.LITE_HASH_DATA_FILE_PATH;
+import static fiftyone.devicedetection.examples.shared.DataFileHelper.LITE_HASH_DATA_FILE_PATH;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 import static java.util.stream.Collectors.groupingBy;
 
@@ -61,6 +62,12 @@ import static java.util.stream.Collectors.groupingBy;
  * page.
  */
 public class MatchMetrics {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-devicedetection-examples-console-matchmetrics.java";
+
     private static final Logger logger = LoggerFactory.getLogger(MatchMetrics.class);
 
     /**
@@ -76,6 +83,8 @@ public class MatchMetrics {
         String dataFilename = DataFileHelper.getDataFileLocation(
                 args.length > 0 ? args[0] : LITE_HASH_DATA_FILE_PATH);
         run(dataFilename, EvidenceHelper.setUpEvidence(), false, System.out);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     /**

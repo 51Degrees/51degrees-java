@@ -128,14 +128,19 @@ public class CombiningServices {
             "/11D167 Safari/9537.53";
 
     public static void main(String[] args) throws Exception {
-        // Obtain a resource key for free at https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-src-main-java-fiftyone-geolocation-examples-combiningservices.java&utm_term=main
+        // Obtain a resource key for free at https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-src-main-java-fiftyone-geolocation-examples-combiningservices.java&utm_term=main
         // Make sure to include the 'Country' and 'IsMobile' properties as they
         // are used by this example.
-        String resourceKey = "!!Your resource license key!!";
+        String resourceKey = ResourceKey.find(args);
 
-        if (resourceKey.startsWith("!!")) {
-            System.out.println("You need to create a resource key at " +
-                "https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-src-main-java-fiftyone-geolocation-examples-combiningservices.java&utm_term=resource-key-required and paste it into this example.");
+        if (resourceKey == null) {
+            System.out.println("This example calls the 51Degrees cloud " +
+                "service, which needs a resource key, and none is set.");
+            System.out.println("Set the " + ResourceKey.VARIABLE +
+                " environment variable to a resource key, or give the key " +
+                "as the first argument, and run the example again.");
+            System.out.println("Create a resource key at " +
+                "https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-src-main-java-fiftyone-geolocation-examples-combiningservices.java&utm_term=resource-key-required");
             System.out.println("Make sure to include the 'Country' and " +
                 "'IsMobile' properties as they are used by this example.");
         }
@@ -179,6 +184,10 @@ public class CombiningServices {
                 System.out.println("IsMobile: " + isMobile.toString());
             }
         }
+        FindOutMore.write(
+            System.out,
+            "https://51degrees.com/documentation/_reverse_geocoding__examples__combining_services.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-combiningservices.java&utm_term=find-out-more",
+            "https://51degrees.com/location?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-combiningservices.java&utm_term=find-out-more");
     }
 
     private static void outputUntilCancelled(

@@ -43,6 +43,8 @@ import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
+import static fiftyone.pipeline.cloudrequestengine.Constants.Messages.NoCloudResponse;
+
 import java.util.*;
 import org.json.JSONArray;
 
@@ -135,7 +137,16 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
     protected void processEngine(FlowData data, CloudGeoData aspectData) {
         if (cloudRequestEngine != null) {
             CloudRequestData requestData = data.getFromElement(cloudRequestEngine);
+            setCloudRequestFailed(data, aspectData, cloudRequestEngine);
             String json = requestData.getJsonResponse();
+
+            // A failed cloud request leaves no response. The Cloud Request
+            // Engine reports why, so this engine adds no error of its own.
+            if (json == null || json.isEmpty()) {
+                logger.warn(String.format(
+                    NoCloudResponse, getClass().getSimpleName()));
+                return;
+            }
 
             JSONObject jsonObj = new JSONObject(json);
             JSONObject geoObj = getElementJson(jsonObj);
@@ -143,7 +154,7 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
             Map<String, Object> methodData = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
             for (AspectPropertyMetaData property : getProperties()) {
-                String key = property.getName().toLowerCase();
+                String key = property.getName().toLowerCase(Locale.ROOT);
                 // A property the response leaves out has no entry, so
                 // reading it throws a PropertyMissingException.
                 if (geoObj.has(key) == false) {
@@ -256,8 +267,10 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
                     new ArrayList<String>(),
                     true,
                     null,
-                    item.delayExecution,
-                    item.evidenceProperties);
+                    item.delayExecution != null ?
+                        item.delayExecution : false,
+                    item.evidenceProperties != null ?
+                        item.evidenceProperties : new ArrayList<String>());
                 
                 loaded.add(property);
             }

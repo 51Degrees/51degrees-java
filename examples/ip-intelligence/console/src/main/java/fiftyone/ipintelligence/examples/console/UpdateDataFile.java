@@ -22,6 +22,7 @@
 
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.IPIntelligencePipelineBuilder;
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
 import fiftyone.ipintelligence.shared.testhelpers.KeyUtils;
@@ -38,6 +39,7 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.nio.file.*;
 import java.text.SimpleDateFormat;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Scanner;
 
@@ -178,6 +180,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  */
 public class UpdateDataFile {
 
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-ipintelligence-examples-console-updatedatafile.java";
+
     public static final String UPDATE_EXAMPLE_LICENSE_KEY_NAME = "LicenseKey";
     public static final String DEFAULT_DATA_FILENAME =
             System.getProperty("user.dir") + File.separator +  ENTERPRISE_DATA_FILE_REL_PATH;
@@ -198,6 +206,8 @@ public class UpdateDataFile {
         String licenseKey = args.length > 0 ? args[0] : null;
         String dataFilename = args.length > 1 ? args[1] : null;
         run(dataFilename, licenseKey, true);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     /**
@@ -266,7 +276,7 @@ public class UpdateDataFile {
                     "in your licensed allocation.");
             System.out.print("Do you wish to continue with this example (y)? ");
             String input = scanner.nextLine();
-            if ((input.isEmpty() || input.toLowerCase().startsWith("y")) == false) {
+            if ((input.isEmpty() || input.toLowerCase(Locale.ROOT).startsWith("y")) == false) {
                 logger.info("Stopping example without download");
                 return;
             }
@@ -294,6 +304,10 @@ public class UpdateDataFile {
                     // overwritten the pipeline must be configured to copy the supplied
                     // file to a temporary file (createTempDataCopy parameter == true.
                     .useOnPremise(dataFilename, true)
+                    // Usage sharing is off because this example's evidence is already
+                    // known to 51Degrees. In production, leave usage sharing on, which adds
+                    // a Usage Sharing Element to the Pipeline and helps improve the service.
+                    .setShareUsage(false)
                     // Use the low memory profile, because this example
                     // downloads the Enterprise data file, which is over 6 GB,
                     // and MaxPerformance would load all of it into memory.

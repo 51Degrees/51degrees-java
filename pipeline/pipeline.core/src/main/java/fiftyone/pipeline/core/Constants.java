@@ -48,5 +48,17 @@ public class Constants {
     
     public static final String EVIDENCE_PROTOCOL = EVIDENCE_HTTPHEADER_PREFIX + EVIDENCE_SEPERATOR + "protocol";
 
-    public static final String EVIDENCE_SESSION_KEY = EVIDENCE_SESSION_PREFIX + EVIDENCE_SEPERATOR + "session";    
+    public static final String EVIDENCE_SESSION_KEY = EVIDENCE_SESSION_PREFIX + EVIDENCE_SEPERATOR + "session";
+
+    /**
+     * Whether a Pipeline closes its elements when it is closed, unless its
+     * builder is told otherwise.
+     */
+    public static final boolean DEFAULT_AUTO_CLOSE_ELEMENTS = false;
+
+    /**
+     * Whether a Pipeline records the exceptions thrown while processing as
+     * errors rather than throwing them, unless its builder is told otherwise.
+     */
+    public static final boolean DEFAULT_SUPPRESS_PROCESS_EXCEPTIONS = false;
 }
