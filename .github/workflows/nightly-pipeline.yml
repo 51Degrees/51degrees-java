@@ -17,7 +17,7 @@ jobs:
   # it runs first and has the runners before the pull request builds do.
   Publish:
     name: Nightly Publish
-    uses: 51Degrees/common-ci/.github/workflows/nightly-publish.yml@main
+    uses: 51Degrees/common-ci/.github/workflows/nightly-publish.yml@19be8a0e3a6c6c3da2c4bbcde585d2df1df186c7
     with:
       repo-name: ${{ github.event.repository.name }}
       org-name: ${{ github.event.repository.owner.login }}
@@ -28,7 +28,7 @@ jobs:
 
   DataFileChange:
     name: Nightly Data File Change
-    uses: 51Degrees/common-ci/.github/workflows/nightly-data-file-change.yml@main
+    uses: 51Degrees/common-ci/.github/workflows/nightly-data-file-change.yml@19be8a0e3a6c6c3da2c4bbcde585d2df1df186c7
     with:
       repo-name: ${{ github.event.repository.name }}
       org-name: ${{ github.event.repository.owner.login }}
@@ -38,7 +38,7 @@ jobs:
 
   PackageUpdate:
     name: Nightly Package Update
-    uses: 51Degrees/common-ci/.github/workflows/nightly-package-update.yml@main
+    uses: 51Degrees/common-ci/.github/workflows/nightly-package-update.yml@19be8a0e3a6c6c3da2c4bbcde585d2df1df186c7
     with:
       repo-name: ${{ github.event.repository.name }}
       org-name: ${{ github.event.repository.owner.login }}
@@ -48,7 +48,7 @@ jobs:
 
   SubmoduleUpdate:
     name: Nightly Submodule Update
-    uses: 51Degrees/common-ci/.github/workflows/nightly-submodule-update.yml@main
+    uses: 51Degrees/common-ci/.github/workflows/nightly-submodule-update.yml@19be8a0e3a6c6c3da2c4bbcde585d2df1df186c7
     with:
       repo-name: ${{ github.event.repository.name }}
       org-name: ${{ github.event.repository.owner.login }}
@@ -60,7 +60,7 @@ jobs:
     if: ${{ !cancelled() }}
     needs: [Publish, DataFileChange, PackageUpdate, SubmoduleUpdate]
     name: Nightly Pull Requests
-    uses: 51Degrees/common-ci/.github/workflows/nightly-pull-requests.yml@main
+    uses: 51Degrees/common-ci/.github/workflows/nightly-pull-requests.yml@19be8a0e3a6c6c3da2c4bbcde585d2df1df186c7
     with:
       repo-name: ${{ github.event.repository.name }}
       org-name: ${{ github.event.repository.owner.login }}
