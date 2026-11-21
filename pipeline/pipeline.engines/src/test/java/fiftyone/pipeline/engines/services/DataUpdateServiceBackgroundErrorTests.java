@@ -36,6 +36,9 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.slf4j.LoggerFactory;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.WatchKey;
 import java.util.concurrent.ScheduledFuture;
 
 import static org.junit.Assert.assertFalse;
@@ -50,14 +53,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * An unexpected error in the background update check is logged and kept
- * inside the task, so it can neither end the thread silently nor reach the
- * process. See
+ * An unexpected error in the background update check, or in the file system
+ * watch, is logged and kept inside the task, so it can neither end the
+ * thread silently nor reach the process. See
  * <a href="https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/features/exception-handling.md#L83">exception-handling.md line 83</a>:
  * "When errors do occur, they will be logged and MUST NOT cause the
  * process to crash."
  * <p>
- * The scheduled task is captured and run on the test's thread, so nothing
+ * Each scheduled task is captured and run on the test's thread, so nothing
  * depends on timing.
  */
 public class DataUpdateServiceBackgroundErrorTests {
@@ -144,5 +147,63 @@ public class DataUpdateServiceBackgroundErrorTests {
 
         assertFalse("The error was not logged.",
             logger.errorsLogged.size() == errorsBefore);
+    }
+
+    /**
+     * The file system watch is a repeating task, and a repeating task that
+     * throws never runs again. An error from the watch key is outside the
+     * handling of an update, so only the task's wrapper keeps it in.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void fileSystemWatch_UnexpectedError_IsLoggedAndKeptInTheTask()
+        throws Exception {
+        Path directory = Files.createTempDirectory("watched");
+        Path dataFile = directory.resolve("data.dat");
+        Files.write(dataFile, "Data".getBytes());
+        DataFileConfigurationDefault config =
+            new DataFileConfigurationDefault();
+        config.setAutomaticUpdatesEnabled(false);
+        config.setFileSystemWatcherEnabled(true);
+        config.setDataFilePath(dataFile.toString());
+        AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
+        file.setEngine(mock(OnPremiseAspectEngine.class));
+        file.setConfiguration(config);
+        WatchKey realKey = null;
+
+        try {
+            dataUpdate.registerDataFile(file);
+            ArgumentCaptor<Runnable> task =
+                ArgumentCaptor.forClass(Runnable.class);
+            verify(futureFactory).scheduleRepeating(
+                task.capture(), anyLong());
+            Runnable watch = task.getValue();
+            realKey = config.getWatchKey();
+            WatchKey failingKey = mock(WatchKey.class);
+            when(failingKey.pollEvents())
+                .thenThrow(new IllegalStateException("watch failed"));
+            config.setWatchKey(failingKey);
+            int errorsBefore = logger.errorsLogged.size();
+
+            try {
+                watch.run();
+            } catch (RuntimeException e) {
+                fail("The error left the background task: " + e);
+            }
+
+            assertFalse("The error was not logged.",
+                logger.errorsLogged.size() == errorsBefore);
+        } finally {
+            // The real watch key goes back so that unregistering cancels it.
+            if (realKey != null) {
+                config.setWatchKey(realKey);
+            }
+            dataUpdate.unregisterDataFile(file);
+            directory.toFile().deleteOnExit();
+            if (dataFile.toFile().delete() == false) {
+                dataFile.toFile().deleteOnExit();
+            }
+            directory.toFile().delete();
+        }
     }
 }
