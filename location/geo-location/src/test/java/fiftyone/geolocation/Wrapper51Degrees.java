@@ -58,7 +58,7 @@ public class Wrapper51Degrees implements Wrapper {
         	resourceKey = envResourceKey;
         }
 
-    	cloudRequestEngine = new CloudRequestEngineBuilder(logger)
+    	cloudRequestEngine = new CloudRequestEngineBuilder(logger, new TimedHttpClient())
                 .setResourceKey(resourceKey)
                 // The live cloud service is shared with every CI run, and
                 // took over the 2 second default to answer at 08:38 UTC on

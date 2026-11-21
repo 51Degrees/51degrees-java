@@ -46,7 +46,7 @@ public class WrapperCloud implements Closeable {
 
     public WrapperCloud() throws Exception {
         cloudRequestEngine = 
-                new CloudRequestEngineBuilder(loggerFactory)
+                new CloudRequestEngineBuilder(loggerFactory, new TimedHttpClient())
                 .setResourceKey(KeyUtils.getResourceKey("TestResourceKey"))
                 // The live cloud service is shared with every CI run, and
                 // took over the 2 second default to answer at 08:38 UTC on
