@@ -32,7 +32,8 @@ import java.util.Map;
  * Sends requests as the default client does, and prints how long each one
  * to the live cloud service took, so each run records the measurement the
  * tests' cloud timeout rests on. Only the path is printed, never the query,
- * which can hold a Resource Key.
+ * and a path's last part ending in ".json" is replaced, as it is the
+ * Resource Key.
  */
 class TimedHttpClient extends HttpClientDefault {
 
@@ -72,7 +73,9 @@ class TimedHttpClient extends HttpClientDefault {
         String outcome,
         long start) {
         System.out.println(
-            "Cloud request " + connection.getURL().getPath() + " " +
+            "Cloud request " +
+            connection.getURL().getPath()
+                .replaceAll("[^/]+\\.json$", "<resource key>.json") + " " +
             outcome + " in " + (System.currentTimeMillis() - start) + " ms");
     }
 }
