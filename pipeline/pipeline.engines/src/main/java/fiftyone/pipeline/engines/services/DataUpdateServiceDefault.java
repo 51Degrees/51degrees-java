@@ -211,30 +211,21 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     }
 
     /**
-     * Private method that performs the following actions:
-     * 1. Checks for an update to the data file on disk.
-     * 2. Checks for an update using the update URL.
-     * 3. Refresh engine with new data if available.
-     * 4. Schedule the next update check if needed.
-     * 5. Report the check to the update callbacks, a check that failed with
-     *    an error as {@link AutoUpdateStatus#AUTO_UPDATE_UNKNOWN_ERROR}. The
-     *    error then passes to the caller unlogged, as does one a callback
-     *    raises.
-     *
-     * @param state        the data file meta data
-     * @param manualUpdate true if the checkForUpdate was manually called, false
-     *                     if it was called as the result of an automated update
-     * @return {@link AutoUpdateStatus#AUTO_UPDATE_SUCCESS} if the data file was
-     * successfully updated
-     */
-    /**
-     * Wrap a task that runs in the background so that an error it did not
-     * expect is logged and kept inside the task. Nothing else would see it:
-     * the executor keeps it in a future that nobody reads. See
+     * Wrap a task that runs in the background so that an error the task's
+     * own handling does not catch is logged and kept inside the task.
+     * Nothing else would see it: the executor keeps it in a future that
+     * nobody reads, and a repeating task that fails never runs again. See
      * <a href="https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/features/exception-handling.md#L83">exception-handling.md line 83</a>:
      * "When errors do occur, they will be logged and MUST NOT cause the
-     * process to crash." An error of the virtual machine itself, such as
-     * running out of memory, is logged and then thrown on.
+     * process to crash."
+     * <p>
+     * The update check and the applying of a watched file log and report
+     * their own failures, so those do not reach here. What does is an error
+     * from the rest of a task: the file system watch's reading and resetting
+     * of its watch key and its search for the data file, and an error
+     * raised while a failed update check is being handled. An error of the
+     * virtual machine itself, such as running out of memory, is logged and
+     * then thrown on.
      * @param what what the task does, for the log
      * @param task the task
      * @return the wrapped task
@@ -256,6 +247,23 @@ public class DataUpdateServiceDefault implements DataUpdateService {
         };
     }
 
+    /**
+     * Private method that performs the following actions:
+     * 1. Checks for an update to the data file on disk.
+     * 2. Checks for an update using the update URL.
+     * 3. Refresh engine with new data if available.
+     * 4. Schedule the next update check if needed.
+     * 5. Report the check to the update callbacks, a check that failed with
+     *    an error as {@link AutoUpdateStatus#AUTO_UPDATE_UNKNOWN_ERROR}. The
+     *    error then passes to the caller unlogged, as does one a callback
+     *    raises.
+     *
+     * @param state        the data file meta data
+     * @param manualUpdate true if the checkForUpdate was manually called, false
+     *                     if it was called as the result of an automated update
+     * @return {@link AutoUpdateStatus#AUTO_UPDATE_SUCCESS} if the data file was
+     * successfully updated
+     */
     private AutoUpdateStatus checkForUpdate(Object state, boolean manualUpdate) {
         AspectEngineDataFile dataFile =
                 state instanceof AspectEngineDataFileDefault ?
