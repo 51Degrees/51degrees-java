@@ -430,7 +430,9 @@ public class CloudRequestEngineBuilder extends
      * for its key. A result is stored while its cloud request is still
      * running, and an entry whose request then fails, or answers with a
      * 51Did, is never served, so the next result for that key must take its
-     * place.
+     * place. The builder in the {@link CacheConfiguration} is set, not
+     * copied, so a configuration shared with another engine's builder is set
+     * for that engine too.
      * @param engine the engine to configure
      * @throws Exception if the engine could not be configured
      */
