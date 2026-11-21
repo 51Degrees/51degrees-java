@@ -4,8 +4,7 @@ param(
     # Set by the publish workflow, which built and installed the packages, to
     # its label for the run. Not set when a pull request is tested, which
     # builds the reactor itself.
-    [string]$Version,
-    [string]$IpIntelligenceUrl
+    [string]$Version
 )
 $ErrorActionPreference = "Stop"
 # Each product's exit code is checked below, so one failing product does not
@@ -106,7 +105,6 @@ $benchmarks = @(
         Output = 'console/target/surefire-reports/fiftyone.devicedetection.examples.console.PerformanceBenchmarkTest-output.txt'
         ProfileHeader = "MaxPerformance AllProperties: (true|false), performanceGraph: (true|false), predictiveGraph (true|false)"
         ProfileName = 'MaxPerformance-false-true-false'
-        Run = $true
     }
     @{
         Product = 'IpIntelligence'
@@ -114,17 +112,12 @@ $benchmarks = @(
         Output = 'console/target/surefire-reports/fiftyone.ipintelligence.examples.console.PerformanceBenchmarkTest-output.txt'
         ProfileHeader = "MaxPerformance AllProperties: (true|false)"
         ProfileName = 'MaxPerformance-false'
-        # Measured with the Enterprise data file, which is only fetched when
-        # its URL is given.
-        Run = [bool]$IpIntelligenceUrl
+        # Measured with the Enterprise data file, which common-ci fetches
+        # with _51DEGREES_LICENSE_KEY.
     }
 )
 
 foreach ($benchmark in $benchmarks) {
-    if (-not $benchmark.Run) {
-        Write-Host "::warning title=Performance skipped::Skipping the $($benchmark.Product) benchmark, as IpIntelligenceUrl was not provided."
-        continue
-    }
     Write-Host "::group::$($benchmark.Product)"
     Push-Location "$RepoName/$($benchmark.Path)"
     try {

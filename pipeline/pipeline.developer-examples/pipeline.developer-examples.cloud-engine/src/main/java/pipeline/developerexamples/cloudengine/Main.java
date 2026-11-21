@@ -92,15 +92,13 @@ public class Main {
     }
 
     /**
-     * The names a 51Degrees resource key is read from, in the order they
-     * are tried. Each is read as an environment variable first and then
-     * as a system property, so a developer can export one and a build
-     * can pass one on the command line with -D.
+     * The name a 51Degrees resource key is read from. It is read as an
+     * environment variable first and then as a system property, so a
+     * developer can export one and a build can pass one on the command
+     * line with -D.
      */
     static final String[] RESOURCE_KEY_NAMES = {
         "_51DEGREES_RESOURCE_KEY",
-        "_51DEGREES_RESOURCE_KEY_BESPOKE",
-        "TestResourceKey",
     };
 
     /**

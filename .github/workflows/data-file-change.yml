@@ -23,7 +23,4 @@ jobs:
       org-name: ${{ github.event.repository.owner.login }}
       dryrun: ${{ inputs.dryrun || false }}
       common-ci-ref: ${{ inputs.common-ci-ref || '' }}
-    secrets:
-      token: ${{ secrets.ACCESS_TOKEN }}
-      data-key: ${{ secrets.DEVICE_DETECTION_KEY }}
-      data-url: ${{ secrets.DEVICE_DETECTION_URL }}
+    secrets: inherit

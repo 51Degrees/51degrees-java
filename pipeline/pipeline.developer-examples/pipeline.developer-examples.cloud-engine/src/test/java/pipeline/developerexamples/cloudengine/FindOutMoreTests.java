@@ -31,7 +31,7 @@ import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * The example ends its output with a "Find out more" section, which lists
@@ -54,11 +54,10 @@ public class FindOutMoreTests {
 
     @Test
     public void Main_EndsWithFindOutMore() throws Exception {
-        if (Main.configuredResourceKey() == null) {
-            fail("This test runs the example against the live cloud "
-                + "service, so it needs a resource key in one of "
-                + String.join(", ", Main.RESOURCE_KEY_NAMES) + ".");
-        }
+        assumeTrue(Main.configuredResourceKey() != null,
+            "This test runs the example against the live cloud service, so "
+                + "it needs a resource key, and it is skipped because "
+                + String.join(", ", Main.RESOURCE_KEY_NAMES) + " is not set.");
         String output = runMain();
         int example = output.lastIndexOf("star sign");
         int heading = output.lastIndexOf(RULE + "\n" + HEADING + "\n");

@@ -186,7 +186,7 @@ public class UpdateDataFile {
     private static final String EXAMPLE_TAG =
             "console-src-main-java-fiftyone-ipintelligence-examples-console-updatedatafile.java";
 
-    public static final String UPDATE_EXAMPLE_LICENSE_KEY_NAME = "LicenseKey";
+    public static final String UPDATE_EXAMPLE_LICENSE_KEY_NAME = "_51DEGREES_LICENSE_KEY";
     public static final String DEFAULT_DATA_FILENAME =
             System.getProperty("user.dir") + File.separator +  ENTERPRISE_DATA_FILE_REL_PATH;
 
