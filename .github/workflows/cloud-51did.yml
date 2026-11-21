@@ -72,6 +72,19 @@ jobs:
           # alone.
           _51DEGREES_LICENSE_KEY_BESPOKE: ${{ secrets._51DEGREES_LICENSE_KEY_BESPOKE }}
         run: |
+          # A license key whose resource key of the same suffix is empty means
+          # that secret is missing. Its licensed tests would then never run,
+          # and the job would still pass, so it fails here, naming it.
+          $missing = Get-ChildItem env: |
+            Where-Object { $_.Name -like '_51DEGREES_LICENSE_KEY_*' -and $_.Value } |
+            ForEach-Object { $_.Name -replace '^_51DEGREES_LICENSE_KEY', '_51DEGREES_RESOURCE_KEY' } |
+            Where-Object { -not [Environment]::GetEnvironmentVariable($_) }
+          if ($missing) {
+            throw ("The secret $($missing -join ', ') is empty or missing, " +
+              'but the license key of the same suffix is set. Add the ' +
+              'organization secret, a resource key of the same account as ' +
+              'that license key.')
+          }
           $keys = Get-ChildItem env: |
             Where-Object { $_.Name -like '_51DEGREES_RESOURCE_KEY*' -and $_.Value }
           if (-not $keys) {

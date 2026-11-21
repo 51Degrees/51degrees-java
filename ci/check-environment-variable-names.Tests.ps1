@@ -252,5 +252,23 @@ Describe 'the workflows' {
             ($passes | Where-Object Resource -eq 'resource-bespoke').License |
                 Should -BeNullOrEmpty
         }
+
+        # A license key with no resource key of its own suffix means a secret
+        # is missing. The licensed redeem would then never run, and the job
+        # would still pass, so the step fails naming the missing secret.
+        It 'fails naming <Resource> when <License> has a value and it is empty' -ForEach @(
+            @{ Resource = '_51DEGREES_RESOURCE_KEY_51DID'; License = '_51DEGREES_LICENSE_KEY_51DID' }
+            @{ Resource = '_51DEGREES_RESOURCE_KEY_BESPOKE'; License = '_51DEGREES_LICENSE_KEY_BESPOKE' }
+        ) {
+            $passes = [System.Collections.Generic.List[object]]::new()
+            function mvn {
+                $passes.Add($env:_51DEGREES_RESOURCE_KEY)
+                $global:LASTEXITCODE = 0
+            }
+            Remove-Item "Env:$Resource"
+
+            { & $script:Step 6> $null } | Should -Throw "*$Resource*"
+            $passes | Should -BeNullOrEmpty
+        }
     }
 }
