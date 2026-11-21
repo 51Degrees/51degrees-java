@@ -270,5 +270,25 @@ Describe 'the workflows' {
             { & $script:Step 6> $null } | Should -Throw "*$Resource*"
             $passes | Should -BeNullOrEmpty
         }
+
+        # A deployment without 51Did has neither secret, and the runner then
+        # sets both names empty. The Bespoke pass must still run, with no
+        # 51Did license and no failure.
+        It 'runs the Bespoke pass alone when both 51Did keys are empty' {
+            $passes = [System.Collections.Generic.List[object]]::new()
+            function mvn {
+                $passes.Add([pscustomobject]@{
+                    Resource = $env:_51DEGREES_RESOURCE_KEY
+                    License  = $env:_51DEGREES_LICENSE_KEY_51DID
+                })
+                $global:LASTEXITCODE = 0
+            }
+            $env:_51DEGREES_RESOURCE_KEY_51DID = ''
+            $env:_51DEGREES_LICENSE_KEY_51DID = ''
+
+            { & $script:Step 6> $null } | Should -Not -Throw
+            @($passes.Resource) | Should -Be @('resource-bespoke')
+            $passes[0].License | Should -BeNullOrEmpty
+        }
     }
 }

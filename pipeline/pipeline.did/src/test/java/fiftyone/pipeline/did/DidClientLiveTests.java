@@ -130,7 +130,7 @@ public class DidClientLiveTests {
     public void verifyFullThenRedeemWithTheLicence_ReadsTheVerdict()
             throws Exception {
         Assume.assumeTrue(
-            "Set _51DEGREES_LICENSE_KEY to redeem a sealed result.",
+            "Set _51DEGREES_LICENSE_KEY_51DID to redeem a sealed result.",
             client.hasLicenceKey());
 
         List<FodId> identifiers = identifiersFor("id.usage", "standard");
@@ -203,7 +203,7 @@ public class DidClientLiveTests {
     public void anIdentifierForAnotherAddress_ReportsEveryFactor()
             throws Exception {
         Assume.assumeTrue(
-            "Set _51DEGREES_LICENSE_KEY to redeem a sealed result.",
+            "Set _51DEGREES_LICENSE_KEY_51DID to redeem a sealed result.",
             client.hasLicenceKey());
 
         List<FodId> identifiers = identifiersCreatedFor(
