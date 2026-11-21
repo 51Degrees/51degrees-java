@@ -37,7 +37,8 @@ import static org.junit.Assert.assertTrue;
  * Each Location example ends its output with a "Find out more" section,
  * which lists pages on 51degrees.com, each with its campaign tags, and the
  * repository. With no resource key set, each example says where to create
- * one and stops, so these tests need no key.
+ * one and stops, so these tests need no key. With a key set, as in CI, the
+ * example calls the cloud service first, and the section still comes last.
  */
 public class FindOutMoreTests {
 
@@ -75,9 +76,18 @@ public class FindOutMoreTests {
     }
 
     private static void assertFindOutMore(String output) {
-        int example = output.lastIndexOf(NO_KEY);
         int heading = output.lastIndexOf(RULE + "\n" + HEADING + "\n");
-        assertTrue("The example wrote nothing:\n" + output, example >= 0);
+        int example;
+        if (ResourceKey.find(new String[0]) == null) {
+            example = output.lastIndexOf(NO_KEY);
+            assertTrue("The example did not say it needs a key:\n" + output,
+                example >= 0);
+        } else {
+            example = heading < 0 ? -1 : 0;
+            assertTrue("The example wrote nothing:\n" + output,
+                heading > 0 && output.substring(0, heading).trim().isEmpty()
+                    == false);
+        }
         assertTrue(
             "No Find out more section after the example's output:\n"
             + output,
