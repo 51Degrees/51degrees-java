@@ -54,7 +54,7 @@ import java.util.TreeMap;
  * request. Keeping a reference to Element Data after its Flow Data is closed
  * is not supported, and reads do not check for it.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/thread-safety.md#element-data">Specification</a>
- * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/resource-cleanup.md#reusing-element-data">Reusing Element Data</a>
+ * @see <a href="https://github.com/51Degrees/specifications/blob/d79bbe3b2aef86273570742f6b660f29bfe72816/pipeline-specification/features/resource-cleanup.md#reusing-element-data">Reusing Element Data</a>
  */
 public abstract class ElementDataBase extends DataBase implements ElementData {
 
@@ -128,7 +128,8 @@ public abstract class ElementDataBase extends DataBase implements ElementData {
 
     /**
      * @return true once a Flow Element that writes this instance has
-     * finished, until one that shares it starts to process
+     * finished, until one that shares it starts to process or its pool gives
+     * it to another Flow Data
      */
     public boolean isFinishedWriting() {
         return finished;
@@ -178,9 +179,11 @@ public abstract class ElementDataBase extends DataBase implements ElementData {
     }
 
     /**
-     * Whether a lazy task may still write this instance. An implementation
-     * with a lazy task returns true until the task has finished.
+     * Whether the task of a lazy property may still write this instance. An
+     * implementation with a lazy property whose value a task works out
+     * returns true until the task has finished.
      * @return false unless an implementation has a lazy task running
+     * @see <a href="https://github.com/51Degrees/specifications/blob/d79bbe3b2aef86273570742f6b660f29bfe72816/pipeline-specification/features/thread-safety.md#lazy-properties">Lazy properties</a>
      */
     protected boolean hasLazyTaskRunning() {
         return false;
@@ -189,8 +192,8 @@ public abstract class ElementDataBase extends DataBase implements ElementData {
     /**
      * Called when the Flow Data that holds this instance is closed. A pooled
      * instance goes back to its Flow Element's pool, once only. One whose
-     * lazy task is still running is left for the garbage collector instead,
-     * because the task may still write it.
+     * lazy property's task is still running is left for the garbage
+     * collector instead, because the task may still write it.
      */
     public void release() {
         Runnable release = onRelease;
