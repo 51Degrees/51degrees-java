@@ -395,6 +395,44 @@ public class CloudRequestEngineLazyCacheTests
     }
 
     /**
+     * After a failed entry is replaced, requests with other Evidence fill
+     * the cache past its size, and every request still gets its own
+     * response.
+     */
+    @Test
+    public void process_ReplacedEntryThenEvictions() throws Exception {
+        final int others = 40;
+        String[] responses = new String[others + 2];
+        responses[0] = null;
+        responses[1] = "{'device':{'value':'replacement'}}";
+        for (int i = 0; i < others; i++) {
+            responses[i + 2] = "{'device':{'value':'" + i + "'}}";
+        }
+        CountDownLatch gate = new CountDownLatch(1);
+        mockService(new CountDownLatch(1), gate, responses);
+        CloudRequestEngine engine =
+            new CloudRequestEngineBuilder(loggerFactory, httpClient)
+                .setResourceKey("resourcekey")
+                .setCacheSize(4)
+                .build();
+
+        List<String> answers = processThreeTimes(engine, gate);
+        assertEquals(Arrays.asList(FAILED, responses[1], responses[1]),
+            answers);
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+                .addFlowElement(engine).build()) {
+            for (int i = 0; i < others; i++) {
+                try (FlowData data = pipeline.createFlowData()) {
+                    data.addEvidence("query.User-Agent", "other " + i);
+                    data.process();
+                    assertEquals(responses[i + 2],
+                        data.get(CloudRequestData.class).getJsonResponse());
+                }
+            }
+        }
+    }
+
+    /**
      * What processThreeTimes records for a request whose response could not
      * be read.
      */
