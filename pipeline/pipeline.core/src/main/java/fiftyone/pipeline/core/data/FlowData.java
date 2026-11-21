@@ -142,29 +142,37 @@ public interface FlowData extends AutoCloseable {
      * Get the {@link ElementData} for the requested aspect.
      * @param key the aspect to get
      * @param <T> type type of the aspect
-     * @return aspect's {@link ElementData} or null if not present
+     * @return aspect's {@link ElementData}
      * @throws IllegalStateException if this FlowData has not been processed
+     * @throws IllegalArgumentException if the key is null
+     * @throws java.util.NoSuchElementException if no element added data
+     * under the key
      */
     <T extends ElementData> T get(TypedKey<T> key)
-        throws IllegalStateException;
+        throws IllegalStateException, IllegalArgumentException,
+        java.util.NoSuchElementException;
 
     /**
      * Get the {@link ElementData} for the requested data key.
      * @param key to the aspect to get
-     * @return aspect's {@link ElementData} or null if not present
+     * @return aspect's {@link ElementData}
      * @throws IllegalStateException if this FlowData has not been processed
+     * @throws java.util.NoSuchElementException if no element added data
+     * under the key
      */
-    ElementData get(String key) throws IllegalStateException;
+    ElementData get(String key)
+        throws IllegalStateException, java.util.NoSuchElementException;
 
     /**
      * Get the {@link ElementData} for the requested {@link ElementData}
-     * implementation. If multiple instances of the type exist then an exception
-     * is thrown.
+     * implementation.
      * @param type the type of {@link ElementData} to return
      * @param <T> the type of {@link ElementData} to return
-     * @return aspect's {@link ElementData} or null if the type is not present
+     * @return aspect's {@link ElementData}
+     * @throws PipelineDataException if no data of the type is present, or
+     * more than one instance is
      */
-    <T extends ElementData> T get(Class<T> type);
+    <T extends ElementData> T get(Class<T> type) throws PipelineDataException;
 
     /**
      * Get the ElementData for the requested {@link FlowElement}. This method
@@ -175,9 +183,10 @@ public interface FlowData extends AutoCloseable {
      * @param <T>     {@link ElementData} stored by the element
      * @return element data stored by the element
      * @throws IllegalStateException if this FlowData has not been processed
+     * @throws IllegalArgumentException if the element is null
      */
     <T extends ElementData> T getFromElement(FlowElement<T, ?> element)
-        throws IllegalStateException;
+        throws IllegalStateException, IllegalArgumentException;
 
     /**
      * Get the specified property as the specified type.
@@ -307,12 +316,16 @@ public interface FlowData extends AutoCloseable {
     Iterable<ElementData> elementDataAsIterable();
 
     /**
-     * Get all element data values that match the specified predicate.
+     * Get all element data values that match the specified predicate. The
+     * properties of an element that added no data, and properties with no
+     * value, are left out.
      * @param matcher if a property passed to this matcher returns true then it
      *                will be included in the results
      * @return all the element data values that match the matcher
+     * @throws IllegalStateException if this FlowData has not been processed
      */
-    Map<String, String> getWhere(PropertyMatcher matcher);
+    Map<String, String> getWhere(PropertyMatcher matcher)
+        throws IllegalStateException;
 
     /**
      * Generate a {@link DataKey} that contains the evidence data from this
