@@ -26,6 +26,7 @@ import fiftyone.geolocation.GeoLocationPipelineBuilder;
 import fiftyone.geolocation.core.Enums;
 import fiftyone.geolocation.core.data.GeoData;
 import fiftyone.geolocation.examples.FindOutMore;
+import fiftyone.geolocation.examples.ResourceKey;
 import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
@@ -82,11 +83,16 @@ public class GettingStarted {
     public static void main(String[] args) throws Exception {
         // Obtain a resource key for free at https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-src-main-java-fiftyone-geolocation-examples-cloud-gettingstarted.java&utm_term=main
         // Make sure to include the 'Country' property as it is used by this example.
-        String resourceKey = "!!Your resource license key!!";
+        String resourceKey = ResourceKey.find(args);
 
-        if (resourceKey.startsWith("!!")) {
-            System.out.println("You need to create a resource key at " +
-                "https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-src-main-java-fiftyone-geolocation-examples-cloud-gettingstarted.java&utm_term=resource-key-required and paste it into this example.");
+        if (resourceKey == null) {
+            System.out.println("This example calls the 51Degrees cloud " +
+                "service, which needs a resource key, and none is set.");
+            System.out.println("Set the " + ResourceKey.VARIABLE +
+                " environment variable to a resource key, or give the key " +
+                "as the first argument, and run the example again.");
+            System.out.println("Create a resource key at " +
+                "https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-src-main-java-fiftyone-geolocation-examples-cloud-gettingstarted.java&utm_term=resource-key-required");
             System.out.println("Make sure to include the 'Country' " +
                 "property as it is used by this example.");
         }

@@ -116,7 +116,7 @@ java -cp ./console/target/device-detection-java-examples.console-4.5.127-SNAPSHO
 ### Web examples
 
 The web examples are run from the root of this repository, because they find their
-web content by a path relative to it. They listen on port 8081 and stop when Enter
+web content by a path relative to it. They listen on port 5151 and stop when Enter
 is pressed. Set the `PORT` environment variable to listen on another port, in which
 case the example runs until the process is stopped:
 
@@ -164,3 +164,15 @@ unnamed module. To grant native access to 51Degrees code alone you need the indi
 jars, with `pipeline.engines.fiftyone` and `device-detection.hash.engine.on-premise` on
 the module path - see the
 [device-detection-java README](https://github.com/51Degrees/51degrees-java/blob/main/device-detection/README.md#native-library-access).
+
+## Flow Data and threads
+
+A Flow Data cannot be used by two threads at once. The web examples handle
+each request on one thread, and read the Flow Data there. An application that
+hands work from a request to another thread or task reads the values that
+work needs from the Flow Data on the request's thread, into its own
+variables, and passes those values, not the Flow Data. The Flow Data is
+closed when the request ends, so work that outlives the request must not
+keep it either. The
+[pipeline README](../../pipeline/README.md#flow-data-and-threads)
+shows such a hand-off.

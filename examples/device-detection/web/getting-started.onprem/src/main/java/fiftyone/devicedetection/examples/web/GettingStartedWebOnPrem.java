@@ -53,65 +53,62 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * the free Lite file in cxx/data/device-detection is used, which is downloaded
  * before the server starts if it is missing.
  * <p>
- * The server listens on port 8081 and stops when Enter is pressed. If the PORT
+ * The server listens on port 5151 and stops when Enter is pressed. If the PORT
  * environment variable is set, the server listens on that port instead and runs
  * until the process is stopped, which is how automated tests start it.
  */
 public class GettingStartedWebOnPrem extends HttpServlet {
     private static final long serialVersionUID = 1734154705981153540L;
+    /**
+     * The port the example listens on when the PORT environment variable
+     * does not choose another.
+     */
+    public static final int DEFAULT_PORT = 5151;
     public static String resourceBase = "examples/device-detection/web/getting-started.onprem/src/main/webapp";
     public static Logger logger = LoggerFactory.getLogger(GettingStartedWebOnPrem.class);
-
-    private static final String DD_PATH_VARIABLE = "_51DEGREES_DD_PATH";
-    private static final String OLD_DD_PATH_VARIABLE = "51DEGREES_DD_PATH";
-
-    /**
-     * Logs a warning when the configuration takes the data file from the
-     * deprecated name, which it does when that name is set and the name
-     * that replaces it is not.
-     */
-    private static void warnOfOldDataFileName() {
-        if (isSet(OLD_DD_PATH_VARIABLE) && isSet(DD_PATH_VARIABLE) == false) {
-            logger.warn(
-                "The environment variable " + OLD_DD_PATH_VARIABLE
-                + " is deprecated and " + DD_PATH_VARIABLE
-                + " replaces it. Set " + DD_PATH_VARIABLE
-                + " to the same value, as a later release may no longer "
-                + "read " + OLD_DD_PATH_VARIABLE + ".");
-        }
-    }
-
-    private static boolean isSet(String name) {
-        String value = System.getenv(name);
-        if (value == null || value.isEmpty()) {
-            value = System.getProperty(name);
-        }
-        return value != null && value.isEmpty() == false;
-    }
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
         logger.info("Running Example {}", GettingStartedWebOnPrem.class);
-        warnOfOldDataFileName();
 
-        // If the data file the configuration names is not at that path, it
-        // is searched for, and the free Lite file is downloaded if missing.
+        String portEnv = System.getenv("PORT");
+        if (portEnv != null) {
+            // Automated runs (e.g. the unified Selenium suite) inject a port and have no
+            // interactive stdin, so keep the server alive by joining it instead of waiting on Enter.
+            start(Integer.parseInt(portEnv)).join();
+        } else {
+            // start Jetty with this WebApp
+            findDataFile();
+            EmbedJetty.runWebApp(getFilePath(resourceBase).getAbsolutePath(), DEFAULT_PORT);
+        }
+    }
+
+    /**
+     * Finds the data file and starts the server with this WebApp, as main
+     * does, and returns the server, which runs until it is stopped. A test
+     * starts the example this way, with nothing set, to run it as it runs
+     * from a fresh clone.
+     * @param port the port to listen on
+     * @return the server
+     * @throws Exception if the data file cannot be found or the server
+     * cannot start
+     */
+    public static org.eclipse.jetty.server.Server start(int port) throws Exception {
+        findDataFile();
+        return EmbedJetty.startWebApp(getFilePath(resourceBase).getAbsolutePath(), port);
+    }
+
+    /**
+     * If the data file the configuration names is not at that path, it is
+     * searched for, and the free Lite file is downloaded if missing.
+     */
+    private static void findDataFile() throws Exception {
         String dataFile = PipelineOptionsFactory.getOptionsFromFile(
                 getFilePath(resourceBase) + "/WEB-INF/51Degrees-OnPrem.xml")
                 .findAndSubstitute("DeviceDetectionHashEngine", "DataFile");
         if (!new File(dataFile).exists()) {
             System.setProperty("TestDataFile",
                     DataFileHelper.getDataFileLocation(dataFile));
-        }
-
-        String portEnv = System.getenv("PORT");
-        if (portEnv != null) {
-            // Automated runs (e.g. the unified Selenium suite) inject a port and have no
-            // interactive stdin, so keep the server alive by joining it instead of waiting on Enter.
-            EmbedJetty.startWebApp(getFilePath(resourceBase).getAbsolutePath(), Integer.parseInt(portEnv)).join();
-        } else {
-            // start Jetty with this WebApp
-            EmbedJetty.runWebApp(getFilePath(resourceBase).getAbsolutePath(), 8081);
         }
     }
 
@@ -127,6 +124,9 @@ public class GettingStartedWebOnPrem extends HttpServlet {
             throws Exception {
         // the detection has already been carried out by the Filter
         // which is responsible to the lifecycle of the flowData - do NOT dispose
+        // A Flow Data cannot be used by two threads at once. Work handed to
+        // another thread or task gets the values it needs, read here on the
+        // request's thread, not the Flow Data.
         FlowData flowData = flowDataProvider.getFlowData(request);
         // retrieve the device data from the flowdata
         DeviceData device = flowData.get(DeviceData.class);

@@ -107,6 +107,9 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  */
 public class GettingStartedApi extends HttpServlet {
     private static final long serialVersionUID = 1734154705981153543L;
+    // A local stand-in for the cloud service, not a web page, so it keeps
+    // 5225, as the .NET version does: a cloud example pointed at it can run
+    // beside a web example on 5151.
     public static final int DEFAULT_PORT = 5225;
     public static final String DATA_FILE_INIT_PARAM = "dataFile";
     public static Logger logger = LoggerFactory.getLogger(GettingStartedApi.class);
@@ -261,6 +264,9 @@ public class GettingStartedApi extends HttpServlet {
             }
         }
 
+        // A Flow Data cannot be used by two threads at once. Work handed to
+        // another thread or task gets the values it needs, read here on the
+        // request's thread, not the Flow Data.
         try (FlowData flowData = pipeline.createFlowData()) {
             flowData.addEvidence(evidence);
             flowData.process();

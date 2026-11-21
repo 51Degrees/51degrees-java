@@ -31,6 +31,7 @@ import fiftyone.pipeline.engines.configuration.DataFileConfiguration;
 import fiftyone.pipeline.engines.data.AspectEngineDataFile;
 import fiftyone.pipeline.engines.data.DataUpdateUrlFormatter;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneDataFileDefault;
+import fiftyone.pipeline.engines.fiftyone.flowelements.SequenceElementBuilder;
 import fiftyone.pipeline.engines.fiftyone.flowelements.ShareUsageElement;
 import fiftyone.pipeline.engines.services.DataUpdateServiceDefault;
 import fiftyone.pipeline.util.FileFinder;
@@ -164,7 +165,30 @@ public class DeviceDetectionOnPremisePipelineBuilderTest {
                 .build()) {
             List<FlowElement> flowElements = pipeline.getFlowElements();
             assertEquals(2, flowElements.size());
-            assertTrue(flowElements.get(0) instanceof ShareUsageElement);
+            // Usage sharing is the last Flow Element.
+            assertTrue(flowElements.get(flowElements.size() - 1)
+                instanceof ShareUsageElement);
+        }
+    }
+
+    /**
+     * An element the caller adds after turning usage sharing on still goes
+     * before usage sharing, which the builder adds when it builds.
+     */
+    @Test
+    public void setShareUsage_True_ElementAddedAfter_ShareUsageLast()
+        throws Exception {
+        try (Pipeline pipeline = new DeviceDetectionPipelineBuilder(loggerFactory)
+                .useOnPremise(datafile.getAbsolutePath(), false)
+                .setAutoUpdate(false)
+                .setShareUsage(true)
+                .addFlowElement(new SequenceElementBuilder(loggerFactory).build())
+                .build()) {
+            List<FlowElement> flowElements = pipeline.getFlowElements();
+            assertEquals(3, flowElements.size());
+            assertTrue(flowElements.toString(),
+                flowElements.get(flowElements.size() - 1)
+                    instanceof ShareUsageElement);
         }
     }
 

@@ -437,7 +437,7 @@ public class JavaScriptBuilderElement
             AspectPropertyValue<?> supportsPromisesValue =
                     data.getAs("Promise", AspectPropertyValue.class);
             supportsPromises = supportsPromisesValue.hasValue() &&
-                    supportsPromisesValue.getValue() == "Full";
+                    "Full".equals(supportsPromisesValue.getValue());
         } catch (PipelineDataException | PropertyMissingException e) {
             supportsPromises = false;
         }
@@ -496,8 +496,12 @@ public class JavaScriptBuilderElement
                 .asKeyMap();
 
         for(Map.Entry<String, Object> entry : queryEvidence.entrySet()){
-            if(entry.getKey().startsWith(EVIDENCE_QUERY_PREFIX) &&
-                    EXCLUDED_PARAMETERS.contains(entry.getKey()) == false){
+            // Evidence keys ignore case, so the prefix and the excluded
+            // keys are matched whatever the case the key was added in.
+            if(entry.getKey().regionMatches(true, 0,
+                    EVIDENCE_QUERY_PREFIX, 0, EVIDENCE_QUERY_PREFIX.length()) &&
+                    EXCLUDED_PARAMETERS.contains(
+                        entry.getKey().toLowerCase(Locale.ROOT)) == false){
                 String key = entry.getKey().substring(entry.getKey().indexOf(EVIDENCE_SEPERATOR) + 1);
                 key = URLEncoder.encode(key, "UTF-8");
                 String value = URLEncoder.encode(entry.getValue().toString(), "UTF-8");

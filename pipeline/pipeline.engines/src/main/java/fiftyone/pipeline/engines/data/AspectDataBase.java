@@ -179,8 +179,10 @@ public abstract class AspectDataBase extends ElementDataBase implements AspectDa
      * Record that the cloud request for the Flow Data failed, so that a
      * property this instance does not hold is missing with the
      * CloudRequestFailed reason.
+     * @throws IllegalStateException if the Flow Element has finished
      */
     public void setCloudRequestFailed() {
+        checkWriting();
         cloudRequestFailed = true;
     }
 
@@ -188,8 +190,10 @@ public abstract class AspectDataBase extends ElementDataBase implements AspectDa
      * Add an engine to the list of engines which have generated the data within
      * this instance.
      * @param engine engine adding data
+     * @throws IllegalStateException if the Flow Element has finished
      */
     public void addEngine(AspectEngine<? extends AspectData,? extends AspectPropertyMetaData> engine) {
+        checkWriting();
         engines.add(engine);
     }
 
@@ -198,8 +202,10 @@ public abstract class AspectDataBase extends ElementDataBase implements AspectDa
      * has no effect. An exception it throws is given to each later read of a
      * property value, as before.
      * @param runnable processing runnable
+     * @throws IllegalStateException if the Flow Element has finished
      */
     public void addProcessCallable(ProcessCallable runnable) {
+        checkWriting();
         FutureTask<Void> task = new FutureTask<>(runnable);
         task.run();
         processFutures.put(runnable.engine, task);
@@ -209,6 +215,18 @@ public abstract class AspectDataBase extends ElementDataBase implements AspectDa
     public Map<String, Object> asKeyMap() {
         waitOnAllProcessFutures();
         return super.asKeyMap();
+    }
+
+    /**
+     * Get the value stored for the key as it is now, without waiting on the
+     * callables added through {@link #addProcessCallable} and without the
+     * checks against the {@link MissingPropertyService}. The value is null
+     * when nothing has been stored for the key.
+     * @param key the key to read
+     * @return the value stored for the key, or null
+     */
+    protected Object getWithoutWaiting(String key) {
+        return super.asKeyMap().get(key);
     }
 
     /**

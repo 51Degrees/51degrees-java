@@ -102,28 +102,30 @@ import java.util.concurrent.CompletionException;
  * variables:
  * <ul>
  * <li>{@code _51DEGREES_RESOURCE_KEY}, required. The resource key of the
- * page, public by nature. Its deprecated name {@code RESOURCE_KEY} is read
- * when it is not set.</li>
+ * page, public by nature.</li>
  * <li>{@code _51DEGREES_LICENSE_KEY}, optional. A licence key of the same
- * account, server side only. Its deprecated name {@code LICENSE_KEY} is
- * read when it is not set.</li>
+ * account, server side only.</li>
  * <li>{@code _51DEGREES_CLOUD_ENDPOINT}, optional. The cloud API base including
  * the {@code /api/v4/} segment, defaulting to
  * {@code https://cloud.51degrees.com/api/v4/}. This is the same variable
  * the cloud request engine of this package honours.</li>
- * <li>{@code PORT}, optional, defaulting to {@code 5100}.</li>
+ * <li>{@code PORT}, optional, defaulting to {@code 5151}.</li>
  * </ul>
- * Then open {@code http://localhost:5100/}.
+ * Then open {@code http://localhost:5151/}.
  */
 public class CreatorContextDemoServer {
 
     /** Where the page and stylesheet live on the classpath. */
     static final String RESOURCES = "/fodid/creator-context/";
 
-    static final String RESOURCE =
-        key("_51DEGREES_RESOURCE_KEY", "RESOURCE_KEY");
-    static final String LICENCE =
-        key("_51DEGREES_LICENSE_KEY", "LICENSE_KEY");
+    /**
+     * The port the server listens on when the PORT environment variable
+     * does not choose another.
+     */
+    public static final int DEFAULT_PORT = 5151;
+
+    static final String RESOURCE = env("_51DEGREES_RESOURCE_KEY");
+    static final String LICENCE = env("_51DEGREES_LICENSE_KEY");
 
     /**
      * The one client, built at start-up and shared by every request,
@@ -133,9 +135,15 @@ public class CreatorContextDemoServer {
 
     public static void main(String[] args) throws Exception {
         if (RESOURCE == null) {
-            System.err.println(
-                "Set _51DEGREES_RESOURCE_KEY to the resource key of the page.");
-            System.exit(1);
+            System.out.println("This demo calls the 51Degrees cloud " +
+                "service, which needs a resource key, and none is set.");
+            System.out.println("Set the _51DEGREES_RESOURCE_KEY environment " +
+                "variable to the resource key of the page, and run the demo " +
+                "again.");
+            System.out.println("Create a resource key at " +
+                "https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=pipeline.developer-examples.fodid-creatorcontextdemoserver.java&utm_term=no-resource-key");
+            Main.writeFindOutMore(System.out);
+            return;
         }
         if (LICENCE == null) {
             // Only an account that holds licence keys needs one to
@@ -165,7 +173,7 @@ public class CreatorContextDemoServer {
         // web examples vendor it.
         resource("page.html");
         resource("examples-main.min.css");
-        int port = Integer.parseInt(envOr("PORT", "5100"));
+        int port = Integer.parseInt(envOr("PORT", String.valueOf(DEFAULT_PORT)));
         HttpServer server = HttpServer.create(
             new InetSocketAddress(port), 0);
         server.createContext("/", CreatorContextDemoServer::servePage);
@@ -462,27 +470,6 @@ public class CreatorContextDemoServer {
             }
         }
         return null;
-    }
-
-    /**
-     * The value of the named environment variable, or of its deprecated
-     * old name when the named one is not set, saying on standard error
-     * that the old name is deprecated when it is the one used.
-     */
-    static String key(String name, String oldName) {
-        String value = env(name);
-        if (value == null) {
-            value = env(oldName);
-            if (value != null) {
-                System.err.println(
-                    "The environment variable " + oldName
-                    + " is deprecated and " + name
-                    + " replaces it. Set " + name
-                    + " to the same value, as a later release may no longer "
-                    + "read " + oldName + ".");
-            }
-        }
-        return value;
     }
 
     static String envOr(String name, String fallback) {

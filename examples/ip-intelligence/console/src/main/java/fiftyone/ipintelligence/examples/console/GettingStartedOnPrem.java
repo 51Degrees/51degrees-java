@@ -65,7 +65,6 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
 import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asString;
@@ -231,23 +230,24 @@ public class GettingStartedOnPrem {
             details of all available properties. */
             
             // The free Lite data file has the registration properties, and
-            // only the Enterprise data file has the others.
-            needsEnterprise |= writeValue(writer, engine, "RegisteredName", ipData::getRegisteredName);
-            needsEnterprise |= writeValue(writer, engine, "RegisteredOwner", ipData::getRegisteredOwner);
-            needsEnterprise |= writeValue(writer, engine, "RegisteredCountry", ipData::getRegisteredCountry);
-            needsEnterprise |= writeValue(writer, engine, "IpRangeStart", ipData::getIpRangeStart);
-            needsEnterprise |= writeValue(writer, engine, "IpRangeEnd", ipData::getIpRangeEnd);
-            needsEnterprise |= writeValue(writer, engine, "Country", ipData::getCountry);
-            needsEnterprise |= writeValue(writer, engine, "CountryCode", ipData::getCountryCode);
-            needsEnterprise |= writeValue(writer, engine, "CountryCode3", ipData::getCountryCode3);
-            needsEnterprise |= writeValue(writer, engine, "Region", ipData::getRegion);
-            needsEnterprise |= writeValue(writer, engine, "State", ipData::getState);
-            needsEnterprise |= writeValue(writer, engine, "Town", ipData::getTown);
-            needsEnterprise |= writeValue(writer, engine, "Latitude", ipData::getLatitude);
-            needsEnterprise |= writeValue(writer, engine, "Longitude", ipData::getLongitude);
-            needsEnterprise |= writeValue(writer, engine, "Areas", ipData::getAreas);
-            needsEnterprise |= writeValue(writer, engine, "AccuracyRadiusMin", ipData::getAccuracyRadiusMin);
-            needsEnterprise |= writeValue(writer, engine, "TimeZoneOffset", ipData::getTimeZoneOffset);
+            // only the Enterprise data file has the others. Each value is
+            // read by name, which gives it with its weighting.
+            needsEnterprise |= writeValue(writer, engine, ipData, "RegisteredName");
+            needsEnterprise |= writeValue(writer, engine, ipData, "RegisteredOwner");
+            needsEnterprise |= writeValue(writer, engine, ipData, "RegisteredCountry");
+            needsEnterprise |= writeValue(writer, engine, ipData, "IpRangeStart");
+            needsEnterprise |= writeValue(writer, engine, ipData, "IpRangeEnd");
+            needsEnterprise |= writeValue(writer, engine, ipData, "Country");
+            needsEnterprise |= writeValue(writer, engine, ipData, "CountryCode");
+            needsEnterprise |= writeValue(writer, engine, ipData, "CountryCode3");
+            needsEnterprise |= writeValue(writer, engine, ipData, "Region");
+            needsEnterprise |= writeValue(writer, engine, ipData, "State");
+            needsEnterprise |= writeValue(writer, engine, ipData, "Town");
+            needsEnterprise |= writeValue(writer, engine, ipData, "Latitude");
+            needsEnterprise |= writeValue(writer, engine, ipData, "Longitude");
+            needsEnterprise |= writeValue(writer, engine, ipData, "Areas");
+            needsEnterprise |= writeValue(writer, engine, ipData, "AccuracyRadiusMin");
+            needsEnterprise |= writeValue(writer, engine, ipData, "TimeZoneOffset");
         }
         writer.println();
         writer.flush();
@@ -258,14 +258,21 @@ public class GettingStartedOnPrem {
      * Writes a property, or that it needs the Enterprise data file when the
      * data file in use does not have it. The value is only read when the
      * data file has the property.
+     * <p>
+     * IP Intelligence values are weighted. Reading a property by name gives
+     * a list of values, each with its weighting, and a property with one
+     * answer gives it with a weighting of 1. The typed getters, such as
+     * {@link IPIntelligenceData#getRegisteredName()}, give the value alone.
      * @return true if the property needs the Enterprise data file
      */
     private static boolean writeValue(PrintWriter writer,
                                       IPIntelligenceOnPremiseEngine engine,
-                                      String property,
-                                      Supplier<AspectPropertyValue<?>> value) {
+                                      IPIntelligenceData ipData,
+                                      String property) {
         if (DataFileHelper.hasProperty(engine, property)) {
-            writer.println("\t" + property + ": " + asString(value.get()));
+            AspectPropertyValue<?> value =
+                    (AspectPropertyValue<?>) ipData.get(property);
+            writer.println("\t" + property + ": " + asString(value));
             return false;
         }
         writer.println("\t" + property + ": " + DataFileHelper.NEEDS_ENTERPRISE);

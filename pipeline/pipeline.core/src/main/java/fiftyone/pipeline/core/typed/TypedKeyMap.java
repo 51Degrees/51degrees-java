@@ -62,6 +62,23 @@ public interface TypedKeyMap extends Closeable {
      */
     <T> void put(TypedKey<T> typedKey, T value);
 
+    /**
+     * Add a value unless one with the same name is already there, and return
+     * whichever value the map then holds for the name. Implementations that
+     * several threads add to do it without a lock.
+     *
+     * @param typedKey the key to add
+     * @param value    the value to add if the name is not there yet
+     * @param <T>      the type of the value
+     * @return the value now held for the name
+     */
+    default <T> T putIfAbsent(TypedKey<T> typedKey, T value) {
+        if (containsKey(typedKey.getName()) == false) {
+            put(typedKey, value);
+        }
+        return get(typedKey);
+    }
+
     <T> T removeIfExists(TypedKey<T> typedKey);
 
     boolean containsKey(String key);

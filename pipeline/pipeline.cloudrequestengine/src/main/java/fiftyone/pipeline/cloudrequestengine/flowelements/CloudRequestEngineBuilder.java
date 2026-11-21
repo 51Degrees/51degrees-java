@@ -43,7 +43,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 /**
@@ -72,11 +71,6 @@ public class CloudRequestEngineBuilder extends
     	return System.getenv(name);
     };
 
-    // Set once the use of the deprecated end point variable has been
-    // logged, so that a process building many engines logs it once.
-    private static final AtomicBoolean oldEndPointVariableLogged =
-        new AtomicBoolean(false);
-
     public CloudRequestEngineBuilder(ILoggerFactory loggerFactory) {
         this(loggerFactory, new HttpClientDefault());
     }
@@ -97,8 +91,7 @@ public class CloudRequestEngineBuilder extends
 
         /*
          *  Check if endPoint has been explicitly set via setEndpoint.
-         *  If not check for environment variable _51DEGREES_CLOUD_ENDPOINT,
-         *  and then for its deprecated name FOD_CLOUD_API_URL.
+         *  If not check for environment variable _51DEGREES_CLOUD_ENDPOINT.
          *  If nothing else is set, use default value.
          */
         if (endPoint == null || endPoint.isEmpty()) {
@@ -145,6 +138,7 @@ public class CloudRequestEngineBuilder extends
      * @param state the copy, or null to discover when building
      * @return this builder
      */
+    @DefaultValue("None - discovered when the engine is built")
     public CloudRequestEngineBuilder setDiscoveryState(
         CloudDiscoveryState state) {
         this.discoveryState = state;
@@ -163,30 +157,11 @@ public class CloudRequestEngineBuilder extends
     }
 
     /**
-     * The end point the environment gives, or null or empty when it gives
-     * none. {@link Constants#CLOUD_ENDPOINT_VARIABLE} is read first. Only
-     * when that is not set or is empty is the deprecated
-     * {@link Constants#FOD_CLOUD_API_URL} read, and the first use of it in
-     * the process is logged as a warning.
+     * The end point that {@link Constants#CLOUD_ENDPOINT_VARIABLE} gives,
+     * or null or empty when it gives none.
      */
-    @SuppressWarnings("deprecation")
     private String endPointFromEnvironment() {
-        String value = getEnvVar.apply(Constants.CLOUD_ENDPOINT_VARIABLE);
-        if (value != null && value.isEmpty() == false) {
-            return value;
-        }
-        value = getEnvVar.apply(Constants.FOD_CLOUD_API_URL);
-        if (value != null && value.isEmpty() == false
-            && oldEndPointVariableLogged.compareAndSet(false, true)) {
-            loggerFactory.getLogger(CloudRequestEngineBuilder.class.getName())
-                .warn("The environment variable "
-                    + Constants.FOD_CLOUD_API_URL + " is deprecated and "
-                    + Constants.CLOUD_ENDPOINT_VARIABLE + " replaces it. "
-                    + "Set " + Constants.CLOUD_ENDPOINT_VARIABLE
-                    + " to the same value, as a later release may no "
-                    + "longer read " + Constants.FOD_CLOUD_API_URL + ".");
-        }
-        return value;
+        return getEnvVar.apply(Constants.CLOUD_ENDPOINT_VARIABLE);
     }
 
     private static String trimmed(String value) {
@@ -271,7 +246,7 @@ public class CloudRequestEngineBuilder extends
      * @param uri data endpoint
      * @return this builder
      */
-    @DefaultValue(Constants.END_POINT_DEFAULT + "{resourcekey}.json")
+    @DefaultValue(Constants.END_POINT_DEFAULT + "/{resourcekey}.json")
     public CloudRequestEngineBuilder setDataEndpoint(String uri) {
         dataEndpoint = uri;
         return this;
@@ -285,7 +260,7 @@ public class CloudRequestEngineBuilder extends
      * @param uri properties endpoint
      * @return this builder
      */
-    @DefaultValue(Constants.END_POINT_DEFAULT + "accessibleproperties")
+    @DefaultValue(Constants.END_POINT_DEFAULT + "/accessibleproperties")
     public CloudRequestEngineBuilder setPropertiesEndpoint(String uri) {
         propertiesEndpoint = uri;
         return this;
@@ -299,7 +274,7 @@ public class CloudRequestEngineBuilder extends
      * @param uri evidence keys endpoint
      * @return this builder
      */
-    @DefaultValue(Constants.END_POINT_DEFAULT + "evidencekeys")
+    @DefaultValue(Constants.END_POINT_DEFAULT + "/evidencekeys")
     public CloudRequestEngineBuilder setEvidenceKeysEndpoint(String uri) {
         evidenceKeysEndpoint = uri;
         return this;

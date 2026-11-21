@@ -24,7 +24,9 @@ package fiftyone.ipintelligence;
 
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngineBuilder;
+import fiftyone.pipeline.annotations.DefaultValue;
 import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
+import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.Constants;
 import fiftyone.pipeline.engines.data.AspectData;
@@ -114,6 +116,8 @@ public class IPIntelligenceOnPremisePipelineBuilder
      * @param enabled True to enable usage sharing. False to disable.
      * @return This builder instance.
      */
+    @DefaultValue(booleanValue = fiftyone.pipeline.engines.fiftyone
+        .flowelements.Constants.SHARE_USAGE_DEFAULT_ENABLED)
     public IPIntelligenceOnPremisePipelineBuilder setShareUsage(
         boolean enabled) {
         shareUsageEnabled = enabled;
@@ -128,6 +132,7 @@ public class IPIntelligenceOnPremisePipelineBuilder
      * @param enabled True to enable auto update. False to disable.
      * @return This builder instance.
      */
+    @DefaultValue(booleanValue = Constants.DEFAULT_AUTOUPDATE_ENABLED)
     public IPIntelligenceOnPremisePipelineBuilder setAutoUpdate(
         boolean enabled) {
         autoUpdateEnabled = enabled;
@@ -142,6 +147,7 @@ public class IPIntelligenceOnPremisePipelineBuilder
      * @param enabled True to enable file system watcher. False to disable.
      * @return This builder instance.
      */
+    @DefaultValue(booleanValue = Constants.DEFAULT_WATCHER_ENABLED)
     public IPIntelligenceOnPremisePipelineBuilder setDataFileSystemWatcher(
             boolean enabled) {
         dataFileSystemWatcher = enabled;
@@ -153,6 +159,7 @@ public class IPIntelligenceOnPremisePipelineBuilder
      * @param dataUpdateService an instance of a dataUpdateService
      * @return This builder instance.
      */
+    @DefaultValue("The DataUpdateService given to the constructor")
     public IPIntelligenceOnPremisePipelineBuilder setDataUpdateService(
             DataUpdateService dataUpdateService) {
         this.dataUpdateService = dataUpdateService;
@@ -161,7 +168,7 @@ public class IPIntelligenceOnPremisePipelineBuilder
 
     /**
      * Enable/Disable update on startup.
-     * Defaults to enabled.
+     * Defaults to disabled.
      * If enabled, the auto update system will be used to check for
      * an update before the IP Intelligence engine is created.
      * If an update is available, it will be downloaded and applied
@@ -170,6 +177,7 @@ public class IPIntelligenceOnPremisePipelineBuilder
      * @param enabled True to enable update on startup. False to disable.
      * @return This builder instance.
      */
+    @DefaultValue(booleanValue = Constants.DEFAULT_UPDATE_ON_STARTUP)
     public IPIntelligenceOnPremisePipelineBuilder setDataUpdateOnStartup(
         boolean enabled) {
         dataUpdateOnStartup = enabled;
@@ -183,6 +191,7 @@ public class IPIntelligenceOnPremisePipelineBuilder
      * @param pollingIntervalSeconds The number of seconds between checks.
      * @return This builder instance.
      */
+    @DefaultValue(intValue = Constants.DATA_UPDATE_POLLING_DEFAULT)
     public IPIntelligenceOnPremisePipelineBuilder setUpdatePollingInterval(
         int pollingIntervalSeconds) {
         
@@ -196,6 +205,7 @@ public class IPIntelligenceOnPremisePipelineBuilder
      * @param pollingIntervalMillis The number of milliseconds between checks.
      * @return This builder instance.
      */
+    @DefaultValue(intValue = Constants.DATA_UPDATE_POLLING_DEFAULT * 1000)
     public IPIntelligenceOnPremisePipelineBuilder setUpdatePollingIntervalMillis(
         long pollingIntervalMillis) {
         updatePollingInterval = pollingIntervalMillis;
@@ -210,6 +220,7 @@ public class IPIntelligenceOnPremisePipelineBuilder
      * polling interval in seconds.
      * @return This builder instance.
      */
+    @DefaultValue(intValue = Constants.DATA_UPDATE_RANDOMISATION_DEFAULT)
     public IPIntelligenceOnPremisePipelineBuilder setUpdateRandomisationMax(
         int randomisationMaxSeconds) {
         updateRandomisationMax = (long)randomisationMaxSeconds * 1000;
@@ -224,6 +235,7 @@ public class IPIntelligenceOnPremisePipelineBuilder
      * polling interval in milliseconds.
      * @return This builder instance.
      */
+    @DefaultValue(intValue = Constants.DATA_UPDATE_RANDOMISATION_DEFAULT * 1000)
     public IPIntelligenceOnPremisePipelineBuilder setUpdateRandomisationMaxMillis(
         long randomisationMaxMillis) {
         updateRandomisationMax = randomisationMaxMillis;
@@ -237,6 +249,7 @@ public class IPIntelligenceOnPremisePipelineBuilder
      * @param key The license key.
      * @return This builder instance.
      */
+    @DefaultValue("No license key")
     public IPIntelligenceOnPremisePipelineBuilder setDataUpdateLicenseKey(
         String key) {
         dataUpdateLicenseKey = key;
@@ -250,6 +263,7 @@ public class IPIntelligenceOnPremisePipelineBuilder
      * @param profile The performance profile to use.
      * @return This builder instance.
      */
+    @DefaultValue("Balanced")
     public IPIntelligenceOnPremisePipelineBuilder setPerformanceProfile(
         Constants.PerformanceProfiles profile) {
         performanceProfile = profile;
@@ -263,6 +277,7 @@ public class IPIntelligenceOnPremisePipelineBuilder
      * @param concurrency expected concurrent accesses
      * @return this builder
      */
+    @DefaultValue("The result of Runtime#getRuntime().getAvailableProcessors()")
     public IPIntelligenceOnPremisePipelineBuilder setConcurrency(int concurrency) {
         this.concurrency = concurrency;
         return this;
@@ -274,6 +289,7 @@ public class IPIntelligenceOnPremisePipelineBuilder
      * @param property the property that we want the engine to populate
      * @return this builder
      */
+    @DefaultValue("All properties")
     public IPIntelligenceOnPremisePipelineBuilder setProperty(String property) {
         this.properties.add(property);
         return this;
@@ -288,6 +304,7 @@ public class IPIntelligenceOnPremisePipelineBuilder
      * @param url the URL to check for a new data file
      * @return this builder
      */
+    @DefaultValue("51Degrees default, set by the engine's builder")
     public IPIntelligenceOnPremisePipelineBuilder setDataUpdateUrl(String url) {
         dataUpdateUrl = url;
         return this;
@@ -304,6 +321,7 @@ public class IPIntelligenceOnPremisePipelineBuilder
      *               False otherwise
      * @return this builder
      */
+    @DefaultValue(booleanValue = Constants.DEFAULT_VERIFY_MD5)
     public IPIntelligenceOnPremisePipelineBuilder setDataUpdateVerifyMd5(Boolean verify) {
         dataUpdateVerifyMd5 = verify;
         return this;
@@ -317,6 +335,7 @@ public class IPIntelligenceOnPremisePipelineBuilder
      * @param formatter the formatter to use
      * @return this builder
      */
+    @DefaultValue("51Degrees default, set by the engine's builder")
     public IPIntelligenceOnPremisePipelineBuilder setDataUpdateUrlFormatter(DataUpdateUrlFormatter formatter) {
         dataUpdateUrlFormatter = formatter;
         return this;
@@ -335,22 +354,33 @@ public class IPIntelligenceOnPremisePipelineBuilder
                 new IPIntelligenceOnPremiseEngineBuilder(loggerFactory, dataUpdateService);
         ipIntelligenceEngine = configureAndBuild(engineBuilder);
 
+        List<FlowElement<?, ?>> made = new ArrayList<>();
         if (ipIntelligenceEngine != null) {
-            // Add the share usage element to the list if enabled
-            if (shareUsageEnabled) {
-                getFlowElements().add(
-                    new ShareUsageBuilder(loggerFactory).build());
-            }
             // Add the IP Intelligence engine to the list
+            made.add(ipIntelligenceEngine);
             getFlowElements().add(ipIntelligenceEngine);
+            // Usage sharing goes last, so that it shares what every other
+            // Flow Element has added to the Evidence.
+            if (shareUsageEnabled) {
+                FlowElement<?, ?> shareUsage =
+                    new ShareUsageBuilder(loggerFactory).build();
+                made.add(shareUsage);
+                getFlowElements().add(shareUsage);
+            }
         } else {
             throw new RuntimeException("Unexpected error creating IP Intelligence engine.");
         }
 
         setAutoCloseElements(true);
 
-        // Create and return the pipeline
-        return super.build();
+        // Create and return the pipeline, closing what this builder made if
+        // the Pipeline is refused.
+        try {
+            return super.build();
+        } catch (Exception e) {
+            closeMadeElements(made, e);
+            throw e;
+        }
     }
 
     /**

@@ -96,6 +96,10 @@ public class GettingStartedWebMixed extends HttpServlet {
             "web-getting-started.mixed-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedwebmixed.java";
 
     private static final long serialVersionUID = 1734154705981153541L;
+    /**
+     * The port the example listens on.
+     */
+    public static final int DEFAULT_PORT = 5151;
     public static Logger logger = LoggerFactory.getLogger(GettingStartedWebMixed.class);
 
     public static final String DD_DATA_FILE_DEFAULT = "device-detection/51Degrees-LiteV4.1.hash";
@@ -133,7 +137,7 @@ public class GettingStartedWebMixed extends HttpServlet {
         }
 
         // Start Jetty with this WebApp
-        EmbedJetty.runWebApp(getResourceBase(), 8081);
+        EmbedJetty.runWebApp(getResourceBase(), DEFAULT_PORT);
     }
 
     public static String getResourceBase() {
@@ -154,6 +158,9 @@ public class GettingStartedWebMixed extends HttpServlet {
         // The detection has already been carried out by the PipelineFilter,
         // which closes the FlowData at the end of the request, so it is not
         // closed here.
+        // A Flow Data cannot be used by two threads at once. Work handed to
+        // another thread or task gets the values it needs, read here on the
+        // request's thread, not the Flow Data.
         FlowData flowData = flowDataProvider.getFlowData(request);
 
         // Determine target IP for display.

@@ -242,12 +242,12 @@ public class JsonBuilderElement
 
         for (Map.Entry<String, Object> element : data.elementDataAsMap().entrySet()) {
             if (elementBlacklist.contains(element.getKey()) == false &&
-                allProperties.containsKey(element.getKey().toLowerCase()) == false) {
+                allProperties.containsKey(element.getKey().toLowerCase(Locale.ROOT)) == false) {
                 Map<String, Object> elementProperties = getValues(
-                    element.getKey().toLowerCase(),
+                    element.getKey().toLowerCase(Locale.ROOT),
                     ((ElementData)element.getValue()).asKeyMap(),
                     config);
-                allProperties.put(element.getKey().toLowerCase(), elementProperties);
+                allProperties.put(element.getKey().toLowerCase(Locale.ROOT), elementProperties);
             }
         }
 
@@ -280,7 +280,7 @@ public class JsonBuilderElement
             throw new IllegalArgumentException("config");
         }
 
-        dataPath = dataPath.toLowerCase();
+        dataPath = dataPath.toLowerCase(Locale.ROOT);
         Map<String, Object> values = new HashMap<>();
         for (Map.Entry<String, Object> value : sourceData.entrySet()) {
             Object propertyValue = null;
@@ -292,8 +292,8 @@ public class JsonBuilderElement
                     propertyValue = aspectProperty.getValue();
                 }
                 else {
-                    values.put(value.getKey().toLowerCase(), null);
-                    values.put(value.getKey().toLowerCase() + "nullreason",
+                    values.put(value.getKey().toLowerCase(Locale.ROOT), null);
+                    values.put(value.getKey().toLowerCase(Locale.ROOT) + "nullreason",
                         aspectProperty.getNoValueMessage());
                 }
             }
@@ -303,7 +303,7 @@ public class JsonBuilderElement
 
             String completeName = dataPath +
                 EVIDENCE_SEPERATOR +
-                value.getKey().toLowerCase();
+                value.getKey().toLowerCase(Locale.ROOT);
 
             if (propertyValue != null) {
                 // If the value is a list of complex types then
@@ -317,7 +317,7 @@ public class JsonBuilderElement
                     List<Object> results = new ArrayList<>();
                     for (Object elementData : elementDatas) {
                         results.add(getValues(
-                            dataPath + "." + value.getKey().toLowerCase(),
+                            dataPath + "." + value.getKey().toLowerCase(Locale.ROOT),
                             ((ElementData) elementData).asKeyMap(),
                             config));
                     }
@@ -330,11 +330,11 @@ public class JsonBuilderElement
                 }
 
                 // Add this value to the output
-                values.put(value.getKey().toLowerCase(), propertyValue);
+                values.put(value.getKey().toLowerCase(Locale.ROOT), propertyValue);
 
                 // Add 'delayexecution' flag if needed.
                 if (config.delayedExecutionProperties.contains(completeName)) {
-                    values.put(value.getKey().toLowerCase() + "delayexecution", true);
+                    values.put(value.getKey().toLowerCase(Locale.ROOT) + "delayexecution", true);
                 }
             }
             // Add evidence properties list if needed.
@@ -342,7 +342,7 @@ public class JsonBuilderElement
             if (config.delayedEvidenceProperties.containsKey(completeName)) {
                 List<String> evidenceProperties = config.delayedEvidenceProperties
                     .get(completeName);
-                values.put(value.getKey().toLowerCase() + "evidenceproperties", evidenceProperties);
+                values.put(value.getKey().toLowerCase(Locale.ROOT) + "evidenceproperties", evidenceProperties);
             }
         }
         return values;
@@ -393,7 +393,7 @@ public class JsonBuilderElement
                 for (Object propertyObject : entry.entrySet()) {
                     Map.Entry<?,?> property = (Entry<?, ?>)propertyObject;
                     props.add(
-                        element.getKey().toLowerCase() + EVIDENCE_SEPERATOR + property.getKey().toString().toLowerCase());
+                        element.getKey().toLowerCase(Locale.ROOT) + EVIDENCE_SEPERATOR + property.getKey().toString().toLowerCase(Locale.ROOT));
                 }
             }
         }
@@ -423,13 +423,13 @@ public class JsonBuilderElement
         keys = javascriptPropertiesMap.keySet().toArray(keys);
         for(String key : keys) {
             if(containsIgnoreCase(props, key) == false) {
-                javascriptPropertiesMap.remove(key.toLowerCase());
+                javascriptPropertiesMap.remove(key.toLowerCase(Locale.ROOT));
             }
         }
 
         List<String> javascriptPropertyNames = new ArrayList<>();
         for (String name : javascriptPropertiesMap.keySet()) {
-            javascriptPropertyNames.add(name.toLowerCase());
+            javascriptPropertyNames.add(name.toLowerCase(Locale.ROOT));
         }
         return javascriptPropertyNames;
     }
@@ -461,7 +461,7 @@ public class JsonBuilderElement
     }
 
     static String resolveName(String name) {
-        return name == JAVASCRIPT_PROPERTIES_NAME ? name : name.toLowerCase();
+        return name == JAVASCRIPT_PROPERTIES_NAME ? name : name.toLowerCase(Locale.ROOT);
     }
 
     private String buildJson(Map<String, Object> allProperties) {
@@ -534,7 +534,7 @@ public class JsonBuilderElement
             pipeline.getElementAvailableProperties().entrySet()) {
 
             for (String propertyName : getDelayedPropertyNames(
-                element.getKey().toLowerCase(),
+                element.getKey().toLowerCase(Locale.ROOT),
                 element.getValue().values())) {
                 config.delayedExecutionProperties.add(propertyName);
             }
@@ -548,8 +548,8 @@ public class JsonBuilderElement
             pipeline.getElementAvailableProperties().entrySet()) {
             for (Map.Entry<String, List<String>> property : getEvidencePropertyNames(
                 config.delayedExecutionProperties,
-                element.getKey().toLowerCase(),
-                element.getKey().toLowerCase(),
+                element.getKey().toLowerCase(Locale.ROOT),
+                element.getKey().toLowerCase(Locale.ROOT),
                 element.getValue().values()).entrySet()) {
                 config.delayedEvidenceProperties.put(
                     property.getKey(),
@@ -574,7 +574,7 @@ public class JsonBuilderElement
                 property.getType().equals(JavaScript.class)) {
                 result.add(dataPath +
                     EVIDENCE_SEPERATOR +
-                    property.getName().toLowerCase());
+                    property.getName().toLowerCase(Locale.ROOT));
             }
 
             // Call recursively for any properties that have sub-properties.
@@ -606,7 +606,7 @@ public class JsonBuilderElement
                 for (String evidenceProperty : property.getEvidenceProperties()) {
                     String evidenceName = elementDataKey +
                         EVIDENCE_SEPERATOR +
-                        evidenceProperty.toLowerCase();
+                        evidenceProperty.toLowerCase(Locale.ROOT);
                     if (delayedExecutionProperties.contains(evidenceName)) {
                         evidenceProperties.add(evidenceName);
                     }
@@ -616,7 +616,7 @@ public class JsonBuilderElement
             // more evidence properties.
             if (evidenceProperties.size() > 0) {
                 result.put(propertyDataPath + EVIDENCE_SEPERATOR +
-                    property.getName().toLowerCase(),
+                    property.getName().toLowerCase(Locale.ROOT),
                     evidenceProperties);
             }
 

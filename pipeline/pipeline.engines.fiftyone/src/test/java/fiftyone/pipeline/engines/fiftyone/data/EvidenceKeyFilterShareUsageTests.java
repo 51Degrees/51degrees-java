@@ -22,6 +22,8 @@
 
 package fiftyone.pipeline.engines.fiftyone.data;
 
+import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
+import fiftyone.pipeline.core.data.EvidenceKeyFilter;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -47,6 +49,10 @@ public class EvidenceKeyFilterShareUsageTests {
             includedQueryStringParams,
             includeSession,
             DEFAULT_SESSION_COOKIE_NAME);
+    }
+
+    private static EvidenceKeyFilter uses(String... keys) {
+        return new EvidenceKeyFilterWhitelist(Arrays.asList(keys));
     }
 
     private static EvidenceKeyFilterShareUsage defaults() {
@@ -86,11 +92,6 @@ public class EvidenceKeyFilterShareUsageTests {
     }
 
     /**
-     * By default headers other than Cookie are shared, cookies, session
-     * values and query string parameters only when their names start with
-     * 51D_, and any other evidence.
-     */
-    /**
      * The whole web request is read by the Usage Sharing Element and never
      * shared as a value, so the filter does not include it.
      */
@@ -103,9 +104,10 @@ public class EvidenceKeyFilterShareUsageTests {
     }
 
     /**
-     * By default every header but Cookie, every query string parameter but
-     * those never shared, and any other evidence are shared, and cookies and
-     * session values only when their names start with 51D_.
+     * By default every header but Cookie and any other evidence are shared,
+     * cookies and session values only when their names start with 51D_, and
+     * query string parameters only when their names start with 51D_ or the
+     * Pipeline uses them.
      */
     @Test
     public void defaultRules() {
@@ -121,8 +123,11 @@ public class EvidenceKeyFilterShareUsageTests {
         assertFalse(filter.include("session.org.example.attribute"));
         assertTrue(filter.include("query.51d_gethighentropyvalues"));
         assertTrue(filter.include("query.51D_Test"));
-        assertTrue(filter.include("query.password"));
-        assertTrue(filter.include("Query.Utm_Source"));
+        assertFalse(filter.include("query.password"));
+        assertFalse(filter.include("Query.Utm_Source"));
+        assertTrue(filter.include(
+            "query.utm_source",
+            uses("query.utm_source")));
         assertFalse(filter.include("query.id.email"));
         assertFalse(filter.include("server.request-query"));
         assertTrue(filter.include("server.client-ip"));
@@ -130,8 +135,8 @@ public class EvidenceKeyFilterShareUsageTests {
     }
 
     /**
-     * With share all query string parameters off, only the 51D_ parameters
-     * and those named are shared.
+     * The deprecated included parameters list has no effect, so only the
+     * 51D_ parameters and those the Pipeline uses are shared.
      */
     @Test
     public void shareAllQueryStringParametersOff_OnlyNamedAnd51D() {
@@ -140,7 +145,8 @@ public class EvidenceKeyFilterShareUsageTests {
             Collections.singletonList("campaign"));
 
         assertFalse(filter.include("query.password"));
-        assertTrue(filter.include("query.campaign"));
+        assertFalse(filter.include("query.campaign"));
+        assertTrue(filter.include("query.campaign", uses("query.campaign")));
         assertTrue(filter.include("query.51D_Test"));
         assertTrue(filter.include("header.user-agent"));
     }
@@ -163,7 +169,12 @@ public class EvidenceKeyFilterShareUsageTests {
             assertFalse(filter.include("cookie.a.b"));
             assertTrue(filter.include("session.org.example.attribute"));
             assertTrue(filter.include("header.x-anything"));
-            assertTrue(filter.include("query.password"));
+            // Not even all Evidence shares a parameter the Pipeline does
+            // not use.
+            assertFalse(filter.include("query.password"));
+            assertTrue(filter.include(
+                "query.user-agent",
+                uses("query.user-agent")));
         }
         assertFalse(sent.include("cookie." + DEFAULT_SESSION_COOKIE_NAME));
         assertTrue(kept.include("cookie." + DEFAULT_SESSION_COOKIE_NAME));
@@ -200,23 +211,24 @@ public class EvidenceKeyFilterShareUsageTests {
     }
 
     /**
-     * A name containing a dot is matched as a whole against the parameters to
-     * share.
+     * A name containing a dot is matched as a whole against the keys the
+     * Pipeline uses.
      */
     @Test
     public void fieldIsEverythingAfterTheFirstDot() {
         EvidenceKeyFilterShareUsage filter = namedParametersOnly(
             Collections.<String>emptyList(),
             Collections.singletonList("valid.email"));
+        EvidenceKeyFilter uses = uses("query.valid.email");
 
-        assertTrue(filter.include("query.valid.email"));
-        assertFalse(filter.include("query.valid"));
-        assertFalse(filter.include("query.other.name"));
+        assertTrue(filter.include("query.valid.email", uses));
+        assertFalse(filter.include("query.valid", uses));
+        assertFalse(filter.include("query.other.name", uses));
     }
 
     /**
-     * The headers not to share and the parameters to share are matched
-     * without regard to case.
+     * The headers not to share are matched without regard to case. The
+     * deprecated parameters to share have no effect.
      */
     @Test
     public void listsIgnoreCase() {
@@ -225,7 +237,7 @@ public class EvidenceKeyFilterShareUsageTests {
             Collections.singletonList("Campaign"));
 
         assertFalse(filter.include("header.x-secret"));
-        assertTrue(filter.include("query.campaign"));
+        assertFalse(filter.include("query.campaign"));
         assertTrue(filter.include("header.user-agent"));
     }
 
@@ -329,7 +341,9 @@ public class EvidenceKeyFilterShareUsageTests {
             Collections.singletonList("valid.email"),
             false);
 
-        assertTrue(filter.include("query.valid.email"));
+        assertTrue(filter.include(
+            "query.valid.email",
+            uses("query.valid.email")));
     }
 
     /**
@@ -343,8 +357,12 @@ public class EvidenceKeyFilterShareUsageTests {
             Collections.singletonList("utm_source"),
             false);
 
-        assertTrue(filter.include("query.utm_source"));
-        assertFalse(filter.include("server.request-query"));
+        assertTrue(filter.include(
+            "query.utm_source",
+            uses("query.utm_source")));
+        assertFalse(filter.include(
+            "server.request-query",
+            uses("server.request-query")));
     }
 
     /**

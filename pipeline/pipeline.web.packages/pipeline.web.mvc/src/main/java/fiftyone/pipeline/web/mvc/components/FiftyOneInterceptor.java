@@ -58,6 +58,11 @@ import static fiftyone.pipeline.web.Constants.DEFAULT_JSON_PATH;
  * This carries out the processing on the device making the request using the
  * Pipeline which has been constructed, and intercepts requests for the
  * 51Degrees JavaScript.
+ * <p>
+ * A Flow Data cannot be used by two threads at once. Application code reads
+ * the values it needs from the Flow Data on the request's thread, and hands
+ * those values, not the Flow Data, to any other thread or task. The Flow
+ * Data is closed when the request ends.
  */
 @Component
 public class FiftyOneInterceptor extends HandlerInterceptorAdapter {

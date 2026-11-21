@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -235,7 +236,7 @@ public class SetHeadersElement
 		PipelineConfig config = new PipelineConfig();
 		pipeline.getElementAvailableProperties().forEach((k, v) -> {
 			v.forEach((p, m) -> {
-				if (p.toLowerCase()
+				if (p.toLowerCase(Locale.ROOT)
 					.startsWith(SET_HEADER_PREFIX_LOWER_CASE)) {
 					PropertyDetails details = new PropertyDetails();
 					details.propertyMetaData = m;

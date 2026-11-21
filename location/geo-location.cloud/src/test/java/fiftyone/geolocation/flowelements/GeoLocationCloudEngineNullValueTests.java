@@ -36,6 +36,7 @@ import fiftyone.pipeline.engines.exceptions.PropertyMissingException;
 import fiftyone.pipeline.engines.services.MissingPropertyServiceDefault;
 import org.junit.Test;
 import org.slf4j.ILoggerFactory;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
@@ -46,8 +47,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static fiftyone.pipeline.cloudrequestengine.Constants.Messages.NoCloudResponse;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -142,6 +147,27 @@ public class GeoLocationCloudEngineNullValueTests {
         }
     }
 
+    /**
+     * A failed cloud request leaves no response. The engine processes
+     * nothing, throws nothing and logs one warning each time, as the Cloud
+     * Request Engine's error says why.
+     */
+    @Test
+    public void NoResponse_ProcessesNothing() throws Exception {
+        Logger logger = mock(Logger.class);
+        ILoggerFactory warnings = mock(ILoggerFactory.class);
+        when(warnings.getLogger(anyString())).thenReturn(logger);
+        try (GeoLocationCloudEngine engine = buildEngine(warnings)) {
+            for (String response : new String[] { null, "" }) {
+                CloudGeoData data = process(engine, response);
+
+                assertFalse(data.asKeyMap().containsKey("Town"));
+            }
+        }
+        verify(logger, times(2)).warn(String.format(
+            NoCloudResponse, GeoLocationCloudEngine.class.getSimpleName()));
+    }
+
     private static void assertMissing(Runnable read) {
         try {
             read.run();
@@ -183,8 +209,16 @@ public class GeoLocationCloudEngineNullValueTests {
      * the Suburb and Town properties.
      */
     private GeoLocationCloudEngine buildEngine() throws Exception {
+        return buildEngine(loggerFactory);
+    }
+
+    /**
+     * The same engine, logging through the given factory.
+     */
+    private GeoLocationCloudEngine buildEngine(ILoggerFactory engineLoggers)
+        throws Exception {
         GeoLocationCloudEngine engine =
-            new GeoLocationCloudEngineBuilder(loggerFactory)
+            new GeoLocationCloudEngineBuilder(engineLoggers)
                 .build(Enums.GeoLocationProvider.FiftyOneDegrees);
 
         ProductMetaData product = new ProductMetaData();

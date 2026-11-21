@@ -687,4 +687,51 @@ public class CloudRequestEngineLicenseKeyTests {
 
         verify(logger, never()).warn(anyString());
     }
+
+    // The warnings array of the response, which the specification's HTTP
+    // requests section says is logged as warnings, as the errors array is
+    // thrown.
+
+    @Test
+    public void Process_Warnings_EachLoggedAsAWarning() throws Exception {
+        cloud.dataResponse = "{\"device\":{\"ismobile\":true}," +
+            "\"warnings\":[\"First warning\",\"Second warning\"]}";
+        CloudRequestEngine engine = build(builder()
+            .setResourceKey(RESOURCE_KEY));
+
+        assertEquals("", process(engine));
+
+        verify(logger, times(1)).warn("First warning");
+        verify(logger, times(1)).warn("Second warning");
+    }
+
+    @Test
+    public void Process_WarningNamingTheLicenseKey_LoggedMasked()
+        throws Exception {
+        String warning = "License key " + LICENSE_KEY + " expires soon";
+        cloud.dataResponse = "{\"device\":{\"ismobile\":true," +
+            "\"iscrawler\":false},\"warnings\":[\"" + warning + "\"]}";
+        CloudRequestEngine engine = build(builder()
+            .setLicenseKey(LICENSE_KEY)
+            .setRequestedProperties(PROPERTY_LIST));
+
+        assertEquals("", process(engine));
+
+        verify(logger, times(1)).warn(argThat((String m) ->
+            m.startsWith("License key ") && m.endsWith(" expires soon")));
+        verify(logger, never()).warn(argThat((String m) ->
+            m.contains(LICENSE_KEY)));
+    }
+
+    @Test
+    public void Process_NoWarnings_NothingLogged() throws Exception {
+        cloud.dataResponse = "{\"device\":{\"ismobile\":true}," +
+            "\"warnings\":[]}";
+        CloudRequestEngine engine = build(builder()
+            .setResourceKey(RESOURCE_KEY));
+
+        assertEquals("", process(engine));
+
+        verify(logger, never()).warn(anyString());
+    }
 }

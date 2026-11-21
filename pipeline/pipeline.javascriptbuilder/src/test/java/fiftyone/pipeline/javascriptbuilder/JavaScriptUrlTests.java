@@ -143,6 +143,50 @@ public class JavaScriptUrlTests {
     }
 
     /**
+     * Evidence keys ignore case, so query Evidence whose prefix is not in
+     * lower case reaches the parameters object, and the session id and
+     * sequence stay out of it whatever their case.
+     */
+    @Test
+    public void Parameters_QueryPrefixInAnyCase() throws Exception {
+        JavaScriptBuilderElement jsElement =
+            new JavaScriptBuilderElementBuilder(loggerFactory)
+                .setEndpoint("/json")
+                .setHost("example.com")
+                .setProtocol("https")
+                .setMinify(false)
+                .build();
+        String javaScript;
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+            .addFlowElement(new SequenceElementBuilder(loggerFactory).build())
+            .addFlowElement(new JsonBuilderElementBuilder(loggerFactory).build())
+            .addFlowElement(jsElement)
+            .build();
+             FlowData flowData = pipeline.createFlowData()) {
+            flowData.addEvidence("Query.Extra", "one");
+            flowData.addEvidence("QUERY.Other", "two");
+            flowData.addEvidence("Query.Session-Id", "a-session");
+            flowData.process();
+            javaScript = flowData.getFromElement(jsElement).getJavaScript();
+        }
+        String parameters = null;
+        for (String line : javaScript.split("\\r?\\n")) {
+            if (line.toLowerCase().contains("parameters =")
+                    && line.contains("{")) {
+                parameters = line;
+                break;
+            }
+        }
+        assertNotNull(parameters, "No parameters object in the script.");
+        assertTrue(parameters.contains("\"Extra\":\"one\""),
+            "Query.Extra is not in the parameters: " + parameters);
+        assertTrue(parameters.contains("\"Other\":\"two\""),
+            "QUERY.Other is not in the parameters: " + parameters);
+        assertFalse(parameters.toLowerCase().contains("session-id"),
+            "The session id is in the parameters: " + parameters);
+    }
+
+    /**
      * A context root still sits between the host and the endpoint, and the
      * URL still carries no query string.
      */

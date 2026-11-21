@@ -38,6 +38,10 @@ import org.slf4j.Logger;
 
 /**
  * Sequence element establishes session and sequence evidence in the pipeline.
+ * As it adds Evidence, it must not run in a parallel group. Add it on its
+ * own, before the elements that read the session and sequence. The Pipeline
+ * does not check this.
+ * @see <a href="https://github.com/51Degrees/specifications/blob/d79bbe3b2aef86273570742f6b660f29bfe72816/pipeline-specification/features/thread-safety.md#evidence">Specification, Evidence in a parallel group</a>
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/pipeline-elements/sequence-element.md">Specification</a>
  */
 public class SequenceElement 

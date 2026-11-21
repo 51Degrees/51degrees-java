@@ -55,7 +55,17 @@ repositories used to do for one package tree each.
   downloads its free data file exactly when the job expects it to. That
   workflow's Ubuntu job downloads each product's free data file once a run,
   as a test of the download, and its other jobs take the file from the cache
-  the Ubuntu job saves.
+  the Ubuntu job saves. To run it by hand, build the console examples as
+  [AGENTS.md](../AGENTS.md#build) says, then from the repository root give
+  `-ExpectDownload` when the free data file is only a link, and leave it out
+  when the file is there.
+
+  ```
+  pwsh -File ./ci/run-fresh-clone-example.ps1 -Product device-detection -Example fiftyone.devicedetection.examples.console.GettingStartedOnPrem -ExpectDownload
+  ```
+
+  [run-fresh-clone-example.Tests.ps1](run-fresh-clone-example.Tests.ps1)
+  tests it with `pwsh -File` and with the workflow's own calls.
 - [run-performance-tests.ps1](run-performance-tests.ps1) measures the Pipeline
   API, Device Detection and IP Intelligence and writes one results file per
   configuration. The Device Detection and IP Intelligence metrics are prefixed

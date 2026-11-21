@@ -62,6 +62,24 @@ public interface Pipeline extends AutoCloseable {
     boolean isConcurrent();
 
     /**
+     * True if exceptions that happen while processing are recorded in
+     * {@link FlowData#getErrors()} and logged, rather than thrown once
+     * processing is complete. A wrapper of the Pipeline, such as the web
+     * integration, can read it to decide whether to suppress and log an
+     * exception of its own. See the
+     * <a href="https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/features/exception-handling.md#L42">exception handling specification</a>.
+     * <p>
+     * The default gives the builder's default, so that an implementation
+     * written before this method was added still compiles. Override it to
+     * give the real setting.
+     * @return true if exceptions during processing are suppressed
+     */
+    default boolean isSuppressProcessExceptions() {
+        return fiftyone.pipeline.core.Constants
+            .DEFAULT_SUPPRESS_PROCESS_EXCEPTIONS;
+    }
+
+    /**
      * Indicates whether the Pipeline has been closed using the {@link #close()}
      * method, either explicitly or as a result of a 'try with resource'.
      * @return true if the Pipeline has been closed

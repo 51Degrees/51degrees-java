@@ -23,6 +23,7 @@
 package fiftyone.devicedetection.examples.console;
 
 import fiftyone.devicedetection.examples.shared.FindOutMore;
+import fiftyone.devicedetection.examples.shared.KeyHelper;
 import fiftyone.devicedetection.cloud.data.MultiDeviceDataCloud;
 import fiftyone.devicedetection.cloud.flowelements.HardwareProfileCloudEngineBuilder;
 import fiftyone.devicedetection.shared.Constants;
@@ -55,7 +56,17 @@ public class NativeModelCloud {
 
     public static void main (String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
-        String resourceKey = args.length > 0 ? args[0] : null;
+        String resourceKey = KeyHelper.findResourceKey(
+                args.length > 0 ? args[0] : null,
+                NATIVE_MODEL_EXAMPLE_RESOURCE_KEY_NAME);
+        if (resourceKey == null) {
+            KeyHelper.writeNoResourceKey(System.out, EXAMPLE_TAG,
+                    NATIVE_MODEL_EXAMPLE_RESOURCE_KEY_NAME,
+                    KeyHelper.PAID_PROPERTIES_CONFIGURATION);
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES);
+            return;
+        }
         run(resourceKey, System.out);
     }
 

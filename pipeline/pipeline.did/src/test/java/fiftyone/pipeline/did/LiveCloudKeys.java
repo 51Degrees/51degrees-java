@@ -22,9 +22,6 @@
 
 package fiftyone.pipeline.did;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * Where the tests that call the live 51Degrees cloud service read their
@@ -51,7 +48,6 @@ final class LiveCloudKeys {
         "_51DEGREES_RESOURCE_KEY",
         "_51DEGREES_RESOURCE_KEY_BESPOKE",
         "TestResourceKey",
-        "SUPER_RESOURCE_KEY",
     };
 
     /**
@@ -70,40 +66,12 @@ final class LiveCloudKeys {
     }
 
     /**
-     * The names that have a deprecated old name, each followed by it. The
-     * old name is read only when its new name is not set.
-     */
-    private static final String[][] DEPRECATED_NAMES = {
-        {"_51DEGREES_RESOURCE_KEY", "RESOURCE_KEY"},
-        {"_51DEGREES_LICENSE_KEY", "LICENSE_KEY"},
-    };
-
-    /** The old names whose use has been reported, each reported once. */
-    private static final Set<String> REPORTED_OLD_NAMES =
-        Collections.synchronizedSet(new HashSet<String>());
-
-    /**
      * The first value set under any of the given names, or null when none
-     * of them is set anywhere. A name with a deprecated old name falls
-     * back to it, saying so on standard error the first time.
+     * of them is set anywhere.
      */
     static String find(String[] names) {
         for (String name : names) {
             String value = read(name);
-            if (value == null) {
-                String oldName = oldNameOf(name);
-                if (oldName != null) {
-                    value = read(oldName);
-                    if (value != null && REPORTED_OLD_NAMES.add(oldName)) {
-                        System.err.println(
-                            "The environment variable " + oldName
-                            + " is deprecated and " + name
-                            + " replaces it. Set " + name
-                            + " to the same value, as a later release may no longer "
-                            + "read " + oldName + ".");
-                    }
-                }
-            }
             if (value != null) {
                 return value;
             }
@@ -122,15 +90,6 @@ final class LiveCloudKeys {
             value = System.getProperty(name);
         }
         return value == null || value.trim().isEmpty() ? null : value.trim();
-    }
-
-    private static String oldNameOf(String name) {
-        for (String[] pair : DEPRECATED_NAMES) {
-            if (pair[0].equals(name)) {
-                return pair[1];
-            }
-        }
-        return null;
     }
 
     /**

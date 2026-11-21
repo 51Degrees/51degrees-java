@@ -25,6 +25,7 @@ package fiftyone.devicedetection.examples.shared;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.PrintStream;
 import java.util.*;
 import java.util.function.Function;
 
@@ -48,7 +49,7 @@ public class KeyHelper {
     public static String getNamedKey(String keyName) {
         String key = System.getenv(keyName);
         if (Objects.isNull(key)) {
-            key = System.getenv(keyName.toUpperCase());
+            key = System.getenv(keyName.toUpperCase(Locale.ROOT));
             if (Objects.isNull(key)) {
                 key = System.getProperty(keyName);
             }
@@ -84,6 +85,78 @@ public class KeyHelper {
 
     static final String CREATE_KEY_URL =
         "https://51degrees.com/configure/?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-devicedetection-examples-shared-keyhelper.java&utm_term=no-resource-key";
+
+    /**
+     * The variable a cloud example reads its resource key from first.
+     */
+    public static final String RESOURCE_KEY_VARIABLE =
+        "_51DEGREES_RESOURCE_KEY";
+
+    /**
+     * The configuration page that creates a key with the free properties
+     * the cloud examples use.
+     */
+    public static final String FREE_PROPERTIES_CONFIGURATION =
+        "configure/jqz435Nc";
+
+    /**
+     * The configuration page that creates a key with the properties the
+     * TAC and native model examples use, which need a paid licence.
+     */
+    public static final String PAID_PROPERTIES_CONFIGURATION =
+        "configure/QKyYH5XT";
+
+    /**
+     * The resource key a cloud example runs with, being the key given as
+     * its argument, or else the first of the names that holds one, read as
+     * an environment variable, under its upper case name and as a system
+     * property.
+     * @param argument the key given on the command line, or null
+     * @param names the names to read, in order
+     * @return the key, or null when there is none
+     */
+    public static String findResourceKey(String argument, String... names) {
+        if (isInvalidKey(argument) == false) {
+            return argument.trim();
+        }
+        for (String name : names) {
+            String value = readKey(name);
+            if (value != null) {
+                return value.trim();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Writes what a cloud example needs when it has no resource key, being
+     * the variable to set and the page where a key is created, so that the
+     * example can end without an error.
+     * @param output where to write
+     * @param example the example's tag, as its Find out more section has it
+     * @param variable the variable the example reads its key from
+     * @param configuration the configuration page for the key, such as
+     *                      {@link #FREE_PROPERTIES_CONFIGURATION}
+     */
+    public static void writeNoResourceKey(PrintStream output, String example,
+                                          String variable,
+                                          String configuration) {
+        output.println();
+        output.println("This example calls the 51Degrees cloud service, " +
+            "which needs a resource key, and none is set.");
+        output.println("Set the " + variable + " environment variable to a " +
+            "resource key, or give the key as the first argument, and run " +
+            "the example again.");
+        output.println("Create a resource key with the properties this " +
+            "example uses at " +
+            FindOutMore.link(configuration, example, "no-resource-key"));
+        if (PAID_PROPERTIES_CONFIGURATION.equals(configuration)) {
+            output.println("These properties need a paid licence. Contact " +
+                "us about one at " +
+                FindOutMore.link("contact-us", example, "no-resource-key"));
+        }
+        output.flush();
+    }
 
     /**
      * The resource key for a test that calls the live cloud service, from
@@ -179,7 +252,7 @@ public class KeyHelper {
     private static String readKey(String name) {
         for (String value : new String[]{
             System.getenv(name),
-            System.getenv(name.toUpperCase()),
+            System.getenv(name.toUpperCase(Locale.ROOT)),
             System.getProperty(name)}) {
             if (isInvalidKey(value) == false) {
                 return value;
