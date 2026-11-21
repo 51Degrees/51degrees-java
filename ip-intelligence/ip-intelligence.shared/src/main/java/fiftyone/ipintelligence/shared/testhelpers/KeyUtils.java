@@ -31,8 +31,8 @@ import java.util.Objects;
  */
 public class KeyUtils {
     /**
-     * Name of the aligned environment variable or system property which
-     * supplies the resource key. This name is checked before any legacy name.
+     * Name of the environment variable or system property which supplies
+     * the resource key. It is the only name read.
      */
     public static final String RESOURCE_KEY_VARIABLE = "_51DEGREES_RESOURCE_KEY";
 
@@ -45,20 +45,25 @@ public class KeyUtils {
     public static final String RESOURCE_KEY_ENV_VAR = "51DEGREES_RESOURCE_KEY";
 
     /**
-     * Obtain a resource key from an environment variable or a system property.
-     * <p>
-     * The aligned name {@link #RESOURCE_KEY_VARIABLE} is checked first. The
-     * supplied legacy name is checked when it is not set. Each name is looked up using
+     * Obtain the resource key from the environment variable or system
+     * property {@link #RESOURCE_KEY_VARIABLE}, looked up using
      * {@link #getNamedKey(String)}.
-     * @param legacyKeyName legacy name to try when the aligned name is not set
-     * @return the resource key, or null if no name is set
+     * @return the resource key, or null if it is not set
      */
+    public static String getResourceKey() {
+        return getNamedKey(RESOURCE_KEY_VARIABLE);
+    }
+
+    /**
+     * Obtain the resource key from {@link #RESOURCE_KEY_VARIABLE}. The name
+     * passed is no longer read.
+     * @param legacyKeyName an old name, which is not read
+     * @return the resource key, or null if it is not set
+     * @deprecated use {@link #getResourceKey()}
+     */
+    @Deprecated
     public static String getResourceKey(String legacyKeyName) {
-        String resourceKey = getNamedKey(RESOURCE_KEY_VARIABLE);
-        if (Objects.isNull(resourceKey)) {
-            resourceKey = getNamedKey(legacyKeyName);
-        }
-        return resourceKey;
+        return getResourceKey();
     }
 
     /**

@@ -54,15 +54,14 @@ public class MetadataCloud {
     /**
      * The resource key can be supplied as an argument to this program, or
      * as an environment variable or Java system property called
-     * "_51DEGREES_RESOURCE_KEY", or the older "TestResourceKey". With none,
+     * "_51DEGREES_RESOURCE_KEY". With none,
      * the example says how to get one and ends.
      */
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
         String resourceKey = KeyHelper.findResourceKey(
                 args.length > 0 ? args[0] : null,
-                KeyHelper.RESOURCE_KEY_VARIABLE,
-                KeyHelper.TEST_RESOURCE_KEY);
+                KeyHelper.RESOURCE_KEY_VARIABLE);
         if (resourceKey == null) {
             KeyHelper.writeNoResourceKey(System.out, EXAMPLE_TAG,
                     KeyHelper.RESOURCE_KEY_VARIABLE,

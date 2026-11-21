@@ -30,7 +30,18 @@ import java.util.*;
 import java.util.function.Function;
 
 public class KeyHelper {
-    public static final String TEST_RESOURCE_KEY = "TestResourceKey";
+    /**
+     * The variable the cloud examples and their tests read a resource key
+     * from.
+     */
+    public static final String TEST_RESOURCE_KEY = "_51DEGREES_RESOURCE_KEY";
+
+    /**
+     * The variable the TAC and native model examples and their tests read
+     * the resource key with every property from.
+     */
+    public static final String SUPER_RESOURCE_KEY_VARIABLE =
+        "_51DEGREES_RESOURCE_KEY_SUPER";
     static Logger logger = LoggerFactory.getLogger(KeyHelper.class);
 
     /**
@@ -73,15 +84,6 @@ public class KeyHelper {
             return true;
         }
     }
-
-    /**
-     * The names every cloud test reads a resource key from first, before
-     * the names its own example reads.
-     */
-    public static final List<String> SHARED_RESOURCE_KEY_NAMES =
-        Collections.unmodifiableList(Arrays.asList(
-            "_51DEGREES_RESOURCE_KEY",
-            "_51DEGREES_RESOURCE_KEY_BESPOKE"));
 
     static final String CREATE_KEY_URL =
         "https://51degrees.com/configure/?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-devicedetection-examples-shared-keyhelper.java&utm_term=no-resource-key";
@@ -160,9 +162,9 @@ public class KeyHelper {
 
     /**
      * The resource key for a test that calls the live cloud service, from
-     * {@link #SHARED_RESOURCE_KEY_NAMES} and then {@link #TEST_RESOURCE_KEY}.
-     * Fails the test when there is none, because a cloud test that passes
-     * without a key has called nothing.
+     * {@link #TEST_RESOURCE_KEY}. Skips the test, naming the variable, when
+     * there is none, because a cloud test that passes without a key has
+     * called nothing.
      * @param asksFor what the test asks the service for
      * @param products the products the key has to carry
      * @return the resource key
@@ -175,7 +177,7 @@ public class KeyHelper {
 
     /**
      * The resource key for a test that calls the live cloud service, from
-     * {@link #SHARED_RESOURCE_KEY_NAMES} and then the given names.
+     * the given names only. Skips the test, naming them, when there is none.
      * @param exampleNames the names the example reads, in the order it
      *                     reads them
      * @param asksFor what the test asks the service for
@@ -193,24 +195,43 @@ public class KeyHelper {
                                      List<String> exampleNames,
                                      String asksFor,
                                      String... products) {
-        List<String> names = new ArrayList<>(SHARED_RESOURCE_KEY_NAMES);
-        names.addAll(exampleNames);
-        for (String name : names) {
+        for (String name : exampleNames) {
             String value = read.apply(name);
             if (isInvalidKey(value) == false) {
                 return value.trim();
             }
         }
-        throw new AssertionError(noResourceKey(names, asksFor, products));
+        throw skipTest(noResourceKey(exampleNames, asksFor, products));
+    }
+
+    /**
+     * The exception that skips a test, being JUnit's
+     * AssumptionViolatedException. It is made by name, because the
+     * examples use KeyHelper too, and run with no test library on their
+     * class path. Where JUnit cannot be found, the exception is an
+     * IllegalStateException with the same message.
+     * @param message why the test is skipped
+     * @return the exception to throw
+     */
+    static RuntimeException skipTest(String message) {
+        try {
+            return (RuntimeException) Class.forName(
+                    "org.junit.AssumptionViolatedException")
+                .getConstructor(String.class)
+                .newInstance(message);
+        } catch (ReflectiveOperationException | LinkageError |
+                 ClassCastException e) {
+            return new IllegalStateException(message);
+        }
     }
 
     static String noResourceKey(List<String> names, String asksFor,
                                 String... products) {
         return "This test calls the live 51Degrees cloud service, so it " +
-            "needs a resource key and there is nothing to fall back on. " +
-            "None of " + String.join(", ", names) + " is set, as an " +
-            "environment variable or as a system property, tried in that " +
-            "order. The key has to carry the " + productList(products) +
+            "needs a resource key, and it is skipped because " +
+            String.join(", ", names) + " is not set as an environment " +
+            "variable or as a system property. " +
+            "The key has to carry the " + productList(products) +
             ", because the test asks the service for " + asksFor + ". To " +
             "see the products a key carries, open " +
             "https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>. " +

@@ -51,9 +51,22 @@ $script:DigitInitialPattern = [regex]::new(
 # query string parameter is on the wire rather than in the environment, so
 # matching in any case would fail on a name that is not an environment
 # variable at all.
+#
+# The second part holds the names this repository used for its keys and for
+# the cloud address before each had a _51DEGREES_ name, and the dropped
+# _51DEGREES_LICENSE_KEY_CLOUDV5BESPOKE. A test read them as a Java string,
+# Maven passed them as system properties with -D, a configuration file
+# named them as placeholders, and the CI scripts took them as parameters
+# and set them as hashtable keys, so a dollar and -D come before one as
+# well. A single quote does not, because the pipeline's documentation names
+# a builder option 'LicenseKey', which is not an environment variable.
 $script:FallbackPattern = [regex]::new(
     '(?:["'']|(?i:env)[:.]\\?|\$\{|getenv\(\s*["'']|^[\t\- ]*)' +
     '(?:RESOURCE_KEY|LICENSE_KEY|FOD_CLOUD_API_URL)(?![A-Za-z0-9_])|' +
+    '(?:"|(?i:env)[:.]\\?|\$\{?|-D|getenv\(\s*"|^[\t\- ]*)' +
+    '(?:TestResourceKey|SuperResourceKey|TestLicenseKey|LicenseKey|' +
+    'TestCloudEnd[Pp]oint|AcceptCh(?:None|Platform|Browser|Hardware)Key|' +
+    '_51DEGREES_LICENSE_KEY_CLOUDV5BESPOKE)(?![A-Za-z0-9_])|' +
     '\bLEGACY_[A-Z_]*ENV_VARS?\b')
 
 # The files that keep a deprecated public constant holding an old name, or

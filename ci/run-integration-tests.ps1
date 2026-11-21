@@ -5,10 +5,6 @@ param(
     # its label for the run. Not set when a pull request is tested, which
     # builds the reactor itself.
     [string]$Version,
-    [string]$TestResourceKey,
-    [string]$DeviceDetection,
-    [string]$IpIntelligence,
-    [string]$IpIntelligenceUrl,
     # False, from select-options.ps1, on every entry of a pull request but
     # one, so the browser contract runs once.
     [bool]$SeleniumContract = $true
@@ -39,10 +35,9 @@ if ($Version) {
 Write-Host "::group::Pipeline developer examples"
 Push-Location "$RepoName/pipeline"
 try {
-    # The cloud engine example calls the live cloud service, so it is given
-    # the test resource key, as the unit test run gives it.
-    mvn test @MavenOptions -DfailIfNoTests=false "-Dsurefire.failIfNoSpecifiedTests=false" -Dtest=ExampleTests `
-        "-DTestResourceKey=$TestResourceKey"
+    # The cloud engine example calls the live cloud service, with the key in
+    # _51DEGREES_RESOURCE_KEY.
+    mvn test @MavenOptions -DfailIfNoTests=false "-Dsurefire.failIfNoSpecifiedTests=false" -Dtest=ExampleTests
     if ($LASTEXITCODE -ne 0) { $failed += 'pipeline developer examples' }
 } finally {
     Pop-Location
@@ -53,29 +48,19 @@ Write-Host "::endgroup::"
 # The product examples. A pull request has already run them in the unit tests,
 # against the reactor, so they are run here only against a published version.
 if ($Version) {
-    $examples = @(
-        @{ Path = 'examples/device-detection'; LicenseKey = $DeviceDetection; Run = $true }
-        # The IP Intelligence examples need the Enterprise data file, which is
-        # only fetched when its URL is given.
-        @{ Path = 'examples/ip-intelligence'; LicenseKey = $IpIntelligence; Run = [bool]$IpIntelligenceUrl }
-    )
+    # The tests read their keys from the _51DEGREES_ environment variables,
+    # and the Enterprise data files were fetched with _51DEGREES_LICENSE_KEY.
+    $examples = @('examples/device-detection', 'examples/ip-intelligence')
     foreach ($example in $examples) {
-        if (-not $example.Run) {
-            Write-Host "::warning title=Examples skipped::Skipping '$($example.Path)', as IpIntelligenceUrl was not provided."
-            continue
-        }
-        Write-Host "::group::$($example.Path) against $($versionArgs -join ' ')"
-        Push-Location "$RepoName/$($example.Path)"
+        Write-Host "::group::$example against $($versionArgs -join ' ')"
+        Push-Location "$RepoName/$example"
         try {
-            mvn clean test @MavenOptions @versionArgs `
-                "-DTestResourceKey=$TestResourceKey" `
-                "-DSuperResourceKey=$TestResourceKey" `
-                "-DLicenseKey=$($example.LicenseKey)"
-            if ($LASTEXITCODE -ne 0) { $failed += $example.Path }
+            mvn clean test @MavenOptions @versionArgs
+            if ($LASTEXITCODE -ne 0) { $failed += $example }
         } finally {
             Pop-Location
         }
-        & "$PSScriptRoot/copy-test-results.ps1" -Path "$RepoName/$($example.Path)" -Destination $results
+        & "$PSScriptRoot/copy-test-results.ps1" -Path "$RepoName/$example" -Destination $results
         Write-Host "::endgroup::"
     }
 } else {
@@ -140,8 +125,8 @@ function Invoke-ContractTests {
 Write-Host "::group::Selenium contract tests"
 if (-not $SeleniumContract) {
     Write-Host "Another entry runs the Selenium contract tests for this pull request."
-} elseif (-not $TestResourceKey) {
-    Write-Host "::warning title=Selenium skipped::No resource key, so the Selenium contract tests were not run against the web examples."
+} elseif (-not $env:_51DEGREES_RESOURCE_KEY) {
+    Write-Host "::warning title=Selenium skipped::_51DEGREES_RESOURCE_KEY is not set, so the Selenium contract tests were not run against the web examples."
 } elseif ($IsLinux -and [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -eq [System.Runtime.InteropServices.Architecture]::Arm64) {
     Write-Host "::warning title=Selenium skipped::Selenium contract skipped on linux-arm64, which has no selenium-manager build. It runs on x64 and macOS arm64."
 } else {
@@ -153,7 +138,8 @@ if (-not $SeleniumContract) {
         git clone --depth 1 --branch $seleniumRef https://github.com/51Degrees/selenium-api-tests.git
     }
     $env:CLOUD_ROOT_URL = "https://cloud.51degrees.com/"
-    $env:PAID_RESOURCE_KEY = $TestResourceKey
+    # The shared suite reads its key under this name of its own.
+    $env:PAID_RESOURCE_KEY = $env:_51DEGREES_RESOURCE_KEY
 
     # Chrome's first start on a fresh runner is many times slower than the
     # starts after it, so it is made here rather than inside the first test.
@@ -168,11 +154,9 @@ if (-not $SeleniumContract) {
         @{
             Label = 'cloud'
             Module = 'web/getting-started.cloud'
+            # The example reads _51DEGREES_RESOURCE_KEY, and the production
+            # cloud unless _51DEGREES_CLOUD_ENDPOINT names another.
             Port = 8099
-            ExampleEnv = @{
-                TestCloudEndpoint = "https://cloud.51degrees.com/api/v4"
-                TestResourceKey = $TestResourceKey
-            }
         }
         # The on-premise example, against the TAC data file that
         # fetch-assets.ps1 links into the data repository. The Lite data file

@@ -43,7 +43,6 @@ import java.util.TreeMap;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -89,9 +88,7 @@ public class CloudRequestEngineLiveTests {
             throws Exception {
         String resourceKey =
             LiveCloudKeys.find(LiveCloudKeys.RESOURCE_KEY_NAMES);
-        if (resourceKey == null) {
-            fail(LiveCloudKeys.noResourceKey());
-        }
+        assumeTrue(resourceKey != null, LiveCloudKeys.noResourceKey());
 
         CloudRequestEngineBuilder builder = new CloudRequestEngineBuilder(
             LoggerFactory.getILoggerFactory(), new HttpClientDefault())
@@ -174,8 +171,8 @@ public class CloudRequestEngineLiveTests {
         String licenceKey =
             LiveCloudKeys.find(LiveCloudKeys.LICENCE_KEY_NAMES);
         assumeTrue(licenceKey != null,
-            "None of " + String.join(", ", LiveCloudKeys.LICENCE_KEY_NAMES)
-            + " is set, so there is no license key to authenticate with.");
+            String.join(", ", LiveCloudKeys.LICENCE_KEY_NAMES)
+            + " is not set, so there is no license key to authenticate with.");
 
         // The service answers a request that names no property the license
         // grants with an error, so one granted property is asked for too.

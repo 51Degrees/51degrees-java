@@ -182,10 +182,9 @@ most of the Device Detection examples use can be made
 [here](https://51degrees.com/configure/jqz435Nc?utm_source=github&utm_medium=docs&utm_campaign=51degrees-java&utm_content=agents.md&utm_term=cloud-examples).
 The Device Detection, IP Intelligence and Location cloud examples take the
 key as their first argument, or from the `_51DEGREES_RESOURCE_KEY`
-environment variable or system property. The Device Detection and IP
-Intelligence examples read the older `TestResourceKey` after it. The TAC and
-native model examples need a key with paid properties and read it from a
-variable of their own, which each names when it has no key.
+environment variable or system property, and no other name. The TAC and
+native model examples need a key with paid properties and read it from
+`_51DEGREES_RESOURCE_KEY_SUPER`, which each names when it has no key.
 
 ```
 java -cp examples/device-detection/console/target/device-detection-java-examples.console-4.5.127-SNAPSHOT-jar-with-dependencies.jar fiftyone.devicedetection.examples.console.GettingStartedCloud <key>
