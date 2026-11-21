@@ -137,8 +137,11 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
     protected void processEngine(FlowData data, CloudGeoData aspectData) {
         if (cloudRequestEngine != null) {
             CloudRequestData requestData = data.getFromElement(cloudRequestEngine);
-            setCloudRequestFailed(data, aspectData, cloudRequestEngine);
-            String json = requestData.getJsonResponse();
+            String json = getJsonResponse(
+                data,
+                aspectData,
+                requestData,
+                cloudRequestEngine);
 
             // A failed cloud request leaves no response. The Cloud Request
             // Engine reports why, so this engine adds no error of its own.

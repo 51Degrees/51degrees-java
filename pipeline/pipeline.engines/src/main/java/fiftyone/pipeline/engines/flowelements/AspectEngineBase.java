@@ -143,21 +143,35 @@ public abstract class AspectEngineBase<
     }
 
     /**
-     * Whether a result may be stored in the cache, and served when it is
-     * found there. A result that holds a value created for the one request
-     * that asked for it, such as a 51Did, must be neither. See the
+     * Whether a processed result may be stored in the cache. A result that
+     * holds a value created for the one request that asked for it, such as a
+     * 51Did, must be neither stored nor served. See the
      * <a href="https://github.com/51Degrees/specifications/blob/d79bbe3b2aef86273570742f6b660f29bfe72816/pipeline-specification/features/caching.md#L151-L156">caching specification</a>:
      * "A cache MUST NOT store a result that holds such a value, and MUST NOT
      * serve one that it finds."
      * <p>
-     * It is asked about a processed result before it is stored, and about a
-     * result found in the cache before it is served.
+     * It is asked about a processed result before it is stored.
+     * {@link #isServable} is asked about a result found in the cache before
+     * it is served.
      * @param data the result to check
      * @return true, unless an engine overrides this to keep a result out of
      * the cache
      */
     protected boolean isCacheable(TData data) {
         return true;
+    }
+
+    /**
+     * Whether a result found in the cache may be served. By default the
+     * answer is {@link #isCacheable}'s. An engine whose result is still being
+     * worked out by a lazy task when it is stored overrides this, so that a
+     * result is served only once its task has finished and the finished
+     * result may be served.
+     * @param data the result found in the cache
+     * @return true if the result may be served
+     */
+    protected boolean isServable(TData data) {
+        return isCacheable(data);
     }
 
     /**
@@ -177,7 +191,7 @@ public abstract class AspectEngineBase<
             if (cacheResultsObject != null &&
                 getTypedDataKey().getType().isAssignableFrom(
                     cacheResultsObject.getClass()) &&
-                isCacheable((TData)cacheResultsObject)) {
+                isServable((TData)cacheResultsObject)) {
                 // This is checked.
                 //noinspection unchecked
                 cacheResult = (TData)cacheResultsObject;

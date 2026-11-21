@@ -143,8 +143,11 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
             data.addEvidence("query.User-Agent", "iPhone");
             data.process();
 
-            assertFalse(data.getErrors().isEmpty());
-            StringBuilder reported = new StringBuilder();
+            // The response is a lazy property, so once processing has
+            // finished its error reaches only the reader.
+            RuntimeException read = assertThrows(RuntimeException.class,
+                () -> data.getFromElement(engine).getJsonResponse());
+            StringBuilder reported = new StringBuilder(printed(read));
             for (FlowError error : data.getErrors()) {
                 reported.append(printed(error.getThrowable()));
             }

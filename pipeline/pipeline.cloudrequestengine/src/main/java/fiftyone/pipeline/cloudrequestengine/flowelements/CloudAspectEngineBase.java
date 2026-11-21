@@ -426,10 +426,9 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
                 "to produce results until this is corrected.");
         }
 
-        setCloudRequestFailed(data, aspectData, requestEngine);
+        String json =
+            getJsonResponse(data, aspectData, requestData, requestEngine);
 
-        String json = requestData == null ? null : requestData.getJsonResponse();
-        
         // If the JSON is empty or null then do not Process the CloudAspectEngine.
         // Empty or null JSON indicates that an error has occurred in the 
         // CloudRequestEngine. The error will have been reported by the 
@@ -444,10 +443,51 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
 	}
 	
     /**
+     * The JSON response of the Cloud Request Engine's request for the Flow
+     * Data, waiting for the request to finish. A failed request met here,
+     * while the Flow Data is processed, is recorded once in the Flow Data's
+     * errors as the Cloud Request Engine's error, not this engine's, and the
+     * Element Data is marked so that a property it does not hold is missing
+     * with the CloudRequestFailed reason. An engine that overrides
+     * {@code processEngine} reads the response through this.
+     * @param data the Flow Data being processed
+     * @param aspectData the Element Data this engine populates
+     * @param requestData the Cloud Request Engine's Element Data
+     * @param requestEngine the Cloud Request Engine of the Pipeline
+     * @return the JSON response, or null where the request failed
+     */
+    protected String getJsonResponse(
+        FlowData data,
+        TData aspectData,
+        CloudRequestData requestData,
+        CloudRequestEngine requestEngine) {
+        String json;
+        try {
+            json = requestData.getJsonResponse();
+        } catch (RuntimeException e) {
+            // The request's own methods, which the public type does not show.
+            CloudRequestDataInternal request = requestData;
+            Throwable failure = request.getRequestFailure();
+            if (failure == null) {
+                throw e;
+            }
+            if (request.firstToMeetFailure()) {
+                data.addError(failure, requestEngine);
+            }
+            json = null;
+        }
+        setCloudRequestFailed(data, aspectData, requestEngine);
+        return json;
+    }
+
+    /**
      * Where the Cloud Request Engine's request for the Flow Data failed,
-     * which an error it added to the Flow Data shows, record it in the
-     * Element Data, so that a property the Element Data does not hold is
-     * missing with the CloudRequestFailed reason.
+     * record it in the Element Data, so that a property the Element Data
+     * does not hold is missing with the CloudRequestFailed reason. The
+     * request itself says whether it failed, so the answer does not depend
+     * on whether another member of a parallel group has recorded the failure
+     * in the Flow Data's errors yet. A failure the Cloud Request Engine threw
+     * while it processed, before any request started, is in those errors.
      * @param data the Flow Data being processed
      * @param aspectData the Element Data this engine populates
      * @param requestEngine the Cloud Request Engine of the Pipeline
@@ -456,16 +496,34 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
         FlowData data,
         TData aspectData,
         CloudRequestEngine requestEngine) {
-        if (aspectData instanceof AspectDataBase == false ||
-            data.getErrors() == null) {
+        if (aspectData instanceof AspectDataBase == false) {
             return;
+        }
+        if (requestFailed(data, requestEngine)) {
+            ((AspectDataBase) aspectData).setCloudRequestFailed();
+        }
+    }
+
+    /**
+     * @return true if the Cloud Request Engine's request for the Flow Data
+     * failed, or the engine threw while it processed
+     */
+    private static boolean requestFailed(
+        FlowData data,
+        CloudRequestEngine requestEngine) {
+        CloudRequestDataInternal request = data.getFromElement(requestEngine);
+        if (request != null && request.getRequestFailure() != null) {
+            return true;
+        }
+        if (data.getErrors() == null) {
+            return false;
         }
         for (FlowError error : data.getErrors()) {
             if (error.getFlowElement() == requestEngine) {
-                ((AspectDataBase) aspectData).setCloudRequestFailed();
-                return;
+                return true;
             }
         }
+        return false;
     }
 
     /**

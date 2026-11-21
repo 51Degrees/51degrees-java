@@ -56,6 +56,9 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -147,6 +150,17 @@ public class CloudRequestEngineDefault
      * uses make them once.
      */
     private final Object discoveryLock = new Object();
+
+    /**
+     * Runs the cloud requests started while processing, on daemon threads
+     * so an engine not closed does not keep the process alive.
+     */
+    private final ExecutorService requests =
+        Executors.newCachedThreadPool(runnable -> {
+            Thread thread = new Thread(runnable, "cloud-request");
+            thread.setDaemon(true);
+            return thread;
+        });
 
     public CloudRequestEngineDefault(
         Logger logger,
@@ -459,20 +473,43 @@ public class CloudRequestEngineDefault
 
     /**
      * A response whose JSON has a top-level member named fodid, in any case,
-     * holds a 51Did created for the one request, so it is neither stored in
-     * nor served from the cache, and the request goes to the cloud service
-     * instead. See the
+     * holds a 51Did created for the one request, so it is never served from
+     * the cache, and the request goes to the cloud service instead. See the
      * <a href="https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/features/caching.md#L144">caching specification</a>:
      * "A cache MUST NOT store a result that holds such a value, and MUST NOT
      * serve one that it finds." A response that cannot be read as a JSON
      * object is not cached either, as it cannot be checked.
      * <p>
-     * The response is read as it is stored, so the check waits for nothing.
+     * The response is a lazy task that is usually still running when the
+     * result is offered to the cache, and this check never waits for it. A
+     * result whose request is still running is stored, because what its
+     * response holds is not known yet, and {@link #isServable} keeps it from
+     * being served unless its request finished with a response that may be
+     * served. A result whose request has finished is stored only if that
+     * response may be served.
      * @param data the result to check
-     * @return false if the response has a top-level fodid member
+     * @return false if the request has finished and its response may not be
+     * cached
      */
     @Override
     protected boolean isCacheable(CloudRequestData data) {
+        if (((CloudRequestDataInternal)data).isRequestRunning()) {
+            return true;
+        }
+        return isServable(data);
+    }
+
+    /**
+     * A result found in the cache is served only once its cloud request has
+     * finished, without failing, with a response that has no top-level fodid
+     * member. Otherwise the request goes to the cloud service, so a request
+     * still running for another Flow Data, and one that failed, are never
+     * shared through the cache.
+     * @param data the result found in the cache
+     * @return true if the result may be served
+     */
+    @Override
+    protected boolean isServable(CloudRequestData data) {
         String response =
             ((CloudRequestDataInternal)data).getJsonResponseWithoutWaiting();
         if (response == null) {
@@ -509,12 +546,29 @@ public class CloudRequestEngineDefault
         headers.put("Content-Type", "application/x-www-form-urlencoded");
         headers.put("Content-Length", Integer.toString(content.length));
 
-        String response = httpClient.postData(connection, headers, content);
+        // The request is built from the Flow Data above. The task holds only
+        // the request, and readers of the JSON response wait for it.
+        ((CloudRequestDataInternal)aspectData).setJsonResponseTask(
+            CompletableFuture.supplyAsync(
+                () -> send(connection, headers, content), requests));
+    }
 
-        ((CloudRequestDataInternal)aspectData).setJsonResponse(response);
-
-        validateResponse(response, connection);
-        reportPropertiesNotCovered(response);
+    /**
+     * Send a built request and check its response, as the task behind the
+     * JSON response. Never reads the Flow Data.
+     */
+    private String send(
+        HttpURLConnection connection,
+        Map<String, String> headers,
+        byte[] content) {
+        try {
+            String response = httpClient.postData(connection, headers, content);
+            validateResponse(response, connection);
+            reportPropertiesNotCovered(response);
+            return response;
+        } catch (IOException e) {
+            throw new CompletionException(e);
+        }
     }
 
     /**
@@ -832,6 +886,15 @@ public class CloudRequestEngineDefault
 
     @Override
     protected void unmanagedResourcesCleanup() {
+        // Wait for the requests already started, which the connection
+        // timeouts bound, so none outlives the engine and every reader
+        // still gets its response.
+        requests.shutdown();
+        try {
+            requests.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private void setCommonHeaders(Map<String, String> headers) {

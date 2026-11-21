@@ -90,7 +90,16 @@ public class SimpleCloudEngine extends CloudAspectEngineBase<StarSignData> {
         }
 
         CloudRequestData requestData = data.getFromElement(cloudRequestEngine);
-        String json = requestData.getJsonResponse();
+        // Wait for the cloud response. A failed request is recorded as the
+        // Cloud Request Engine's error and leaves no response to read.
+        String json = getJsonResponse(
+            data,
+            aspectData,
+            requestData,
+            cloudRequestEngine);
+        if (json == null) {
+            return;
+        }
 
         // A failed cloud request leaves no response. The Cloud Request
         // Engine reports why, so this engine adds no error of its own.
