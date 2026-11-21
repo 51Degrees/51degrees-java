@@ -48,14 +48,17 @@ public class GettingStartedWebOnPremTest {
         // downloaded, as the example finds it, so a fresh clone runs this.
         System.setProperty(
             "TestDataFile", DataFileHelper.getDataFileLocation(null));
-        SERVER = EmbedJetty.startWebApp(getFilePath(resourceBase).getAbsolutePath(), 8081);
+        // Listen on the example's default port, so the request below to
+        // port 5151 checks that the example listens there.
+        SERVER = EmbedJetty.startWebApp(getFilePath(resourceBase).getAbsolutePath(),
+            GettingStartedWebOnPrem.DEFAULT_PORT);
     }
 
     @Test
     public void testWebOnPrem() throws Exception {
 
         HttpURLConnection connection =
-                (HttpURLConnection) new URL("http://localhost:8081/").openConnection();
+                (HttpURLConnection) new URL("http://localhost:5151/").openConnection();
 
         InputStream response = connection.getInputStream();
         String responseBody;

@@ -28,6 +28,7 @@ import fiftyone.pipeline.core.data.DataKeyBuilderDefault;
 import fiftyone.pipeline.core.data.EvidenceKeyFilter;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.engines.configuration.CacheConfiguration;
+import fiftyone.pipeline.engines.fiftyone.data.EvidenceKeyFilterShareUsage;
 import fiftyone.pipeline.engines.fiftyone.data.ShareUsageEvidence;
 import fiftyone.pipeline.engines.trackers.TrackerBase;
 
@@ -100,14 +101,24 @@ public class ShareUsageTracker extends TrackerBase<Date> {
      * The key is made from the values {@link ShareUsageEvidence#find} finds
      * that the filter includes, which take in the web request's values,
      * as the session tracking hash is of the values that would be shared.
-     * The Evidence alone does not hold them.
+     * The Evidence alone does not hold them. A usage sharing filter is given
+     * the Pipeline's Evidence key filter, as the record is, so a query or
+     * form parameter the Pipeline uses is in the key.
      */
     @Override
     protected DataKey generateKey(FlowData data) {
+        EvidenceKeyFilter pipelineUses = data.getPipeline() == null ?
+            null :
+            data.getPipeline().getEvidenceKeyFilter();
         DataKeyBuilder builder = new DataKeyBuilderDefault();
         for (Map.Entry<String, Object> entry :
             ShareUsageEvidence.find(data.getEvidence()).entrySet()) {
-            if (filter.include(entry.getKey())) {
+            boolean include = filter instanceof EvidenceKeyFilterShareUsage ?
+                ((EvidenceKeyFilterShareUsage) filter).include(
+                    entry.getKey(),
+                    pipelineUses) :
+                filter.include(entry.getKey());
+            if (include) {
                 builder.add(
                     filter.order(entry.getKey()),
                     entry.getKey(),

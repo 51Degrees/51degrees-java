@@ -29,6 +29,6 @@ public class ExampleLauncher {
         runWebApp(
                 "pipeline.developer-examples/pipeline.developer-examples.clientside-element-mvc/src/main/webapp",
                 "pipeline.developer-examples/pipeline.developer-examples.clientside-element-mvc/target",
-                8088);
+                5151);
     }
 }

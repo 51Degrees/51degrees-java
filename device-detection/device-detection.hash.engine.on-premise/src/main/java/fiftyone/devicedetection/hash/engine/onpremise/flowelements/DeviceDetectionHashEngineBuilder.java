@@ -156,6 +156,7 @@ public class DeviceDetectionHashEngineBuilder
         }
     }
 
+    @DefaultValue("Balanced")
     @Override
     public DeviceDetectionHashEngineBuilder setPerformanceProfile(
         PerformanceProfiles profile) {
@@ -327,6 +328,7 @@ public class DeviceDetectionHashEngineBuilder
         return setIndexedProperties(list);
     }
 
+    @DefaultValue("No results cache, and none can be set for this engine")
     @Override
     public DeviceDetectionHashEngineBuilder setCache(
         CacheConfiguration cacheConfiguration) {

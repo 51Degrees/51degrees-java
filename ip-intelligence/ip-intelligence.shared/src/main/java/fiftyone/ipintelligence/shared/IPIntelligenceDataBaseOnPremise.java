@@ -49,6 +49,12 @@ import static fiftyone.pipeline.util.Types.getPrimitiveTypeMap;
 
 /**
  * Base class used for all 51Degrees on-premise IP Intelligence results classes.
+ * <p>
+ * An instance reads its values from native results, and reading a value
+ * writes into them, so an instance is not safe to use from several threads
+ * at once. The caller is responsible for thread-safe access, for example by
+ * wrapping its calls in a lock of its own. See the
+ * <a href="https://github.com/51Degrees/specifications/blob/d79bbe3b2aef86273570742f6b660f29bfe72816/pipeline-specification/features/thread-safety.md#L196-L221">thread safety specification</a>.
  */
 public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceDataBase
     implements ProvidesValuesAsString {

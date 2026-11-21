@@ -186,7 +186,7 @@ Web examples:
 mvn compile exec:java -pl web/getting-started.onprem -Dexec.mainClass="fiftyone.ipintelligence.examples.web.GettingStartedWebOnPrem"
 ```
 
-The web example will start a Jetty server on port 8081. Access it at: `http://localhost:8081`
+The web example will start a Jetty server on port 5151. Access it at: `http://localhost:5151`
 
 ### Running Examples from Packaged JARs
 
