@@ -18,7 +18,7 @@ on:
 
 jobs:
   Example_Assets_Update:
-    uses: 51Degrees/common-ci/.github/workflows/nightly-example-assets-update.yml@main
+    uses: 51Degrees/common-ci/.github/workflows/nightly-example-assets-update.yml@19be8a0e3a6c6c3da2c4bbcde585d2df1df186c7
     with:
       repo-name: ${{ github.event.repository.name }}
       common-ci-ref: ${{ inputs.common-ci-ref || '' }}
