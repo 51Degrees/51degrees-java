@@ -181,7 +181,8 @@ public class ShareUsageOptionsTests {
         assertFalse(shared(sent, "cookie", "plain"));
         assertTrue(shared(sent, "cookie", "51D_plain"));
         assertFalse(shared(sent, "session", "plain"));
-        assertTrue(shared(sent, "query", "plain"));
+        // No Flow Element in the Pipeline accepts the parameter.
+        assertFalse(shared(sent, "query", "plain"));
     }
 
     @Test
@@ -194,7 +195,9 @@ public class ShareUsageOptionsTests {
         assertFalse(shared(sent, "cookie", "plain"));
         assertTrue(shared(sent, "cookie", "51D_plain"));
         assertTrue(shared(sent, "session", "plain"));
-        assertTrue(shared(sent, "query", "plain"));
+        // Not even all Evidence shares a parameter the Pipeline does not
+        // use.
+        assertFalse(shared(sent, "query", "plain"));
         assertFalse(shared(sent, "query", "id.email"));
         assertFalse(shared(sent, "id", "email"));
         assertFalse(shared(sent, "id", "salt"));
@@ -210,17 +213,21 @@ public class ShareUsageOptionsTests {
 
         assertFalse(shared(sent, "header", "x-blocked"));
         assertFalse(shared(sent, "cookie", "plain"));
-        assertTrue(shared(sent, "query", "plain"));
+        assertFalse(shared(sent, "query", "plain"));
     }
 
+    /**
+     * The deprecated share all query string parameters option has no
+     * effect, so a parameter the Pipeline does not use is not shared.
+     */
     @Test
-    public void shareAllQueryStringParameters_FromConfiguration_SharesEveryParameter()
+    public void shareAllQueryStringParameters_FromConfiguration_HasNoEffect()
         throws Exception {
         Document sent = send(
             options("ShareAllQueryStringParameters", "true"),
             evidence());
 
-        assertTrue(shared(sent, "query", "plain"));
+        assertFalse(shared(sent, "query", "plain"));
         assertFalse(shared(sent, "query", "id.email"));
         assertFalse(shared(sent, "server", "request-query"));
         // The other rules still apply.
@@ -259,8 +266,14 @@ public class ShareUsageOptionsTests {
         evidence.put("Server.Client-IP", "1.2.3.4");
         evidence.put("Query.Session-ID", "session-1");
         evidence.put("Query.Sequence", "5");
+        // The Sequence Element accepts the session id and sequence, so the
+        // Pipeline uses them and they are shared.
+        PipelineOptions options = options();
+        ElementOptions sequence = new ElementOptions();
+        sequence.builderName = "SequenceElement";
+        options.elements.add(0, sequence);
 
-        Document sent = send(options(), evidence);
+        Document sent = send(options, evidence);
 
         assertEquals("1.2.3.4",
             sent.getElementsByTagName("ClientIP").item(0).getTextContent());

@@ -177,6 +177,12 @@ public class ShareUsageElementTests {
 
     // Dependencies
     private Pipeline pipeline;
+
+    /**
+     * A Pipeline holding the Sequence Element, which accepts the session id
+     * and sequence, so that usage sharing shares them.
+     */
+    private Pipeline sequencePipeline;
     private Tracker tracker;
 
     TestConnector connector;
@@ -203,6 +209,18 @@ public class ShareUsageElementTests {
             shareUsageElement.close();
         }
         pipeline.close();
+        if (sequencePipeline != null) {
+            sequencePipeline.close();
+        }
+    }
+
+    private Pipeline sequencePipeline() throws Exception {
+        if (sequencePipeline == null) {
+            sequencePipeline = new PipelineBuilder()
+                .addFlowElement(sequenceElement)
+                .build();
+        }
+        return sequencePipeline;
     }
 
     private void createShareUsage(
@@ -730,10 +748,11 @@ public class ShareUsageElementTests {
                 "//cookie[@Name='other']", doc,
                 XPathConstants.NODESET)).getLength(),
                 "A cookie the rules leave out was shared.");
-            assertEquals("shared-query", xpath.evaluate(
-                "//query[@Name='campaign']", doc),
-                "A query string parameter from the web request was not " +
-                "shared by default.");
+            assertEquals(0, ((NodeList) xpath.evaluate(
+                "//query[@Name='campaign']", doc,
+                XPathConstants.NODESET)).getLength(),
+                "A query string parameter that no Flow Element accepts " +
+                "was shared.");
             assertEquals("1.2.3.4", xpath.evaluate("//ClientIP", doc),
                 "The client IP from the web request was not shared.");
             assertEquals("GET", xpath.evaluate(
@@ -1094,7 +1113,7 @@ public class ShareUsageElementTests {
         Map<String, Object> evidenceData = new HashMap<>();
         evidenceData.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
 
-        try (FlowData data = pipeline.createFlowData()) {
+        try (FlowData data = sequencePipeline().createFlowData()) {
             data.addEvidence(evidenceData);
 
             // Act
@@ -1140,7 +1159,7 @@ public class ShareUsageElementTests {
         evidenceData.put(Constants.EVIDENCE_SESSIONID, "abcdefg-hijklmn-opqrst-uvwxyz");
         evidenceData.put(Constants.EVIDENCE_SEQUENCE, 2);
 
-        try (FlowData data = pipeline.createFlowData()) {
+        try (FlowData data = sequencePipeline().createFlowData()) {
             data.addEvidence(evidenceData);
 
             // Act
@@ -1435,9 +1454,9 @@ public class ShareUsageElementTests {
 
     /**
      * Default settings share headers other than Cookie, the 51Degrees cookies,
-     * every query string parameter but those never shared, and other
-     * evidence, and leave out ordinary cookies, session values and the
-     * evidence that is never shared.
+     * the 51Degrees query string parameters and those the Pipeline uses, and
+     * other evidence, and leave out ordinary cookies, other parameters,
+     * session values and the evidence that is never shared.
      */
     @Test
     public void ShareUsageElement_DefaultSharesOnlyAcceptedEvidence() throws Exception {
@@ -1478,12 +1497,12 @@ public class ShareUsageElementTests {
         String output = new String(
             connector.getBaos().toByteArray(), StandardCharsets.UTF_8);
         for (String shared : Arrays.asList(
-            "some user agent", "screen width", "fiftyone parameter",
-            "password parameter")) {
+            "some user agent", "screen width", "fiftyone parameter")) {
             assertTrue(output.contains(shared), shared);
         }
+        // A parameter no Flow Element accepts is not shared.
         for (String withheld : Arrays.asList(
-            "sessionid cookie", "cookie header",
+            "password parameter", "sessionid cookie", "cookie header",
             "email parameter", "email header", "salt value",
             "whole query string", "request path", "session attribute")) {
             assertFalse(output.contains(withheld), withheld);
@@ -1559,7 +1578,7 @@ public class ShareUsageElementTests {
                 screenWidths[sequence - 1]);
             evidenceData.put(Constants.EVIDENCE_SESSIONID, "one session");
             evidenceData.put(Constants.EVIDENCE_SEQUENCE, sequence);
-            try (FlowData data = pipeline.createFlowData()) {
+            try (FlowData data = sequencePipeline().createFlowData()) {
                 data.addEvidence(evidenceData);
                 shareUsageElement.process(data);
             }

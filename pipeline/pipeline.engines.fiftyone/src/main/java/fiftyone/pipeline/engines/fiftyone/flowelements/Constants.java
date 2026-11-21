@@ -126,8 +126,8 @@ public class Constants {
     static final String SHARE_USAGE_DEFAULT_URL = "https://devices-v4.51degrees.com/new.ashx";
 
     /**
-     * Every query string and HTTP form parameter is shared by default, not
-     * only the 51Degrees ones and those named.
+     * Deprecated. The default of the share all query string parameters
+     * option, which has no effect.
      */
     public static final boolean
         SHARE_USAGE_DEFAULT_SHARE_ALL_QUERY_STRING_PARAMETERS = true;
