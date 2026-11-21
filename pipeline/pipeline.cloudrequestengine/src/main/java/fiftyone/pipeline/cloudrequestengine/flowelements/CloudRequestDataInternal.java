@@ -141,13 +141,29 @@ public class CloudRequestDataInternal extends AspectDataBase
     }
 
     /**
-     * The JSON response as it is stored now, so the engine can check it
-     * before the result is cached or served from the cache.
-     * @return the JSON response, or null if none has been stored
+     * The JSON response as it is now, without waiting for the cloud request,
+     * so the engine can check it before the result is cached or served from
+     * the cache.
+     * @return the JSON response, or null if there is none, or the cloud
+     * request is still running or failed
      */
     String getJsonResponseWithoutWaiting() {
+        CompletableFuture<String> task = jsonResponseTask;
+        if (task != null) {
+            return task.isDone() && task.isCompletedExceptionally() == false ?
+                task.join() : null;
+        }
         Object response = getWithoutWaiting(JSON_RESPONSE_KEY);
         return response == null ? null : response.toString();
+    }
+
+    /**
+     * Whether the cloud request the engine started is still running.
+     * @return true if a request was started and has not finished
+     */
+    boolean isRequestRunning() {
+        CompletableFuture<String> task = jsonResponseTask;
+        return task != null && task.isDone() == false;
     }
 
 
