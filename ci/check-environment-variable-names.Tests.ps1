@@ -179,3 +179,21 @@ Describe 'Test-DeprecatedFallback' {
         Test-DeprecatedFallback $Path $Value | Should -BeFalse
     }
 }
+
+Describe 'the workflows' {
+
+    # The 51Did license key unseals only results made with the resource key
+    # of its own account. Filled from the Bespoke key, the licensed redeem
+    # comes back unreadable, so the 51Did resource key is taken from the
+    # secret of its own name.
+    It 'fill _51DEGREES_RESOURCE_KEY_51DID from the secret of the same name' {
+        $workflows = Join-Path $PSScriptRoot '../.github/workflows'
+        $lines = @(Get-ChildItem $workflows -Filter *.yml |
+            Select-String -Pattern '^\s*_51DEGREES_RESOURCE_KEY_51DID\s*:' |
+            ForEach-Object { "$($_.Filename):$($_.LineNumber): $($_.Line.Trim())" })
+        $lines | Should -Not -BeNullOrEmpty
+        $lines | Where-Object {
+            $_ -notmatch ':\s*\$\{\{\s*secrets\._51DEGREES_RESOURCE_KEY_51DID\s*\}\}\s*$'
+        } | Should -BeNullOrEmpty
+    }
+}

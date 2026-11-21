@@ -132,6 +132,9 @@ To run the cloud tests:
   property, which the Location and the TAC and native model tests read.
 - `_51DEGREES_LICENSE_KEY_BESPOKE`: license key for the cloud products, for
   the Cloud Request Engine's test on a license key alone.
+- `_51DEGREES_RESOURCE_KEY_51DID`: resource key for the 51Did cloud tests.
+  It has to belong to the same account as `_51DEGREES_LICENSE_KEY_51DID`,
+  or the licensed redeem comes back unreadable.
 - `_51DEGREES_LICENSE_KEY_51DID`: license key for the 51Did cloud tests.
 
 A cloud test with no key is skipped, naming the variable it reads.
