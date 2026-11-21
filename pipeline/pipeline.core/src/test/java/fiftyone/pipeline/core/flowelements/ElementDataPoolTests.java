@@ -290,4 +290,54 @@ public class ElementDataPoolTests {
             running.complete(null);
         }
     }
+
+    /**
+     * Closing a Flow Data a second time, as a try-with-resources around one
+     * that a web filter also closes does, must not give back an instance
+     * that the pool has since given to another request.
+     */
+    @Test
+    public void closingTwice_GivesNoInstanceToTwoRequests() throws Exception {
+        AtomicInteger allocated = new AtomicInteger();
+        try (Pipeline pipeline = new PipelineBuilder(
+                LoggerFactory.getILoggerFactory())
+                .addFlowElement(new Counter(allocated))
+                .setAutoCloseElements(true)
+                .build();
+             FlowData first = pipeline.createFlowData()) {
+            first.addEvidence("query.request", "first");
+            first.process();
+            Object pooled = first.get("counter");
+            first.close();
+
+            try (FlowData second = pipeline.createFlowData()) {
+                second.addEvidence("query.request", "second");
+                second.process();
+                assertSame(
+                    "The instance was not reused, so this proves nothing",
+                    pooled,
+                    second.get("counter"));
+
+                first.close();
+
+                try (FlowData third = pipeline.createFlowData()) {
+                    third.addEvidence("query.request", "third");
+                    third.process();
+                    assertNotSame(
+                        "A second close gave an instance that another " +
+                            "request holds back to its pool",
+                        pooled,
+                        third.get("counter"));
+                }
+                assertEquals(
+                    "The second request's value was overwritten",
+                    "second",
+                    ((ElementDataBase) second.get("counter")).get("request"));
+            }
+        }
+        assertEquals(
+            "Element Data allocated for three requests, two at once",
+            2,
+            allocated.get());
+    }
 }
