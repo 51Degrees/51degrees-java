@@ -196,4 +196,61 @@ Describe 'the workflows' {
             $_ -notmatch ':\s*\$\{\{\s*secrets\._51DEGREES_RESOURCE_KEY_51DID\s*\}\}\s*$'
         } | Should -BeNullOrEmpty
     }
+
+    # cloud-51did.yml runs the 51Did tests once for each resource key. The
+    # tests redeem with _51DEGREES_LICENSE_KEY_51DID, which unseals only
+    # results made with _51DEGREES_RESOURCE_KEY_51DID. So each pass gets only
+    # the license whose suffix matches its resource key, and the Bespoke pass
+    # gets none. The step's script runs here with mvn replaced by a function
+    # that records the keys each pass hands it.
+    Context 'cloud-51did.yml' {
+
+        BeforeAll {
+            $workflow = Join-Path $PSScriptRoot '../.github/workflows/cloud-51did.yml'
+            $lines = @(Get-Content $workflow)
+            $start = $lines | Select-String -Pattern '^(\s*)run: \|\s*$' |
+                Select-Object -First 1
+            $indent = $start.Matches[0].Groups[1].Value.Length
+            $body = foreach ($line in $lines[$start.LineNumber..($lines.Count - 1)]) {
+                if ($line.Trim() -and $line -notmatch "^\s{$($indent + 1),}") { break }
+                if ($line.Length -gt $indent + 2) { $line.Substring($indent + 2) } else { '' }
+            }
+            $script:Step = [scriptblock]::Create($body -join "`n")
+        }
+
+        BeforeEach {
+            $script:Saved = @(Get-ChildItem env: |
+                Where-Object { $_.Name -like '_51DEGREES_*' })
+            $script:Saved | ForEach-Object { Remove-Item "Env:$($_.Name)" }
+            $env:_51DEGREES_RESOURCE_KEY_51DID = 'resource-51did'
+            $env:_51DEGREES_RESOURCE_KEY_BESPOKE = 'resource-bespoke'
+            $env:_51DEGREES_LICENSE_KEY_51DID = 'license-51did'
+            $env:_51DEGREES_LICENSE_KEY_BESPOKE = 'license-bespoke'
+        }
+
+        AfterEach {
+            Get-ChildItem env: | Where-Object { $_.Name -like '_51DEGREES_*' } |
+                ForEach-Object { Remove-Item "Env:$($_.Name)" }
+            $script:Saved | ForEach-Object { Set-Item "Env:$($_.Name)" $_.Value }
+        }
+
+        It 'redeems with the 51Did license only in the pass with the 51Did resource key' {
+            $passes = [System.Collections.Generic.List[object]]::new()
+            function mvn {
+                $passes.Add([pscustomobject]@{
+                    Resource = $env:_51DEGREES_RESOURCE_KEY
+                    License  = $env:_51DEGREES_LICENSE_KEY_51DID
+                })
+                $global:LASTEXITCODE = 0
+            }
+            & $script:Step 6> $null
+
+            @($passes.Resource | Sort-Object) |
+                Should -Be @('resource-51did', 'resource-bespoke')
+            ($passes | Where-Object Resource -eq 'resource-51did').License |
+                Should -Be 'license-51did'
+            ($passes | Where-Object Resource -eq 'resource-bespoke').License |
+                Should -BeNullOrEmpty
+        }
+    }
 }

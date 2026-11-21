@@ -65,7 +65,8 @@ jobs:
           _51DEGREES_RESOURCE_KEY_51DID: ${{ secrets._51DEGREES_RESOURCE_KEY_51DID }}
           # Without a license key the tests that redeem a sealed verdict skip.
           # The service only redeems with a license key of the resource key's
-          # own account.
+          # own account, so each resource key is paired by suffix with the
+          # license key it belongs to. Only the 51DID pass gets this one.
           _51DEGREES_LICENSE_KEY_51DID: ${{ secrets._51DEGREES_LICENSE_KEY_51DID }}
           # The license for the cloud products, for the test on a license key
           # alone.
@@ -80,10 +81,22 @@ jobs:
               'from a fork gets no secrets, so run this workflow from a ' +
               'branch in this repository.')
           }
+          # The 51Did tests redeem with _51DEGREES_LICENSE_KEY_51DID. A pass
+          # whose resource key is not paired with it by suffix redeems with no
+          # license, so those tests skip rather than come back unreadable.
+          $didLicense = $env:_51DEGREES_LICENSE_KEY_51DID
           $failed = $false
           foreach ($k in $keys) {
             Write-Host "::group::Live tests with $($k.Name)"
             $env:_51DEGREES_RESOURCE_KEY = $k.Value
+            $licenseName = $k.Name -replace '^_51DEGREES_RESOURCE_KEY', '_51DEGREES_LICENSE_KEY'
+            if ($licenseName -eq '_51DEGREES_LICENSE_KEY_51DID' -and $didLicense) {
+              Write-Host "License key: $licenseName"
+              $env:_51DEGREES_LICENSE_KEY_51DID = $didLicense
+            } else {
+              Write-Host 'License key: none'
+              Remove-Item Env:_51DEGREES_LICENSE_KEY_51DID -ErrorAction SilentlyContinue
+            }
             # Only the Pipeline API tree is built, as in its own repository.
             mvn -B -f pipeline/pom.xml `
               -pl pipeline.did,pipeline.cloudrequestengine -am test `

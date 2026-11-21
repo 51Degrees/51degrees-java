@@ -136,6 +136,8 @@ To run the cloud tests:
   It has to belong to the same account as `_51DEGREES_LICENSE_KEY_51DID`,
   or the licensed redeem comes back unreadable.
 - `_51DEGREES_LICENSE_KEY_51DID`: license key for the 51Did cloud tests.
+  `cloud-51did.yml` gives it only to the pass with
+  `_51DEGREES_RESOURCE_KEY_51DID`. The Bespoke pass redeems with none.
 
 A cloud test with no key is skipped, naming the variable it reads.
 
