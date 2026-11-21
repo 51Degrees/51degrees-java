@@ -68,6 +68,8 @@ import java.util.Map;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
 import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asString;
+import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asWeightedString;
+import static fiftyone.ipintelligence.examples.shared.PropertyHelper.weightedValues;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 import static fiftyone.ipintelligence.examples.shared.DataFileHelper.LITE_DATA_FILE_REL_PATH;
 
@@ -272,7 +274,22 @@ public class GettingStartedOnPrem {
         if (DataFileHelper.hasProperty(engine, property)) {
             AspectPropertyValue<?> value =
                     (AspectPropertyValue<?>) ipData.get(property);
-            writer.println("\t" + property + ": " + asString(value));
+            if (value.hasValue() == false) {
+                writer.println("\t" + property + ": " + asString(value));
+                return false;
+            }
+            // Each value comes with a weighting between 0 and 1, which says
+            // how much of the IP range the value applies to.
+            StringBuilder line = new StringBuilder();
+            for (IWeightedValue<?> weighted : weightedValues(value)) {
+                if (line.length() > 0) {
+                    line.append(", ");
+                }
+                line.append(asWeightedString(
+                        weighted.getValue(),
+                        weighted.getWeighting()));
+            }
+            writer.println("\t" + property + ": " + line);
             return false;
         }
         writer.println("\t" + property + ": " + DataFileHelper.NEEDS_ENTERPRISE);
