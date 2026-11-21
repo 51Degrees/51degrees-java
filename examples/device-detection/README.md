@@ -48,7 +48,8 @@ to run most of the examples can be obtained [here](https://51degrees.com/configu
 To use the resource key in the example it can be supplied as a
 command line parameter, pasted into the configuration file (where there is one)
 or supplied as either an environment variable or a system
-property called "TestResourceKey".
+property called "_51DEGREES_RESOURCE_KEY". The TAC and native model
+examples read theirs from "_51DEGREES_RESOURCE_KEY_SUPER".
 
 Some cloud examples require an enhanced resource key containing a license key. And some
 on-premise examples require you to provide a license key. You can find out about 
@@ -116,7 +117,7 @@ java -cp ./console/target/device-detection-java-examples.console-4.5.127-SNAPSHO
 ### Web examples
 
 The web examples are run from the root of this repository, because they find their
-web content by a path relative to it. They listen on port 8081 and stop when Enter
+web content by a path relative to it. They listen on port 5151 and stop when Enter
 is pressed. Set the `PORT` environment variable to listen on another port, in which
 case the example runs until the process is stopped:
 

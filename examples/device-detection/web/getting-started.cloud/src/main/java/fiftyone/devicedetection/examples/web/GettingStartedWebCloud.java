@@ -50,6 +50,10 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * <a href="https://51degrees.com/configure/jqz435Nc?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=web-getting-started.cloud-src-main-java-fiftyone-devicedetection-examples-web-gettingstartedwebcloud.java&amp;utm_term=gettingstartedwebcloud">https://51degrees.com/configure/jqz435Nc?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-getting-started.cloud-src-main-java-fiftyone-devicedetection-examples-web-gettingstartedwebcloud.java&utm_term=gettingstartedwebcloud-2</a>.
  * <p>
  * The configuration file for the pipeline is at src/main/webapp/WEB-INF/51Degrees-Cloud.xml
+ * <p>
+ * The server listens on port 5151 and stops when Enter is pressed. If the PORT
+ * environment variable is set, the server listens on that port instead and runs
+ * until the process is stopped, which is how automated tests start it.
  */
 public class GettingStartedWebCloud extends HttpServlet {
     /**
@@ -60,6 +64,11 @@ public class GettingStartedWebCloud extends HttpServlet {
         "web-getting-started.cloud-src-main-java-fiftyone-devicedetection-examples-web-gettingstartedwebcloud.java";
 
     private static final long serialVersionUID = 1734154705981153540L;
+    /**
+     * The port the example listens on when the PORT environment variable
+     * does not choose another.
+     */
+    public static final int DEFAULT_PORT = 5151;
     public static String resourceBase = "examples/device-detection/web/getting-started.cloud/src/main/webapp";
     public static Logger logger = LoggerFactory.getLogger(GettingStartedWebCloud.class);
 
@@ -67,8 +76,7 @@ public class GettingStartedWebCloud extends HttpServlet {
         configureLogback(getFilePath("logback.xml"));
         String resourceKey = KeyHelper.findResourceKey(
                 args.length > 0 ? args[0] : null,
-                KeyHelper.RESOURCE_KEY_VARIABLE,
-                KeyHelper.TEST_RESOURCE_KEY);
+                KeyHelper.RESOURCE_KEY_VARIABLE);
         if (resourceKey == null) {
             KeyHelper.writeNoResourceKey(System.out, EXAMPLE_TAG,
                     KeyHelper.RESOURCE_KEY_VARIABLE,
@@ -88,7 +96,7 @@ public class GettingStartedWebCloud extends HttpServlet {
             EmbedJetty.startWebApp(getFilePath(resourceBase).getAbsolutePath(), Integer.parseInt(portEnv)).join();
         } else {
             // start Jetty with this WebApp
-            EmbedJetty.runWebApp(getFilePath(resourceBase).getAbsolutePath(), 8081);
+            EmbedJetty.runWebApp(getFilePath(resourceBase).getAbsolutePath(), DEFAULT_PORT);
         }
     }
 

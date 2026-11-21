@@ -27,9 +27,9 @@
             <BuildParameters>
                 <!-- A resource key is required to access the Cloud service.
                 You can paste the resource key here, or set an environment
-                variable or System property called "TestResourceKey"
+                variable or System property called "_51DEGREES_RESOURCE_KEY"
                 which will get inserted as the value. -->
-                <ResourceKey>${TestResourceKey}</ResourceKey>
+                <ResourceKey>${_51DEGREES_RESOURCE_KEY}</ResourceKey>
             </BuildParameters>
             <BuilderName>CloudRequestEngine</BuilderName>
         </Element>

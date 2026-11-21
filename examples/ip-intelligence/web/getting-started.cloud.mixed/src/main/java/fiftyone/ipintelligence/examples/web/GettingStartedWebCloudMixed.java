@@ -84,9 +84,9 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * <p>
  * The configuration file for the pipeline is at
  * src/main/webapp/WEB-INF/51Degrees-CloudMixed.xml. The resource key is taken from the
- * environment variable or system property "TestResourceKey" unless supplied as a command
+ * environment variable or system property "_51DEGREES_RESOURCE_KEY" unless supplied as a command
  * line argument. The server listens on the port in the PORT environment variable, or on
- * 8084 when PORT is not set.
+ * 5151 when PORT is not set.
  */
 public class GettingStartedWebCloudMixed extends HttpServlet {
     /**
@@ -96,6 +96,11 @@ public class GettingStartedWebCloudMixed extends HttpServlet {
             "web-getting-started.cloud.mixed-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedwebcloudmixed.java";
 
     private static final long serialVersionUID = 1734154705981153543L;
+    /**
+     * The port the example listens on when the PORT environment variable
+     * does not choose another.
+     */
+    public static final int DEFAULT_PORT = 5151;
     public static Logger logger = LoggerFactory.getLogger(GettingStartedWebCloudMixed.class);
 
     public static void main(String[] args) throws Exception {
@@ -103,7 +108,7 @@ public class GettingStartedWebCloudMixed extends HttpServlet {
         logger.info("Running Example {}", GettingStartedWebCloudMixed.class);
 
         // Get the resource key from the command line, environment variable or
-        // system property. This sets the "TestResourceKey" system property
+        // system property. This sets the "_51DEGREES_RESOURCE_KEY" system property
         // which is interpolated in the pipeline configuration file.
         String resourceKey = KeyHelper.findResourceKey(
                 args.length > 0 ? args[0] : null);
@@ -122,7 +127,7 @@ public class GettingStartedWebCloudMixed extends HttpServlet {
             EmbedJetty.startWebApp(getResourceBase(), Integer.parseInt(portEnv)).join();
         } else {
             // Start Jetty with this WebApp
-            EmbedJetty.runWebApp(getResourceBase(), 8084);
+            EmbedJetty.runWebApp(getResourceBase(), DEFAULT_PORT);
         }
     }
 

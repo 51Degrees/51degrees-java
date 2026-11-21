@@ -53,7 +53,14 @@ import static org.apache.commons.lang3.BooleanUtils.isFalse;
 public class IPIntelligenceOnPremiseEngine
     extends FiftyOneOnPremiseAspectEngineBase<IPIntelligenceDataHash,
     FiftyOneAspectPropertyMetaData> {
-    private EngineIpiSwig engine = null;
+    // Volatile, so a thread that processes sees the native engine a
+    // refresh on another thread made.
+    private volatile EngineIpiSwig engine = null;
+    // Set, while this engine's monitor is held, once closing has freed the
+    // native objects, so a refresh that gets the monitor afterwards fails
+    // instead of using them. It has no initializer, so an engine built by
+    // a mock that skips field initializers still has it, as false.
+    private boolean freed;
     private final List<FiftyOneAspectPropertyMetaData> properties = new ArrayList<>();
     private final ConfigIpiSwig config;
     private final RequiredPropertiesConfigSwig propertiesConfigSwig;
@@ -332,15 +339,30 @@ public class IPIntelligenceOnPremiseEngine
      * refresh.
      * <p>
      * The lock is this engine's own monitor, held for the whole refresh.
-     * Nothing else in the engine or the Pipeline takes it, and no other
-     * lock is taken while it is held, so it cannot deadlock. It is not a
+     * Closing the engine takes it too, so the native objects are freed
+     * only once a refresh that is running has finished. Nothing else in
+     * the engine or the Pipeline takes it, and no other lock is taken
+     * while it is held, so it cannot deadlock. It is not a
      * field, so an engine built by a mock that skips field initializers
      * still has it.
      */
     @Override
     public void refreshData(String dataFileIdentifier) {
         synchronized (this) {
+            refuseIfFreed();
             refreshFromFile();
+        }
+    }
+
+    /**
+     * Called with this engine's monitor held, before a refresh uses the
+     * native objects.
+     * @throws IllegalStateException if the engine has been closed
+     */
+    private void refuseIfFreed() {
+        if (freed) {
+            throw new IllegalStateException(
+                "The engine has been closed, so its data cannot be refreshed.");
         }
     }
 
@@ -384,6 +406,7 @@ public class IPIntelligenceOnPremiseEngine
     @Override
     public void refreshData(String dataFileIdentifier, byte[] data) {
         synchronized (this) {
+            refuseIfFreed();
             if (engine == null) {
                 engine = new EngineIpiSwig(data, config, propertiesConfigSwig);
             } else {
@@ -428,14 +451,23 @@ public class IPIntelligenceOnPremiseEngine
                 }
             }
         }
-        if (config != null) {
-            config.delete();
-        }
-        if (propertiesConfigSwig != null) {
-            propertiesConfigSwig.delete();
-        }
-        if (engine != null) {
-            engine.delete();
+        // A refresh holds this engine's monitor while it uses the native
+        // objects, so taking it here waits for a refresh that is running
+        // before they are freed.
+        synchronized (this) {
+            if (freed) {
+                return;
+            }
+            freed = true;
+            if (config != null) {
+                config.delete();
+            }
+            if (propertiesConfigSwig != null) {
+                propertiesConfigSwig.delete();
+            }
+            if (engine != null) {
+                engine.delete();
+            }
         }
     }
 

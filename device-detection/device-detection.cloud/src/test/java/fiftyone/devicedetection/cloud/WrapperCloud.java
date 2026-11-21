@@ -24,6 +24,7 @@ package fiftyone.devicedetection.cloud;
 
 import fiftyone.devicedetection.cloud.flowelements.DeviceDetectionCloudEngine;
 import fiftyone.devicedetection.cloud.flowelements.DeviceDetectionCloudEngineBuilder;
+import fiftyone.devicedetection.shared.testhelpers.Constants;
 import fiftyone.devicedetection.shared.testhelpers.TestKeyUtils;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngineBuilder;
@@ -37,6 +38,8 @@ import java.io.Closeable;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
 
+import static org.junit.Assume.assumeFalse;
+
 public class WrapperCloud implements Closeable {
 
     protected static final ILoggerFactory loggerFactory = LoggerFactory.getILoggerFactory();
@@ -45,9 +48,16 @@ public class WrapperCloud implements Closeable {
     public DeviceDetectionCloudEngine deviceDetectionCloudEngine;
 
     public WrapperCloud() throws Exception {
+        String resourceKey =
+            TestKeyUtils.getNamedKey(Constants.RESOURCE_KEY_ENV_VAR);
+        assumeFalse("These tests call the live 51Degrees cloud service, so " +
+                "they need a resource key, and they are skipped because " +
+                Constants.RESOURCE_KEY_ENV_VAR + " is not set as an " +
+                "environment variable or as a system property.",
+            TestKeyUtils.isInvalidKey(resourceKey));
         cloudRequestEngine = 
                 new CloudRequestEngineBuilder(loggerFactory, new TimedHttpClient())
-                .setResourceKey(TestKeyUtils.getNamedKey("TestResourceKey"))
+                .setResourceKey(resourceKey)
                 // The live cloud service is shared with every CI run. In run
                 // 44881631156 its slowest answer was 0.77 s, over 540
                 // requests on all 15 Build and Test jobs (TimedHttpClient

@@ -109,14 +109,20 @@ import java.util.concurrent.CompletionException;
  * the {@code /api/v4/} segment, defaulting to
  * {@code https://cloud.51degrees.com/api/v4/}. This is the same variable
  * the cloud request engine of this package honours.</li>
- * <li>{@code PORT}, optional, defaulting to {@code 5100}.</li>
+ * <li>{@code PORT}, optional, defaulting to {@code 5151}.</li>
  * </ul>
- * Then open {@code http://localhost:5100/}.
+ * Then open {@code http://localhost:5151/}.
  */
 public class CreatorContextDemoServer {
 
     /** Where the page and stylesheet live on the classpath. */
     static final String RESOURCES = "/fodid/creator-context/";
+
+    /**
+     * The port the server listens on when the PORT environment variable
+     * does not choose another.
+     */
+    public static final int DEFAULT_PORT = 5151;
 
     static final String RESOURCE = env("_51DEGREES_RESOURCE_KEY");
     static final String LICENCE = env("_51DEGREES_LICENSE_KEY");
@@ -167,7 +173,7 @@ public class CreatorContextDemoServer {
         // web examples vendor it.
         resource("page.html");
         resource("examples-main.min.css");
-        int port = Integer.parseInt(envOr("PORT", "5100"));
+        int port = Integer.parseInt(envOr("PORT", String.valueOf(DEFAULT_PORT)));
         HttpServer server = HttpServer.create(
             new InetSocketAddress(port), 0);
         server.createContext("/", CreatorContextDemoServer::servePage);

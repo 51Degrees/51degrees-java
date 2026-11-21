@@ -514,6 +514,40 @@ public class DataUpdateServiceLoggingTests {
     }
 
     /**
+     * An error of any other kind is logged at Error with the Errors table's
+     * last message and the error attached, and gives
+     * AUTO_UPDATE_UNKNOWN_ERROR.
+     */
+    @Test
+    public void UnexpectedError_LogsTheLastRow() {
+        AspectEngineDataFileDefault file = newDataFile(false, false, false);
+        // The engine's copy is the data file itself, so the file on disk is
+        // not newer and the URL is checked.
+        file.setTempDataFilePath(dataFile.getAbsolutePath());
+        final IllegalStateException broke =
+            new IllegalStateException("formatter broke");
+        file.getConfiguration().setUrlFormatter(d -> {
+            throw broke;
+        });
+
+        assertEquals("AUTO_UPDATE_UNKNOWN_ERROR",
+            dataUpdate.checkForUpdate(engine).name());
+
+        for (ILoggingEvent event : appender.list) {
+            if (event.getLevel() == Level.ERROR &&
+                event.getFormattedMessage().equals("An unhandled error " +
+                    "occurred while checking for automatic updates for " +
+                    "engine '" + engineType + "'") &&
+                event.getThrowableProxy() != null &&
+                "formatter broke".equals(
+                    event.getThrowableProxy().getMessage())) {
+                return;
+            }
+        }
+        fail("No unhandled error entry in " + logged(Level.ERROR));
+    }
+
+    /**
      * The MD5 hash of the bytes as lower case hexadecimal.
      */
     private static String md5Hex(byte[] bytes) throws Exception {

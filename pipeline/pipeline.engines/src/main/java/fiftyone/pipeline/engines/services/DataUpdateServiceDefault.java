@@ -227,6 +227,35 @@ public class DataUpdateServiceDefault implements DataUpdateService {
      * @return {@link AutoUpdateStatus#AUTO_UPDATE_SUCCESS} if the data file was
      * successfully updated
      */
+    /**
+     * Wrap a task that runs in the background so that an error it did not
+     * expect is logged and kept inside the task. Nothing else would see it:
+     * the executor keeps it in a future that nobody reads. See
+     * <a href="https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/features/exception-handling.md#L83">exception-handling.md line 83</a>:
+     * "When errors do occur, they will be logged and MUST NOT cause the
+     * process to crash." An error of the virtual machine itself, such as
+     * running out of memory, is logged and then thrown on.
+     * @param what what the task does, for the log
+     * @param task the task
+     * @return the wrapped task
+     */
+    private Runnable logErrors(final String what, final Runnable task) {
+        return new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    task.run();
+                } catch (Throwable t) {
+                    logger.error("Unexpected error in the background " +
+                        what + ".", t);
+                    if (t instanceof VirtualMachineError) {
+                        throw (VirtualMachineError) t;
+                    }
+                }
+            }
+        };
+    }
+
     private AutoUpdateStatus checkForUpdate(Object state, boolean manualUpdate) {
         AspectEngineDataFile dataFile =
                 state instanceof AspectEngineDataFileDefault ?
@@ -341,12 +370,12 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                         if (dataFile.getFuture() != null) {
                             dataFile.getFuture().cancel(true);
                             dataFile.setFuture(futureFactory.schedule(
-                                    new Runnable() {
+                                    logErrors("update check", new Runnable() {
                                         @Override
                                         public void run() {
                                             checkForUpdateOnTimer(dataFile);
                                         }
-                                    },
+                                    }),
                                     getIntervalMillis(dataFile.getConfiguration())));
                         }
                     }
@@ -603,7 +632,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                             delayMillis);
                     try {
                         ScheduledFuture<?> future = futureFactory.schedule(
-                                new Runnable() {
+                                logErrors("update check", new Runnable() {
                                     @Override
                                     public void run() {
                                         logger.debug("running checkForUpdate {}",
@@ -611,7 +640,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                                         checkForUpdateOnTimer(aspectDataFile);
                                         logger.debug("Returning from checkForUpdate");
                                     }
-                                },
+                                }),
                                 delayMillis);
                         logger.debug("Update check scheduled for {} millis",
                                 future.getDelay(TimeUnit.MILLISECONDS));
@@ -663,7 +692,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                                 aspectDataFile.getConfiguration().getPollingIntervalSeconds() * 1000L;
                         logger.debug("Setting poll future {} millis", pollingInterval);
                         aspectDataFile.setPollFuture(futureFactory.scheduleRepeating(
-                                new Runnable() {
+                                logErrors("file system watch", new Runnable() {
                                     @Override
                                     public void run() {
                                         logger.debug("Watcher is running");
@@ -686,7 +715,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                                         // make sure to reset the watch key or we are not called again
                                         watchKey.reset();
                                     }
-                                },
+                                }),
                                 pollingInterval));
                         logger.debug("Poll check scheduled for {} mins",
                                 aspectDataFile.getPollFuture().getDelay(TimeUnit.MINUTES));
@@ -1344,8 +1373,8 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             }
             return result;
         } catch (Throwable e) {
-            logger.error("Exception thrown", e);
-            return AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED;
+            logUnhandledError(dataFile, e);
+            return AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR;
         } finally {
             // Make sure the temp files are cleaned up
             try {

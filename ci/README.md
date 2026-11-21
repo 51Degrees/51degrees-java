@@ -113,23 +113,33 @@ Required:
   [access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#about-personal-access-tokens)
   for cloning repositories and creating pull requests.
 
+The workflows pass the secrets to common-ci with `secrets: inherit`, and
+common-ci exports each under its own name before the scripts here run. The
+tests read only these names.
+
 To run the on-premise tests:
 
-- `DEVICE_DETECTION_KEY`: [license key](https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=ci-readme.md&utm_term=secrets)
-  for the Device Detection TAC data file and the data file update example.
-- `IP_INTELLIGENCE_KEY`: license key for the IP Intelligence Enterprise data
-  file.
-- `IPI_DATA_FILE_URL`: URL of the IP Intelligence Enterprise data file. The
-  IP Intelligence examples and benchmark are skipped without it.
-- `DEVICE_DETECTION_URL` (optional): URL of the Device Detection TAC data file.
+- `_51DEGREES_LICENSE_KEY`: [license key](https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=ci-readme.md&utm_term=secrets)
+  for the data files. common-ci downloads the Device Detection TAC and the IP
+  Intelligence Enterprise data files from the Distributor with it, and the
+  data file update example uses it.
 
 To run the cloud tests:
 
 - `_51DEGREES_RESOURCE_KEY_BESPOKE`: [resource key](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=ci-readme.md&utm_term=secrets)
-  passed to the tests as `TestResourceKey` and `SuperResourceKey`.
-- `_51DEGREES_LICENSE_KEY_51DID`: license key for the 51Did cloud tests,
-  together with the `_51DEGREES_RESOURCE_KEY_BASIC` and
-  `_51DEGREES_RESOURCE_KEY_51DID` variables.
+  from which common-ci fills `_51DEGREES_RESOURCE_KEY`, the key the cloud
+  tests read, and `_51DEGREES_RESOURCE_KEY_SUPER`, the key with every
+  property, which the Location and the TAC and native model tests read.
+- `_51DEGREES_LICENSE_KEY_BESPOKE`: license key for the cloud products, for
+  the Cloud Request Engine's test on a license key alone.
+- `_51DEGREES_RESOURCE_KEY_51DID`: resource key for the 51Did cloud tests.
+  It has to belong to the same account as `_51DEGREES_LICENSE_KEY_51DID`,
+  or the licensed redeem comes back unreadable.
+- `_51DEGREES_LICENSE_KEY_51DID`: license key for the 51Did cloud tests.
+  `cloud-51did.yml` gives it only to the pass with
+  `_51DEGREES_RESOURCE_KEY_51DID`. The Bespoke pass redeems with none.
+
+A cloud test with no key is skipped, naming the variable it reads.
 
 To publish to Maven Central (51Degrees only):
 

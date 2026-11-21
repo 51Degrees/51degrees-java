@@ -11,3 +11,6 @@
 [submodule "pipeline/pipeline.core/configuration-validation"]
 	path = pipeline/pipeline.core/configuration-validation
 	url = ../configuration-validation
+[submodule "pipeline/derived-properties"]
+	path = pipeline/derived-properties
+	url = ../derived-properties

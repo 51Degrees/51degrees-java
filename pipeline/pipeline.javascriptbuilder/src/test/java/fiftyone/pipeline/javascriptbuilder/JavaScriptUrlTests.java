@@ -187,6 +187,47 @@ public class JavaScriptUrlTests {
     }
 
     /**
+     * Only a key whose prefix is "query" followed by the separator is a
+     * query parameter, so a key such as "queryx.field" is left out.
+     */
+    @Test
+    public void Parameters_PrefixWithoutSeparator_IsLeftOut()
+        throws Exception {
+        JavaScriptBuilderElement jsElement =
+            new JavaScriptBuilderElementBuilder(loggerFactory)
+                .setEndpoint("/json")
+                .setHost("example.com")
+                .setProtocol("https")
+                .setMinify(false)
+                .build();
+        String javaScript;
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+            .addFlowElement(new SequenceElementBuilder(loggerFactory).build())
+            .addFlowElement(new JsonBuilderElementBuilder(loggerFactory).build())
+            .addFlowElement(jsElement)
+            .build();
+             FlowData flowData = pipeline.createFlowData()) {
+            flowData.addEvidence("query.kept", "yes");
+            flowData.addEvidence("queryx.field", "not-a-query");
+            flowData.process();
+            javaScript = flowData.getFromElement(jsElement).getJavaScript();
+        }
+        String parameters = null;
+        for (String line : javaScript.split("\\r?\\n")) {
+            if (line.toLowerCase().contains("parameters =")
+                    && line.contains("{")) {
+                parameters = line;
+                break;
+            }
+        }
+        assertNotNull(parameters, "No parameters object in the script.");
+        assertTrue(parameters.contains("\"kept\":\"yes\""),
+            "query.kept is not in the parameters: " + parameters);
+        assertFalse(parameters.contains("not-a-query"),
+            "queryx.field is in the parameters: " + parameters);
+    }
+
+    /**
      * A context root still sits between the host and the endpoint, and the
      * URL still carries no query string.
      */

@@ -55,8 +55,7 @@ public class MinimalExample {
     public static void main(String[] args) throws Exception {
         String resourceKey = KeyHelper.findResourceKey(
                 args.length > 0 ? args[0] : null,
-                KeyHelper.RESOURCE_KEY_VARIABLE,
-                KeyHelper.TEST_RESOURCE_KEY);
+                KeyHelper.RESOURCE_KEY_VARIABLE);
         if (resourceKey == null) {
             KeyHelper.writeNoResourceKey(System.out, EXAMPLE_TAG,
                     KeyHelper.RESOURCE_KEY_VARIABLE,

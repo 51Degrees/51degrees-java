@@ -495,11 +495,14 @@ public class JavaScriptBuilderElement
                 .getEvidence()
                 .asKeyMap();
 
+        // The prefix with its separator, so that a key such as "querystring"
+        // is not taken for a query parameter.
+        String queryPrefix = EVIDENCE_QUERY_PREFIX + EVIDENCE_SEPERATOR;
         for(Map.Entry<String, Object> entry : queryEvidence.entrySet()){
             // Evidence keys ignore case, so the prefix and the excluded
             // keys are matched whatever the case the key was added in.
             if(entry.getKey().regionMatches(true, 0,
-                    EVIDENCE_QUERY_PREFIX, 0, EVIDENCE_QUERY_PREFIX.length()) &&
+                    queryPrefix, 0, queryPrefix.length()) &&
                     EXCLUDED_PARAMETERS.contains(
                         entry.getKey().toLowerCase(Locale.ROOT)) == false){
                 String key = entry.getKey().substring(entry.getKey().indexOf(EVIDENCE_SEPERATOR) + 1);

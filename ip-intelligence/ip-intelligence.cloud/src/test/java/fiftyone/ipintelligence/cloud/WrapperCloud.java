@@ -47,7 +47,7 @@ public class WrapperCloud implements Closeable {
     public WrapperCloud() throws Exception {
         cloudRequestEngine = 
                 new CloudRequestEngineBuilder(loggerFactory, new TimedHttpClient())
-                .setResourceKey(KeyUtils.getResourceKey("TestResourceKey"))
+                .setResourceKey(KeyUtils.getResourceKey())
                 // The live cloud service is shared with every CI run. In run
                 // 44881631156 its slowest answer was 0.77 s, over 540
                 // requests on all 15 Build and Test jobs (TimedHttpClient

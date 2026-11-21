@@ -77,7 +77,7 @@ public class Example extends HttpServlet {
     public static void main(String[] args) throws LifecycleException {
         EmbedTomcat.runWebApp("geo-location.web.examples/geo-location.web.examples.servlet/src/main/webapp",
             "geo-location.web.examples/geo-location.web.examples.servlet/target",
-            8080);
+            5151);
     }
     /**
      * Serializable class version number, which is used during deserialization.

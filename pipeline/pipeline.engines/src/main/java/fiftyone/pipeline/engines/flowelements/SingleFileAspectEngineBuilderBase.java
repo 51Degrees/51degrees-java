@@ -242,6 +242,7 @@ public abstract class SingleFileAspectEngineBuilderBase<
      * @return this builder
      */
     @Deprecated
+    @DefaultValue(intValue = Constants.DATA_UPDATE_POLLING_DEFAULT)
     @SuppressWarnings("unchecked")
     public TBuilder setUpdatePollingInterval(int pollingIntervalSeconds) {
         dataFileBuilder.setUpdatePollingInterval(pollingIntervalSeconds);
@@ -277,6 +278,7 @@ public abstract class SingleFileAspectEngineBuilderBase<
      * @return this builder
      */
     @Deprecated
+    @DefaultValue(intValue = Constants.DATA_UPDATE_POLLING_DEFAULT * 1000)
     @SuppressWarnings("unchecked")
     public TBuilder setUpdatePollingInterval(long pollingIntervalMillis) {
         dataFileBuilder.setUpdatePollingInterval(pollingIntervalMillis);
@@ -308,6 +310,7 @@ public abstract class SingleFileAspectEngineBuilderBase<
      * @return this builder
      */
     @Deprecated
+    @DefaultValue(intValue = Constants.DATA_UPDATE_RANDOMISATION_DEFAULT * 1000)
     @SuppressWarnings("unchecked")
     public TBuilder setUpdateRandomisationMax(long maximumDeviationMillis) {
         dataFileBuilder.setUpdateRandomisationMax(maximumDeviationMillis);
@@ -324,7 +327,7 @@ public abstract class SingleFileAspectEngineBuilderBase<
      *                               polling interval
      * @return this builder
      */
-    @DefaultValue(intValue = Constants.DATA_UPDATE_RANDOMISATION_DEFAULT)
+    @DefaultValue(intValue = Constants.DATA_UPDATE_RANDOMISATION_DEFAULT * 1000)
     @SuppressWarnings("unchecked")
     public TBuilder setUpdateRandomisationMaxMillis(long maximumDeviationMillis) {
         dataFileBuilder.setUpdateRandomisationMax(maximumDeviationMillis);

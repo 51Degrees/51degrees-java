@@ -37,8 +37,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Refreshing the engine's data from several threads at once, with the free
@@ -107,6 +110,65 @@ public class DataRefreshTests extends TestsBase {
             data.process();
             return data.get(IPIntelligenceData.class)
                 .getRegisteredCountry().getValue();
+        }
+    }
+
+    /**
+     * Closing the engine while a refresh runs waits for the refresh to
+     * finish, so the native engine is never freed under it. The test holds
+     * the engine's own monitor, which a refresh holds while it runs.
+     */
+    @Test
+    public void Close_WhileARefreshRuns_WaitsForTheRefresh()
+        throws Exception {
+        IPIntelligenceOnPremiseEngine engine = getWrapper().getEngine();
+        CountDownLatch held = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        Future<Boolean> refresh = executor.submit(() -> {
+            synchronized (engine) {
+                held.countDown();
+                return release.await(WAIT_SECONDS, TimeUnit.SECONDS);
+            }
+        });
+        assertTrue(held.await(WAIT_SECONDS, TimeUnit.SECONDS));
+        Future<Boolean> closing = executor.submit(() -> {
+            engine.close();
+            return true;
+        });
+        try {
+            closing.get(2, TimeUnit.SECONDS);
+            fail("The engine closed while a refresh was running.");
+        } catch (TimeoutException e) {
+            // Closing waits for the refresh, as it should.
+        } finally {
+            release.countDown();
+        }
+        assertTrue(refresh.get(WAIT_SECONDS, TimeUnit.SECONDS));
+        assertTrue(closing.get(WAIT_SECONDS, TimeUnit.SECONDS));
+    }
+
+    /**
+     * A refresh that gets the engine's monitor after the engine is closed,
+     * from either overload, fails with an error and does not use the native
+     * objects that closing freed.
+     */
+    @Test
+    public void Refresh_AfterClose_FailsWithoutUsingTheFreedEngine()
+        throws Exception {
+        IPIntelligenceOnPremiseEngine engine = getWrapper().getEngine();
+        String identifier = engine.getDataFileMetaData().getIdentifier();
+        engine.close();
+        try {
+            engine.refreshData(identifier);
+            fail("A refresh from file ran after the engine was closed.");
+        } catch (IllegalStateException e) {
+            // As it should.
+        }
+        try {
+            engine.refreshData(identifier, new byte[] { 0 });
+            fail("A refresh from memory ran after the engine was closed.");
+        } catch (IllegalStateException e) {
+            // As it should.
         }
     }
 }

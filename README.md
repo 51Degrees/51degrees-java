@@ -98,7 +98,9 @@ mvn install -DskipTests -pl device-detection -am
 mvn surefire:test
 ```
 
-The cloud tests need a Resource Key, passed as `-DTestResourceKey=<key>`. The
+The cloud tests need a Resource Key, in the `_51DEGREES_RESOURCE_KEY`
+environment variable, or passed as `-D_51DEGREES_RESOURCE_KEY=<key>`, and are
+skipped without one. The
 on-premise tests need the free data files, which the script in
 [Getting the code](#getting-the-code) downloads. For the Enterprise IP
 Intelligence data file, see `ip-intelligence/README.md`.

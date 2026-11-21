@@ -91,20 +91,17 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     }
 
     /**
-     * By default, only query string parameters that start with 51D_ are
-     * shared.
-     * <p>
-     * This setter replaces the current list, if any
-     * <p>
-     * This setting allows you to share these parameters with 51Degrees
-     * if needed.
+     * Deprecated, and has no effect. A query string or HTTP form parameter
+     * is shared only when its name starts with 51D_ or it is Evidence the
+     * Pipeline uses, being a key a Flow Element in the Pipeline accepts,
+     * whatever this is set to.
      * @param queryStringParameterNames the (case-insensitive) names of
      *                                  the query string parameters
      *                                  to include
      * @return this builder
      */
 
-    @DefaultValue("No sharing unless the parameter starts with 51D_")
+    @DefaultValue("None, as it has no effect")
     public ShareUsageBuilderBase<T> setIncludedQueryStringParameters(
         List<String> queryStringParameterNames) {
         includedQueryStringParameters.clear();
@@ -113,19 +110,16 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     }
 
     /**
-     * By default, only query string parameters that start with 51D_ are
-     * shared.
-     * <p>
-     * This setter replaces the current list, if any
-     * <p>
-     * This setting allows you to share these parameters with 51Degrees
-     * if needed.
+     * Deprecated, and has no effect. A query string or HTTP form parameter
+     * is shared only when its name starts with 51D_ or it is Evidence the
+     * Pipeline uses, being a key a Flow Element in the Pipeline accepts,
+     * whatever this is set to.
      * @param queryStringParameterNames a comma separated list of
      *                                  (case-insensitive) names of the
      *                                  query string parameters to include
      * @return this builder
      */
-    @DefaultValue("No sharing unless the parameter starts with 51D_")
+    @DefaultValue("None, as it has no effect")
     public ShareUsageBuilderBase<T> setIncludedQueryStringParameters(
             String queryStringParameterNames) {
         includedQueryStringParameters.clear();
@@ -135,16 +129,15 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     }
 
     /**
-     * By default, only query string parameters that start with 51D_ are
-     * shared.
-     * <p>
-     * This setting adds the name of a parameter to share with 51Degrees
-     * if needed.
+     * Deprecated, and has no effect. A query string or HTTP form parameter
+     * is shared only when its name starts with 51D_ or it is Evidence the
+     * Pipeline uses, being a key a Flow Element in the Pipeline accepts,
+     * whatever this is set to.
      * @param queryStringParameterName the (case-insensitive) name of the
      *                                 query string parameter to include
      * @return this builder
      */
-    @DefaultValue("No sharing unless the parameter starts with 51D_")
+    @DefaultValue("None, as it has no effect")
     public ShareUsageBuilderBase<T> setIncludedQueryStringParameter(
         String queryStringParameterName) {
         includedQueryStringParameters.add(queryStringParameterName.trim());
@@ -152,14 +145,11 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     }
 
     /**
-     * If set to true, every query string and HTTP form parameter is shared,
-     * rather than only those that start with 51D_ or are named in the
-     * included parameters. The whole query string and the parameters that are
-     * never shared are still not shared. Set it to false to share only the
-     * 51D_ parameters and those named.
-     * <p>
-     * Default value is true
-     * @param shareAll true to share all query string parameters
+     * Deprecated, and has no effect. Setting it shares no query string or
+     * HTTP form parameter that would not otherwise be shared, which is one
+     * whose name starts with 51D_ or that a Flow Element in the Pipeline
+     * accepts.
+     * @param shareAll kept, but not used
      * @return this builder
      */
     @DefaultValue(booleanValue = true)
@@ -170,8 +160,9 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     }
 
     /**
-     * Whether every query string parameter is shared.
-     * @return true if all query string parameters are shared
+     * Deprecated. The value set for the share all query string parameters
+     * option, which has no effect.
+     * @return the value set
      */
     public boolean isShareAllQueryStringParameters() {
         return shareAllQueryStringParameters;
@@ -179,11 +170,12 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
 
     /**
      * If set to true, all Evidence is shared, which overrides the blocked
-     * HTTP headers and the rules for session values and query string
-     * parameters. The keys that are never shared (an email address, the salt
-     * for hashed email identifiers, the whole query string, the path and the
-     * Cookie header) are still not shared, and nor is any cookie whose name
-     * does not start with 51D_.
+     * HTTP headers and the rule for session values. The keys that are never
+     * shared (an email address, the salt for hashed email identifiers, the
+     * whole query string, the path and the Cookie header) are still not
+     * shared, and nor is any cookie whose name does not start with 51D_, or
+     * any query string or form parameter whose name does not start with 51D_
+     * and which the Pipeline does not use.
      * <p>
      * Default value is false
      * @param shareAll true to share all Evidence
@@ -358,6 +350,7 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      * @return this builder
      */
     @Deprecated
+    @DefaultValue(intValue = Constants.SHARE_USAGE_DEFAULT_ADD_TIMEOUT)
     public ShareUsageBuilderBase<T> setAddTimeout(int milliseconds) {
         addTimeout = milliseconds;
         return this;
@@ -388,6 +381,7 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      * @return this builder
      */
     @Deprecated
+    @DefaultValue(intValue = Constants.SHARE_USAGE_DEFAULT_TAKE_TIMEOUT)
     public ShareUsageBuilderBase<T> setTakeTimeout(int milliseconds) {
         takeTimeout = milliseconds;
         return this;
