@@ -58,8 +58,19 @@ public class Wrapper51Degrees implements Wrapper {
         	resourceKey = envResourceKey;
         }
 
-    	cloudRequestEngine = new CloudRequestEngineBuilder(logger)
+    	cloudRequestEngine = new CloudRequestEngineBuilder(logger, new TimedHttpClient())
                 .setResourceKey(resourceKey)
+                // The live cloud service is shared with every CI run. In run
+                // 44881631156 its slowest answer was 0.77 s, over 540
+                // requests on all 15 Build and Test jobs (TimedHttpClient
+                // prints each one). In java #190's release build (run
+                // 44702767584, about 08:38 UTC on 20 November 2026) device
+                // detection's ValueCloudTests got "Read timed out" past the
+                // 2 second default on two jobs. How long those answers took
+                // was not measured. 15 seconds is about 20 times the slowest
+                // answer measured. These tests check what the service
+                // answers, not how fast.
+                .setTimeOutSeconds(15)
                 .build();
         engine =  new GeoLocationCloudEngineBuilder(logger)
                 .setGeoLocationProvider("FiftyOneDegrees")
