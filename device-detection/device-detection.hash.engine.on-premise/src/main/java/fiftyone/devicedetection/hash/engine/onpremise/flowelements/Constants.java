@@ -26,7 +26,10 @@ public class Constants {
 	public static class MatchMetrics {
 		/* Category */
 		public static final String CATEGORY = "Device Metrics";
-		
+
+		/* Component */
+		public static final String COMPONENT = "Metrics";
+
 		/* Names */
 		public static final String MATCHED_NODES = "MatchedNodes";
 		public static final String DIFFERENCE = "Difference";

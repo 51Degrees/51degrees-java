@@ -144,6 +144,24 @@ public abstract class AspectEngineBase<
     }
 
     /**
+     * Whether a result may be stored in the cache, and served when it is
+     * found there. A result that holds a value created for the one request
+     * that asked for it, such as a 51Did, must be neither. See the
+     * <a href="https://github.com/51Degrees/specifications/blob/d79bbe3b2aef86273570742f6b660f29bfe72816/pipeline-specification/features/caching.md#L151-L156">caching specification</a>:
+     * "A cache MUST NOT store a result that holds such a value, and MUST NOT
+     * serve one that it finds."
+     * <p>
+     * It is asked about a processed result before it is stored, and about a
+     * result found in the cache before it is served.
+     * @param data the result to check
+     * @return true, unless an engine overrides this to keep a result out of
+     * the cache
+     */
+    protected boolean isCacheable(TData data) {
+        return true;
+    }
+
+    /**
      * Private method that checks if the result is already in the cache or not.
      * If it is then the result is added to 'data', if not then
      * {@link #processEngine(FlowData, AspectData)}is called to do so.
@@ -159,7 +177,8 @@ public abstract class AspectEngineBase<
             Object cacheResultsObject = cache.get(flowData);
             if (cacheResultsObject != null &&
                 getTypedDataKey().getType().isAssignableFrom(
-                    cacheResultsObject.getClass())) {
+                    cacheResultsObject.getClass()) &&
+                isCacheable((TData)cacheResultsObject)) {
                 // This is checked.
                 //noinspection unchecked
                 cacheResult = (TData)cacheResultsObject;
@@ -178,23 +197,29 @@ public abstract class AspectEngineBase<
             }
 
             // Process on this thread, whether or not the deprecated lazy
-            // loading option is set.
+            // loading option is set, then cache the result if it may be.
             processEngine(flowData, aspectData);
-            // If there is a cache then add the result
-            // of processing to the cache.
-            if (cache != null) {
-                TData result = flowData.getFromElement(this);
-                // The cache holds it after this Flow Data is closed, so it
-                // never goes back to a pool.
-                if (result instanceof ElementDataBase) {
-                    ((ElementDataBase) result).keepFromPool();
-                }
-                cache.put(flowData, result);
-            }
+            putInCache(flowData, aspectData);
         } else {
             // We have a result from the cache so add it
             // into the flow data.
             flowData.getOrAdd(getTypedDataKey(), new DataFactorySimple<>(cacheResult));
+        }
+    }
+
+    /**
+     * Add a processed result to the cache, if there is one and the result
+     * may be cached. A result that is stored is kept out of its pool,
+     * because the cache holds it after this Flow Data is closed.
+     * @param flowData the {@link FlowData} whose Evidence makes the key
+     * @param aspectData the processed result
+     */
+    private void putInCache(FlowData flowData, TData aspectData) {
+        if (cache != null && isCacheable(aspectData)) {
+            if (aspectData instanceof ElementDataBase) {
+                ((ElementDataBase) aspectData).keepFromPool();
+            }
+            cache.put(flowData, aspectData);
         }
     }
 

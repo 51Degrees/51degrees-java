@@ -109,11 +109,11 @@ class PipelineDefault implements PipelineInternal {
 
     /**
      * A filter that will only include the evidence keys that can be used by at
-     * least one {@link FlowElement} within this pipeline.
-     * (Will only be populated after the {@link #getEvidenceKeyFilter()} method
-     * is called.)
+     * least one {@link FlowElement} within this pipeline. Built once in the
+     * constructor, because the elements do not change after that, and final
+     * so every request can read it with no lock.
      */
-    private EvidenceKeyFilter evidenceKeyFilter = null;
+    private final EvidenceKeyFilter evidenceKeyFilter;
 
     /**
      * The pipeline maintains a map of the elements it contains indexed by type.
@@ -150,7 +150,11 @@ class PipelineDefault implements PipelineInternal {
         boolean suppressProcessExceptions) {
         this.logger = logger;
         this.flowDataFactory = flowDataFactory;
-        this.flowElements = flowElements;
+        // A copy, so that the builder adding to its own list later cannot
+        // change this Pipeline, which is immutable. See
+        // https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/conceptual-overview.md#L118
+        this.flowElements = Collections.unmodifiableList(
+            new ArrayList<>(flowElements));
         this.services = new ArrayList<>();
         this.autoDisposeElements = autoDisposeElements;
         this.suppressProcessExceptions = suppressProcessExceptions;
@@ -161,6 +165,13 @@ class PipelineDefault implements PipelineInternal {
         for (FlowElement element : this.flowElements) {
             isConcurrent = isConcurrent || element.isConcurrent();
         }
+
+        EvidenceKeyFilterAggregator filter = new EvidenceKeyFilterAggregator();
+        for (FlowElement element : this.flowElements) {
+            filter.addFilter(element.getEvidenceKeyFilter());
+        }
+        evidenceKeyFilter = filter;
+
         getElementAvailableProperties();
 
         logger.debug("Pipeline '" + hashCode() + "' created.");
@@ -192,24 +203,17 @@ class PipelineDefault implements PipelineInternal {
 
     @Override
     public EvidenceKeyFilter getEvidenceKeyFilter() {
-        if (evidenceKeyFilter == null) {
-            synchronized (lock) {
-                if (evidenceKeyFilter == null) {
-                    EvidenceKeyFilterAggregator filter =
-                        new EvidenceKeyFilterAggregator();
-                    for (FlowElement element : flowElements) {
-                        filter.addFilter(element.getEvidenceKeyFilter());
-                    }
-                    evidenceKeyFilter = filter;
-                }
-            }
-        }
         return evidenceKeyFilter;
     }
 
     @Override
     public boolean isConcurrent() {
         return isConcurrent;
+    }
+
+    @Override
+    public boolean isSuppressProcessExceptions() {
+        return suppressProcessExceptions;
     }
 
     @Override

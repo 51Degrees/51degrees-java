@@ -115,6 +115,10 @@ public class GettingStartedWebOnPrem extends HttpServlet {
             "web-getting-started.onprem-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedwebonprem.java";
 
     private static final long serialVersionUID = 1734154705981153540L;
+    /**
+     * The port the example listens on.
+     */
+    public static final int DEFAULT_PORT = 5151;
     public static Logger logger = LoggerFactory.getLogger(GettingStartedWebOnPrem.class);
 
     public static void main(String[] args) throws Exception {
@@ -138,7 +142,7 @@ public class GettingStartedWebOnPrem extends HttpServlet {
         }
 
         // start Jetty with this WebApp
-        EmbedJetty.runWebApp(getResourceBase(), 8082);
+        EmbedJetty.runWebApp(getResourceBase(), DEFAULT_PORT);
     }
 
     public static String getResourceBase() {
@@ -166,6 +170,9 @@ public class GettingStartedWebOnPrem extends HttpServlet {
         // The lookup has already been carried out by the PipelineFilter
         // which closes the FlowData at the end of the request, so it is not
         // closed here.
+        // A Flow Data cannot be used by two threads at once. Work handed to
+        // another thread or task gets the values it needs, read here on the
+        // request's thread, not the Flow Data.
         FlowData flowData = flowDataProvider.getFlowData(request);
         
         // Determine target IP for display.

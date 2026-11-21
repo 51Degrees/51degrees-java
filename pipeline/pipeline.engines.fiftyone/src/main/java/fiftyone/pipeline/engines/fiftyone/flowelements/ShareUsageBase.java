@@ -26,6 +26,8 @@ import fiftyone.caching.LruPutCache;
 import fiftyone.pipeline.core.data.*;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
+import fiftyone.pipeline.core.flowelements.ParallelElements;
+import fiftyone.pipeline.core.flowelements.RunsLast;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.configuration.CacheConfiguration;
 import fiftyone.pipeline.engines.fiftyone.data.EvidenceKeyFilterShareUsage;
@@ -48,6 +50,8 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.Function;
+import java.util.function.LongSupplier;
 
 import static fiftyone.pipeline.core.Constants.EVIDENCE_SEPERATOR;
 import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.LOST_DATA_RESET_DEFAULT;
@@ -56,10 +60,11 @@ import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.LOST_DAT
 /**
  * Abstract base class for ShareUsage elements. Contains common functionality
  * such as filtering the evidence and building the XML records.
- * @see <a href="https://github.com/51Degrees/specifications/blob/c8128ca4fa68c6348d76ddb2889bb5087de1aa5f/pipeline-specification/pipeline-elements/usage-sharing-element.md">Specification</a>
+ * @see <a href="https://github.com/51Degrees/specifications/blob/07e1fcedc2cbd83a60cd245c137747686e58da41/pipeline-specification/pipeline-elements/usage-sharing-element.md">Specification</a>
  */
 public abstract class ShareUsageBase
-    extends FlowElementBase<ElementData, ElementPropertyMetaData> {
+    extends FlowElementBase<ElementData, ElementPropertyMetaData>
+    implements RunsLast {
 
     /**
      * IP Addresses of local host device.
@@ -138,7 +143,7 @@ public abstract class ShareUsageBase
     /**
      * Which of the values found are shared, leaving out the session cookie.
      */
-    private final EvidenceKeyFilter evidenceKeyFilterExclSession;
+    private final EvidenceKeyFilterShareUsage evidenceKeyFilterExclSession;
 
     /**
      * The filter used to determine if an item of evidence should be ignored or
@@ -203,6 +208,51 @@ public abstract class ShareUsageBase
      * {@link #getFlowElements()} is called.
      */
     private List<String> flowElements = null;
+
+    /**
+     * The packages the pipeline uses, each with its version. This is
+     * populated when {@link #getPackages()} is called.
+     */
+    private SortedMap<String, String> packages = null;
+
+    /**
+     * Finds the packages that hold the classes given and the packages they
+     * depend on. Tests replace it, as the classes they run are not loaded
+     * from published jars.
+     */
+    Function<Collection<Class<?>>, SortedMap<String, String>> packageFinder =
+        classes -> PackageVersions.of(classes, PackageVersions.GROUP_ID);
+
+    /**
+     * How long after the invariant values were last written to a record
+     * they are written again, which is an hour.
+     */
+    private static final long INVARIANT_VALUES_INTERVAL_MILLIS =
+        60L * 60L * 1000L;
+
+    /**
+     * The time in milliseconds, which decides when the invariant values are
+     * written again. Tests replace it, so that the hour passes without
+     * waiting for it.
+     */
+    LongSupplier clock = System::currentTimeMillis;
+
+    /**
+     * The process identifier, a version 4 UUID created when the element is
+     * built. It is never stored, so a process that starts again, or builds
+     * another element, has a new one. Written to every record as
+     * ProcessId.
+     */
+    private final String processId = UUID.randomUUID().toString();
+
+    /**
+     * When the invariant values were last written to a record, by
+     * {@link #clock}, or null if they have not been written yet.
+     */
+    private Long invariantValuesWritten = null;
+
+    /** Guards {@link #invariantValuesWritten}. */
+    private final Object invariantValuesLock = new Object();
 
     /**
      * The name of the operating system the Pipeline runs on, followed by
@@ -614,6 +664,38 @@ public abstract class ShareUsageBase
     }
 
     /**
+     * The process identifier, which every record carries as ProcessId. It
+     * is created when the element is built and is the same in every record
+     * the element writes.
+     * @return a version 4 UUID in its string form
+     */
+    protected String getProcessId() {
+        return processId;
+    }
+
+    /**
+     * Decides whether the record about to be written carries the invariant
+     * values: Version, Product, Flow Elements, Packages, Language,
+     * LanguageVersion, ServerIP and Platform. They are written to the first
+     * record and then to the first record written once an hour or more has
+     * passed since they were last written, and to no other record. Call it
+     * once for each record, as it notes the time when it returns true.
+     * @return true if the record is to carry the invariant values
+     */
+    protected boolean writeInvariantValuesNow() {
+        long now = clock.getAsLong();
+        synchronized (invariantValuesLock) {
+            if (invariantValuesWritten == null ||
+                now - invariantValuesWritten >=
+                    INVARIANT_VALUES_INTERVAL_MILLIS) {
+                invariantValuesWritten = now;
+                return true;
+            }
+            return false;
+        }
+    }
+
+    /**
      * The text for Platform, which is the name of the operating system
      * followed by its version where there is one.
      */
@@ -656,6 +738,49 @@ public abstract class ShareUsageBase
             }
         }
         return flowElements;
+    }
+
+    /**
+     * The 51Degrees packages in use, each named by its Maven group and
+     * artifact id and given its version, in name order. They are the
+     * package that holds the pipeline, the package that holds each of its
+     * flow elements and this element, and every 51Degrees package those
+     * depend on. The pipeline lists a parallel group as one element, so the
+     * members of each group are added as well.
+     * @return the packages and their versions
+     */
+    protected Map<String, String> getPackages() {
+        if (packages == null) {
+            List<Class<?>> classes = new ArrayList<>();
+            classes.add(getClass());
+            if (getPipelines().size() == 1) {
+                Pipeline pipeline = getPipelines().get(0);
+                classes.add(pipeline.getClass());
+                addElementClasses(classes, pipeline.getFlowElements());
+            }
+            packages = packageFinder.apply(classes);
+        }
+        return packages;
+    }
+
+    /**
+     * Add the class of each flow element, and of each member of a parallel
+     * group among them, to the classes in use.
+     * @param classes the classes in use
+     * @param elements the flow elements to add
+     */
+    @SuppressWarnings("rawtypes")
+    private static void addElementClasses(
+            List<Class<?>> classes,
+            List<FlowElement> elements) {
+        for (FlowElement element : elements) {
+            classes.add(element.getClass());
+            if (element instanceof ParallelElements) {
+                addElementClasses(
+                    classes,
+                    ((ParallelElements) element).getFlowElements());
+            }
+        }
     }
 
     @Override
@@ -790,8 +915,31 @@ public abstract class ShareUsageBase
         return null;
     }
 
+    /**
+     * The time closing may still wait for the data to be sent, so that the
+     * whole of closing, measured from its start, keeps within the close
+     * limit with the reserve left for what follows the wait.
+     * @param closeStartNanos {@link System#nanoTime()} when closing started
+     * @return milliseconds left to wait, never less than 0
+     */
+    private static long closeWaitLeftMillis(long closeStartNanos) {
+        long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(
+            System.nanoTime() - closeStartNanos);
+        return Math.max(0, closeWaitMillis() - elapsedMillis);
+    }
+
+    /**
+     * The longest closing waits for the data to be sent, from its start.
+     * @return milliseconds
+     */
+    private static long closeWaitMillis() {
+        return Constants.SHARE_USAGE_CLOSE_LIMIT_MILLIS -
+            Constants.SHARE_USAGE_CLOSE_RESERVE_MILLIS;
+    }
+
     @Override
     protected void managedResourcesCleanup() {
+        long closeStartNanos = System.nanoTime();
         // Tell any consumer - one that is already running as well as the final
         // one queued below - that the queue has to be drained completely rather
         // than stopping once fewer than minEntriesPerMessage entries are left.
@@ -810,9 +958,12 @@ public abstract class ShareUsageBase
         submitSendData();
         try {
             executor.shutdown();
-            if (!executor.awaitTermination(Constants.SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT, TimeUnit.MILLISECONDS)){
+            if (!executor.awaitTermination(
+                    closeWaitLeftMillis(closeStartNanos),
+                    TimeUnit.MILLISECONDS)) {
                 // Sending stops rather than hold up the process that closes
-                // the element, and the data left is discarded.
+                // the element, and the data left is discarded, all within
+                // the close limit.
                 discarding = true;
                 int discarded =
                     evidenceCollection.drainTo(new ArrayList<ShareUsageData>());
@@ -821,7 +972,7 @@ public abstract class ShareUsageBase
                         "not finished {} milliseconds after usage sharing " +
                         "started closing.",
                     discarded,
-                    Constants.SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT);
+                    closeWaitMillis());
                 executor.shutdownNow();
             }
         } catch (InterruptedException interruptedException) {
@@ -861,6 +1012,18 @@ public abstract class ShareUsageBase
     }
 
     /**
+     * The Evidence key filter of the Pipeline processing the Flow Data,
+     * which decides which query string and form parameters it uses.
+     * @param data the Flow Data being processed
+     * @return the filter, or null if the Flow Data has no Pipeline
+     */
+    private static EvidenceKeyFilter pipelineUses(FlowData data) {
+        return data.getPipeline() == null ?
+            null :
+            data.getPipeline().getEvidenceKeyFilter();
+    }
+
+    /**
      * Process the supplied request data
      * @param data the {@link FlowData} instance that provides the evidence
      * @param found the values {@link ShareUsageEvidence#find} found for it,
@@ -877,7 +1040,9 @@ public abstract class ShareUsageBase
                 // it to the collection.
                 try {
                     if (evidenceCollection.offer(
-                            getDataFromEvidence(shared),
+                            getDataFromEvidence(
+                                shared,
+                                pipelineUses(data)),
                             addTimeout,
                             TimeUnit.MILLISECONDS)) {
                         queueFullReported = false;
@@ -916,15 +1081,23 @@ public abstract class ShareUsageBase
      * reference to the existing evidence instance.
      *
      * @param found the values {@link ShareUsageEvidence#find} found
+     * @param pipelineUses the Evidence key filter of the Pipeline, which
+     *                     decides which parameters it uses
      * @return a {@link ShareUsageData} instance populated with the values
      * the sharing rules allow
      */
-    private ShareUsageData getDataFromEvidence(Map<String, Object> found) {
+    private ShareUsageData getDataFromEvidence(
+        Map<String, Object> found,
+        EvidenceKeyFilter pipelineUses) {
         ShareUsageData shareUsageData = new ShareUsageData();
 
         for (Map.Entry<String, Object> entry : found.entrySet()) {
-            // Check if we can send this piece of evidence
-            if (evidenceKeyFilterExclSession.include(entry.getKey()) == false) {
+            // Check if we can send this piece of evidence. A query string or
+            // form parameter is sent only if it starts with 51D_ or the
+            // Pipeline uses it.
+            if (evidenceKeyFilterExclSession.include(
+                    entry.getKey(),
+                    pipelineUses) == false) {
                 continue;
             }
 
@@ -1099,5 +1272,16 @@ public abstract class ShareUsageBase
             categoryDict.put(field, value.toString());
         }
 
+    }
+
+    /**
+     * Usage sharing reads what every other Flow Element has added to the
+     * Evidence, so it is the last Flow Element of a Pipeline and outside any
+     * parallel group.
+     * @return the name a misplaced usage sharing element is refused with
+     */
+    @Override
+    public String getRunsLastName() {
+        return "The usage sharing element";
     }
 }

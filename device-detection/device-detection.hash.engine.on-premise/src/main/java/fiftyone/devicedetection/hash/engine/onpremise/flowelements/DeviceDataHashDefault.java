@@ -44,6 +44,12 @@ import static fiftyone.pipeline.util.StringManipulation.stringJoin;
 /**
  * Internal implementation of the {@link DeviceDataHash} interface. This can
  * only be constructed by the {@link DeviceDetectionHashEngine}.
+ * <p>
+ * Values are read from the native results with no lock. Reading a value
+ * writes into the results, so an instance is not safe to use from several
+ * threads at once, and a caller that shares one is responsible for any
+ * locking.
+ * @see <a href="https://github.com/51Degrees/specifications/blob/d79bbe3b2aef86273570742f6b660f29bfe72816/device-detection-specification/pipeline-elements/device-detection-on-premise.md#results-and-threads">Results and threads</a>
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/device-detection-specification/pipeline-elements/device-detection-on-premise.md#element-data">Specification</a>
  */
 public class DeviceDataHashDefault
@@ -259,10 +265,13 @@ public class DeviceDataHashDefault
     @Override
     protected boolean propertyIsAvailable(String propertyName) {
         checkState();
-        // A property the engine has a position for is held by its results,
-        // so that needs no lookup of the name in native code.
-        if (indexOf(propertyName) != null) {
-            return resultsList.isEmpty() == false;
+        // A property the engine was created with has a position, and the
+        // read goes by it, so there is no need to look the name up in the
+        // results first. A property the data set lacks keeps its position
+        // and reads as having no value. With results from more than one
+        // engine, the name finds the results that hold the property.
+        if (resultsList.size() == 1 && indexOf(propertyName) != null) {
+            return true;
         }
         for (ResultsHashSwig results : resultsList) {
             if (results.containsProperty(Swig.asBytes(propertyName))) {

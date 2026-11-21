@@ -32,6 +32,8 @@ import fiftyone.pipeline.engines.fiftyone.flowelements.SetHeadersElement;
 import fiftyone.pipeline.javascriptbuilder.flowelements.JavaScriptBuilderElement;
 import fiftyone.pipeline.jsonbuilder.flowelements.JsonBuilderElement;
 
+import java.util.Locale;
+
 /**
  * Static methods used on server startup to configure and build the Pipeline and
  * services needed.
@@ -50,12 +52,29 @@ public class StartupHelpers {
         String name) {
         int index = 0;
         for (ElementOptions element : options.elements) {
-            if (element.builderName.toLowerCase().contains(name.toLowerCase())) {
+            if (element.builderName.toLowerCase(Locale.ROOT).contains(name.toLowerCase(Locale.ROOT))) {
                 return index;
             }
             index++;
         }
         return -1;
+    }
+
+    /**
+     * Add an element at the end of the configuration, but before a usage
+     * sharing element, which must stay the last Flow Element.
+     * @param options the options to add to
+     * @param element the element to add
+     */
+    private static void addBeforeUsageSharing(
+        PipelineOptions options,
+        ElementOptions element) {
+        int index = getElementIndex(options, "ShareUsage");
+        if (index >= 0 && index == options.elements.size() - 1) {
+            options.elements.add(index, element);
+        } else {
+            options.elements.add(element);
+        }
     }
 
     /**
@@ -184,7 +203,7 @@ public class StartupHelpers {
                     jsIndex++;
                 }
                 else {
-                    options.elements.add(jsonBuilderElement);
+                    addBeforeUsageSharing(options, jsonBuilderElement);
                 }
             }
 
@@ -196,7 +215,7 @@ public class StartupHelpers {
                 if(contextRoot != null) {
                     javaScriptBuilderElement.buildParameters.put("ContextRoot", contextRoot);
                 }
-                options.elements.add(javaScriptBuilderElement);
+                addBeforeUsageSharing(options, javaScriptBuilderElement);
             }
             else {
                 // There is already a JavaScript builder config so check if
@@ -238,7 +257,7 @@ public class StartupHelpers {
             // The set-headers element is not included so add it.
             ElementOptions setHeadersElement = new ElementOptions();
             setHeadersElement.builderName = SetHeadersElement.class.getSimpleName();
-            options.elements.add(setHeadersElement);
+            addBeforeUsageSharing(options, setHeadersElement);
         }
         
         return builder.buildFromConfiguration(options);

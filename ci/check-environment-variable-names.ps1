@@ -1,11 +1,11 @@
 # Every 51Degrees environment variable name in this repository starts with an
 # underscore, because a POSIX shell cannot set a name that starts with a digit,
-# and each variable has one name. An old name is still read, as a deprecated
-# fallback for when its new name is not set, by the files listed in
-# DeprecatedFallbacks below and by nothing else. This reads every file git
-# tracks, which leaves out build output and the submodules, and fails on any
-# name that starts with the digit and on any old name, outside the files
-# listed for that name.
+# and each variable has one name. No old name is read. An old name may appear
+# only in the files listed in KeptOldNames below, which keep a deprecated
+# public constant holding it, and in the tests of those constants. This reads
+# every file git tracks, which leaves out build output and the submodules, and
+# fails on any name that starts with the digit and on any old name, outside
+# the files listed for that name.
 #
 # Dot-sourcing the script defines Find-EnvironmentNameProblem and
 # Test-DeprecatedFallback without reading the repository, which is how its
@@ -56,25 +56,20 @@ $script:FallbackPattern = [regex]::new(
     '(?:RESOURCE_KEY|LICENSE_KEY|FOD_CLOUD_API_URL)(?![A-Za-z0-9_])|' +
     '\bLEGACY_[A-Z_]*ENV_VARS?\b')
 
-# The files that read an old name as a deprecated fallback, or that test
-# that read, each with the old names it may hold. The names are put together
+# The files that keep a deprecated public constant holding an old name, or
+# that test the constant, each with the old names it may hold. The names are put together
 # from parts so that this file does not match itself.
 $oldEndpoint = 'FOD_CLOUD' + '_API_URL'
 $oldResourceKey = 'RESOURCE' + '_KEY'
-$oldLicenseKey = 'LICENSE' + '_KEY'
 $oldDigitKey = $digitInitial + $oldResourceKey
 $oldIpiPath = $digitInitial + 'IPI_PATH'
-$oldDdPath = $digitInitial + 'DD_PATH'
 $cloudEngine = 'pipeline/pipeline.cloudrequestengine/src'
 $did = 'pipeline/pipeline.did/src'
-$examples = 'pipeline/pipeline.developer-examples/pipeline.developer-examples'
 $ipiShared = 'ip-intelligence/ip-intelligence.shared/src'
 $ipiHelpers = 'fiftyone/ipintelligence/shared/testhelpers'
 $ipiExamples = 'examples/ip-intelligence/shared/src'
 $ipiExampleHelpers = 'fiftyone/ipintelligence/examples/shared'
-$onPrem = 'examples/device-detection/web/getting-started.onprem/src'
-$onPremPackage = 'fiftyone/devicedetection/examples/web'
-$script:DeprecatedFallbacks = @{
+$script:KeptOldNames = @{
     "$cloudEngine/main/java/fiftyone/pipeline/cloudrequestengine/flowelements/Constants.java" =
         @($oldEndpoint)
     "$cloudEngine/test/java/fiftyone/pipeline/cloudrequestengine/flowelements/CloudRequestEngineBuilderTests.java" =
@@ -83,18 +78,6 @@ $script:DeprecatedFallbacks = @{
         @($oldEndpoint)
     "$did/test/java/fiftyone/pipeline/did/DidClientEnvironmentTests.java" =
         @($oldEndpoint)
-    "$did/test/java/fiftyone/pipeline/did/LiveCloudKeys.java" =
-        @($oldResourceKey, $oldLicenseKey)
-    "$did/test/java/fiftyone/pipeline/did/LiveCloudKeysTests.java" =
-        @($oldResourceKey, $oldLicenseKey)
-    "$examples.cloud-engine/src/main/java/pipeline/developerexamples/cloudengine/Main.java" =
-        @($oldEndpoint, $oldResourceKey)
-    "$examples.cloud-engine/src/test/java/pipeline/developerexamples/cloudengine/EndpointTests.java" =
-        @($oldEndpoint, $oldResourceKey)
-    "$examples.fodid/src/main/java/pipeline/developerexamples/fodid/CreatorContextDemoServer.java" =
-        @($oldResourceKey, $oldLicenseKey)
-    "$examples.fodid/src/test/java/pipeline/developerexamples/fodid/DeprecatedKeyNameTests.java" =
-        @($oldResourceKey, $oldLicenseKey)
     "$ipiShared/main/java/$ipiHelpers/FileUtils.java" = @($oldIpiPath)
     "$ipiShared/test/java/$ipiHelpers/FileUtilsTest.java" = @($oldIpiPath)
     "$ipiShared/main/java/$ipiHelpers/KeyUtils.java" = @($oldDigitKey)
@@ -107,21 +90,13 @@ $script:DeprecatedFallbacks = @{
         @($oldDigitKey)
     "$ipiExamples/test/java/$ipiExampleHelpers/KeyHelperTest.java" =
         @($oldDigitKey)
-    'ip-intelligence/ip-intelligence.translation/src/test/java/fiftyone/ipintelligence/translation/CountryTranslationIntegrationTest.java' =
-        @($oldIpiPath)
-    "$onPrem/main/webapp/WEB-INF/51Degrees-OnPrem.xml" = @($oldDdPath)
-    "$onPrem/main/java/$onPremPackage/GettingStartedWebOnPrem.java" =
-        @($oldDdPath)
-    "$onPrem/test/java/$onPremPackage/OnPremDataFileOptionTest.java" =
-        @($oldDdPath)
 }
-
 # Whether the text matched in the file at this path, relative to the root
 # with forward slashes, is an old name that file is listed for. The name is
 # the run of name characters the match ends with, compared in its exact
 # case.
 function Test-DeprecatedFallback([string]$Path, [string]$Value) {
-    $allowed = $script:DeprecatedFallbacks[$Path]
+    $allowed = $script:KeptOldNames[$Path]
     if ($null -eq $allowed) {
         return $false
     }

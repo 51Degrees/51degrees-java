@@ -140,7 +140,9 @@ public class IPIntelligenceOnPremisePipelineBuilderTest {
                 .build()) {
             List<FlowElement> flowElements = pipeline.getFlowElements();
             assertEquals(2, flowElements.size());
-            assertTrue(flowElements.get(0) instanceof ShareUsageElement);
+            // Usage sharing is the last Flow Element.
+            assertTrue(flowElements.get(flowElements.size() - 1)
+                instanceof ShareUsageElement);
         }
     }
 

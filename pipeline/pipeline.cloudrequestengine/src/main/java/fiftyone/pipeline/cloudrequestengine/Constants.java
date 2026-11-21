@@ -58,6 +58,16 @@ public class Constants {
 
         public static final String EvidenceConflict =
             "'%s:%s' evidence conflicts with %s";
+
+        /**
+         * Warning a cloud engine logs when the Cloud Request Engine has no
+         * response for it to read. The argument is the engine's class name.
+         */
+        public static final String NoCloudResponse =
+            "The %s did not process, as the Cloud Request Engine has no "
+            + "response. The Cloud Request Engine's error in the log says "
+            + "why.";
+
         public static final String MessageNoDataInResponse =
             "No data in response from cloud service at '%s'";
         public static final String MessageErrorCodeReturned =

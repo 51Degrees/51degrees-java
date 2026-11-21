@@ -2,12 +2,16 @@ name: CI script tests
 
 # Runs the Pester tests of the scripts in ci on Linux and Windows, where the
 # builds run them. The environment variable names workflow runs its own test.
+# The test of run-fresh-clone-example.ps1 also runs the calls in
+# examples-fresh-clone.yml, so a change to that workflow runs the tests too.
 
 on:
   pull_request:
     paths:
       - 'ci/**'
       - '.github/workflows/ci-script-tests.yml'
+      # run-fresh-clone-example.Tests.ps1 runs the calls this workflow makes.
+      - '.github/workflows/examples-fresh-clone.yml'
   push:
     branches:
       - main
@@ -15,6 +19,7 @@ on:
     paths:
       - 'ci/**'
       - '.github/workflows/ci-script-tests.yml'
+      - '.github/workflows/examples-fresh-clone.yml'
   workflow_dispatch:
 
 permissions:

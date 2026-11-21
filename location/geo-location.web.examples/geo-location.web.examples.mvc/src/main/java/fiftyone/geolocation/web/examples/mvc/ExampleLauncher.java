@@ -31,6 +31,6 @@ public class ExampleLauncher {
         runWebApp(
                 "geo-location.web.examples/geo-location.web.examples.mvc/src/main/webapp",
                 "geo-location.web.examples/geo-location.web.examples.mvc/target",
-                8080);
+                5151);
     }
 }

@@ -35,7 +35,6 @@ import pipeline.developerexamples.cloudengine.flowelements.SimpleCloudEngine;
 import pipeline.developerexamples.cloudengine.flowelements.SimpleCloudEngineBuilder;
 
 import java.io.PrintStream;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Main {
     private static final ILoggerFactory loggerFactory = LoggerFactory.getILoggerFactory();
@@ -57,24 +56,10 @@ public class Main {
         "https://cloud.51degrees.com/api/v4/";
 
     /**
-     * The name the cloud endpoint is read from, and the deprecated name
-     * read when that one is not set.
+     * The name the cloud endpoint is read from.
      */
     private static final String ENDPOINT_VARIABLE =
         "_51DEGREES_CLOUD_ENDPOINT";
-    private static final String OLD_ENDPOINT_VARIABLE = "FOD_CLOUD_API_URL";
-
-    private static final AtomicBoolean oldEndpointVariableLogged =
-        new AtomicBoolean(false);
-
-    /**
-     * The deprecated name of the first of the resource key names, read
-     * when that one is not set.
-     */
-    private static final String OLD_RESOURCE_KEY_VARIABLE = "RESOURCE_KEY";
-
-    private static final AtomicBoolean oldResourceKeyVariableLogged =
-        new AtomicBoolean(false);
 
     /**
      * The cloud endpoint, taken from _51DEGREES_CLOUD_ENDPOINT when that is
@@ -86,24 +71,10 @@ public class Main {
      * which is the private hosting option of the cloud service. Both run
      * the same service, so the example works unchanged. Normalised to
      * end in one slash so the builder appends its three paths to it
-     * directly. The deprecated name FOD_CLOUD_API_URL is read when
-     * _51DEGREES_CLOUD_ENDPOINT is not set, and the first use of it is
-     * logged as a warning.
+     * directly.
      */
     static String endpoint() {
         String value = env(ENDPOINT_VARIABLE);
-        if (value == null) {
-            value = env(OLD_ENDPOINT_VARIABLE);
-            if (value != null
-                && oldEndpointVariableLogged.compareAndSet(false, true)) {
-                loggerFactory.getLogger(Main.class.getName()).warn(
-                    "The environment variable " + OLD_ENDPOINT_VARIABLE
-                    + " is deprecated and " + ENDPOINT_VARIABLE
-                    + " replaces it. Set " + ENDPOINT_VARIABLE
-                    + " to the same value, as a later release may no "
-                    + "longer read " + OLD_ENDPOINT_VARIABLE + ".");
-            }
-        }
         if (value == null) {
             // A resource key and an endpoint travel together, because a
             // key is only known to the service that issued it. So the
@@ -130,31 +101,15 @@ public class Main {
         "_51DEGREES_RESOURCE_KEY",
         "_51DEGREES_RESOURCE_KEY_BESPOKE",
         "TestResourceKey",
-        "SUPER_RESOURCE_KEY",
     };
 
     /**
      * The 51Degrees resource key that was found, or null when none of the
-     * names above is set anywhere. When the first name is not set its
-     * deprecated name RESOURCE_KEY is read before the others, and the
-     * first use of it is logged as a warning.
+     * names above is set anywhere.
      */
     static String configuredResourceKey() {
         for (String name : RESOURCE_KEY_NAMES) {
             String value = env(name);
-            if (value == null && name.equals(RESOURCE_KEY_NAMES[0])) {
-                value = env(OLD_RESOURCE_KEY_VARIABLE);
-                if (value != null
-                    && oldResourceKeyVariableLogged.compareAndSet(
-                        false, true)) {
-                    loggerFactory.getLogger(Main.class.getName()).warn(
-                        "The environment variable " + OLD_RESOURCE_KEY_VARIABLE
-                        + " is deprecated and " + name
-                        + " replaces it. Set " + name
-                        + " to the same value, as a later release may no longer "
-                        + "read " + OLD_RESOURCE_KEY_VARIABLE + ".");
-                }
-            }
             if (value != null) {
                 return value;
             }

@@ -156,6 +156,7 @@ public class DeviceDetectionHashEngineBuilder
         }
     }
 
+    @DefaultValue("Balanced")
     @Override
     public DeviceDetectionHashEngineBuilder setPerformanceProfile(
         PerformanceProfiles profile) {
@@ -285,6 +286,49 @@ public class DeviceDetectionHashEngineBuilder
         return this;
     }
     
+    /**
+     * Set the properties, such as TAC and NativeModel, whose values are
+     * indexed to the profiles holding them when the data file loads, so that
+     * {@link DeviceDetectionHashEngine#getProfileIdsForPropertyValue(String, String)}
+     * finds the profiles for a value of one of them without reading every
+     * profile. Names are matched exactly. A refresh indexes the same
+     * properties.
+     * <p>
+     * Default is none.
+     * @see <a href="https://github.com/51Degrees/specifications/blob/main/device-detection-specification/pipeline-elements/device-detection-on-premise.md#configuration-options">Specification</a>
+     * @param names of the properties to index
+     * @return this builder
+     */
+    @DefaultValue("None")
+    public DeviceDetectionHashEngineBuilder setIndexedProperties(
+        List<String> names) {
+        try (VectorStringSwig namesSwig = new VectorStringSwig()) {
+            namesSwig.addAll(names);
+            config.setIndexedProperties(namesSwig);
+        }
+        return this;
+    }
+
+    /**
+     * Set the properties whose values are indexed to the profiles holding
+     * them, as {@link #setIndexedProperties(List)} does, from a comma
+     * separated list of names, as a configuration file gives them.
+     * @param names comma separated names of the properties to index
+     * @return this builder
+     */
+    @DefaultValue("None")
+    public DeviceDetectionHashEngineBuilder setIndexedProperties(
+        String names) {
+        List<String> list = new ArrayList<>();
+        for (String name : names.split(",")) {
+            if (name.trim().isEmpty() == false) {
+                list.add(name.trim());
+            }
+        }
+        return setIndexedProperties(list);
+    }
+
+    @DefaultValue("No results cache, and none can be set for this engine")
     @Override
     public DeviceDetectionHashEngineBuilder setCache(
         CacheConfiguration cacheConfiguration) {

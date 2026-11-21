@@ -29,8 +29,8 @@ public class Constants {
 	// Environment variable name to set end point
 	public static final String CLOUD_ENDPOINT_VARIABLE = "_51DEGREES_CLOUD_ENDPOINT";
 	/**
-	 * The old name of the environment variable that sets the end point,
-	 * read only when {@link #CLOUD_ENDPOINT_VARIABLE} is not set.
+	 * The old name of the environment variable that sets the end point.
+	 * It is no longer read.
 	 * @deprecated use {@link #CLOUD_ENDPOINT_VARIABLE}, and set the
 	 * environment variable it names in place of this one.
 	 */

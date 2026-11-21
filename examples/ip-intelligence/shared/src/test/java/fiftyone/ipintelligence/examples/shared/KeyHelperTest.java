@@ -43,8 +43,7 @@ public class KeyHelperTest {
     private static final String KEY_B = "AgAAAAAAAAAAAAAAAAAAAAAA";
 
     /**
-     * The names getOrSetTestResourceKey reads, in its order, apart from
-     * the deprecated name it reads when the first is not set.
+     * The names getOrSetTestResourceKey reads, in its order.
      */
     private static final List<String> EXAMPLE_NAMES = Arrays.asList(
         KeyHelper.RESOURCE_KEY_VARIABLE, KeyHelper.TEST_RESOURCE_KEY);
@@ -55,10 +54,7 @@ public class KeyHelperTest {
      */
     @Test
     public void getOrSetTestResourceKey_NoKey_StoresNothing() {
-        // The deprecated name is read as well, so it must not be set
-        // either.
         List<String> namesRead = new ArrayList<>(EXAMPLE_NAMES);
-        namesRead.add(OLD_KEY_NAME);
         // A test can clear a system property but not an environment
         // variable.
         for (String name : namesRead) {
@@ -137,20 +133,9 @@ public class KeyHelperTest {
     private static final String OLD_KEY_NAME = "51DEGREES_RESOURCE_KEY";
 
     @Test
-    public void requireResourceKey_OldNameWhenNewIsNotSet() {
-        Map<String, String> values = new HashMap<>();
-        values.put(OLD_KEY_NAME, KEY_A);
-        values.put(KeyHelper.TEST_RESOURCE_KEY, KEY_B);
-        assertEquals(KEY_A, KeyHelper.requireResourceKey(values::get,
-            Arrays.asList(NEW_KEY_NAME, KeyHelper.TEST_RESOURCE_KEY),
-            "every IP Intelligence property", "ip"));
-    }
-
-    @Test
-    public void requireResourceKey_NewNameWinsOverOld() {
+    public void requireResourceKey_NewName() {
         Map<String, String> values = new HashMap<>();
         values.put(NEW_KEY_NAME, KEY_B);
-        values.put(OLD_KEY_NAME, KEY_A);
         assertEquals(KEY_B, KeyHelper.requireResourceKey(values::get,
             Arrays.asList(NEW_KEY_NAME, KeyHelper.TEST_RESOURCE_KEY),
             "every IP Intelligence property", "ip"));

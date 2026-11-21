@@ -32,6 +32,7 @@ import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
+import fiftyone.pipeline.engines.data.ProvidesValuesAsString;
 import fiftyone.pipeline.engines.flowelements.AspectEngine;
 import fiftyone.pipeline.engines.services.MissingPropertyService;
 import org.slf4j.Logger;
@@ -40,6 +41,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -47,8 +49,15 @@ import static fiftyone.pipeline.util.Types.getPrimitiveTypeMap;
 
 /**
  * Base class used for all 51Degrees on-premise IP Intelligence results classes.
+ * <p>
+ * An instance reads its values from native results, and reading a value
+ * writes into them, so an instance is not safe to use from several threads
+ * at once. The caller is responsible for thread-safe access, for example by
+ * wrapping its calls in a lock of its own. See the
+ * <a href="https://github.com/51Degrees/specifications/blob/d79bbe3b2aef86273570742f6b660f29bfe72816/pipeline-specification/features/thread-safety.md#L196-L221">thread safety specification</a>.
  */
-public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceDataBase {
+public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceDataBase
+    implements ProvidesValuesAsString {
 
     protected final Map<Class<?>, Class<?>> primitiveTypes;
     private final Object dataLock = new Object();
@@ -98,6 +107,24 @@ public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceData
      */
     protected abstract AspectPropertyValue<String> getValueAsString(
         String propertyName);
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The Property is first read as {@link #get(String)} reads it, so a
+     * Property that is not in the results throws, and a lazy loaded result
+     * is waited for, exactly as for that accessor.
+     * <p>
+     * The value is read from the results instance with no lock, so this
+     * instance is not safe to use from several threads at once. A caller
+     * that shares it coordinates its own access.
+     */
+    @Override
+    public AspectPropertyValue<String> getStoredValueAsString(
+        String propertyName) {
+        get(propertyName);
+        return getValueAsString(propertyName);
+    }
 
     /**
      * Get the value for the specified property as an {@link Integer}. If the
@@ -229,12 +256,12 @@ public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceData
                     final Map<String, ElementPropertyMetaData> keyedProps = allProps.get(key);
                     final java.util.Collection<ElementPropertyMetaData> relevantProps = keyedProps.values();
                     for (ElementPropertyMetaData property : relevantProps) {
-                        map.put(property.getName().toLowerCase(),
+                        map.put(property.getName().toLowerCase(Locale.ROOT),
                             getAs(property.getName(),
                                 AspectPropertyValue.class,
                                 toWeightedListType(property.getType(), false)));
                     }
-                    populateFromMap(map);
+                    keepValues(map);
                     mapPopulated = true;
                 }
             }

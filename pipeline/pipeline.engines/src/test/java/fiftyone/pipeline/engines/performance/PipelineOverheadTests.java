@@ -114,14 +114,21 @@ public class PipelineOverheadTests {
         CacheConfiguration cacheConfig = new CacheConfiguration(
             new LruPutCache.Builder(),100);
         engine.setCache(new FlowCacheDefault(cacheConfig));
-        // Set process cost to 0.2 sec. Therefore, the test cannot pass
-        // unless the cache is mitigating this cost as it should do.
+        // Set process cost to 0.2 sec, so every call the cache does not answer
+        // costs far more than the overhead permitted.
         engine.setProcessCost(200);
         int iterations = 10_000;
         Map<String, Object> evidence = new HashMap<>();
         evidence.put("test.value", 10);
+        // Fill the cache before timing. The one call that misses the cache
+        // costs 0.2 sec, which is 0.02 ms of the permitted average over
+        // 10,000 calls, so timing it measured the process cost and not the
+        // overhead.
+        new TestCallable(pipeline, 1, evidence).call();
         long result = new TestCallable(pipeline, iterations, evidence).call();
 
+        // The cache answered every call after the first.
+        assertEquals(1, engine.getProcessCount());
         double msOverheadPerCall = (double)(result) / iterations;
         logger.info("Process cost {}", engine.getProcessCost());
         logger.info("Average was {} millis", msOverheadPerCall);

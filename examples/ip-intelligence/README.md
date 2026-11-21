@@ -186,7 +186,7 @@ Web examples:
 mvn compile exec:java -pl web/getting-started.onprem -Dexec.mainClass="fiftyone.ipintelligence.examples.web.GettingStartedWebOnPrem"
 ```
 
-The web example will start a Jetty server on port 8081. Access it at: `http://localhost:8081`
+The web example will start a Jetty server on port 5151. Access it at: `http://localhost:5151`
 
 ### Running Examples from Packaged JARs
 
@@ -207,3 +207,15 @@ the examples use.
 ```bash
 java -cp ./console/target/ip-intelligence-java-examples.console-4.5.127-SNAPSHOT-jar-with-dependencies.jar fiftyone.ipintelligence.examples.console.OfflineProcessing
 ```
+
+## Flow Data and threads
+
+A Flow Data cannot be used by two threads at once. The web examples handle
+each request on one thread, and read the Flow Data there. An application that
+hands work from a request to another thread or task reads the values that
+work needs from the Flow Data on the request's thread, into its own
+variables, and passes those values, not the Flow Data. The Flow Data is
+closed when the request ends, so work that outlives the request must not
+keep it either. The
+[pipeline README](../../pipeline/README.md#flow-data-and-threads)
+shows such a hand-off.

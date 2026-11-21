@@ -155,8 +155,10 @@ Lite file does not have the last three, so each of them reads
 The IP Intelligence example looks up `116.154.188.222`, `45.236.48.61` and an
 IPv6 address. For each it prints `Input values:` with `query.client-ip`, then
 `Results:` with a line for each property, from `RegisteredName` to
-`TimeZoneOffset`. The Lite file has RegisteredName, RegisteredOwner and
-RegisteredCountry, so every other line reads `needs the Enterprise data file`.
+`TimeZoneOffset`. Each value is followed by its weighting, as in
+`RegisteredCountry: CN (weighting 1.00)`. The Lite file has RegisteredName,
+RegisteredOwner and RegisteredCountry, so every other line reads `needs the
+Enterprise data file`.
 
 Both then end the same way, where `<tier>` is `Lite` for Device Detection and
 `IPIV4Lite` for IP Intelligence.
@@ -178,17 +180,25 @@ The cloud examples need a resource key, which a person creates on the
 configuration page, so ask for one if none is set. A key with the properties
 most of the Device Detection examples use can be made
 [here](https://51degrees.com/configure/jqz435Nc?utm_source=github&utm_medium=docs&utm_campaign=51degrees-java&utm_content=agents.md&utm_term=cloud-examples).
-The Device Detection cloud example takes the key as its first argument, or
-from a `TestResourceKey` environment variable or system property.
+The Device Detection, IP Intelligence and Location cloud examples take the
+key as their first argument, or from the `_51DEGREES_RESOURCE_KEY`
+environment variable or system property. The Device Detection and IP
+Intelligence examples read the older `TestResourceKey` after it. The TAC and
+native model examples need a key with paid properties and read it from a
+variable of their own, which each names when it has no key.
 
 ```
 java -cp examples/device-detection/console/target/device-detection-java-examples.console-4.5.127-SNAPSHOT-jar-with-dependencies.jar fiftyone.devicedetection.examples.console.GettingStartedCloud <key>
 ```
 
 It prints the same `Input values:` and `Results:` blocks as the on-premise
-example. The IP Intelligence cloud examples read their key from
-`_51DEGREES_RESOURCE_KEY` first and `TestResourceKey` second, and
-`examples/ip-intelligence/README.md` gives the keys to create for them.
+example. `examples/ip-intelligence/README.md` gives the keys to create for
+the IP Intelligence examples.
+
+With no key, a cloud example does not fail. It says that it needs a resource
+key, names the variable to set, gives the page where a key is created, ends
+with its "Find out more" section and exits with code 0. The tests named
+`WithoutKey` run each one that way.
 
 ### Pitfalls
 
@@ -229,8 +239,14 @@ example. The IP Intelligence cloud examples read their key from
   product's `GettingStartedOnPrem` jar from the repository root with no
   settings. On Ubuntu the free data file is downloaded, as from a fresh
   clone, and the Windows and macOS jobs take that file from the run's cache,
-  so each file is downloaded once a run. It runs on each push to `main` and
-  `rc`, daily, and on a pull request that changes the examples.
+  so each file is downloaded once a run. The Ubuntu job then builds every
+  example module, the web examples too, with its tests compiled against
+  the published packages, so a test that uses a class only this
+  repository has fails there. It runs on each push to `main` and
+  `rc`, daily, and on a pull request that changes the examples. Its check
+  runs by hand from the repository root after the build, with
+  `-ExpectDownload` only when the data file is still a link:
+  `pwsh -File ./ci/run-fresh-clone-example.ps1 -Product device-detection -Example fiftyone.devicedetection.examples.console.GettingStartedOnPrem -ExpectDownload`.
 
 ## Environment variable names
 
@@ -303,6 +319,14 @@ The Windows pre-build scripts take a toolset and SDK version from the pom.
 `cxx` is 51degrees-cxx, moved forward by the nightly submodule update. The
 JavaScript templates and the OWID library are submodules inside `pipeline`,
 where the Pipeline API expects them.
+
+`pipeline/derived-properties` is the
+[derived-properties](https://github.com/51Degrees/derived-properties)
+repository. `pipeline.derivedproperty` packages the scripts in its `scripts`
+folder as resources, so a script added there needs a `BuiltInScript`
+constant, which `BuiltInScriptTests` checks. The package's tests run every
+case file and every rejection case in its `tests` folder, so its answers and
+its faults are checked against the other languages'.
 
 ## Releases
 

@@ -22,6 +22,9 @@
 
 package fiftyone.pipeline.core.flowelements;
 
+import fiftyone.pipeline.annotations.AlternateName;
+import fiftyone.pipeline.annotations.DefaultValue;
+import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.core.Constants;
 import fiftyone.pipeline.core.configuration.PipelineOptions;
 import fiftyone.pipeline.core.data.FlowData;
@@ -105,6 +108,7 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
      */
     public Pipeline build() throws Exception {
         onPreBuild();
+        checkRunsLast(flowElements);
         Pipeline pipeline = new PipelineDefault(
             loggerFactory.getLogger(Pipeline.class.getName()),
             flowElements,
@@ -113,6 +117,58 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
             suppressProcessExceptions);
         addServicesToPipeline(pipeline);
         return pipeline;
+    }
+
+    /**
+     * After a build has failed, close the Flow Elements this builder made
+     * itself and take them out of its list, because no caller holds them to
+     * close. A failure to close one is added to the build's error.
+     * @param made the Flow Elements this builder made
+     * @param error the error the build failed with
+     */
+    protected void closeMadeElements(
+        List<? extends FlowElement<?, ?>> made,
+        Exception error) {
+        for (FlowElement<?, ?> element : made) {
+            getFlowElements().remove(element);
+            try {
+                element.close();
+            } catch (Exception e) {
+                error.addSuppressed(e);
+            }
+        }
+    }
+
+    /**
+     * Refuse a Pipeline that puts a Flow Element that must run last, such as
+     * the usage sharing element, anywhere but last, or in a parallel group.
+     * @param elements the Flow Elements of the Pipeline, in order
+     * @throws PipelineConfigurationException if one is out of place
+     */
+    @SuppressWarnings("rawtypes")
+    private static void checkRunsLast(List<FlowElement> elements) {
+        for (int i = 0; i < elements.size(); i++) {
+            FlowElement element = elements.get(i);
+            if (element instanceof ParallelElements) {
+                for (FlowElement member :
+                    ((ParallelElements) element).getFlowElements()) {
+                    if (member instanceof RunsLast) {
+                        throw runsLastRefused((RunsLast) member);
+                    }
+                }
+            } else if (element instanceof RunsLast &&
+                i != elements.size() - 1) {
+                throw runsLastRefused((RunsLast) element);
+            }
+        }
+    }
+
+    private static PipelineConfigurationException runsLastRefused(
+        RunsLast element) {
+        return new PipelineConfigurationException(
+            element.getRunsLastName() + " must be the last Flow Element " +
+                "and outside any parallel group. Add it after every other " +
+                "Flow Element, and not as a member of a parallel group.");
     }
 
     /**
@@ -181,11 +237,16 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
     /**
      * Configure the {@link Pipeline} to either call dispose on it's child
      * {@link FlowElement}s when it is disposed or not.
+     * <p>
+     * A configuration file may also give this option as 'AutoDisposeElements'
+     * or 'SetAutoDisposeElements', the name other languages use.
      * @param autoClose true if the Pipeline should call dispose on it's child
      *                  elements when it is disposed
      * @return this builder
      */
     @SuppressWarnings("unchecked")
+    @DefaultValue(booleanValue = Constants.DEFAULT_AUTO_CLOSE_ELEMENTS)
+    @AlternateName("SetAutoDisposeElements")
     public T setAutoCloseElements(boolean autoClose) {
         this.autoCloseElements = autoClose;
         return (T) this;
@@ -201,6 +262,7 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
      * @return this builder
      */
     @SuppressWarnings("unchecked")
+    @DefaultValue(booleanValue = Constants.DEFAULT_SUPPRESS_PROCESS_EXCEPTIONS)
     public T setSuppressProcessException(boolean suppress) {
         this.suppressProcessExceptions = suppress;
         return (T) this;

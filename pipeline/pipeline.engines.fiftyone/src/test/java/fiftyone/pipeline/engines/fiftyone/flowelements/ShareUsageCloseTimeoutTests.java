@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Proxy;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -45,11 +46,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static fiftyone.pipeline.core.Constants.EVIDENCE_CLIENTIP_KEY;
 import static fiftyone.pipeline.engines.Constants.DEFAULT_SESSION_COOKIE_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Closing waits up to 5 seconds for the data waiting to be sent. If it has
- * not all been sent by then, sending stops, the rest is discarded and a
+ * Closing finishes within 5 seconds of its start. If the data waiting has
+ * not all been sent in time, sending stops, the rest is discarded and a
  * warning gives the number discarded. See Cleanup in the usage sharing
  * element specification.
  */
@@ -64,6 +66,22 @@ public class ShareUsageCloseTimeoutTests {
      * Entries processed, enough for several messages of at most two.
      */
     private static final int ENTRIES = 10;
+
+    /**
+     * The 5 seconds the specification bounds the whole of cleanup at. The
+     * <a href="https://github.com/51Degrees/specifications/blob/6570727d/pipeline-specification/pipeline-elements/usage-sharing-element.md#cleanup">usage
+     * sharing element specification</a> says "Cleanup SHOULD complete within
+     * 5 seconds, so that closing the element does not hold up the process
+     * that closes it."
+     * <p>
+     * The limit is the specification's, not a measurement. Closing must take
+     * less, holding the wait for the data to be sent, discarding the rest,
+     * the warning and freeing the resources. The element waits 4,500 ms, its
+     * 5,000 ms budget less a 500 ms reserve, then does the rest, so it
+     * closes in a little over 4,500 ms. Code that waits the full 5 seconds
+     * before doing the rest always takes at least this long, so it fails.
+     */
+    private static final long CLOSE_LIMIT_MILLIS = 5000;
 
     /**
      * An upload whose first answer does not come until the test releases
@@ -107,23 +125,7 @@ public class ShareUsageCloseTimeoutTests {
         List<String> warnings = new CopyOnWriteArrayList<>();
         StalledUploader uploader = new StalledUploader();
         Pipeline pipeline = new PipelineBuilder().build();
-        ShareUsageElement element = new ShareUsageElement(
-            recordingLogger(warnings),
-            1,
-            1,
-            100,
-            100,
-            100,
-            1,
-            true,
-            "http://localhost/usage",
-            new ArrayList<>(),
-            new ArrayList<>(),
-            new ArrayList<>(),
-            DEFAULT_SESSION_COOKIE_NAME,
-            flowData -> true);
-        element.addPipeline(pipeline);
-        element.dataUploader = uploader;
+        ShareUsageElement element = element(warnings, pipeline, uploader);
         try {
             for (int i = 1; i <= ENTRIES; i++) {
                 process(pipeline, element, "10.0.0." + i);
@@ -156,6 +158,82 @@ public class ShareUsageCloseTimeoutTests {
             }
             pipeline.close();
         }
+    }
+
+    /**
+     * Closing while the remote service has stopped answering finishes within
+     * 5 seconds of its start, the whole of cleanup included, while the
+     * upload in progress is still waiting for its answer.
+     */
+    @Test
+    public void ShareUsageElement_ServiceStopsAnswering_CloseWithin5Seconds()
+        throws Exception {
+        StalledUploader uploader = new StalledUploader();
+        Pipeline pipeline = new PipelineBuilder().build();
+        ShareUsageElement element = element(
+            new CopyOnWriteArrayList<>(),
+            pipeline,
+            uploader);
+        try {
+            for (int i = 1; i <= ENTRIES; i++) {
+                process(pipeline, element, "10.0.0." + i);
+            }
+            assertTrue(
+                uploader.sending.await(WAIT_LIMIT_MILLIS, TimeUnit.MILLISECONDS),
+                "No send was started.");
+
+            long[] tookMillis = new long[1];
+            assertTimeoutPreemptively(
+                Duration.ofMillis(WAIT_LIMIT_MILLIS),
+                () -> {
+                    long start = System.nanoTime();
+                    element.close();
+                    tookMillis[0] = TimeUnit.NANOSECONDS.toMillis(
+                        System.nanoTime() - start);
+                },
+                "Closing waited for the remote service to answer.");
+            assertTrue(tookMillis[0] < CLOSE_LIMIT_MILLIS,
+                "Closing took " + tookMillis[0] + " ms, not within the " +
+                    CLOSE_LIMIT_MILLIS + " ms the specification puts on " +
+                    "cleanup.");
+            assertEquals(1, uploader.release.getCount(),
+                "The upload in progress was answered before closing ended.");
+        }
+        finally {
+            uploader.release.countDown();
+            if (element.executor.isShutdown() == false) {
+                element.close();
+            }
+            pipeline.close();
+        }
+    }
+
+    /**
+     * An element that sends each entry on its own, through the uploader
+     * given, logging its warnings to the list given.
+     */
+    private static ShareUsageElement element(
+        List<String> warnings,
+        Pipeline pipeline,
+        DataUploader uploader) {
+        ShareUsageElement element = new ShareUsageElement(
+            recordingLogger(warnings),
+            1,
+            1,
+            100,
+            100,
+            100,
+            1,
+            true,
+            "http://localhost/usage",
+            new ArrayList<>(),
+            new ArrayList<>(),
+            new ArrayList<>(),
+            DEFAULT_SESSION_COOKIE_NAME,
+            flowData -> true);
+        element.addPipeline(pipeline);
+        element.dataUploader = uploader;
+        return element;
     }
 
     private static void process(

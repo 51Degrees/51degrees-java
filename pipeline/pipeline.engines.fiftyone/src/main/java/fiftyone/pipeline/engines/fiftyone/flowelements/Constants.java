@@ -97,6 +97,19 @@ public class Constants {
     static final int SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT = 5000;
 
     /**
+     * The most time closing the Usage Sharing Element may take, from its
+     * start, in milliseconds.
+     */
+    static final int SHARE_USAGE_CLOSE_LIMIT_MILLIS = 5000;
+
+    /**
+     * The part of the close limit, in milliseconds, kept for what closing
+     * does after it stops waiting for the data to be sent: discarding the
+     * rest, logging the warning and freeing the resources.
+     */
+    static final int SHARE_USAGE_CLOSE_RESERVE_MILLIS = 500;
+
+    /**
      * Default lost data count for share usage before it wraps
      */
     static final int LOST_DATA_RESET_DEFAULT = 5000000;
@@ -113,8 +126,8 @@ public class Constants {
     static final String SHARE_USAGE_DEFAULT_URL = "https://devices-v4.51degrees.com/new.ashx";
 
     /**
-     * Every query string and HTTP form parameter is shared by default, not
-     * only the 51Degrees ones and those named.
+     * Deprecated. The default of the share all query string parameters
+     * option, which has no effect.
      */
     public static final boolean
         SHARE_USAGE_DEFAULT_SHARE_ALL_QUERY_STRING_PARAMETERS = true;

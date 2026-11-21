@@ -43,11 +43,11 @@ import java.util.TreeMap;
   * <p>
  * Element Data is written only by the Flow Element that provides it, or the
  * Flow Elements that share it, and only while they process. Once a Flow
- * Element that writes it has finished, {@link #put(String, Object)}, and so
- * every setter built on it, fails with an {@link IllegalStateException}.
- * Values kept once they have been read, with
- * {@link #populateFromMap(Map)}, are not writes. Like the Flow Data that
- * holds it, Element Data is not safe to use from several threads at once.
+ * Element that writes it has finished, {@link #put(String, Object)},
+ * {@link #populateFromMap(Map)} and every setter built on them fail with an
+ * {@link IllegalStateException}. Values kept once they have been read, with
+ * {@link #keepValues(Map)}, are not writes. Like the Flow Data that holds
+ * it, Element Data is not safe to use from several threads at once.
  * <p>
  * Element Data that can be pooled goes back to its Flow Element's pool when
  * the Flow Data that holds it is closed, and may then be given to another
@@ -231,5 +231,38 @@ public abstract class ElementDataBase extends DataBase implements ElementData {
             throw new IllegalStateException(FINISHED_MESSAGE);
         }
         super.put(key, value);
+    }
+
+    /**
+     * Store values, which only the Flow Element that provides this instance,
+     * or one that shares it, does while it processes.
+     * @throws IllegalStateException if the Flow Element has finished
+     */
+    @Override
+    public void populateFromMap(Map<String, Object> values) {
+        checkWriting();
+        super.populateFromMap(values);
+    }
+
+    /**
+     * Keep values this instance has read, such as those read from a results
+     * instance, so they are not read again. Keeping them is not a write, so
+     * it works once the Flow Element has finished.
+     * @param values the values read
+     */
+    protected void keepValues(Map<String, Object> values) {
+        super.populateFromMap(values);
+    }
+
+    /**
+     * Fail a write once a Flow Element that writes this instance has
+     * finished. A write method that does not go through
+     * {@link #put(String, Object)} calls it first.
+     * @throws IllegalStateException if the Flow Element has finished
+     */
+    protected void checkWriting() {
+        if (finished) {
+            throw new IllegalStateException(FINISHED_MESSAGE);
+        }
     }
 }

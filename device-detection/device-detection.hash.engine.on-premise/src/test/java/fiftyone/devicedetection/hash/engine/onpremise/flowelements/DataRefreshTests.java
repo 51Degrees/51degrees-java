@@ -31,6 +31,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -40,6 +42,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.assertEquals;
@@ -98,6 +101,40 @@ public class DataRefreshTests extends TestsBase {
                 start.await();
                 for (int i = 0; i < REFRESHES; i++) {
                     engine.refreshData(identifier);
+                }
+                return REFRESHES;
+            }));
+        }
+        start.countDown();
+        for (Future<Integer> refresher : refreshers) {
+            assertEquals(Integer.valueOf(REFRESHES),
+                refresher.get(WAIT_SECONDS, TimeUnit.SECONDS));
+        }
+        assertEquals(expected, isMobile());
+    }
+
+    /**
+     * Several threads refresh the engine at once from the same data held in
+     * memory, and every refresh completes and the engine then gives the
+     * values it gave before. A refresh from memory leaves the native engine
+     * without a file path, so this test doesn't mix it with refreshes from
+     * the file.
+     */
+    @Test
+    public void Refresh_FromMemoryOnSeveralThreads_EngineStillWorks()
+        throws Exception {
+        List<Boolean> expected = isMobile();
+        DeviceDetectionHashEngine engine = getWrapper().getEngine();
+        String identifier = engine.getDataFileMetaData().getIdentifier();
+        byte[] data = Files.readAllBytes(Paths.get(
+            engine.getDataFileMetaData().getDataFilePath()));
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<Integer>> refreshers = new ArrayList<>();
+        for (int t = 0; t < THREADS; t++) {
+            refreshers.add(executor.submit(() -> {
+                start.await();
+                for (int i = 0; i < REFRESHES; i++) {
+                    engine.refreshData(identifier, data);
                 }
                 return REFRESHES;
             }));
@@ -211,5 +248,64 @@ public class DataRefreshTests extends TestsBase {
             }
         }
         return values;
+    }
+
+    /**
+     * Closing the engine while a refresh runs waits for the refresh to
+     * finish, so the native engine is never freed under it. The test holds
+     * the engine's own monitor, which a refresh holds while it runs.
+     */
+    @Test
+    public void Close_WhileARefreshRuns_WaitsForTheRefresh()
+        throws Exception {
+        DeviceDetectionHashEngine engine = getWrapper().getEngine();
+        CountDownLatch held = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        Future<Boolean> refresh = executor.submit(() -> {
+            synchronized (engine) {
+                held.countDown();
+                return release.await(WAIT_SECONDS, TimeUnit.SECONDS);
+            }
+        });
+        assertTrue(held.await(WAIT_SECONDS, TimeUnit.SECONDS));
+        Future<Boolean> closing = executor.submit(() -> {
+            engine.close();
+            return true;
+        });
+        try {
+            closing.get(2, TimeUnit.SECONDS);
+            fail("The engine closed while a refresh was running.");
+        } catch (TimeoutException e) {
+            // Closing waits for the refresh, as it should.
+        } finally {
+            release.countDown();
+        }
+        assertTrue(refresh.get(WAIT_SECONDS, TimeUnit.SECONDS));
+        assertTrue(closing.get(WAIT_SECONDS, TimeUnit.SECONDS));
+    }
+
+    /**
+     * A refresh that gets the engine's monitor after the engine is closed,
+     * from either overload, fails with an error and does not use the native
+     * objects that closing freed.
+     */
+    @Test
+    public void Refresh_AfterClose_FailsWithoutUsingTheFreedEngine()
+        throws Exception {
+        DeviceDetectionHashEngine engine = getWrapper().getEngine();
+        String identifier = engine.getDataFileMetaData().getIdentifier();
+        engine.close();
+        try {
+            engine.refreshData(identifier);
+            fail("A refresh from file ran after the engine was closed.");
+        } catch (IllegalStateException e) {
+            // As it should.
+        }
+        try {
+            engine.refreshData(identifier, new byte[] { 0 });
+            fail("A refresh from memory ran after the engine was closed.");
+        } catch (IllegalStateException e) {
+            // As it should.
+        }
     }
 }

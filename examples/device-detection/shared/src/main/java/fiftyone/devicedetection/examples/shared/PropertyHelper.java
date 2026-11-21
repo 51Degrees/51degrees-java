@@ -47,8 +47,9 @@ public class PropertyHelper {
         } catch (PropertyMissingException e) {
             String message =
                     "The property '" + e.getPropertyName() + "' is not " +
-                    "available in this data file. See data file options " +
-                    "<a href=\"https://51degrees.com/pricing?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=shared-src-main-java-fiftyone-devicedetection-examples-shared-propertyhelper.java&amp;utm_term=property-not-available\">here</a>";
+                    "available with the data file or resource key in use. " +
+                    "Contact us about one that has it at " +
+                    "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-devicedetection-examples-shared-propertyhelper.java&utm_term=property-not-available";
             AspectPropertyValue<T> result = new AspectPropertyValueDefault<>();
             result.setNoValueMessage(message);
             return result;

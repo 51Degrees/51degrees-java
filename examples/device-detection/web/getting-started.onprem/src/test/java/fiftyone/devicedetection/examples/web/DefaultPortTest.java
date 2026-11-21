@@ -20,29 +20,19 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-package pipeline.developerexamples.fodid;
+package fiftyone.devicedetection.examples.web;
+
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 /**
- * Prints the resource key and the licence key the example read from the
- * environment of the process. {@link DeprecatedKeyNameTests} runs this in
- * a Java process of its own, because the example reads both keys once,
- * when its class loads, and a process cannot change its own environment
- * variables.
+ * Checks that the example listens on port 5151 when the PORT environment
+ * variable does not choose another, as the readme says.
  */
-public final class KeyProbe {
-
-    static final String RESOURCE_PREFIX = "RESOURCE ";
-    static final String LICENCE_PREFIX = "LICENCE ";
-
-    private KeyProbe() {
-    }
-
-    public static void main(String[] args) {
-        System.out.println(
-            RESOURCE_PREFIX + CreatorContextDemoServer.RESOURCE);
-        System.out.println(
-            LICENCE_PREFIX + CreatorContextDemoServer.LICENCE);
-        System.out.flush();
-        System.exit(0);
+public class DefaultPortTest {
+    @Test
+    public void listensOn5151ByDefault() {
+        assertEquals(5151, GettingStartedWebOnPrem.DEFAULT_PORT);
     }
 }
