@@ -22,12 +22,14 @@
 
 package fiftyone.pipeline.engines.configuration;
 
-import fiftyone.pipeline.engines.exceptions.LazyLoadTimeoutException;
-
 import java.util.concurrent.ExecutorService;
 
 /**
- * Used to store configuration values relating to lazy loading.
+ * Deprecated, and has no effect. Lazy loading is kept as a public name so
+ * that existing code and configuration still build and run, but every Engine
+ * processes on the thread that processes the Flow Data, whatever is set
+ * here. Long-running work is a lazy property of an Engine's own Element Data
+ * instead.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/advanced-features/lazy-loading.md">Specification</a>
  */
 public class LazyLoadingConfiguration {
@@ -37,12 +39,7 @@ public class LazyLoadingConfiguration {
 
     /**
      * Construct a new instance using the default {@link ExecutorServiceFactory}.
-     * @param propertyTimeoutMillis the timeout in milliseconds to use when
-     *                              waiting for processing to complete in order
-     *                              to retrieve property values. If the timeout
-     *                              is exceeded then a
-     *                              {@link LazyLoadTimeoutException}
-     *                              will be thrown
+     * @param propertyTimeoutMillis kept, but not used
      */
     public LazyLoadingConfiguration(int propertyTimeoutMillis) {
         this(propertyTimeoutMillis, new ExecutorServiceFactoryDefault());
@@ -50,14 +47,8 @@ public class LazyLoadingConfiguration {
 
     /**
      * Construct a new instance.
-     * @param propertyTimeoutMillis the timeout in milliseconds to use when
-     *                              waiting for processing to complete in order
-     *                              to retrieve property values. If the timeout
-     *                              is exceeded then a
-     *                              {@link LazyLoadTimeoutException}
-     *                              will be thrown
-     * @param factory the {@link ExecutorServiceFactory} to use when processing
-     *                in order to retrieve property values
+     * @param propertyTimeoutMillis kept, but not used
+     * @param factory kept, but no Engine asks it for an executor
      */
     public LazyLoadingConfiguration(
         int propertyTimeoutMillis,
@@ -67,9 +58,7 @@ public class LazyLoadingConfiguration {
     }
 
     /**
-     * Get the timeout in milliseconds to use when waiting for processing to
-     * complete in order to retrieve property values. If the timeout is exceeded
-     * then a {@link LazyLoadTimeoutException} will be thrown.
+     * Get the timeout that was set, which is not used.
      * @return timeout in milliseconds
      */
     public int getPropertyTimeoutMillis() {
@@ -77,8 +66,8 @@ public class LazyLoadingConfiguration {
     }
 
     /**
-     * Get an {@link ExecutorService} to use when processing in order to
-     * retrieve property values.
+     * Create an {@link ExecutorService} from the factory that was set. No
+     * Engine calls this, as lazy loading has no effect.
      * @return new {@link ExecutorService}
      */
     public ExecutorService getExecutorService() {

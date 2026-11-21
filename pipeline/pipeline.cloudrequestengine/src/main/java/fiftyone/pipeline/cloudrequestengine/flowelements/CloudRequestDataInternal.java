@@ -40,9 +40,8 @@ public class CloudRequestDataInternal extends AspectDataBase {
     }
 
     /**
-     * The JSON response as it is stored now, without waiting for lazy
-     * loading processing to finish, so the engine can check it from inside
-     * that processing.
+     * The JSON response as it is stored now, so the engine can check it
+     * before the result is cached or served from the cache.
      * @return the JSON response, or null if none has been stored
      */
     String getJsonResponseWithoutWaiting() {

@@ -42,10 +42,10 @@ public interface AspectData extends ElementData {
     List<AspectEngine<? extends AspectData, ? extends AspectPropertyMetaData>> getEngines();
 
     /**
-     * If the engine is configured for lazy loading, this property returns a
-     * {@link Future} that will complete once the engine has finished
-     * processing. Otherwise, it will be null.
-     * @return lazy loading future or null
+     * Deprecated. Lazy loading has no effect, so every Engine has finished
+     * processing when the Flow Data's process call returns, and the
+     * {@link Future} this returns is already done.
+     * @return a future that is already done
      */
     Future<?> getProcessFuture();
 }

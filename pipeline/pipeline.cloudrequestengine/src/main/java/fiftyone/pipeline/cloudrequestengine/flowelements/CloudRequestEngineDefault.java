@@ -467,9 +467,7 @@ public class CloudRequestEngineDefault
      * serve one that it finds." A response that cannot be read as a JSON
      * object is not cached either, as it cannot be checked.
      * <p>
-     * The response is read without waiting for lazy loading, so the check
-     * never makes process wait for the cloud service. With lazy loading it
-     * is made by the processing task once the response is stored.
+     * The response is read as it is stored, so the check waits for nothing.
      * @param data the result to check
      * @return false if the response has a top-level fodid member
      */
