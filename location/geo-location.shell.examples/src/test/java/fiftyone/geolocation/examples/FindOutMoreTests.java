@@ -31,13 +31,16 @@ import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
  * Each Location example ends its output with a "Find out more" section,
  * which lists pages on 51degrees.com, each with its campaign tags, and the
  * repository. With no resource key set, each example says where to create
- * one and stops, so these tests need no key.
+ * one and stops, so these tests need no key. With a key set, as it is in
+ * CI, each example calls the cloud service and writes what it found before
+ * the section.
  */
 public class FindOutMoreTests {
 
@@ -75,13 +78,24 @@ public class FindOutMoreTests {
     }
 
     private static void assertFindOutMore(String output) {
-        int example = output.lastIndexOf(NO_KEY);
         int heading = output.lastIndexOf(RULE + "\n" + HEADING + "\n");
-        assertTrue("The example wrote nothing:\n" + output, example >= 0);
-        assertTrue(
-            "No Find out more section after the example's output:\n"
-            + output,
-            heading > example);
+        assertTrue("No Find out more section:\n" + output, heading >= 0);
+        String before = output.substring(0, heading);
+        if (ResourceKey.find(new String[0]) == null) {
+            assertTrue(
+                "The example did not say it needs a resource key before "
+                + "the Find out more section:\n" + output,
+                before.contains(NO_KEY));
+        } else {
+            assertFalse(
+                "The example said no key is set, but "
+                + ResourceKey.VARIABLE + " is set:\n" + output,
+                before.contains(NO_KEY));
+            assertFalse(
+                "The example wrote nothing before the Find out more "
+                + "section:\n" + output,
+                before.trim().isEmpty());
+        }
         String section = output.substring(
             heading + RULE.length() + HEADING.length() + 2);
         int end = section.indexOf(RULE + "\n");

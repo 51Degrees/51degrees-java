@@ -35,7 +35,9 @@ public class UpdateDataFileTest {
     @Test
     public void updateExampleTest () throws Exception {
         String licenseKey = KeyUtils.getNamedKey(UpdateDataFile.UPDATE_EXAMPLE_LICENSE_KEY_NAME);
-        assumeFalse("Skipping test, no license key found",
+        assumeFalse("Skipped, because " +
+                UpdateDataFile.UPDATE_EXAMPLE_LICENSE_KEY_NAME +
+                " is not set to a license key for the data files.",
                 KeyUtils.isInvalidKey(licenseKey));
         try {
             run(null, licenseKey, false);

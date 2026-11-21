@@ -78,8 +78,8 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * <p>
  * Access to the Cloud service is configured using a "resource key". The resource key can be
  * supplied as a command line argument, or via the environment variable or system property
- * "TestResourceKey". An optional second command line argument, or the environment variable or
- * system property "TestCloudEndPoint", can be used to direct the example at a custom hosted
+ * "_51DEGREES_RESOURCE_KEY". An optional second command line argument, or the environment variable or
+ * system property "_51DEGREES_CLOUD_ENDPOINT", can be used to direct the example at a custom hosted
  * Cloud service.
  * <p>
  * The concepts of "pipeline", "flow data", "evidence" and "results" are illustrated.
@@ -97,7 +97,7 @@ public class GettingStartedCloud {
      * Name of the environment variable or system property that can hold a
      * custom Cloud service endpoint URL.
      */
-    public static final String CLOUD_END_POINT_NAME = "TestCloudEndPoint";
+    public static final String CLOUD_END_POINT_NAME = "_51DEGREES_CLOUD_ENDPOINT";
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));

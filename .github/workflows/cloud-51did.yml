@@ -7,10 +7,11 @@ name: Cloud 51Did Tests
 # the cloud for a 51Did and fail, saying so, when a key gets an answer with no
 # identifier in it. That is entitlement working rather than a fault.
 #
-# A run that has a license key also runs the Cloud Request Engine's live test
-# on a license key alone (pipeline/pipeline.cloudrequestengine,
-# CloudRequestEngineLiveTests), because no other workflow has a license key
-# for the cloud service. Without one that test skips.
+# Each run also runs the Cloud Request Engine's live test on a license key
+# alone (pipeline/pipeline.cloudrequestengine, CloudRequestEngineLiveTests),
+# with the cloud license in _51DEGREES_LICENSE_KEY_BESPOKE. Without one that
+# test skips. _51DEGREES_LICENSE_KEY holds the license for the data files, so
+# it is not set here.
 #
 # The secrets are named one by one rather than passed as toJSON(secrets).
 # GitHub marks a workflow that hands every secret to a step as possibly
@@ -61,13 +62,29 @@ jobs:
         shell: pwsh
         env:
           _51DEGREES_RESOURCE_KEY_BESPOKE: ${{ secrets._51DEGREES_RESOURCE_KEY_BESPOKE }}
-          _51DEGREES_RESOURCE_KEY_51DID: ${{ vars._51DEGREES_RESOURCE_KEY_51DID }}
+          _51DEGREES_RESOURCE_KEY_51DID: ${{ secrets._51DEGREES_RESOURCE_KEY_51DID }}
           # Without a license key the tests that redeem a sealed verdict skip.
           # The service only redeems with a license key of the resource key's
-          # own account, so each one is paired by suffix with the resource
-          # key it belongs to.
+          # own account, so each resource key is paired by suffix with the
+          # license key it belongs to. Only the 51DID pass gets this one.
           _51DEGREES_LICENSE_KEY_51DID: ${{ secrets._51DEGREES_LICENSE_KEY_51DID }}
+          # The license for the cloud products, for the test on a license key
+          # alone.
+          _51DEGREES_LICENSE_KEY_BESPOKE: ${{ secrets._51DEGREES_LICENSE_KEY_BESPOKE }}
         run: |
+          # A license key whose resource key of the same suffix is empty means
+          # that secret is missing. Its licensed tests would then never run,
+          # and the job would still pass, so it fails here, naming it.
+          $missing = Get-ChildItem env: |
+            Where-Object { $_.Name -like '_51DEGREES_LICENSE_KEY_*' -and $_.Value } |
+            ForEach-Object { $_.Name -replace '^_51DEGREES_LICENSE_KEY', '_51DEGREES_RESOURCE_KEY' } |
+            Where-Object { -not [Environment]::GetEnvironmentVariable($_) }
+          if ($missing) {
+            throw ("The secret $($missing -join ', ') is empty or missing, " +
+              'but the license key of the same suffix is set. Add the ' +
+              'organization secret, a resource key of the same account as ' +
+              'that license key.')
+          }
           $keys = Get-ChildItem env: |
             Where-Object { $_.Name -like '_51DEGREES_RESOURCE_KEY*' -and $_.Value }
           if (-not $keys) {
@@ -77,18 +94,21 @@ jobs:
               'from a fork gets no secrets, so run this workflow from a ' +
               'branch in this repository.')
           }
+          # The 51Did tests redeem with _51DEGREES_LICENSE_KEY_51DID. A pass
+          # whose resource key is not paired with it by suffix redeems with no
+          # license, so those tests skip rather than come back unreadable.
+          $didLicense = $env:_51DEGREES_LICENSE_KEY_51DID
           $failed = $false
           foreach ($k in $keys) {
             Write-Host "::group::Live tests with $($k.Name)"
             $env:_51DEGREES_RESOURCE_KEY = $k.Value
             $licenseName = $k.Name -replace '^_51DEGREES_RESOURCE_KEY', '_51DEGREES_LICENSE_KEY'
-            $license = [Environment]::GetEnvironmentVariable($licenseName)
-            if ($license) {
+            if ($licenseName -eq '_51DEGREES_LICENSE_KEY_51DID' -and $didLicense) {
               Write-Host "License key: $licenseName"
-              $env:_51DEGREES_LICENSE_KEY = $license
+              $env:_51DEGREES_LICENSE_KEY_51DID = $didLicense
             } else {
               Write-Host 'License key: none'
-              Remove-Item Env:_51DEGREES_LICENSE_KEY -ErrorAction SilentlyContinue
+              Remove-Item Env:_51DEGREES_LICENSE_KEY_51DID -ErrorAction SilentlyContinue
             }
             # Only the Pipeline API tree is built, as in its own repository.
             mvn -B -f pipeline/pom.xml `
