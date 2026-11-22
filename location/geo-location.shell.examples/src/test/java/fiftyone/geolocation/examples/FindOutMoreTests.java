@@ -38,9 +38,10 @@ import static org.junit.Assert.assertTrue;
  * Each Location example ends its output with a "Find out more" section,
  * which lists pages on 51degrees.com, each with its campaign tags, and the
  * repository. With no resource key set, each example says where to create
- * one and stops, so these tests need no key. With a key set, as it is in
- * CI, each example calls the cloud service and writes what it found before
- * the section.
+ * one and stops, so these tests need no key. With the key with every
+ * property set in _51DEGREES_RESOURCE_KEY_BESPOKE, the tests give it to each
+ * example as the system property the example reads, and each example calls
+ * the cloud service and writes what it found before the section.
  */
 public class FindOutMoreTests {
 
@@ -54,6 +55,12 @@ public class FindOutMoreTests {
 
     private static final String NO_KEY =
         "needs a resource key, and none is set";
+
+    /**
+     * The name the tests read the resource key with every property from.
+     */
+    private static final String TEST_KEY_NAME =
+        "_51DEGREES_RESOURCE_KEY_BESPOKE";
 
     private static final Pattern TAGGED = Pattern.compile(
         "https://51degrees\\.com/[^?\\s]*\\?utm_source=code"
@@ -81,15 +88,15 @@ public class FindOutMoreTests {
         int heading = output.lastIndexOf(RULE + "\n" + HEADING + "\n");
         assertTrue("No Find out more section:\n" + output, heading >= 0);
         String before = output.substring(0, heading);
-        if (ResourceKey.find(new String[0]) == null) {
+        if (testKey() == null && ResourceKey.find(new String[0]) == null) {
             assertTrue(
                 "The example did not say it needs a resource key before "
                 + "the Find out more section:\n" + output,
                 before.contains(NO_KEY));
         } else {
             assertFalse(
-                "The example said no key is set, but "
-                + ResourceKey.VARIABLE + " is set:\n" + output,
+                "The example said no key is set, but it ran with one:\n"
+                + output,
                 before.contains(NO_KEY));
             assertFalse(
                 "The example wrote nothing before the Find out more "
@@ -117,10 +124,29 @@ public class FindOutMoreTests {
     }
 
     /**
+     * The key the tests give each example, read as an environment variable
+     * and then as a system property, or null when there is none.
+     */
+    private static String testKey() {
+        String value = System.getenv(TEST_KEY_NAME);
+        if (value == null || value.trim().isEmpty()) {
+            value = System.getProperty(TEST_KEY_NAME);
+        }
+        return value == null || value.trim().isEmpty() ? null : value.trim();
+    }
+
+    /**
      * Runs the example and returns what it wrote, with each line ending in
-     * a line feed.
+     * a line feed. The example reads its key from the name in
+     * {@link ResourceKey#VARIABLE}, so the key the tests read is set there
+     * as a system property while the example runs.
      */
     private static String run(Example example) throws Exception {
+        String key = testKey();
+        String saved = System.getProperty(ResourceKey.VARIABLE);
+        if (key != null) {
+            System.setProperty(ResourceKey.VARIABLE, key);
+        }
         PrintStream original = System.out;
         ByteArrayOutputStream captured = new ByteArrayOutputStream();
         System.setOut(new PrintStream(captured, true, "UTF-8"));
@@ -128,6 +154,11 @@ public class FindOutMoreTests {
             example.run();
         } finally {
             System.setOut(original);
+            if (saved == null) {
+                System.clearProperty(ResourceKey.VARIABLE);
+            } else {
+                System.setProperty(ResourceKey.VARIABLE, saved);
+            }
         }
         return new String(captured.toByteArray(), StandardCharsets.UTF_8)
             .replace("\r\n", "\n");

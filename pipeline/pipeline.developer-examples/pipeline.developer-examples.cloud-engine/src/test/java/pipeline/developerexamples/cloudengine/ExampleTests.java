@@ -42,15 +42,16 @@ public class ExampleTests {
 
     @Test
     public void SimpleCloudEngine_Test() throws Exception {
-        assumeTrue(Main.configuredResourceKey() != null,
+        String resourceKey = ExampleKey.find();
+        assumeTrue(resourceKey != null,
             "This test runs the cloud engine example against the live "
                 + "51Degrees cloud service, so it needs a resource key, and "
                 + "it is skipped because "
-                + Main.RESOURCE_KEY_NAME + " is not set "
+                + ExampleKey.NAME + " is not set "
                 + "as an environment variable or as a system property. Any "
                 + "key works here, because the example reports a product "
                 + "the key does not carry rather than failing on it. Create "
                 + "a key at https://51degrees.com/configure.");
-        new Main.Example().run();
+        ExampleKey.runWith(resourceKey, () -> new Main.Example().run());
     }
 }
