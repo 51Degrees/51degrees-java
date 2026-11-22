@@ -38,8 +38,9 @@ if ($Version) {
 Write-Host "::group::Pipeline developer examples"
 Push-Location "$RepoName/pipeline"
 try {
-    # The cloud engine example calls the live cloud service, with the key in
-    # _51DEGREES_RESOURCE_KEY.
+    # The cloud engine example calls the live cloud service. Its test reads
+    # the key from _51DEGREES_RESOURCE_KEY_BESPOKE and gives it to the example
+    # as _51DEGREES_RESOURCE_KEY.
     mvn test @MavenOptions -DfailIfNoTests=false "-Dsurefire.failIfNoSpecifiedTests=false" -Dtest=ExampleTests
     if ($LASTEXITCODE -ne 0) { $failed += 'pipeline developer examples' }
 } finally {

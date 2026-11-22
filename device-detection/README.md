@@ -234,7 +234,8 @@ variable to the resource key and run:
 mvn clean test
 ```
 The TAC and native model examples need a key with every property, which they
-read from the same variable. For tests and examples that require a license
+read from `_51DEGREES_RESOURCE_KEY`, the name a person running an example
+sets. Their tests give them the key from `_51DEGREES_RESOURCE_KEY_BESPOKE`. For tests and examples that require a license
 key, set the `_51DEGREES_LICENSE_KEY` environment variable.
 
 ## Projects

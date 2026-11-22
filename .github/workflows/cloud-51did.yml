@@ -14,11 +14,8 @@ name: Cloud 51Did Tests
 # test skips. _51DEGREES_LICENSE_KEY holds the license for the data files, so
 # it is not set here.
 #
-# The secrets are named one by one rather than passed as toJSON(secrets).
-# GitHub marks a workflow that hands every secret to a step as possibly
-# malicious and holds each run for manual approval, so the nightly never ran.
-# A new resource key therefore needs a line here and in the test as well as
-# the organization secret.
+# The secrets are named one by one, so a new resource key needs a line here
+# and in the test as well as the organization secret.
 #
 # The tests call the cloud service that the organization variable
 # _51DEGREES_CLOUD_ENDPOINT names, and the public service when it names none.
@@ -35,7 +32,7 @@ on:
   # again, so a field the cloud starts writing, stops writing or changes goes
   # unnoticed until a customer finds it. That is what happened when the cloud service began
   # writing the Terms byte. The six 51Did packages are
-  # staggered ten minutes apart so they do not all ask production at once.
+  # staggered ten minutes apart so they do not all call the cloud service at once.
   schedule:
     - cron: '10 5 * * *'
   pull_request:
