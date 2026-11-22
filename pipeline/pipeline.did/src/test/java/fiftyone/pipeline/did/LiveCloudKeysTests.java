@@ -47,7 +47,7 @@ public class LiveCloudKeysTests {
      * _51DEGREES_LICENSE_KEY holds the data file license, so it is not read.
      */
     @Test
-    public void passes_PairEachResourceKeyWithItsOwnLicenceOrNone() {
+    public void passes_PairEachResourceKeyWithItsOwnLicenseOrNone() {
         assertEquals(2, LiveCloudKeys.PASSES.length);
         assertArrayEquals(new String[]{
             "_51DEGREES_RESOURCE_KEY_51DID",
@@ -107,14 +107,14 @@ public class LiveCloudKeysTests {
     }
 
     @Test
-    public void noLicenceKey_NamesTheVariableToSet() {
-        String message = LiveCloudKeys.noLicenceKey(SAMPLE);
+    public void noLicenseKey_NamesTheVariableToSet() {
+        String message = LiveCloudKeys.noLicenseKey(SAMPLE);
         assertTrue(message, message.contains("Set " + SAMPLE));
     }
 
     @Test
-    public void noLicenceKey_SaysWhenThePassHasNone() {
-        String message = LiveCloudKeys.noLicenceKey(null);
+    public void noLicenseKey_SaysWhenThePassHasNone() {
+        String message = LiveCloudKeys.noLicenseKey(null);
         assertTrue(message, message.contains("no license key"));
     }
 }

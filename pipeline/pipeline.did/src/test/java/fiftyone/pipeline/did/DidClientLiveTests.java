@@ -76,14 +76,14 @@ public class DidClientLiveTests {
     }
 
     private final String resourceKeyName;
-    private final String licenceKeyName;
+    private final String licenseKeyName;
     private String resourceKey;
     private String licenceKey;
     private DidClient client;
 
-    public DidClientLiveTests(String resourceKeyName, String licenceKeyName) {
+    public DidClientLiveTests(String resourceKeyName, String licenseKeyName) {
         this.resourceKeyName = resourceKeyName;
-        this.licenceKeyName = licenceKeyName;
+        this.licenseKeyName = licenseKeyName;
     }
 
     @Before
@@ -91,10 +91,10 @@ public class DidClientLiveTests {
         resourceKey = LiveCloudKeys.read(resourceKeyName);
         // One lookup serves both, so the key the form body sends and the
         // one hasLicenceKey() answers for can never disagree.
-        licenceKey = LiveCloudKeys.read(licenceKeyName);
+        licenceKey = LiveCloudKeys.read(licenseKeyName);
         if (resourceKey == null && licenceKey != null) {
             fail(LiveCloudKeys.missingResourceKey(
-                resourceKeyName, licenceKeyName));
+                resourceKeyName, licenseKeyName));
         }
         Assume.assumeTrue(LiveCloudKeys.noResourceKey(resourceKeyName),
             resourceKey != null);
@@ -158,7 +158,7 @@ public class DidClientLiveTests {
     public void verifyFullThenRedeemWithTheLicence_ReadsTheVerdict()
             throws Exception {
         Assume.assumeTrue(
-            LiveCloudKeys.noLicenceKey(licenceKeyName),
+            LiveCloudKeys.noLicenseKey(licenseKeyName),
             client.hasLicenceKey());
 
         List<FodId> identifiers = identifiersFor("id.usage", "standard");
@@ -231,7 +231,7 @@ public class DidClientLiveTests {
     public void anIdentifierForAnotherAddress_ReportsEveryFactor()
             throws Exception {
         Assume.assumeTrue(
-            LiveCloudKeys.noLicenceKey(licenceKeyName),
+            LiveCloudKeys.noLicenseKey(licenseKeyName),
             client.hasLicenceKey());
 
         List<FodId> identifiers = identifiersCreatedFor(

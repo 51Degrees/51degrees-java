@@ -25,7 +25,7 @@ package fiftyone.pipeline.did;
 
 /**
  * Where the tests that call the live 51Degrees cloud service read their
- * resource key and licence key from, and what they say when there is
+ * resource key and license key from, and what they say when there is
  * none.
  * <p>
  * The tests run once for each resource key in {@link #PASSES}. Every name
@@ -37,11 +37,11 @@ package fiftyone.pipeline.did;
 final class LiveCloudKeys {
 
     /**
-     * The resource key and the licence key of each pass of the tests. A
-     * sealed verdict is redeemed only with the licence key of the account
+     * The resource key and the license key of each pass of the tests. A
+     * sealed verdict is redeemed only with the license key of the account
      * the resource key belongs to, so the 51Did resource key runs with the
-     * 51Did licence key, and the Bespoke resource key runs with none. The
-     * licence key is not _51DEGREES_LICENSE_KEY, which holds the licence
+     * 51Did license key, and the Bespoke resource key runs with none. The
+     * license key is not _51DEGREES_LICENSE_KEY, which holds the license
      * for the data files.
      */
     static final String[][] PASSES = {
@@ -84,12 +84,12 @@ final class LiveCloudKeys {
     }
 
     /**
-     * What to fail with when a licence key is set and the resource key of
-     * its account is not. The tests that redeem with that licence key
+     * What to fail with when a license key is set and the resource key of
+     * its account is not. The tests that redeem with that license key
      * would otherwise never run, and nothing would say so.
      */
-    static String missingResourceKey(String name, String licenceName) {
-        return name + " is not set, but " + licenceName + ", the license "
+    static String missingResourceKey(String name, String licenseName) {
+        return name + " is not set, but " + licenseName + ", the license "
             + "key of the same account, is. Set " + name + " to a resource "
             + "key of that account, so the tests that redeem a sealed "
             + "result run.";
@@ -97,15 +97,15 @@ final class LiveCloudKeys {
 
     /**
      * Why a test that redeems a sealed result is skipped when the pass has
-     * no licence key.
-     * @param licenceName the name the licence key of the pass is read
+     * no license key.
+     * @param licenseName the name the license key of the pass is read
      *                    from, or null when the pass runs with none
      */
-    static String noLicenceKey(String licenceName) {
-        return licenceName == null
+    static String noLicenseKey(String licenseName) {
+        return licenseName == null
             ? "This resource key runs with no license key, so there is no "
                 + "sealed result it can redeem."
-            : "Set " + licenceName + " to redeem a sealed result.";
+            : "Set " + licenseName + " to redeem a sealed result.";
     }
 
     /**
