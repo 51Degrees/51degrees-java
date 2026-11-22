@@ -117,19 +117,6 @@ public class GettingStartedOnPrem {
     }
 
     /**
-     * Puts a system property back as it was before the example set it.
-     * @param name the name of the property
-     * @param value the value it had, or null if it had none
-     */
-    private static void restoreProperty(String name, String value) {
-        if (value == null) {
-            System.clearProperty(name);
-        } else {
-            System.setProperty(name, value);
-        }
-    }
-
-    /**
      * Run the example
      * @param dataFile a IP Intelligence data file
      * @param evidenceList a List&lt;Map&lt;String, String>> representing evidence
@@ -141,13 +128,8 @@ public class GettingStartedOnPrem {
         logger.info("Running GettingStarted example");
         
         String dataFileLocation;
-        String dataFileBefore =
-                System.getProperty(DataFileHelper.IPI_PATH_VARIABLE);
         try {
             dataFileLocation = DataFileHelper.getDataFileLocation(dataFile);
-            // the location of the data file is interpolated in the pipeline
-            // configuration file
-            System.setProperty(DataFileHelper.IPI_PATH_VARIABLE, dataFileLocation);
         } catch (Exception e) {
             logger.error("Failed to find IP Intelligence data file at '{}'. " +
                     "Please provide a valid path to an IP Intelligence data file (.ipi). " +
@@ -170,6 +152,9 @@ public class GettingStartedOnPrem {
         // load the options and if no resource key has been set in the file
         // use the one supplied to this method
         PipelineOptions pipelineOptions = PipelineOptionsFactory.getOptionsFromFile(optionsFile);
+        // The data file this method was given is the one the pipeline uses,
+        // in place of the one the options file names.
+        pipelineOptions.replace("IPIntelligenceOnPremiseEngine", "DataFile", dataFileLocation);
         // Build a new Pipeline from the configuration.
         try (Pipeline pipeline = new FiftyOnePipelineBuilder()
                 // Usage sharing is off because this example's evidence is already
@@ -177,9 +162,6 @@ public class GettingStartedOnPrem {
                 // a Usage Sharing Element to the Pipeline and helps improve the service.
                 .setShareUsage(false)
                 .buildFromConfiguration(pipelineOptions)) {
-            // The configuration has been read, so the property that passed
-            // the data file to it is put back as it was.
-            restoreProperty(DataFileHelper.IPI_PATH_VARIABLE, dataFileBefore);
 
             /* Get the 'engine' element within the pipeline that performs IP Intelligence. We
             can use this to get details about the data file as well as meta-data describing
