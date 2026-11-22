@@ -13,6 +13,7 @@
         <module>getting-started.cloud</module>
         <module>shared</module>
         <module>getting-started.onprem</module>
+        <module>human-confidence</module>
     </modules>
 
     <artifactId>device-detection-java-examples.web</artifactId>
