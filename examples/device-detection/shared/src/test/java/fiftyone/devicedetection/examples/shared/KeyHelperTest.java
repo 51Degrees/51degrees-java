@@ -197,8 +197,8 @@ public class KeyHelperTest {
                 loader);
             assertNotSame(KeyHelper.class, helper);
             String key = (String) helper
-                .getMethod("findResourceKey", String.class, String[].class)
-                .invoke(null, KEY_A, new String[0]);
+                .getMethod("findResourceKey", String.class, String.class)
+                .invoke(null, KEY_A, KeyHelper.TEST_RESOURCE_KEY);
             assertEquals(KEY_A, key);
         }
     }
