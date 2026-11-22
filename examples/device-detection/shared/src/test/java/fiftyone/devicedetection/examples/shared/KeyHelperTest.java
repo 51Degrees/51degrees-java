@@ -185,6 +185,45 @@ public class KeyHelperTest {
     }
 
     /**
+     * A test of a cloud example reads the key with every property. A key
+     * under the name the example reads does not stand in for it.
+     */
+    @Test
+    public void requireTestResourceKey_ReadsTheKeyWithEveryProperty() {
+        String example = "_51DEGREES_RESOURCE_KEY";
+        String bespoke = "_51DEGREES_RESOURCE_KEY_BESPOKE";
+        // A test can set a system property but not an environment
+        // variable.
+        assumeTrue(System.getenv(example) == null &&
+            System.getenv(bespoke) == null);
+        String savedExample = System.getProperty(example);
+        String savedBespoke = System.clearProperty(bespoke);
+        try {
+            System.setProperty(example, KEY_A);
+            AssumptionViolatedException skipped = assertThrows(
+                AssumptionViolatedException.class, () ->
+                    KeyHelper.requireTestResourceKey(
+                        "whether a device is mobile", "device"));
+            assertTrue(skipped.getMessage(),
+                skipped.getMessage().contains(bespoke + " is not set"));
+            System.setProperty(bespoke, KEY_B);
+            assertEquals(KEY_B, KeyHelper.requireTestResourceKey(
+                "whether a device is mobile", "device"));
+        } finally {
+            putBack(example, savedExample);
+            putBack(bespoke, savedBespoke);
+        }
+    }
+
+    private static void putBack(String name, String value) {
+        if (value == null) {
+            System.clearProperty(name);
+        } else {
+            System.setProperty(name, value);
+        }
+    }
+
+    /**
      * A cloud example runs as an application, with no test library on its
      * class path, and reads its key with KeyHelper. So KeyHelper has to
      * load, and find a key, where JUnit cannot be found.

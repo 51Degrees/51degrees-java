@@ -58,7 +58,8 @@ public class KeyUtilsTest {
         }
     }
 
-    private static final String KEY_NAME = "_51DEGREES_RESOURCE_KEY";
+    private static final String KEY_NAME =
+        "_51DEGREES_RESOURCE_KEY_BESPOKE";
 
     /**
      * System properties stand in for the environment variables, because

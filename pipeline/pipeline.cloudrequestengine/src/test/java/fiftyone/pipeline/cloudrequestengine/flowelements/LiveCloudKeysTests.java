@@ -33,9 +33,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class LiveCloudKeysTests {
 
+    /**
+     * The live tests read the resource key with every property.
+     */
     @Test
-    public void resourceKey_ReadUnderItsOwnNameOnly() {
-        assertEquals("_51DEGREES_RESOURCE_KEY",
+    public void resourceKey_IsTheKeyWithEveryProperty() {
+        assertEquals("_51DEGREES_RESOURCE_KEY_BESPOKE",
             LiveCloudKeys.RESOURCE_KEY_NAME);
     }
 
@@ -53,7 +56,7 @@ public class LiveCloudKeysTests {
     @Test
     public void noResourceKey_NamesTheVariable() {
         assertTrue(LiveCloudKeys.noResourceKey().contains(
-            "_51DEGREES_RESOURCE_KEY is not set"),
+            "_51DEGREES_RESOURCE_KEY_BESPOKE is not set"),
             LiveCloudKeys.noResourceKey());
     }
 }

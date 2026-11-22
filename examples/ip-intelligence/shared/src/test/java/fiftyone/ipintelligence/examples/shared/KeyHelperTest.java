@@ -34,6 +34,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 public class KeyHelperTest {
@@ -158,6 +159,45 @@ public class KeyHelperTest {
             } else {
                 System.setProperty(KEY_NAME, saved);
             }
+        }
+    }
+
+    /**
+     * A test of a cloud example reads the key with every property. A key
+     * under the name the example reads does not stand in for it.
+     */
+    @Test
+    public void requireTestResourceKey_ReadsTheKeyWithEveryProperty() {
+        String example = "_51DEGREES_RESOURCE_KEY";
+        String bespoke = "_51DEGREES_RESOURCE_KEY_BESPOKE";
+        // A test can set a system property but not an environment
+        // variable.
+        assumeTrue(System.getenv(example) == null &&
+            System.getenv(bespoke) == null);
+        String savedExample = System.getProperty(example);
+        String savedBespoke = System.clearProperty(bespoke);
+        try {
+            System.setProperty(example, KEY_A);
+            AssumptionViolatedException skipped = assertThrows(
+                AssumptionViolatedException.class, () ->
+                    KeyHelper.requireTestResourceKey(
+                        "the network of an IP address", "ip"));
+            assertTrue(skipped.getMessage(),
+                skipped.getMessage().contains(bespoke + " is not set"));
+            System.setProperty(bespoke, KEY_B);
+            assertEquals(KEY_B, KeyHelper.requireTestResourceKey(
+                "the network of an IP address", "ip"));
+        } finally {
+            putBack(example, savedExample);
+            putBack(bespoke, savedBespoke);
+        }
+    }
+
+    private static void putBack(String name, String value) {
+        if (value == null) {
+            System.clearProperty(name);
+        } else {
+            System.setProperty(name, value);
         }
     }
 
