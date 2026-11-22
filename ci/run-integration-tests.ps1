@@ -7,7 +7,10 @@ param(
     [string]$Version,
     # False, from select-options.ps1, on every entry of a pull request but
     # one, so the browser contract runs once.
-    [bool]$SeleniumContract = $true
+    [bool]$SeleniumContract = $true,
+    # The branch of the shared Selenium contract tests to run, so a change
+    # there can be tried here before it is merged.
+    [string]$SeleniumTestsRef = 'main'
 )
 $ErrorActionPreference = "Stop"
 # Each part's exit code is checked below, so one failing part does not stop
@@ -125,21 +128,16 @@ function Invoke-ContractTests {
 Write-Host "::group::Selenium contract tests"
 if (-not $SeleniumContract) {
     Write-Host "Another entry runs the Selenium contract tests for this pull request."
-} elseif (-not $env:_51DEGREES_RESOURCE_KEY) {
-    Write-Host "::warning title=Selenium skipped::_51DEGREES_RESOURCE_KEY is not set, so the Selenium contract tests were not run against the web examples."
+} elseif (-not $env:_51DEGREES_RESOURCE_KEY_BESPOKE) {
+    Write-Host "::warning title=Selenium skipped::_51DEGREES_RESOURCE_KEY_BESPOKE is not set, so the Selenium contract tests were not run against the web examples."
 } elseif ($IsLinux -and [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -eq [System.Runtime.InteropServices.Architecture]::Arm64) {
     Write-Host "::warning title=Selenium skipped::Selenium contract skipped on linux-arm64, which has no selenium-manager build. It runs on x64 and macOS arm64."
 } else {
-    # Get the shared contract tests. SELENIUM_TESTS_REF picks a branch of the
-    # suite, so a change there can be tried here before it is merged.
-    $seleniumRef = if ($env:SELENIUM_TESTS_REF) { $env:SELENIUM_TESTS_REF } else { 'main' }
+    # Get the shared contract tests.
     if (-not (Test-Path selenium-api-tests)) {
-        Write-Host "Cloning the Selenium contract tests from '$seleniumRef'"
-        git clone --depth 1 --branch $seleniumRef https://github.com/51Degrees/selenium-api-tests.git
+        Write-Host "Cloning the Selenium contract tests from '$SeleniumTestsRef'"
+        git clone --depth 1 --branch $SeleniumTestsRef https://github.com/51Degrees/selenium-api-tests.git
     }
-    $env:CLOUD_ROOT_URL = "https://cloud.51degrees.com/"
-    # The shared suite reads its key under this name of its own.
-    $env:PAID_RESOURCE_KEY = $env:_51DEGREES_RESOURCE_KEY
 
     # Chrome's first start on a fresh runner is many times slower than the
     # starts after it, so it is made here rather than inside the first test.
@@ -154,9 +152,13 @@ if (-not $SeleniumContract) {
         @{
             Label = 'cloud'
             Module = 'web/getting-started.cloud'
-            # The example reads _51DEGREES_RESOURCE_KEY, and the production
-            # cloud unless _51DEGREES_CLOUD_ENDPOINT names another.
+            # The example reads _51DEGREES_RESOURCE_KEY, which is set here to
+            # the key with every property, and the production cloud unless
+            # _51DEGREES_CLOUD_ENDPOINT names another.
             Port = 8099
+            ExampleEnv = @{
+                '_51DEGREES_RESOURCE_KEY' = $env:_51DEGREES_RESOURCE_KEY_BESPOKE
+            }
         }
         # The on-premise example, against the TAC data file that
         # fetch-assets.ps1 links into the data repository. The Lite data file
