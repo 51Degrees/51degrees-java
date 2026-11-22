@@ -114,14 +114,14 @@ The tests read a resource key from `_51DEGREES_RESOURCE_KEY`, set as an
 environment variable or as a system property, and no other name. A cloud test
 with no key is skipped.
 
-To verify the code:
+To verify the code, set the `_51DEGREES_RESOURCE_KEY` environment variable to
+the resource key and run:
 
 ```
-mvn clean test -D_51DEGREES_RESOURCE_KEY=[Resource Key]
+mvn clean test
 ```
-For tests and examples that require a license key, set
-`_51DEGREES_LICENSE_KEY` or add the following option:
-- `-D_51DEGREES_LICENSE_KEY=[License Key]`
+For tests and examples that require a license key, set the
+`_51DEGREES_LICENSE_KEY` environment variable.
 
 ## Projects
 
