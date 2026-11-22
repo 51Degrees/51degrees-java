@@ -41,9 +41,7 @@ final class LiveCloudKeys {
      * tests once for every key the organisation holds sets this single
      * name to each key in turn.
      */
-    static final String[] RESOURCE_KEY_NAMES = {
-        "_51DEGREES_RESOURCE_KEY",
-    };
+    static final String RESOURCE_KEY_NAME = "_51DEGREES_RESOURCE_KEY";
 
     /**
      * The name the license key is read from. A license key is optional,
@@ -51,25 +49,9 @@ final class LiveCloudKeys {
      * It is the 51Did license, which redeems a sealed verdict, and not
      * _51DEGREES_LICENSE_KEY, which holds the license for the data files.
      */
-    static final String[] LICENCE_KEY_NAMES = {
-        "_51DEGREES_LICENSE_KEY_51DID",
-    };
+    static final String LICENCE_KEY_NAME = "_51DEGREES_LICENSE_KEY_51DID";
 
     private LiveCloudKeys() {
-    }
-
-    /**
-     * The first value set under any of the given names, or null when none
-     * of them is set anywhere.
-     */
-    static String find(String[] names) {
-        for (String name : names) {
-            String value = read(name);
-            if (value != null) {
-                return value;
-            }
-        }
-        return null;
     }
 
     /**
@@ -77,7 +59,7 @@ final class LiveCloudKeys {
      * the system property where that is not set or is blank, or null when
      * neither holds a value.
      */
-    private static String read(String name) {
+    static String find(String name) {
         String value = System.getenv(name);
         if (value == null || value.trim().isEmpty()) {
             value = System.getProperty(name);
@@ -92,7 +74,7 @@ final class LiveCloudKeys {
     static String noResourceKey() {
         return "These tests call the live 51Degrees cloud service, so they "
             + "need a resource key, and they are skipped because "
-            + String.join(", ", RESOURCE_KEY_NAMES) + " is not set as an "
+            + RESOURCE_KEY_NAME + " is not set as an "
             + "environment variable or as a system property. "
             + "The key has to carry the fodid product, because "
             + "these tests ask the cloud for FODiD.IdProbGlobal and "

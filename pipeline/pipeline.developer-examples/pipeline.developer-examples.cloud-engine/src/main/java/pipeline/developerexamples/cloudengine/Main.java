@@ -97,22 +97,14 @@ public class Main {
      * developer can export one and a build can pass one on the command
      * line with -D.
      */
-    static final String[] RESOURCE_KEY_NAMES = {
-        "_51DEGREES_RESOURCE_KEY",
-    };
+    static final String RESOURCE_KEY_NAME = "_51DEGREES_RESOURCE_KEY";
 
     /**
-     * The 51Degrees resource key that was found, or null when none of the
-     * names above is set anywhere.
+     * The 51Degrees resource key that was found, or null when the name
+     * above is not set anywhere.
      */
     static String configuredResourceKey() {
-        for (String name : RESOURCE_KEY_NAMES) {
-            String value = env(name);
-            if (value != null) {
-                return value;
-            }
-        }
-        return null;
+        return env(RESOURCE_KEY_NAME);
     }
 
     /**

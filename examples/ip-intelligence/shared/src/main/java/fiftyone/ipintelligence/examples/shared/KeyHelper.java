@@ -102,22 +102,19 @@ public class KeyHelper {
      */
     public static String requireTestResourceKey(String asksFor,
                                                 String... products) {
-        return requireResourceKey(KeyHelper::readKey,
-            Collections.singletonList(RESOURCE_KEY_VARIABLE), asksFor,
-            products);
+        return requireResourceKey(KeyHelper::readKey, RESOURCE_KEY_VARIABLE,
+            asksFor, products);
     }
 
     static String requireResourceKey(Function<String, String> read,
-                                     List<String> exampleNames,
+                                     String exampleName,
                                      String asksFor,
                                      String... products) {
-        for (String name : exampleNames) {
-            String value = read.apply(name);
-            if (KeyUtils.isInvalidKey(value) == false) {
-                return value.trim();
-            }
+        String value = read.apply(exampleName);
+        if (KeyUtils.isInvalidKey(value) == false) {
+            return value.trim();
         }
-        throw skipTest(noResourceKey(exampleNames, asksFor, products));
+        throw skipTest(noResourceKey(exampleName, asksFor, products));
     }
 
     /**
@@ -141,11 +138,11 @@ public class KeyHelper {
         }
     }
 
-    static String noResourceKey(List<String> names, String asksFor,
+    static String noResourceKey(String name, String asksFor,
                                 String... products) {
         return "This test calls the live 51Degrees cloud service, so it " +
             "needs a resource key, and it is skipped because " +
-            String.join(", ", names) + " is not set as an environment " +
+            name + " is not set as an environment " +
             "variable or as a system property. " +
             "The key has to carry the " + productList(products) +
             ", because the test asks the service for " + asksFor + ". To " +

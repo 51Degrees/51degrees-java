@@ -459,17 +459,13 @@ public class CreatorContextDemoServer {
     }
 
     /**
-     * The first of the named environment variables that is set to a
-     * non-blank value, or null when none is.
+     * The value of the named environment variable when it is set to a
+     * non-blank value, or null when it is not.
      */
-    static String env(String... names) {
-        for (String name : names) {
-            String value = System.getenv(name);
-            if (value != null && value.trim().isEmpty() == false) {
-                return value;
-            }
-        }
-        return null;
+    static String env(String name) {
+        String value = System.getenv(name);
+        return value != null && value.trim().isEmpty() == false
+            ? value : null;
     }
 
     static String envOr(String name, String fallback) {

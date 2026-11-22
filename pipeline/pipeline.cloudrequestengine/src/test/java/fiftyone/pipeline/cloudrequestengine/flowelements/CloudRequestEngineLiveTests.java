@@ -87,14 +87,14 @@ public class CloudRequestEngineLiveTests {
     public void build_Process_ReadsDeviceDataFromTheLiveService()
             throws Exception {
         String resourceKey =
-            LiveCloudKeys.find(LiveCloudKeys.RESOURCE_KEY_NAMES);
+            LiveCloudKeys.find(LiveCloudKeys.RESOURCE_KEY_NAME);
         assumeTrue(resourceKey != null, LiveCloudKeys.noResourceKey());
 
         CloudRequestEngineBuilder builder = new CloudRequestEngineBuilder(
             LoggerFactory.getILoggerFactory(), new HttpClientDefault())
             .setResourceKey(resourceKey);
         String licenceKey =
-            LiveCloudKeys.find(LiveCloudKeys.LICENCE_KEY_NAMES);
+            LiveCloudKeys.find(LiveCloudKeys.LICENCE_KEY_NAME);
         if (licenceKey != null) {
             builder.setLicenseKey(licenceKey);
         }
@@ -169,9 +169,9 @@ public class CloudRequestEngineLiveTests {
     public void build_Process_LicenseKeyAlone_AnswersOnlyWhatWasAsked()
             throws Exception {
         String licenceKey =
-            LiveCloudKeys.find(LiveCloudKeys.LICENCE_KEY_NAMES);
+            LiveCloudKeys.find(LiveCloudKeys.LICENCE_KEY_NAME);
         assumeTrue(licenceKey != null,
-            String.join(", ", LiveCloudKeys.LICENCE_KEY_NAMES)
+            LiveCloudKeys.LICENCE_KEY_NAME
             + " is not set, so there is no license key to authenticate with.");
 
         // The service answers a request that names no property the license

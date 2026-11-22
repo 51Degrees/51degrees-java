@@ -112,23 +112,18 @@ public class KeyHelper {
 
     /**
      * The resource key a cloud example runs with, being the key given as
-     * its argument, or else the first of the names that holds one, read as
-     * an environment variable and then as a system property.
+     * its argument, or else the key under the name given, read as an
+     * environment variable and then as a system property.
      * @param argument the key given on the command line, or null
-     * @param names the names to read, in order
+     * @param name the name to read
      * @return the key, or null when there is none
      */
-    public static String findResourceKey(String argument, String... names) {
+    public static String findResourceKey(String argument, String name) {
         if (isInvalidKey(argument) == false) {
             return argument.trim();
         }
-        for (String name : names) {
-            String value = readKey(name);
-            if (value != null) {
-                return value.trim();
-            }
-        }
-        return null;
+        String value = readKey(name);
+        return value == null ? null : value.trim();
     }
 
     /**
@@ -172,37 +167,33 @@ public class KeyHelper {
      */
     public static String requireTestResourceKey(String asksFor,
                                                 String... products) {
-        return requireResourceKey(Collections.singletonList(TEST_RESOURCE_KEY),
-            asksFor, products);
+        return requireResourceKey(TEST_RESOURCE_KEY, asksFor, products);
     }
 
     /**
      * The resource key for a test that calls the live cloud service, from
-     * the given names only. Skips the test, naming them, when there is none.
-     * @param exampleNames the names the example reads, in the order it
-     *                     reads them
+     * the given name only. Skips the test, naming it, when there is none.
+     * @param exampleName the name the example reads
      * @param asksFor what the test asks the service for
      * @param products the products the key has to carry
      * @return the resource key
      */
-    public static String requireResourceKey(List<String> exampleNames,
+    public static String requireResourceKey(String exampleName,
                                             String asksFor,
                                             String... products) {
-        return requireResourceKey(KeyHelper::readKey, exampleNames, asksFor,
+        return requireResourceKey(KeyHelper::readKey, exampleName, asksFor,
             products);
     }
 
     static String requireResourceKey(Function<String, String> read,
-                                     List<String> exampleNames,
+                                     String exampleName,
                                      String asksFor,
                                      String... products) {
-        for (String name : exampleNames) {
-            String value = read.apply(name);
-            if (isInvalidKey(value) == false) {
-                return value.trim();
-            }
+        String value = read.apply(exampleName);
+        if (isInvalidKey(value) == false) {
+            return value.trim();
         }
-        throw skipTest(noResourceKey(exampleNames, asksFor, products));
+        throw skipTest(noResourceKey(exampleName, asksFor, products));
     }
 
     /**
@@ -226,11 +217,11 @@ public class KeyHelper {
         }
     }
 
-    static String noResourceKey(List<String> names, String asksFor,
+    static String noResourceKey(String name, String asksFor,
                                 String... products) {
         return "This test calls the live 51Degrees cloud service, so it " +
             "needs a resource key, and it is skipped because " +
-            String.join(", ", names) + " is not set as an environment " +
+            name + " is not set as an environment " +
             "variable or as a system property. " +
             "The key has to carry the " + productList(products) +
             ", because the test asks the service for " + asksFor + ". To " +

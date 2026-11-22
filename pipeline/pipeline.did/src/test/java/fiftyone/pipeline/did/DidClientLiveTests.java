@@ -65,11 +65,11 @@ public class DidClientLiveTests {
 
     @Before
     public void init() {
-        resourceKey = LiveCloudKeys.find(LiveCloudKeys.RESOURCE_KEY_NAMES);
+        resourceKey = LiveCloudKeys.find(LiveCloudKeys.RESOURCE_KEY_NAME);
         Assume.assumeTrue(LiveCloudKeys.noResourceKey(), resourceKey != null);
         // One lookup serves both, so the key the form body sends and the
         // one hasLicenceKey() answers for can never disagree.
-        licenceKey = LiveCloudKeys.find(LiveCloudKeys.LICENCE_KEY_NAMES);
+        licenceKey = LiveCloudKeys.find(LiveCloudKeys.LICENCE_KEY_NAME);
         client = new DidClient(resourceKey, licenceKey);
     }
 
