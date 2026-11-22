@@ -249,16 +249,15 @@ with its "Find out more" section and exits with code 0. The tests named
 
 ## Environment variable names
 
-[common-ci's list of environment variable names](https://github.com/51Degrees/common-ci/blob/d8a9c596eabf69dd5581a08e9360cdd1c9b3d9e8/environment-variables.md)
-holds every environment variable name that the packages, tests, examples and
-CI scripts of every language read, with what each name holds and the
-deprecated names each replaced. The list decides. Use the names it gives, and
-when a change needs a new name, or reads an old name again, change
-[`environment-variables.json`](https://github.com/51Degrees/common-ci/blob/d8a9c596eabf69dd5581a08e9360cdd1c9b3d9e8/environment-variables.json)
-in common-ci in the same piece of work. This repository's own name
-check, [`ci/check-environment-variable-names.ps1`](ci/check-environment-variable-names.ps1), still keeps a
-list of its own. Where the two differ, common-ci's list is the one to
-follow.
+Every name 51Degrees defines for an environment variable or a Java system
+property starts `_51DEGREES_`, each name holds one thing, and no name is
+filled from another. A name the platform or a build tool defines keeps the
+name its owner gave it.
+[`ci/check-environment-variable-names.ps1`](ci/check-environment-variable-names.ps1)
+reads every tracked file and fails on a name read or set that is neither. It
+holds the short list of platform and tool names. Run it, and its tests in
+[`ci/check-environment-variable-names.Tests.ps1`](ci/check-environment-variable-names.Tests.ps1),
+after a change that reads or sets a name.
 
 ## One reactor, six package trees
 
