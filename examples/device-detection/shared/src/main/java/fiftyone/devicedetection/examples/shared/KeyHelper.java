@@ -40,8 +40,8 @@ public class KeyHelper {
      * The variable the TAC and native model examples and their tests read
      * the resource key with every property from.
      */
-    public static final String SUPER_RESOURCE_KEY_VARIABLE =
-        "_51DEGREES_RESOURCE_KEY_SUPER";
+    public static final String BESPOKE_RESOURCE_KEY_VARIABLE =
+        "_51DEGREES_RESOURCE_KEY_BESPOKE";
     static Logger logger = LoggerFactory.getLogger(KeyHelper.class);
 
     /**

@@ -127,9 +127,9 @@ To run the on-premise tests:
 To run the cloud tests:
 
 - `_51DEGREES_RESOURCE_KEY_BESPOKE`: [resource key](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=ci-readme.md&utm_term=secrets)
-  from which common-ci fills `_51DEGREES_RESOURCE_KEY`, the key the cloud
-  tests read, and `_51DEGREES_RESOURCE_KEY_SUPER`, the key with every
-  property, which the Location and the TAC and native model tests read.
+  with every property, which the Location and the TAC and native model
+  tests read. common-ci fills `_51DEGREES_RESOURCE_KEY`, the key the other
+  cloud tests read, from it.
 - `_51DEGREES_LICENSE_KEY_BESPOKE`: license key for the cloud products, for
   the Cloud Request Engine's test on a license key alone.
 - `_51DEGREES_RESOURCE_KEY_51DID`: resource key for the 51Did cloud tests.

@@ -184,7 +184,7 @@ The Device Detection, IP Intelligence and Location cloud examples take the
 key as their first argument, or from the `_51DEGREES_RESOURCE_KEY`
 environment variable or system property, and no other name. The TAC and
 native model examples need a key with paid properties and read it from
-`_51DEGREES_RESOURCE_KEY_SUPER`, which each names when it has no key.
+`_51DEGREES_RESOURCE_KEY_BESPOKE`, which each names when it has no key.
 
 ```
 java -cp examples/device-detection/console/target/device-detection-java-examples.console-4.5.127-SNAPSHOT-jar-with-dependencies.jar fiftyone.devicedetection.examples.console.GettingStartedCloud <key>

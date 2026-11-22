@@ -14,7 +14,7 @@ $ErrorActionPreference = "Stop"
 # tests the integration tests report, and logs why a forked JVM died when one
 # does. The dev profile points the examples at the reactor. The tests read
 # their keys from the environment, where common-ci has put them under their
-# _51DEGREES_ names: _51DEGREES_RESOURCE_KEY, _51DEGREES_RESOURCE_KEY_SUPER
+# _51DEGREES_ names: _51DEGREES_RESOURCE_KEY, _51DEGREES_RESOURCE_KEY_BESPOKE
 # for the Location and the TAC and native model tests, and
 # _51DEGREES_LICENSE_KEY for the Device Detection data file update example.
 # A pull request at the standard depth leaves out the tests in

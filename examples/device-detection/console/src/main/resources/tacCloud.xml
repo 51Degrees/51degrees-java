@@ -33,9 +33,9 @@
                 can be created at https://51degrees.com/configure/QKyYH5XT?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=console-src-main-resources-taccloud.xml&amp;utm_term=buildparameters.
 
                 You can paste the resource key here, or set an environment
-                variable or System property called "_51DEGREES_RESOURCE_KEY_SUPER"
+                variable or System property called "_51DEGREES_RESOURCE_KEY_BESPOKE"
                 which will get inserted as the value.-->
-                <ResourceKey>${_51DEGREES_RESOURCE_KEY_SUPER}</ResourceKey>
+                <ResourceKey>${_51DEGREES_RESOURCE_KEY_BESPOKE}</ResourceKey>
             </BuildParameters>
             <BuilderName>CloudRequestEngine</BuilderName>
         </Element>
