@@ -1,294 +1,324 @@
 # Tests for ci/check-environment-variable-names.ps1.
 #
-# Each case is one line of text and what the check must make of it. The
-# digit-initial name is matched in any case, because Windows reads an
-# environment variable name in any case, so a lower case old name is still
-# the old name there. The old names keep their case, for the reason the check
-# gives.
+# Each case is one line of text, the path of the file it is in, and what the
+# check must make of it. The names are made up, apart from the names of the
+# platform and of the tools the build uses, which the check lets through.
 
 BeforeAll {
     $script:Check = Join-Path $PSScriptRoot 'check-environment-variable-names.ps1'
     . $script:Check
 
-    function Get-Kind([string]$Line) {
-        @(Find-EnvironmentNameProblem $Line | ForEach-Object { $_.Kind })
+    function Get-Problem([string]$Line, [string]$Path = 'src/Any.java') {
+        @(Find-EnvironmentNameProblem -Line $Line -Path $Path)
+    }
+
+    # A repository of the given files, each a path and its lines, with every
+    # file tracked.
+    function New-SampleRepository([hashtable]$Files) {
+        $repo = Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid())
+        New-Item -ItemType Directory $repo | Out-Null
+        git -C $repo init -q
+        foreach ($relative in $Files.Keys) {
+            $file = Join-Path $repo $relative
+            New-Item -ItemType Directory (Split-Path $file) -Force | Out-Null
+            Set-Content -LiteralPath $file -Value $Files[$relative]
+        }
+        git -C $repo add -A
+        $repo
+    }
+}
+
+Describe 'Test-AllowedName' {
+
+    It 'allows the 51Degrees name <Name>' -ForEach @(
+        @{ Name = '_51DEGREES_SAMPLE' }
+        @{ Name = '_51DEGREES_SAMPLE_PATH_2' }
+    ) {
+        Test-AllowedName $Name | Should -BeTrue
+    }
+
+    It 'allows the platform name <Name>' -ForEach @(
+        @{ Name = 'PATH' }
+        @{ Name = 'JAVA_HOME' }
+        @{ Name = 'GITHUB_ACTIONS' }
+        @{ Name = 'GITHUB_TOKEN' }
+        @{ Name = 'CHROME_BIN' }
+        @{ Name = 'MVNW_REPOURL' }
+        @{ Name = 'os.name' }
+        @{ Name = 'java.io.tmpdir' }
+        @{ Name = 'user.dir' }
+        @{ Name = 'logback.configurationFile' }
+        @{ Name = 'maven.multiModuleProjectDirectory' }
+    ) {
+        Test-AllowedName $Name | Should -BeTrue
+    }
+
+    It 'refuses <Name>' -ForEach @(
+        @{ Name = 'SAMPLE_NAME' }
+        @{ Name = 'SampleName' }
+        @{ Name = 'sample.name' }
+        @{ Name = '_51DEGREES_' }
+        @{ Name = '_51degrees_sample' }
+        @{ Name = '_51DEGREES_Sample' }
+        @{ Name = 'X_51DEGREES_SAMPLE' }
+        @{ Name = 'path' }
+        @{ Name = 'javax.sample' }
+    ) {
+        Test-AllowedName $Name | Should -BeFalse
     }
 }
 
 Describe 'Find-EnvironmentNameProblem' {
 
-    It 'finds the digit-initial name <Line>' -ForEach @(
-        @{ Line = 'System.getenv("51DEGREES_IPI_PATH")' }
-        @{ Line = 'public static final String IPI = "51DEGREES_IPI_PATH";' }
-        @{ Line = '<DataFile>${51DEGREES_DD_PATH:-lite.hash}</DataFile>' }
-        @{ Line = "'51DEGREES_DD_PATH' = (Resolve-Path `$file).Path" }
-        @{ Line = 'System.getenv("51degrees_ipi_path")' }
-        @{ Line = '$env:51Degrees_Resource_Key = "key"' }
+    # A name a POSIX shell cannot set is found wherever it is written and in
+    # any case, because Windows reads an environment variable name in any
+    # case.
+    It 'finds the digit-initial name in <Line>' -ForEach @(
+        @{ Line = 'System.getenv("51DEGREES_SAMPLE")' }
+        @{ Line = 'public static final String SAMPLE = "51DEGREES_SAMPLE";' }
+        @{ Line = '<DataFile>${51DEGREES_SAMPLE:-sample.dat}</DataFile>' }
+        @{ Line = "'51DEGREES_SAMPLE' = (Resolve-Path `$file).Path" }
+        @{ Line = 'Set 51degrees_sample to the file.' }
     ) {
-        Get-Kind $Line | Should -Contain 'digit'
+        (Get-Problem $Line).Kind | Should -Contain 'digit'
     }
 
-    It 'finds the old name <Line>' -ForEach @(
-        @{ Line = 'System.getenv("RESOURCE_KEY")' }
-        @{ Line = 'env("_51DEGREES_RESOURCE_KEY", "RESOURCE_KEY");' }
-        @{ Line = 'env("_51DEGREES_LICENSE_KEY", "LICENSE_KEY");' }
-        @{ Line = 'public static final String FOD = "FOD_CLOUD_API_URL";' }
-        @{ Line = '$env:LICENSE_KEY = $Keys.TestResourceKey' }
-        @{ Line = '${env:LICENSE_KEY} = $Keys.TestResourceKey' }
-        @{ Line = '${Env:RESOURCE_KEY}' }
-        @{ Line = '$ENV:RESOURCE_KEY = "key"' }
-        @{ Line = 'Remove-Item Env:\LICENSE_KEY' }
-        @{ Line = '<Endpoint>${env:FOD_CLOUD_API_URL}</Endpoint>' }
-        @{ Line = '          url: ${{ env.FOD_CLOUD_API_URL }}' }
-        @{ Line = '${FOD_CLOUD_API_URL}' }
-        @{ Line = 'Constants.LEGACY_ENV_VARS' }
-        @{ Line = '          LICENSE_KEY: ${{ secrets.DEVICE_DETECTION_KEY }}' }
-        @{ Line = '- RESOURCE_KEY names the resource key' }
-        @{ Line = 'RESOURCE_KEY=my-key mvn test' }
+    It 'finds the name read in <Line>' -ForEach @(
+        @{ Line = 'System.getenv("SAMPLE_NAME")' }
+        @{ Line = 'String value = getenv( "SampleName" );' }
+        @{ Line = 'System.getProperty("sample.name")' }
+        @{ Line = 'System.getProperty("SampleName", "default")' }
+        @{ Line = 'System.setProperty("SampleName", file.getPath());' }
+        @{ Line = 'System.clearProperty("SampleName");' }
+        @{ Line = '$env:SAMPLE_NAME = $Keys.Sample' }
+        @{ Line = '${env:SAMPLE_NAME} = "value"' }
+        @{ Line = '${Env:SAMPLE_NAME}' }
+        @{ Line = '$ENV:SAMPLE_NAME = "value"' }
+        @{ Line = 'Remove-Item Env:\SAMPLE_NAME' }
+        @{ Line = 'Remove-Item Env:SAMPLE_NAME' }
+        @{ Line = '[Environment]::GetEnvironmentVariable("SAMPLE_NAME")' }
+        @{ Line = "[Environment]::SetEnvironmentVariable('SAMPLE_NAME', 'value')" }
+        @{ Line = '$env:_51degrees_sample = "sample.dat"' }
+        @{ Line = 'System.getenv("_51DEGREES_Sample")' }
     ) {
-        Get-Kind $Line | Should -Contain 'fallback'
+        $problems = Get-Problem $Line
+        $problems.Kind | Should -Be @('name')
     }
 
-    # The names this repository's tests, examples and CI scripts used for
-    # keys and the cloud address before each had a _51DEGREES_ name, read as
-    # a Java string, a system property passed with -D, a PowerShell
-    # parameter or variable, a placeholder in a configuration file, or a key
-    # in a hashtable.
-    It 'finds the old key name <Line>' -ForEach @(
-        @{ Line = '.setResourceKey(TestKeyUtils.getNamedKey("TestResourceKey"))' }
-        @{ Line = 'public static final String RESOURCE_KEY_ENV_VAR = "SuperResourceKey";' }
-        @{ Line = 'UPDATE_EXAMPLE_LICENSE_KEY_NAME = "LicenseKey";' }
-        @{ Line = '        "TestLicenseKey",' }
-        @{ Line = '        "_51DEGREES_LICENSE_KEY_CLOUDV5BESPOKE",' }
-        @{ Line = 'CLOUD_END_POINT_NAME = "TestCloudEndPoint";' }
-        @{ Line = '<EndPoint>${TestCloudEndpoint:-https://cloud.51degrees.com/api/v4}</EndPoint>' }
-        @{ Line = '<ResourceKey>${SuperResourceKey}</ResourceKey>' }
-        @{ Line = '<AcceptChNoneKey>${AcceptChNoneKey}</AcceptChNoneKey>' }
-        @{ Line = '    "-DTestResourceKey=$TestResourceKey"' }
-        @{ Line = '    "-DLicenseKey=$DeviceDetection"' }
-        @{ Line = '    [string]$TestResourceKey,' }
-        @{ Line = '                TestResourceKey = $TestResourceKey' }
-        @{ Line = 'mvn clean test -DTestResourceKey=[Resource Key]' }
+    It 'gives the name read in <Line> as <Name>' -ForEach @(
+        @{ Line = 'System.getenv("SAMPLE_NAME")'; Name = 'SAMPLE_NAME' }
+        @{ Line = 'System.getProperty("sample.name")'; Name = 'sample.name' }
+        @{ Line = 'Remove-Item Env:\SAMPLE_NAME'; Name = 'SAMPLE_NAME' }
+        @{ Line = '${env:SAMPLE_NAME} = "value"'; Name = 'SAMPLE_NAME' }
     ) {
-        Get-Kind $Line | Should -Contain 'fallback'
+        (Get-Problem $Line).Value | Should -Be @($Name)
     }
 
-    # The cloud request engine's tests name the query string parameter
-    # resource_key, which is on the wire and not in the environment, so the
-    # old names keep their case.
     It 'leaves <Line> alone' -ForEach @(
-        @{ Line = 'assertEquals("resource_key=" + key, query);' }
-        @{ Line = '          DeviceDetection: ${{ secrets.DEVICE_DETECTION_KEY }}' }
-        @{ Line = '  PAID_RESOURCE_KEY: ${{ secrets.X }}' }
-        @{ Line = 'System.getenv("_51DEGREES_RESOURCE_KEY")' }
-        @{ Line = 'System.getenv("_51DEGREES_CLOUD_ENDPOINT")' }
-        @{ Line = '$env:_51DEGREES_DD_PATH = "file.hash"' }
-        @{ Line = '$env:_51degrees_dd_path = "file.hash"' }
-        @{ Line = '${env:_51DEGREES_LICENSE_KEY} = $Keys.TestResourceKey' }
-        @{ Line = 'assertEquals("${env:user.home}", substitutor.replace(line));' }
-        @{ Line = '  PAID_RESOURCE_KEY: ${{ env.PAID_RESOURCE_KEY }}' }
-        @{ Line = 'System.getenv("SUPER_RESOURCE_KEY")' }
-        @{ Line = 'Set the key with !!YOUR_RESOURCE_KEY!! in the readme.' }
-        @{ Line = ' * https://distributor.51degrees.com/api/v2/download?LicenseKeys=<your_license_key>' }
-        @{ Line = '                    .setDataUpdateLicenseKey(licenseKey)' }
-        @{ Line = ' * method for a configuration option named ''LicenseKey''. If the' }
-        @{ Line = '        "_51DEGREES_LICENSE_KEY_BESPOKE",' }
-        @{ Line = '        resourceKey = KeyHelper.getOrSetTestResourceKey(resourceKey);' }
-        @{ Line = '<ResourceKey>${_51DEGREES_RESOURCE_KEY_SUPER}</ResourceKey>' }
+        @{ Line = 'System.getenv("_51DEGREES_SAMPLE")' }
+        @{ Line = 'System.getProperty("_51DEGREES_SAMPLE")' }
+        @{ Line = 'System.setProperty("_51DEGREES_SAMPLE", file.getPath());' }
+        @{ Line = '$env:_51DEGREES_SAMPLE = "sample.dat"' }
+        @{ Line = '${env:_51DEGREES_SAMPLE} = $Keys.Sample' }
+        @{ Line = 'Remove-Item Env:_51DEGREES_SAMPLE' }
+        @{ Line = 'System.getenv("PATH")' }
+        @{ Line = '"true".equals(System.getenv("GITHUB_ACTIONS"))' }
+        @{ Line = 'System.getProperty("os.name", "")' }
+        @{ Line = 'System.getProperty("java.io.tmpdir")' }
+        @{ Line = '$env:JAVA_HOME = $home' }
+        @{ Line = 'if ($env:CI) { return }' }
+        # A name held in a variable or constant is read where it is defined.
+        @{ Line = 'System.getenv(name)' }
+        @{ Line = 'System.getProperty(SAMPLE_CONSTANT)' }
+        # Not reads of the environment or of a system property.
+        @{ Line = 'assertEquals("sample_name=" + key, query);' }
+        @{ Line = 'json.getProperty("SampleName")' }
+        @{ Line = 'data.get("SampleName").toString()' }
+        @{ Line = '                TestSample = $TestSample' }
+        @{ Line = 'Set the key with !!YOUR_SAMPLE_NAME!! in the readme.' }
+        @{ Line = '<version>${sample.version}</version>' }
     ) {
-        Get-Kind $Line | Should -BeNullOrEmpty
+        Get-Problem $Line | Should -BeNullOrEmpty
+    }
+
+    # An options file names a variable or system property as a placeholder,
+    # which the options lookup reads.
+    Context 'in an options file' {
+
+        It 'finds the placeholder in <Line>' -ForEach @(
+            @{ Line = '<DataFile>${SampleName}</DataFile>' }
+            @{ Line = '<DataFile>${SampleName:-sample.dat}</DataFile>' }
+            @{ Line = '<EndPoint>${env:SAMPLE_NAME}</EndPoint>' }
+            @{ Line = '<EndPoint>${sys:sample.name:-https://example.com}</EndPoint>' }
+            @{ Line = '<EndPoint>${envsys:SAMPLE_NAME}</EndPoint>' }
+            @{ Line = '<A>${_51DEGREES_SAMPLE:-${SampleName:-sample.dat}}</A>' }
+        ) {
+            (Get-Problem $Line 'src/main/resources/sample.xml').Kind |
+                Should -Be @('name')
+        }
+
+        It 'leaves <Line> alone' -ForEach @(
+            @{ Line = '<DataFile>${_51DEGREES_SAMPLE}</DataFile>' }
+            @{ Line = '<DataFile>${_51DEGREES_SAMPLE:-sample.dat}</DataFile>' }
+            @{ Line = '<EndPoint>${envsys:_51DEGREES_SAMPLE}</EndPoint>' }
+            @{ Line = '<File>${filepath:sample.dat}</File>' }
+            @{ Line = '<Home>${sys:user.home}</Home>' }
+        ) {
+            Get-Problem $Line 'src/main/resources/sample.xml' |
+                Should -BeNullOrEmpty
+        }
+
+        # A Maven project file and a page template use the same form for
+        # their own properties and fields.
+        It 'leaves a placeholder in <Path> alone' -ForEach @(
+            @{ Path = 'pom.xml' }
+            @{ Path = 'sample/pom.xml' }
+            @{ Path = 'src/main/webapp/WEB-INF/html/index.html' }
+            @{ Path = 'src/Any.java' }
+        ) {
+            Get-Problem '<a>${SampleName}</a>' $Path | Should -BeNullOrEmpty
+        }
+    }
+
+    Context 'in a Maven project file' {
+
+        It 'finds the environment variable in <Line>' -ForEach @(
+            @{ Line = '<sample>${env.SAMPLE_NAME}</sample>' }
+        ) {
+            (Get-Problem $Line 'sample/pom.xml').Value |
+                Should -Be @('SAMPLE_NAME')
+        }
+
+        It 'leaves <Line> alone' -ForEach @(
+            @{ Line = '<sample>${env.JAVA_HOME}</sample>' }
+            @{ Line = '<sample>${env._51DEGREES_SAMPLE}</sample>' }
+            @{ Line = '<sample>${project.version}</sample>' }
+        ) {
+            Get-Problem $Line 'sample/pom.xml' | Should -BeNullOrEmpty
+        }
+    }
+
+    Context 'in a workflow' {
+
+        It 'finds the name in <Line>' -ForEach @(
+            @{ Line = '          url: ${{ env.SAMPLE_NAME }}' }
+            @{ Line = '          key: ${{ secrets.SAMPLE_NAME }}' }
+            @{ Line = '          address: ${{ vars.SAMPLE_NAME }}' }
+            @{ Line = '        if: secrets.SAMPLE_NAME != ''''' }
+        ) {
+            (Get-Problem $Line '.github/workflows/sample.yml').Value |
+                Should -Be @('SAMPLE_NAME')
+        }
+
+        It 'leaves <Line> alone' -ForEach @(
+            @{ Line = '          key: ${{ secrets._51DEGREES_SAMPLE }}' }
+            @{ Line = '          address: ${{ vars._51DEGREES_SAMPLE }}' }
+            @{ Line = '          token: ${{ secrets.GITHUB_TOKEN }}' }
+            @{ Line = '    secrets: inherit' }
+            @{ Line = '          ref: ${{ inputs.sample-ref }}' }
+            @{ Line = '          os: ${{ matrix.os }}' }
+        ) {
+            Get-Problem $Line '.github/workflows/sample.yml' |
+                Should -BeNullOrEmpty
+        }
+    }
+}
+
+Describe 'Find-BlockNameProblem' {
+
+    It 'finds a name a workflow sets in an env block' {
+        $lines = @(
+            'jobs:'
+            '  sample:'
+            '    env:'
+            '      _51DEGREES_SAMPLE: ${{ secrets._51DEGREES_SAMPLE }}'
+            '      SAMPLE_NAME: value'
+            '    steps:'
+            '      - name: Sample'
+            '        env:'
+            '          # A comment.'
+            '          OtherSample: value'
+            '          JAVA_HOME: /sample'
+            '        run: |'
+            '          SampleKey: not in an env block'
+        )
+        $problems = @(Find-BlockNameProblem -Lines $lines `
+            -Path '.github/workflows/sample.yml')
+        $problems.Value | Should -Be @('SAMPLE_NAME', 'OtherSample')
+        $problems.LineNumber | Should -Be @(5, 10)
+    }
+
+    It 'finds a system property a Maven project file sets for the tests' {
+        $lines = @(
+            '<configuration>'
+            '    <systemPropertyVariables>'
+            '        <!-- A comment. -->'
+            '        <logback.configurationFile>${basedir}/logback.xml</logback.configurationFile>'
+            '        <sample.name>${basedir}</sample.name>'
+            '        <_51DEGREES_SAMPLE>${basedir}</_51DEGREES_SAMPLE>'
+            '    </systemPropertyVariables>'
+            '    <environmentVariables>'
+            '        <SAMPLE_NAME>value</SAMPLE_NAME>'
+            '    </environmentVariables>'
+            '    <sample.other>value</sample.other>'
+            '</configuration>'
+        )
+        $problems = @(Find-BlockNameProblem -Lines $lines -Path 'sample/pom.xml')
+        $problems.Value | Should -Be @('sample.name', 'SAMPLE_NAME')
+        $problems.LineNumber | Should -Be @(5, 9)
+    }
+
+    It 'reads no block in <Path>' -ForEach @(
+        @{ Path = 'ci/sample.yml' }
+        @{ Path = 'src/main/resources/sample.xml' }
+    ) {
+        $lines = @('env:', '  SAMPLE_NAME: value', '<systemPropertyVariables>',
+            '<sample.name>value</sample.name>', '</systemPropertyVariables>')
+        Find-BlockNameProblem -Lines $lines -Path $Path | Should -BeNullOrEmpty
     }
 }
 
 Describe 'the check over a repository' {
 
+    AfterEach {
+        if ($script:Repo) {
+            Remove-Item -Recurse -Force $script:Repo
+            $script:Repo = $null
+        }
+    }
+
     # git quotes a path holding a non-ASCII character unless told not to,
     # and a quoted path is not found on disk.
     It 'reads a file whose name is not ASCII' {
-        $repo = Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid())
-        New-Item -ItemType Directory $repo | Out-Null
-        try {
-            git -C $repo init -q
-            $name = 'Donn' + [char]0xE9 + 'es.java'
-            Set-Content -LiteralPath (Join-Path $repo $name) `
-                -Value 'System.getenv("51DEGREES_DD_PATH");'
-            git -C $repo add -A
-            { & $script:Check -RepoRoot $repo } |
-                Should -Throw '1 names start with a digit*'
-        } finally {
-            Remove-Item -Recurse -Force $repo
+        $name = 'Donn' + [char]0xE9 + 'es.java'
+        $script:Repo = New-SampleRepository @{
+            $name = 'System.getenv("51DEGREES_SAMPLE");'
         }
+        { & $script:Check -RepoRoot $script:Repo } |
+            Should -Throw '1 names start with a digit*'
     }
 
-    It 'passes an old name in a file that keeps a deprecated constant holding it' {
-        $repo = Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid())
-        New-Item -ItemType Directory $repo | Out-Null
-        try {
-            git -C $repo init -q
-            $file = Join-Path $repo 'pipeline/pipeline.did/src/main/java/fiftyone/pipeline/did/DidClient.java'
-            New-Item -ItemType Directory (Split-Path $file) -Force | Out-Null
-            Set-Content -LiteralPath $file `
-                -Value 'String ENDPOINT_VARIABLE = "FOD_CLOUD_API_URL";'
-            git -C $repo add -A
-            { & $script:Check -RepoRoot $repo } | Should -Not -Throw
-        } finally {
-            Remove-Item -Recurse -Force $repo
+    It 'fails on a name that is not a 51Degrees or platform name' {
+        $script:Repo = New-SampleRepository @{
+            'src/Sample.java' = 'String key = System.getenv("SAMPLE_NAME");'
+            'src/main/resources/sample.xml' = '<A>${SampleName}</A>'
+            'sample/pom.xml' = @(
+                '<systemPropertyVariables>'
+                '<sample.name>value</sample.name>'
+                '</systemPropertyVariables>')
         }
+        { & $script:Check -RepoRoot $script:Repo } |
+            Should -Throw '*and 3 names are read or set that are not*'
     }
 
-    It 'fails on the same old name in a file that is not named for it' {
-        $repo = Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid())
-        New-Item -ItemType Directory $repo | Out-Null
-        try {
-            git -C $repo init -q
-            Set-Content -LiteralPath (Join-Path $repo 'Other.java') `
-                -Value 'String ENDPOINT_VARIABLE = "FOD_CLOUD_API_URL";'
-            git -C $repo add -A
-            { & $script:Check -RepoRoot $repo } |
-                Should -Throw '*and 1 old names are read*'
-        } finally {
-            Remove-Item -Recurse -Force $repo
+    It 'passes when every name is a 51Degrees or platform name' {
+        $script:Repo = New-SampleRepository @{
+            'src/Sample.java' = @(
+                'String key = System.getenv("_51DEGREES_SAMPLE");'
+                'String os = System.getProperty("os.name");')
+            'src/main/resources/sample.xml' = '<A>${_51DEGREES_SAMPLE:-a}</A>'
+            'ci/sample.ps1' = '$env:_51DEGREES_SAMPLE = $env:JAVA_HOME'
         }
-    }
-}
-
-Describe 'Test-DeprecatedFallback' {
-
-    # An old name is allowed only in a file that keeps a deprecated constant
-    # holding it or tests that constant, and only the names listed for that
-    # file.
-    It 'allows <Value> in <Path>' -ForEach @(
-        @{ Path = 'pipeline/pipeline.did/src/main/java/fiftyone/pipeline/did/DidClient.java'; Value = '"FOD_CLOUD_API_URL' }
-        @{ Path = 'ip-intelligence/ip-intelligence.shared/src/main/java/fiftyone/ipintelligence/shared/testhelpers/FileUtils.java'; Value = '51DEGREES_IPI_PATH' }
-        @{ Path = 'examples/ip-intelligence/shared/src/main/java/fiftyone/ipintelligence/examples/shared/KeyHelper.java'; Value = '51DEGREES_RESOURCE_KEY' }
-    ) {
-        Test-DeprecatedFallback $Path $Value | Should -BeTrue
-    }
-
-    It 'refuses <Value> in <Path>' -ForEach @(
-        @{ Path = 'pipeline/pipeline.core/src/main/java/Any.java'; Value = '"FOD_CLOUD_API_URL' }
-        @{ Path = 'ci/run-unit-tests.ps1'; Value = 'env:RESOURCE_KEY' }
-        @{ Path = 'pipeline/pipeline.did/src/main/java/fiftyone/pipeline/did/DidClient.java'; Value = '"RESOURCE_KEY' }
-        @{ Path = 'pipeline/pipeline.did/src/main/java/fiftyone/pipeline/did/DidClient.java'; Value = 'LEGACY_ENV_VARS' }
-        @{ Path = 'pipeline/pipeline.did/src/test/java/fiftyone/pipeline/did/LiveCloudKeys.java'; Value = '"FOD_CLOUD_API_URL' }
-        @{ Path = 'ip-intelligence/ip-intelligence.shared/src/main/java/fiftyone/ipintelligence/shared/testhelpers/FileUtils.java'; Value = '51DEGREES_DD_PATH' }
-        @{ Path = 'ip-intelligence/ip-intelligence.shared/src/main/java/fiftyone/ipintelligence/shared/testhelpers/FileUtils.java'; Value = '51degrees_ipi_path' }
-        @{ Path = 'examples/device-detection/web/getting-started.onprem/src/main/webapp/WEB-INF/51Degrees-OnPrem.xml'; Value = '51DEGREES_DD_PATH' }
-        @{ Path = 'pipeline/pipeline.did/src/test/java/fiftyone/pipeline/did/LiveCloudKeys.java'; Value = '"RESOURCE_KEY' }
-    ) {
-        Test-DeprecatedFallback $Path $Value | Should -BeFalse
-    }
-}
-
-Describe 'the workflows' {
-
-    # The 51Did license key unseals only results made with the resource key
-    # of its own account. Filled from the Bespoke key, the licensed redeem
-    # comes back unreadable, so the 51Did resource key is taken from the
-    # secret of its own name.
-    It 'fill _51DEGREES_RESOURCE_KEY_51DID from the secret of the same name' {
-        $workflows = Join-Path $PSScriptRoot '../.github/workflows'
-        $lines = @(Get-ChildItem $workflows -Filter *.yml |
-            Select-String -Pattern '^\s*_51DEGREES_RESOURCE_KEY_51DID\s*:' |
-            ForEach-Object { "$($_.Filename):$($_.LineNumber): $($_.Line.Trim())" })
-        $lines | Should -Not -BeNullOrEmpty
-        $lines | Where-Object {
-            $_ -notmatch ':\s*\$\{\{\s*secrets\._51DEGREES_RESOURCE_KEY_51DID\s*\}\}\s*$'
-        } | Should -BeNullOrEmpty
-    }
-
-    # cloud-51did.yml runs the 51Did tests once for each resource key. The
-    # tests redeem with _51DEGREES_LICENSE_KEY_51DID, which unseals only
-    # results made with _51DEGREES_RESOURCE_KEY_51DID. So each pass gets only
-    # the license whose suffix matches its resource key, and the Bespoke pass
-    # gets none. The step's script runs here with mvn replaced by a function
-    # that records the keys each pass hands it.
-    Context 'cloud-51did.yml' {
-
-        BeforeAll {
-            $workflow = Join-Path $PSScriptRoot '../.github/workflows/cloud-51did.yml'
-            $lines = @(Get-Content $workflow)
-            $start = $lines | Select-String -Pattern '^(\s*)run: \|\s*$' |
-                Select-Object -First 1
-            $indent = $start.Matches[0].Groups[1].Value.Length
-            $body = foreach ($line in $lines[$start.LineNumber..($lines.Count - 1)]) {
-                if ($line.Trim() -and $line -notmatch "^\s{$($indent + 1),}") { break }
-                if ($line.Length -gt $indent + 2) { $line.Substring($indent + 2) } else { '' }
-            }
-            $script:Step = [scriptblock]::Create($body -join "`n")
-        }
-
-        BeforeEach {
-            $script:Saved = @(Get-ChildItem env: |
-                Where-Object { $_.Name -like '_51DEGREES_*' })
-            $script:Saved | ForEach-Object { Remove-Item "Env:$($_.Name)" }
-            $env:_51DEGREES_RESOURCE_KEY_51DID = 'resource-51did'
-            $env:_51DEGREES_RESOURCE_KEY_BESPOKE = 'resource-bespoke'
-            $env:_51DEGREES_LICENSE_KEY_51DID = 'license-51did'
-            $env:_51DEGREES_LICENSE_KEY_BESPOKE = 'license-bespoke'
-        }
-
-        AfterEach {
-            Get-ChildItem env: | Where-Object { $_.Name -like '_51DEGREES_*' } |
-                ForEach-Object { Remove-Item "Env:$($_.Name)" }
-            $script:Saved | ForEach-Object { Set-Item "Env:$($_.Name)" $_.Value }
-        }
-
-        It 'redeems with the 51Did license only in the pass with the 51Did resource key' {
-            $passes = [System.Collections.Generic.List[object]]::new()
-            function mvn {
-                $passes.Add([pscustomobject]@{
-                    Resource = $env:_51DEGREES_RESOURCE_KEY
-                    License  = $env:_51DEGREES_LICENSE_KEY_51DID
-                })
-                $global:LASTEXITCODE = 0
-            }
-            & $script:Step 6> $null
-
-            @($passes.Resource | Sort-Object) |
-                Should -Be @('resource-51did', 'resource-bespoke')
-            ($passes | Where-Object Resource -eq 'resource-51did').License |
-                Should -Be 'license-51did'
-            ($passes | Where-Object Resource -eq 'resource-bespoke').License |
-                Should -BeNullOrEmpty
-        }
-
-        # A license key with no resource key of its own suffix means a secret
-        # is missing. The licensed redeem would then never run, and the job
-        # would still pass, so the step fails naming the missing secret.
-        It 'fails naming <Resource> when <License> has a value and it is empty' -ForEach @(
-            @{ Resource = '_51DEGREES_RESOURCE_KEY_51DID'; License = '_51DEGREES_LICENSE_KEY_51DID' }
-            @{ Resource = '_51DEGREES_RESOURCE_KEY_BESPOKE'; License = '_51DEGREES_LICENSE_KEY_BESPOKE' }
-        ) {
-            $passes = [System.Collections.Generic.List[object]]::new()
-            function mvn {
-                $passes.Add($env:_51DEGREES_RESOURCE_KEY)
-                $global:LASTEXITCODE = 0
-            }
-            Remove-Item "Env:$Resource"
-
-            { & $script:Step 6> $null } | Should -Throw "*$Resource*"
-            $passes | Should -BeNullOrEmpty
-        }
-
-        # A deployment without 51Did has neither secret, and the runner then
-        # sets both names empty. The Bespoke pass must still run, with no
-        # 51Did license and no failure.
-        It 'runs the Bespoke pass alone when both 51Did keys are empty' {
-            $passes = [System.Collections.Generic.List[object]]::new()
-            function mvn {
-                $passes.Add([pscustomobject]@{
-                    Resource = $env:_51DEGREES_RESOURCE_KEY
-                    License  = $env:_51DEGREES_LICENSE_KEY_51DID
-                })
-                $global:LASTEXITCODE = 0
-            }
-            $env:_51DEGREES_RESOURCE_KEY_51DID = ''
-            $env:_51DEGREES_LICENSE_KEY_51DID = ''
-
-            { & $script:Step 6> $null } | Should -Not -Throw
-            @($passes.Resource) | Should -Be @('resource-bespoke')
-            $passes[0].License | Should -BeNullOrEmpty
-        }
+        { & $script:Check -RepoRoot $script:Repo } | Should -Not -Throw
     }
 }
