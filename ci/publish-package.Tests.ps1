@@ -17,8 +17,10 @@ BeforeAll {
     $Script = Join-Path $Root 'repo' 'ci' 'publish-package.ps1'
     Set-Content (Join-Path $Root 'steps' 'release-plan.ps1') `
         'function Get-ReleasePlan([string]$RepoPath) { }'
+    # The stub takes only the parameters common-ci's script takes, and binds
+    # no others, so a parameter the publish should not give stops the test.
     Set-Content (Join-Path $Root 'java' 'publish-package-maven.ps1') `
-        'param($RepoName, $MavenSettings, $Version, $DryRun)'
+        '[CmdletBinding()] param($RepoName, $Version, [bool]$DryRun)'
 
     # Pester mocks only a command it can find, so the plan is defined here
     # as well as in the stub.
@@ -28,7 +30,7 @@ BeforeAll {
         Push-Location $Root
         try {
             & $Script -RepoName 'repo' -OrgName 'org' -Version '0' `
-                -Keys @{ MavenSettings = '' } -DryRun $DryRun
+                -DryRun $DryRun
         } finally {
             Pop-Location
         }
@@ -54,6 +56,10 @@ Describe 'publish-package.ps1' {
                 Previous = $null; Reason = 'depends on pipeline.core'
             }
         }
+    }
+
+    It 'takes no keys, because the upload reads its token from the environment' {
+        (Get-Command $Script).Parameters.ContainsKey('Keys') | Should -BeFalse
     }
 
     It 'pushes every tag in one atomic push' {
