@@ -48,10 +48,10 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * <p>
  * The configuration file for the pipeline is at src/main/webapp/WEB-INF/51Degrees-OnPrem.xml
  * <p>
- * The data file is taken from the _51DEGREES_DD_PATH environment variable, then
- * from TestDataFile (an environment variable or system property), and otherwise
- * the free Lite file in cxx/data/device-detection is used, which is downloaded
- * before the server starts if it is missing.
+ * The data file is taken from _51DEGREES_DD_PATH, an environment variable or
+ * system property, and otherwise the free Lite file in
+ * cxx/data/device-detection is used, which is downloaded before the server
+ * starts if it is missing.
  * <p>
  * The server listens on port 5151 and stops when Enter is pressed. If the PORT
  * environment variable is set, the server listens on that port instead and runs
@@ -107,7 +107,7 @@ public class GettingStartedWebOnPrem extends HttpServlet {
                 getFilePath(resourceBase) + "/WEB-INF/51Degrees-OnPrem.xml")
                 .findAndSubstitute("DeviceDetectionHashEngine", "DataFile");
         if (!new File(dataFile).exists()) {
-            System.setProperty("TestDataFile",
+            System.setProperty("_51DEGREES_DD_PATH",
                     DataFileHelper.getDataFileLocation(dataFile));
         }
     }

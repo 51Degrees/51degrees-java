@@ -108,9 +108,9 @@ public class GettingStartedOnPrem {
         try {
             String dataFileLocation =
                     DataFileHelper.findDataFile(dataFile).getAbsolutePath();
-            // the location of the test data file is interpolated in the pipeline
+            // the location of the data file is interpolated in the pipeline
             // configuration file
-            System.setProperty("TestDataFile", dataFileLocation);
+            System.setProperty("_51DEGREES_DD_PATH", dataFileLocation);
         } catch (Exception e) {
             DataFileHelper.cantFindDataFile(dataFile);
             throw e;

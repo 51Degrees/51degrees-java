@@ -132,7 +132,7 @@ public class GettingStartedMixed {
         // Resolve and set the Device Detection data file location
         try {
             String ddLocation = resolveDataFile(ddDataFile);
-            System.setProperty("TestDeviceDetectionDataFile", ddLocation);
+            System.setProperty("_51DEGREES_DD_PATH", ddLocation);
         } catch (Exception e) {
             logger.error("Failed to find Device Detection data file at '{}'. " +
                     "Please provide a valid path to a Device Detection data file (.hash).", ddDataFile);
@@ -142,7 +142,7 @@ public class GettingStartedMixed {
         // Resolve and set the IP Intelligence data file location
         try {
             String ipiLocation = DataFileHelper.getDataFileLocation(ipiDataFile);
-            System.setProperty("TestDataFile", ipiLocation);
+            System.setProperty("_51DEGREES_IPI_PATH", ipiLocation);
         } catch (Exception e) {
             logger.error("Failed to find IP Intelligence data file at '{}'. " +
                     "Please provide a valid path to an IP Intelligence data file (.ipi). " +

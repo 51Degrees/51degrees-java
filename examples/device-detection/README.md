@@ -126,8 +126,8 @@ PORT=8100 java -jar ./web/getting-started.onprem/target/device-detection-java-ex
 ```
 
 The on-premise web example takes its data file from the `_51DEGREES_DD_PATH`
-environment variable, then from `TestDataFile`, and otherwise uses the free Lite file
-in `cxx/data/device-detection`, which it downloads before the server starts if it is
+environment variable, and otherwise uses the free Lite file in
+`cxx/data/device-detection`, which it downloads before the server starts if it is
 missing.
 
 ### Native library access

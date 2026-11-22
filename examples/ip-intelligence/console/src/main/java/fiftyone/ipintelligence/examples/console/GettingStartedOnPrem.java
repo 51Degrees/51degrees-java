@@ -130,9 +130,9 @@ public class GettingStartedOnPrem {
         String dataFileLocation;
         try {
             dataFileLocation = DataFileHelper.getDataFileLocation(dataFile);
-            // the location of the test data file is interpolated in the pipeline
+            // the location of the data file is interpolated in the pipeline
             // configuration file
-            System.setProperty("TestDataFile", dataFileLocation);
+            System.setProperty("_51DEGREES_IPI_PATH", dataFileLocation);
         } catch (Exception e) {
             logger.error("Failed to find IP Intelligence data file at '{}'. " +
                     "Please provide a valid path to an IP Intelligence data file (.ipi). " +
