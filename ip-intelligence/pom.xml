@@ -217,7 +217,7 @@
                         <logback.configurationFile>${maven.multiModuleProjectDirectory}/logback.xml</logback.configurationFile>
                         <!-- this sets the scope of file search (inter alia in getFilePath) to the project directory-->
                         <!--suppress UnresolvedMavenProperty -->
-                        <project.root>${maven.multiModuleProjectDirectory}</project.root>
+                        <_51DEGREES_PROJECT_ROOT>${maven.multiModuleProjectDirectory}</_51DEGREES_PROJECT_ROOT>
                         <!-- The tests read their keys from the _51DEGREES_ environment
                              variables, which the forked JVM inherits, or from these system
                              properties, which can be defined in settings.xml -->

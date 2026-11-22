@@ -278,10 +278,12 @@ module starts to depend on another, add it to `ci/packages.json` as well, or
 the pull request build fails. `ci/README.md` describes how a release is
 planned.
 
-## Data files and `project.root`
+## Data files and `_51DEGREES_PROJECT_ROOT`
 
 Tests and examples find data files with `FileFinder`, which searches below
-`project.root`. The surefire configuration sets that to
+the folder `_51DEGREES_PROJECT_ROOT` names, read as an environment variable
+and then as a system property. The surefire configuration sets the system
+property to
 `maven.multiModuleProjectDirectory`, which Maven takes from the nearest `.mvn`
 folder above the working directory. The only `.mvn` folder is at the root, so
 the search covers `cxx/data/device-detection` and `cxx/data/ip-intelligence`
