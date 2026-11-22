@@ -26,11 +26,26 @@ import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import fiftyone.devicedetection.examples.shared.EvidenceHelper;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
+
 public class GettingStartedOnPremTest {
 
     @Test
     public void gettingStartedOnPremTest() throws Exception {
         GettingStartedOnPrem.run(DataFileHelper.getDataFileLocation(null),
                 EvidenceHelper.setUpEvidence(), System.out);
+    }
+
+    /**
+     * The example passes the data file to its options file in a system
+     * property, and puts the property back as it was, so that a later run
+     * in the same process finds its own file.
+     */
+    @Test
+    public void run_LeavesTheDataFilePropertyAsItWas() throws Exception {
+        String before = System.getProperty("_51DEGREES_DD_PATH");
+        GettingStartedOnPrem.run(DataFileHelper.getDataFileLocation(null),
+                EvidenceHelper.setUpEvidence(), System.out);
+        assertEquals(before, System.getProperty("_51DEGREES_DD_PATH"));
     }
 }

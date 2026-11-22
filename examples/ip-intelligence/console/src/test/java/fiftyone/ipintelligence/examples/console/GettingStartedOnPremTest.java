@@ -26,6 +26,7 @@ import fiftyone.ipintelligence.examples.shared.DataFileHelper;
 import fiftyone.ipintelligence.examples.shared.EvidenceHelper;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeTrue;
 
 public class GettingStartedOnPremTest {
@@ -39,5 +40,22 @@ public class GettingStartedOnPremTest {
                 dataFile != null);
         GettingStartedOnPrem.run(dataFile,
                 EvidenceHelper.setUpEvidence(), System.out);
+    }
+
+    /**
+     * The example passes the data file to its options file in a system
+     * property, and puts the property back as it was, so that a later run
+     * in the same process finds its own file.
+     */
+    @Test
+    public void run_LeavesTheDataFilePropertyAsItWas() throws Exception {
+        String dataFile = DataFileHelper.findAvailableDataFile();
+        assumeTrue("Skipping test, no IP Intelligence data file found",
+                dataFile != null);
+        String before = System.getProperty(DataFileHelper.IPI_PATH_VARIABLE);
+        GettingStartedOnPrem.run(dataFile,
+                EvidenceHelper.setUpEvidence(), System.out);
+        assertEquals(before,
+                System.getProperty(DataFileHelper.IPI_PATH_VARIABLE));
     }
 }
