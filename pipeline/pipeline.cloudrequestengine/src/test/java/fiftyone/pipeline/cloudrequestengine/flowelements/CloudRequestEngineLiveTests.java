@@ -94,7 +94,7 @@ public class CloudRequestEngineLiveTests {
             LoggerFactory.getILoggerFactory(), new HttpClientDefault())
             .setResourceKey(resourceKey);
         String licenceKey =
-            LiveCloudKeys.find(LiveCloudKeys.LICENCE_KEY_NAME);
+            LiveCloudKeys.find(LiveCloudKeys.LICENSE_KEY_NAME);
         if (licenceKey != null) {
             builder.setLicenseKey(licenceKey);
         }
@@ -169,9 +169,9 @@ public class CloudRequestEngineLiveTests {
     public void build_Process_LicenseKeyAlone_AnswersOnlyWhatWasAsked()
             throws Exception {
         String licenceKey =
-            LiveCloudKeys.find(LiveCloudKeys.LICENCE_KEY_NAME);
+            LiveCloudKeys.find(LiveCloudKeys.LICENSE_KEY_NAME);
         assumeTrue(licenceKey != null,
-            LiveCloudKeys.LICENCE_KEY_NAME
+            LiveCloudKeys.LICENSE_KEY_NAME
             + " is not set, so there is no license key to authenticate with.");
 
         // The service answers a request that names no property the license

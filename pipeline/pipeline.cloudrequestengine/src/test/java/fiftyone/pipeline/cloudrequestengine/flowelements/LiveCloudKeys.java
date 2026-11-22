@@ -47,7 +47,7 @@ final class LiveCloudKeys {
      * It is the license for the cloud products, and not
      * _51DEGREES_LICENSE_KEY, which holds the license for the data files.
      */
-    static final String LICENCE_KEY_NAME = "_51DEGREES_LICENSE_KEY_BESPOKE";
+    static final String LICENSE_KEY_NAME = "_51DEGREES_LICENSE_KEY_BESPOKE";
 
     private LiveCloudKeys() {
     }
