@@ -11,7 +11,7 @@ $data = "$PSScriptRoot/../cxx/data"
 $deviceDetectionData = "$data/device-detection"
 $ipIntelligenceData = "$data/ip-intelligence"
 
-$deviceDetectionAssets = 'TAC-HashV41.hash', '51Degrees-LiteV4.1.hash', '20000 Evidence Records.yml', '20000 User Agents.csv'
+$deviceDetectionAssets = 'TAC-HashV41.hash', '51Degrees-LiteV4.1.hash', '20000 Evidence Records.yml'
 ./steps/fetch-assets.ps1 -Assets $deviceDetectionAssets
 foreach ($asset in $deviceDetectionAssets) {
     New-Item -ItemType SymbolicLink -Force -Target "$PWD/assets/$asset" -Path "$deviceDetectionData/$asset"
