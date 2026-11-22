@@ -103,6 +103,15 @@ tests, or by itself from `examples/device-detection`.
 ../../mvnw -pl web/human-confidence -am test
 ```
 
+`HumanConfidenceLiveTest` makes the server's passive call against the cloud
+service that `_51DEGREES_CLOUD_ENDPOINT` names. With the key in
+`_51DEGREES_RESOURCE_KEY_BESPOKE` the answer has `HumanConfidenceSource` set
+to `Passive` and a plain level. With the key in
+`_51DEGREES_RESOURCE_KEY_BASIC`, which is outside the Bespoke product, the
+answer has no source. A test whose key is not set is skipped. The active
+source comes back only to a browser that has run the tests, so these tests
+don't check it.
+
 ## What a run costs
 
 Every call to the cloud is one use against the subscription behind the keys.

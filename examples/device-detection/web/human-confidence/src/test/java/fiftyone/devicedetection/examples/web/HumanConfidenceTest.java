@@ -60,6 +60,17 @@ public class HumanConfidenceTest {
     private static final String LICENSE = "test-license-key";
     private static final String REDEEMED =
             "{\"humanConfidence\":\"High\",\"secondsSinceVerified\":2}";
+    private static final String PASSIVE =
+            "{\"derived\":{"
+            + "\"humanconfidencesource\":\"Passive\","
+            + "\"humanconfidence\":\"Medium\"}}";
+    /** The answer for a key outside Bespoke, with no source and no level. */
+    private static final String NO_SOURCE =
+            "{\"derived\":{"
+            + "\"humanconfidence\":null,"
+            + "\"humanconfidencenullreason\":\"Not in this key.\","
+            + "\"humanconfidencesource\":null,"
+            + "\"humanconfidencesourcenullreason\":\"Not in this key.\"}}";
 
 
     /** A link to 51degrees.com, up to the character that ends it. */
@@ -79,6 +90,7 @@ public class HumanConfidenceTest {
     private HumanConfidence example;
     private volatile Map<String, String> passiveForm;
     private volatile Map<String, String> redeemForm;
+    private volatile String passiveAnswer = PASSIVE;
 
     @After
     public void stop() {
@@ -113,9 +125,7 @@ public class HumanConfidenceTest {
                 exchange -> reply(exchange, 200, properties));
         cloud.createContext("/api/v4/" + RESOURCE + ".json", exchange -> {
             passiveForm = HumanConfidence.parseForm(body(exchange));
-            reply(exchange, 200, "{\"derived\":{"
-                    + "\"humanconfidencesource\":\"Passive\","
-                    + "\"humanconfidence\":\"Medium\"}}");
+            reply(exchange, 200, passiveAnswer);
         });
         cloud.createContext("/api/v4/hc/redeem", exchange -> {
             redeemForm = HumanConfidence.parseForm(body(exchange));
@@ -179,6 +189,19 @@ public class HumanConfidenceTest {
         assertNull(passiveForm.get("authorization"));
         assertNull(passiveForm.get("x-other"));
         assertNull(passiveForm.get("x"));
+    }
+
+    @Test
+    public void passiveWithoutTheSourceReportsNone() throws IOException {
+        passiveAnswer = NO_SOURCE;
+        String base = start(true, true);
+        String response = rawGet(base, "/passive", "User-Agent: Test Agent");
+        JSONObject answer = new JSONObject(
+                response.substring(response.indexOf("\r\n\r\n") + 4));
+        assertFalse(answer.toString(), answer.has("error"));
+        assertFalse("No source is made up: " + answer, answer.has("source"));
+        assertFalse("No level is made up: " + answer,
+                answer.has("humanConfidence"));
     }
 
     @Test
