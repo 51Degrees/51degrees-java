@@ -24,9 +24,14 @@ package fiftyone.ipintelligence.examples.console;
 
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
 import fiftyone.ipintelligence.examples.shared.EvidenceHelper;
+import fiftyone.ipintelligence.examples.shared.ExampleProcess;
 import org.junit.Test;
 
+import java.io.File;
+import java.util.Collections;
+
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 public class GettingStartedOnPremTest {
@@ -43,9 +48,30 @@ public class GettingStartedOnPremTest {
     }
 
     /**
-     * The example passes the data file to its options file in a system
-     * property, and puts the property back as it was, so that a later run
-     * in the same process finds its own file.
+     * A data file given as an argument is the one the example uses, when
+     * _51DEGREES_IPI_PATH names another. The variable here names a file
+     * that is not there, so the example ends well only if it left it alone.
+     */
+    @Test
+    public void main_UsesTheDataFileGivenAsAnArgument() throws Exception {
+        String dataFile = DataFileHelper.findAvailableDataFile();
+        assumeTrue("Skipping test, no IP Intelligence data file found",
+                dataFile != null);
+        dataFile = new File(dataFile).getAbsolutePath();
+        ExampleProcess.Result result = ExampleProcess.runWith(
+                GettingStartedOnPrem.class,
+                Collections.singletonMap(DataFileHelper.IPI_PATH_VARIABLE,
+                        new File("not-there.ipi").getAbsolutePath()),
+                dataFile);
+        assertEquals(result.output, 0, result.exitCode);
+        assertTrue(result.output, result.output.contains(
+                "from location '" + dataFile + "'"));
+    }
+
+    /**
+     * The example gives the data file to its options itself, and sets no
+     * system property, so that a later run in the same process finds its
+     * own file.
      */
     @Test
     public void run_LeavesTheDataFilePropertyAsItWas() throws Exception {

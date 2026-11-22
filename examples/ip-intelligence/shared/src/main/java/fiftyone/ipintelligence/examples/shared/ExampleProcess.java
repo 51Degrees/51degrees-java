@@ -27,8 +27,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -81,6 +84,24 @@ public final class ExampleProcess {
      *                   within the timeout
      */
     public static Result runWithoutKeys(Class<?> example) throws Exception {
+        return runWith(example, Collections.<String, String>emptyMap());
+    }
+
+    /**
+     * Runs the example's main method as {@link #runWithoutKeys(Class)}
+     * does, then with each of these environment variables set and with
+     * these arguments, as a person who has a variable set and gives the
+     * example an argument runs it.
+     * @param example the class whose main method runs
+     * @param environment the environment variables to set, by name
+     * @param arguments the arguments the example is given
+     * @return the exit code and the output
+     * @throws Exception if the process cannot start, or does not end
+     *                   within the timeout
+     */
+    public static Result runWith(Class<?> example,
+                                 Map<String, String> environment,
+                                 String... arguments) throws Exception {
         List<String> command = new ArrayList<>();
         command.add(new File(new File(System.getProperty("java.home"),
             "bin"), "java").getPath());
@@ -91,10 +112,12 @@ public final class ExampleProcess {
             command.add("-D_51DEGREES_PROJECT_ROOT=" + projectRoot);
         }
         command.add(example.getName());
+        command.addAll(Arrays.asList(arguments));
 
         ProcessBuilder builder = new ProcessBuilder(command);
         builder.environment().keySet().removeIf(
             name -> name.toUpperCase(Locale.ROOT).contains("KEY"));
+        builder.environment().putAll(environment);
         builder.redirectErrorStream(true);
         Process process = builder.start();
 

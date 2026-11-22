@@ -23,10 +23,14 @@
 package fiftyone.ipintelligence.examples.console;
 
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
+import fiftyone.ipintelligence.examples.shared.ExampleProcess;
 import org.junit.Test;
 
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
 
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 import static org.junit.Assert.assertEquals;
@@ -67,9 +71,36 @@ public class GettingStartedMixedTest {
     }
 
     /**
-     * The example passes each data file to its options file in a system
-     * property, and puts the properties back as they were, so that a later
-     * run in the same process finds its own files.
+     * The data files given as arguments are the ones the example uses,
+     * when _51DEGREES_DD_PATH and _51DEGREES_IPI_PATH name others. The
+     * variables here name files that are not there, so the example ends
+     * well only if it left them alone.
+     */
+    @Test
+    public void main_UsesTheDataFilesGivenAsArguments() throws Exception {
+        assumeTrue("Skipping test, no device detection data file found at " +
+                        GettingStartedMixed.DD_DATA_FILE_DEFAULT,
+                ddDataFileExists());
+        String ipiDataFile = DataFileHelper.findAvailableDataFile();
+        assumeTrue("Skipping test, no IP Intelligence data file found",
+                ipiDataFile != null);
+        Map<String, String> environment = new HashMap<>();
+        environment.put("_51DEGREES_DD_PATH",
+                new File("not-there.hash").getAbsolutePath());
+        environment.put(DataFileHelper.IPI_PATH_VARIABLE,
+                new File("not-there.ipi").getAbsolutePath());
+        ExampleProcess.Result result = ExampleProcess.runWith(
+                GettingStartedMixed.class, environment,
+                getFilePath(GettingStartedMixed.DD_DATA_FILE_DEFAULT)
+                        .getAbsolutePath(),
+                new File(ipiDataFile).getAbsolutePath());
+        assertEquals(result.output, 0, result.exitCode);
+    }
+
+    /**
+     * The example gives each data file to its options itself, and sets no
+     * system property, so that a later run in the same process finds its
+     * own files.
      */
     @Test
     public void run_LeavesTheDataFilePropertiesAsTheyWere() throws Exception {
