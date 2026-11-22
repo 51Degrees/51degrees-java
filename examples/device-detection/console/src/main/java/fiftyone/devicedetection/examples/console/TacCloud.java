@@ -102,7 +102,7 @@ public class TacCloud {
         PipelineOptions pipelineOptions = PipelineOptionsFactory.getOptionsFromFile(optionsFile);
         String fileResourceKey = pipelineOptions.find("CloudRequestEngine", "ResourceKey");
         if (isInvalidKey(fileResourceKey)) {
-            getOrSetSuperResourceKey(resourceKey, TAC_EXAMPLE_RESOURCE_KEY_NAME);
+            getOrSetPaidResourceKey(resourceKey, TAC_EXAMPLE_RESOURCE_KEY_NAME);
         }
         try (PrintWriter writer = new PrintWriter(os)) {
             writer.println("This example shows the details of devices " +

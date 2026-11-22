@@ -236,10 +236,10 @@ public class KeyHelper {
         }
         return value;
     }
-    public static String getOrSetSuperResourceKey(String value, String variablename) {
-        return getOrSetSuperResourceKey(value, variablename, true);
+    public static String getOrSetPaidResourceKey(String value, String variablename) {
+        return getOrSetPaidResourceKey(value, variablename, true);
     }
-    public static String getOrSetSuperResourceKey(String value, String variablename, boolean shouldThrow) {
+    public static String getOrSetPaidResourceKey(String value, String variablename, boolean shouldThrow) {
         return getOrSetResourceKey(value, variablename, "TAC lookup and native model are not " +
                 "available with a free resource key. " +
                 "See https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-keyhelper.java&utm_term=super-resource-key-required to get a paid subscription " +

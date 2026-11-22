@@ -331,10 +331,10 @@ public class KeyHelper {
         }
         return value;
     }
-    public static String getOrSetSuperResourceKey(String value, String variablename) {
-        return getOrSetSuperResourceKey(value, variablename, true);
+    public static String getOrSetPaidResourceKey(String value, String variablename) {
+        return getOrSetPaidResourceKey(value, variablename, true);
     }
-    public static String getOrSetSuperResourceKey(String value, String variablename, boolean shouldThrow) {
+    public static String getOrSetPaidResourceKey(String value, String variablename, boolean shouldThrow) {
         return getOrSetResourceKey(value, variablename, "TAC lookup and Native Model are not " +
                 "available as a free service.\nThis means " +
                 "that you will first need a license key, which can be purchased " +
