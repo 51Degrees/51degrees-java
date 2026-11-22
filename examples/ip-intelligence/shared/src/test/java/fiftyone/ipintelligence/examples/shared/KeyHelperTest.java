@@ -65,8 +65,7 @@ public class KeyHelperTest {
         // variable.
         for (String name : namesRead) {
             assumeTrue(name + " is set in the environment",
-                System.getenv(name) == null &&
-                    System.getenv(name.toUpperCase()) == null);
+                System.getenv(name) == null);
         }
         Map<String, String> saved = new HashMap<>();
         for (String name : namesRead) {
@@ -83,6 +82,26 @@ public class KeyHelperTest {
                     System.setProperty(entry.getKey(), entry.getValue());
                 }
             }
+        }
+    }
+
+    /**
+     * A key is read from the environment under the name given, and from
+     * the system property of that name when the environment has none.
+     */
+    @Test
+    public void readKey_ReadsTheEnvironmentThenTheSystemProperty() {
+        String name = "Key_Helper_Test_Name";
+        Map<String, String> environment = new HashMap<>();
+        environment.put("KEY_HELPER_TEST_NAME", KEY_A);
+        assertNull(KeyHelper.readKey(name, environment::get));
+        System.setProperty(name, KEY_B);
+        try {
+            assertEquals(KEY_B, KeyHelper.readKey(name, environment::get));
+            environment.put(name, KEY_A);
+            assertEquals(KEY_A, KeyHelper.readKey(name, environment::get));
+        } finally {
+            System.clearProperty(name);
         }
     }
 

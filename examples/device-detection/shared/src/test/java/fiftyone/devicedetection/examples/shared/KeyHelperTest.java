@@ -55,8 +55,7 @@ public class KeyHelperTest {
         // A test can clear a system property but not an environment
         // variable.
         assumeTrue(name + " is set in the environment",
-            System.getenv(name) == null &&
-                System.getenv(name.toUpperCase()) == null);
+            System.getenv(name) == null);
         String saved = System.clearProperty(name);
         try {
             assertNull(KeyHelper.getOrSetTestResourceKey(false));
@@ -65,6 +64,31 @@ public class KeyHelperTest {
             if (saved != null) {
                 System.setProperty(name, saved);
             }
+        }
+    }
+
+    /**
+     * A key is read from the environment under the name given, and from
+     * the system property of that name when the environment has none.
+     */
+    @Test
+    public void readKey_ReadsTheEnvironmentThenTheSystemProperty() {
+        String name = "Key_Helper_Test_Name";
+        Map<String, String> environment = new HashMap<>();
+        environment.put("KEY_HELPER_TEST_NAME", KEY_A);
+        assertNull(KeyHelper.readKey(name, environment::get));
+        assertNull(KeyHelper.getNamedKey(name, environment::get));
+        System.setProperty(name, KEY_B);
+        try {
+            assertEquals(KEY_B, KeyHelper.readKey(name, environment::get));
+            assertEquals(KEY_B,
+                KeyHelper.getNamedKey(name, environment::get));
+            environment.put(name, KEY_A);
+            assertEquals(KEY_A, KeyHelper.readKey(name, environment::get));
+            assertEquals(KEY_A,
+                KeyHelper.getNamedKey(name, environment::get));
+        } finally {
+            System.clearProperty(name);
         }
     }
 

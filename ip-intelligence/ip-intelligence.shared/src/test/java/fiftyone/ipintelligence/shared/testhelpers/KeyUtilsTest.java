@@ -24,14 +24,38 @@ package fiftyone.ipintelligence.shared.testhelpers;
 
 import org.junit.Test;
 
+import java.util.Collections;
+import java.util.Map;
+
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
 public class KeyUtilsTest {
+    private static final String NAME = "Key_Utils_Test_Name";
+
+    /**
+     * An environment that holds a value under the upper case form of
+     * {@link #NAME} only.
+     */
+    private static final Map<String, String> UPPER_CASE_ONLY =
+        Collections.singletonMap("KEY_UTILS_TEST_NAME", "from-environment");
+
     @Test
-    public void testGetEnv(){
-        assertNotNull(KeyUtils.getNamedKey("path"));
-        System.out.println(KeyUtils.getNamedKey("path"));
+    public void getNamedKey_ReadsTheEnvironmentUnderTheNameGiven() {
+        assertEquals("from-environment", KeyUtils.getNamedKey(
+            "KEY_UTILS_TEST_NAME", UPPER_CASE_ONLY::get));
+        assertNull(KeyUtils.getNamedKey(NAME, UPPER_CASE_ONLY::get));
+    }
+
+    @Test
+    public void getNamedKey_NotInTheEnvironment_ReadsTheSystemProperty() {
+        System.setProperty(NAME, "from-property");
+        try {
+            assertEquals("from-property",
+                KeyUtils.getNamedKey(NAME, UPPER_CASE_ONLY::get));
+        } finally {
+            System.clearProperty(NAME);
+        }
     }
 
     private static final String NEW_KEY_NAME = "_51DEGREES_RESOURCE_KEY";
