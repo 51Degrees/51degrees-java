@@ -1,14 +1,21 @@
-# Every 51Degrees environment variable name in this repository starts with an
-# underscore, because a POSIX shell cannot set a name that starts with a digit,
-# and each variable has one name. No old name is read. An old name may appear
-# only in the files listed in KeptOldNames below, which keep a deprecated
-# public constant holding it, and in the tests of those constants. This reads
-# every file git tracks, which leaves out build output and the submodules, and
-# fails on any name that starts with the digit and on any old name, outside
-# the files listed for that name.
+# Every name 51Degrees defines for an environment variable or a system
+# property in this repository starts _51DEGREES_, with the underscore because
+# a POSIX shell cannot set a name that starts with a digit. This reads every
+# file git tracks, which leaves out build output and the submodules, and fails
+# on:
 #
-# Dot-sourcing the script defines Find-EnvironmentNameProblem and
-# Test-DeprecatedFallback without reading the repository, which is how its
+# - any name that starts with the digit, wherever it is written, and
+# - any name read or set that neither starts _51DEGREES_ nor is one the
+#   platform or a build tool defines, which are listed below.
+#
+# A name counts as read or set when it is a string given to getenv or to
+# System.getProperty, setProperty or clearProperty, a name on PowerShell's
+# Env: drive, a placeholder in an options file, a secret, variable or env
+# entry of a workflow, or an environment variable or system property a Maven
+# project file reads or gives the tests.
+#
+# Dot-sourcing the script defines Test-AllowedName, Find-EnvironmentNameProblem
+# and Find-BlockNameProblem without reading the repository, which is how its
 # tests use them.
 
 [CmdletBinding()]
@@ -33,98 +40,162 @@ $script:DigitInitialPattern = [regex]::new(
     "(?<![A-Za-z0-9_])$digitInitial[A-Za-z0-9_]*",
     [Text.RegularExpressions.RegexOptions]::IgnoreCase)
 
-# An old name read or set as an environment variable, or held in a constant to
-# fall back to. A Java read takes the name as a string, so a quoted bare name
-# is matched, along with the PowerShell and config forms the CI scripts and the
-# web example use, and a name at the start of a line past any spaces and a
-# list dash, which is how a workflow declares one as a key in an env: block
-# and how a readme lists one.
-#
-# The env token is matched on its own, in any case and with a following
-# backslash allowed, because PowerShell braces a name as well as prefixing
-# it, reads one through the Env: drive, and because the pipeline config
-# lookup and a workflow expression both brace one too. Wanting the dollar
-# and the token adjacent misses every braced form.
-#
-# These keep their case. The cloud request engine's tests name the query string
-# parameter resource_key, which differs from RESOURCE_KEY only by case, and a
-# query string parameter is on the wire rather than in the environment, so
-# matching in any case would fail on a name that is not an environment
-# variable at all.
-#
-# The second part holds the names this repository used for its keys and for
-# the cloud address before each had a _51DEGREES_ name, and the dropped
-# _51DEGREES_LICENSE_KEY_CLOUDV5BESPOKE. A test read them as a Java string,
-# Maven passed them as system properties with -D, a configuration file
-# named them as placeholders, and the CI scripts took them as parameters
-# and set them as hashtable keys, so a dollar and -D come before one as
-# well. A single quote does not, because the pipeline's documentation names
-# a builder option 'LicenseKey', which is not an environment variable.
-$script:FallbackPattern = [regex]::new(
-    '(?:["'']|(?i:env)[:.]\\?|\$\{|getenv\(\s*["'']|^[\t\- ]*)' +
-    '(?:RESOURCE_KEY|LICENSE_KEY|FOD_CLOUD_API_URL)(?![A-Za-z0-9_])|' +
-    '(?:"|(?i:env)[:.]\\?|\$\{?|-D|getenv\(\s*"|^[\t\- ]*)' +
-    '(?:TestResourceKey|SuperResourceKey|TestLicenseKey|LicenseKey|' +
-    'TestCloudEnd[Pp]oint|AcceptCh(?:None|Platform|Browser|Hardware)Key|' +
-    '_51DEGREES_LICENSE_KEY_CLOUDV5BESPOKE)(?![A-Za-z0-9_])|' +
-    '\bLEGACY_[A-Z_]*ENV_VARS?\b')
+# A name 51Degrees defines. It keeps its case, because a POSIX shell reads a
+# name in its exact case.
+$script:OwnNamePattern = [regex]::new('^_51DEGREES_[A-Z0-9][A-Z0-9_]*$')
 
-# The files that keep a deprecated public constant holding an old name, or
-# that test the constant, each with the old names it may hold. The names are put together
-# from parts so that this file does not match itself.
-$oldEndpoint = 'FOD_CLOUD' + '_API_URL'
-$oldResourceKey = 'RESOURCE' + '_KEY'
-$oldDigitKey = $digitInitial + $oldResourceKey
-$oldIpiPath = $digitInitial + 'IPI_PATH'
-$cloudEngine = 'pipeline/pipeline.cloudrequestengine/src'
-$did = 'pipeline/pipeline.did/src'
-$ipiShared = 'ip-intelligence/ip-intelligence.shared/src'
-$ipiHelpers = 'fiftyone/ipintelligence/shared/testhelpers'
-$ipiExamples = 'examples/ip-intelligence/shared/src'
-$ipiExampleHelpers = 'fiftyone/ipintelligence/examples/shared'
-$script:KeptOldNames = @{
-    "$cloudEngine/main/java/fiftyone/pipeline/cloudrequestengine/flowelements/Constants.java" =
-        @($oldEndpoint)
-    "$cloudEngine/test/java/fiftyone/pipeline/cloudrequestengine/flowelements/CloudRequestEngineBuilderTests.java" =
-        @($oldEndpoint)
-    "$did/main/java/fiftyone/pipeline/did/DidClient.java" =
-        @($oldEndpoint)
-    "$did/test/java/fiftyone/pipeline/did/DidClientEnvironmentTests.java" =
-        @($oldEndpoint)
-    "$ipiShared/main/java/$ipiHelpers/FileUtils.java" = @($oldIpiPath)
-    "$ipiShared/test/java/$ipiHelpers/FileUtilsTest.java" = @($oldIpiPath)
-    "$ipiShared/main/java/$ipiHelpers/KeyUtils.java" = @($oldDigitKey)
-    "$ipiShared/test/java/$ipiHelpers/KeyUtilsTest.java" = @($oldDigitKey)
-    "$ipiExamples/main/java/$ipiExampleHelpers/DataFileHelper.java" =
-        @($oldIpiPath)
-    "$ipiExamples/test/java/$ipiExampleHelpers/DataFileHelperTest.java" =
-        @($oldIpiPath)
-    "$ipiExamples/main/java/$ipiExampleHelpers/KeyHelper.java" =
-        @($oldDigitKey)
-    "$ipiExamples/test/java/$ipiExampleHelpers/KeyHelperTest.java" =
-        @($oldDigitKey)
-}
-# Whether the text matched in the file at this path, relative to the root
-# with forward slashes, is an old name that file is listed for. The name is
-# the run of name characters the match ends with, compared in its exact
-# case.
-function Test-DeprecatedFallback([string]$Path, [string]$Value) {
-    $allowed = $script:KeptOldNames[$Path]
-    if ($null -eq $allowed) {
-        return $false
-    }
-    $name = [regex]::Match($Value, '[A-Za-z0-9_]+$').Value
-    return $allowed -ccontains $name
+# The names the platform and the build tools define, which keep the name
+# their owner gave them.
+$script:PlatformNames = @(
+    # The operating system and the shell.
+    'PATH', 'USER', 'SystemRoot'
+    # The JDK and Maven, with its wrapper.
+    'JAVA_HOME', 'MAVEN_USER_HOME', 'MVNW_USERNAME', 'MVNW_PASSWORD',
+    'MVNW_VERBOSE', 'MVNW_REPOURL', 'basedir',
+    'maven.multiModuleProjectDirectory', 'logback.configurationFile'
+    # GraalVM, which runs the JavaScript the tests of the JavaScript builder
+    # check.
+    'polyglot.engine.WarnInterpreterOnly'
+    # GitHub Actions and its runners.
+    'CI', 'GITHUB_ACTIONS', 'GITHUB_ENV', 'GITHUB_TOKEN', 'CHROME_BIN',
+    'CHROMEWEBDRIVER'
+    # The shared browser test suite, which is told where the example under
+    # test listens.
+    'PORT', 'EXAMPLE_URL', 'EXAMPLE_LANG'
+    # The tests of the options lookup make these up to read back.
+    'myName', 'hometown', 'TestMaxLength', 'TestDelimiter'
+)
+
+# The system properties the JDK defines start with one of these.
+$script:PlatformPropertyPattern = [regex]::new('^(?:java|os|user|sun|file|line)\.[A-Za-z0-9_.]+$')
+
+# Whether a name read or set is one 51Degrees defines under its prefix, or
+# one the platform or a build tool defines.
+function Test-AllowedName([string]$Name) {
+    return $script:OwnNamePattern.IsMatch($Name) -or
+        $script:PlatformNames -ccontains $Name -or
+        $script:PlatformPropertyPattern.IsMatch($Name)
 }
 
-# The problems on one line, each as its kind, 'digit' or 'fallback', and the
-# text matched.
-function Find-EnvironmentNameProblem([string]$Line) {
+$nameCharacters = '[A-Za-z0-9_.]+'
+
+# The forms a name is read or set in, in any file. Each captures the name.
+#
+# A Java read takes the name as a string. A system property is matched only
+# on System, because other classes have a getProperty of their own.
+#
+# PowerShell reads a name from its Env: drive, with or without a dollar, a
+# brace or a backslash, and in any case.
+$script:ReadPatterns = @(
+    [regex]::new("\bgetenv\(\s*`"(?<name>$nameCharacters)`"")
+    [regex]::new("\bSystem\.(?:get|set|clear)Property\(\s*`"(?<name>$nameCharacters)`"")
+    [regex]::new("(?<![A-Za-z0-9_])(?i:env):\\?(?<name>$nameCharacters)")
+    [regex]::new("\b[GS]etEnvironmentVariable\(\s*[`"'](?<name>$nameCharacters)[`"']")
+)
+
+# A placeholder in an options file, which the options lookup reads as an
+# environment variable and then as a system property. A prefix chooses one of
+# the two. A placeholder with another prefix, such as a file path, names no
+# variable. The Env: form above already finds the env prefix.
+$script:PlaceholderPattern = [regex]::new(
+    "\$\{(?:(?:sys|envsys):)?(?<name>$nameCharacters)(?=\}|:-)")
+
+# An environment variable a Maven project file reads.
+$script:MavenEnvironmentPattern = [regex]::new(
+    "\$\{env\.(?<name>$nameCharacters)\}")
+
+# A secret, a variable or an env entry a workflow reads.
+$script:WorkflowPattern = [regex]::new(
+    "\b(?:secrets|vars|env)\.(?<name>$nameCharacters)")
+
+function Test-OptionsFile([string]$Path) {
+    return $Path -like '*.xml' -and (Split-Path $Path -Leaf) -ne 'pom.xml'
+}
+
+function Test-MavenProjectFile([string]$Path) {
+    return (Split-Path $Path -Leaf) -eq 'pom.xml'
+}
+
+function Test-Workflow([string]$Path) {
+    return $Path -like '.github/*.yml' -or $Path -like '.github/*.yaml'
+}
+
+# The problems on one line of the file at this path, relative to the root
+# with forward slashes. Each has its kind, 'digit' or 'name', and its value,
+# which is the text matched for a digit and the name read or set otherwise.
+function Find-EnvironmentNameProblem([string]$Line, [string]$Path = '') {
     foreach ($match in $script:DigitInitialPattern.Matches($Line)) {
         [pscustomobject]@{ Kind = 'digit'; Value = $match.Value }
     }
-    foreach ($match in $script:FallbackPattern.Matches($Line)) {
-        [pscustomobject]@{ Kind = 'fallback'; Value = $match.Value }
+    $patterns = @($script:ReadPatterns)
+    if (Test-OptionsFile $Path) {
+        $patterns += $script:PlaceholderPattern
+    }
+    if (Test-MavenProjectFile $Path) {
+        $patterns += $script:MavenEnvironmentPattern
+    }
+    if (Test-Workflow $Path) {
+        $patterns += $script:WorkflowPattern
+    }
+    $names = foreach ($pattern in $patterns) {
+        foreach ($match in $pattern.Matches($Line)) {
+            $match.Groups['name'].Value.TrimEnd('.')
+        }
+    }
+    foreach ($name in @($names | Select-Object -Unique)) {
+        # A name that starts with the digit is already reported.
+        if ($script:DigitInitialPattern.IsMatch($name)) {
+            continue
+        }
+        if (-not (Test-AllowedName $name)) {
+            [pscustomobject]@{ Kind = 'name'; Value = $name }
+        }
+    }
+}
+
+# The names set in a block of the file at this path that are not allowed,
+# each with its line number. A workflow sets environment variables as the
+# keys of an env block, and a Maven project file gives the tests system
+# properties and environment variables as the elements of a block.
+function Find-BlockNameProblem([string[]]$Lines, [string]$Path = '') {
+    $workflow = Test-Workflow $Path
+    $maven = Test-MavenProjectFile $Path
+    if (-not $workflow -and -not $maven) {
+        return
+    }
+    $inBlock = $false
+    $blockIndent = -1
+    for ($i = 0; $i -lt $Lines.Count; $i++) {
+        $line = $Lines[$i]
+        $name = $null
+        if ($workflow) {
+            if (-not $line.Trim() -or $line -match '^\s*#') {
+                continue
+            }
+            $indent = $line.Length - $line.TrimStart().Length
+            if ($inBlock -and $indent -le $blockIndent) {
+                $inBlock = $false
+            }
+            if ($inBlock) {
+                if ($line -match "^\s*(?<name>$nameCharacters)\s*:") {
+                    $name = $Matches['name']
+                }
+            } elseif ($line -match '^\s*env\s*:\s*$') {
+                $inBlock = $true
+                $blockIndent = $indent
+            }
+        } else {
+            if ($line -match '<(?:systemPropertyVariables|environmentVariables)>') {
+                $inBlock = $true
+            } elseif ($line -match '</(?:systemPropertyVariables|environmentVariables)>') {
+                $inBlock = $false
+            } elseif ($inBlock -and $line -match "^\s*<(?<name>$nameCharacters)[\s/>]") {
+                $name = $Matches['name']
+            }
+        }
+        if ($null -ne $name -and -not (Test-AllowedName $name)) {
+            [pscustomobject]@{ Kind = 'name'; Value = $name; LineNumber = $i + 1 }
+        }
     }
 }
 
@@ -134,8 +205,15 @@ if ($MyInvocation.InvocationName -eq '.') {
 
 $root = (Resolve-Path $RepoRoot).Path
 # Paths are listed as they are, so a path holding a non-ASCII character is not
-# quoted and is still found.
-$tracked = & git -C $root -c core.quotePath=false ls-files
+# quoted and is still found. git writes them as UTF-8, which is not what a
+# Windows console reads by default.
+$consoleEncoding = [Console]::OutputEncoding
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+try {
+    $tracked = & git -C $root -c core.quotePath=false ls-files
+} finally {
+    [Console]::OutputEncoding = $consoleEncoding
+}
 if ($LASTEXITCODE -ne 0) {
     throw "git ls-files failed in $root"
 }
@@ -143,8 +221,8 @@ if ($LASTEXITCODE -ne 0) {
 # The tests of this script name every form it fails on, on purpose.
 $ownTests = 'ci/check-environment-variable-names.Tests.ps1'
 
-$found = @()
-$fallbacks = @()
+$digits = @()
+$names = @()
 $read = 0
 $skipped = @()
 foreach ($relative in $tracked) {
@@ -159,33 +237,35 @@ foreach ($relative in $tracked) {
         continue
     }
     $read++
+    $lines = @([IO.File]::ReadLines($path))
     $lineNumber = 0
-    foreach ($line in [IO.File]::ReadLines($path)) {
+    foreach ($line in $lines) {
         $lineNumber++
-        foreach ($problem in Find-EnvironmentNameProblem $line) {
-            if (Test-DeprecatedFallback $relative $problem.Value) {
-                continue
-            }
+        foreach ($problem in Find-EnvironmentNameProblem -Line $line -Path $relative) {
             $text = "${relative}:${lineNumber}: $($problem.Value)"
             if ($problem.Kind -eq 'digit') {
-                $found += $text
+                $digits += $text
             } else {
-                $fallbacks += $text
+                $names += $text
             }
         }
+    }
+    foreach ($problem in Find-BlockNameProblem -Lines $lines -Path $relative) {
+        $names += "${relative}:$($problem.LineNumber): $($problem.Value)"
     }
 }
 
 Write-Output ("$read paths read, $($skipped.Count) skipped as not files: " +
     "$($skipped -join ', '), and $ownTests left out")
 
-if ($found.Count -gt 0 -or $fallbacks.Count -gt 0) {
-    Write-Output $found
-    Write-Output $fallbacks
-    throw ("$($found.Count) names start with a digit, which a POSIX shell " +
+if ($digits.Count -gt 0 -or $names.Count -gt 0) {
+    Write-Output $digits
+    Write-Output $names
+    throw ("$($digits.Count) names start with a digit, which a POSIX shell " +
         'cannot set, so each must start with an underscore, and ' +
-        "$($fallbacks.Count) old names are read, set or kept, where each " +
-        'variable has one name.')
+        "$($names.Count) names are read or set that are not _51DEGREES_ " +
+        'names or names the platform or a build tool defines.')
 }
 
-Write-Output 'No tracked file names a variable starting with a digit or an old name.'
+Write-Output ('Every name read or set is a _51DEGREES_ name or one the ' +
+    'platform or a build tool defines.')
