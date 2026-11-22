@@ -57,8 +57,7 @@ public class KeyHelper {
     /**
      * The resource key a cloud example runs with, being the key given as
      * its argument, or else the key in {@link #RESOURCE_KEY_VARIABLE}, read
-     * as an environment variable, under its upper case name and as a
-     * system property.
+     * as an environment variable and then as a system property.
      * @param argument the key given on the command line, or null
      * @return the key, or null when there is none
      */
@@ -167,14 +166,17 @@ public class KeyHelper {
     }
 
     /**
-     * A key read as an environment variable, as its upper case name, and
-     * then as a system property, skipping any that is not a key, such as
-     * the empty string the example poms pass for a key that is not set.
+     * A key read as an environment variable, and then as a system property
+     * of the same name, skipping any that is not a key.
      */
     private static String readKey(String name) {
+        return readKey(name, System::getenv);
+    }
+
+    static String readKey(String name,
+                          Function<String, String> environment) {
         for (String value : new String[]{
-            System.getenv(name),
-            System.getenv(name.toUpperCase(Locale.ROOT)),
+            environment.apply(name),
             System.getProperty(name)}) {
             if (KeyUtils.isInvalidKey(value) == false) {
                 return value;

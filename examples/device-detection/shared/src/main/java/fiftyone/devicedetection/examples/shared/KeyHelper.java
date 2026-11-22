@@ -52,18 +52,20 @@ public class KeyHelper {
     private static final int MIN_DECODED_KEY_LENGTH = 14;
 
     /**
-     * Read a key as an environment variable, then as its upper case name,
-     * then as a system property.
+     * Read a key as an environment variable, then as a system property of
+     * the same name.
      * @param keyName the name of the key
      * @return the key, or null when none is set
      */
     public static String getNamedKey(String keyName) {
-        String key = System.getenv(keyName);
+        return getNamedKey(keyName, System::getenv);
+    }
+
+    static String getNamedKey(String keyName,
+                              Function<String, String> environment) {
+        String key = environment.apply(keyName);
         if (Objects.isNull(key)) {
-            key = System.getenv(keyName.toUpperCase(Locale.ROOT));
-            if (Objects.isNull(key)) {
-                key = System.getProperty(keyName);
-            }
+            key = System.getProperty(keyName);
         }
         return key;
     }
@@ -111,8 +113,7 @@ public class KeyHelper {
     /**
      * The resource key a cloud example runs with, being the key given as
      * its argument, or else the first of the names that holds one, read as
-     * an environment variable, under its upper case name and as a system
-     * property.
+     * an environment variable and then as a system property.
      * @param argument the key given on the command line, or null
      * @param names the names to read, in order
      * @return the key, or null when there is none
@@ -266,14 +267,17 @@ public class KeyHelper {
     }
 
     /**
-     * A key read as an environment variable, as its upper case name, and
-     * then as a system property, skipping any that is not a key, such as
-     * the empty string the example poms pass for a key that is not set.
+     * A key read as an environment variable, and then as a system property
+     * of the same name, skipping any that is not a key.
      */
     private static String readKey(String name) {
+        return readKey(name, System::getenv);
+    }
+
+    static String readKey(String name,
+                          Function<String, String> environment) {
         for (String value : new String[]{
-            System.getenv(name),
-            System.getenv(name.toUpperCase(Locale.ROOT)),
+            environment.apply(name),
             System.getProperty(name)}) {
             if (isInvalidKey(value) == false) {
                 return value;
