@@ -25,14 +25,12 @@ package fiftyone.devicedetection.examples.console;
 import fiftyone.devicedetection.examples.shared.KeyHelper;
 import org.junit.Test;
 
-import java.util.Collections;
-
 public class TacCloudTest {
 
     @Test
     public void run() throws Exception {
         String resourceKey = KeyHelper.requireResourceKey(
-            Collections.singletonList(TacCloud.TAC_EXAMPLE_RESOURCE_KEY_NAME),
+            TacCloud.TAC_EXAMPLE_RESOURCE_KEY_NAME,
             "the devices that match a TAC", "hardware");
         TacCloud.run(resourceKey, System.out);
     }

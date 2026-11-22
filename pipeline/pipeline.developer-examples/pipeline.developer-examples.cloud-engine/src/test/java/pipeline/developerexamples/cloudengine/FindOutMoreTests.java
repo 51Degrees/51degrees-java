@@ -57,7 +57,7 @@ public class FindOutMoreTests {
         assumeTrue(Main.configuredResourceKey() != null,
             "This test runs the example against the live cloud service, so "
                 + "it needs a resource key, and it is skipped because "
-                + String.join(", ", Main.RESOURCE_KEY_NAMES) + " is not set.");
+                + Main.RESOURCE_KEY_NAME + " is not set.");
         String output = runMain();
         int example = output.lastIndexOf("star sign");
         int heading = output.lastIndexOf(RULE + "\n" + HEADING + "\n");

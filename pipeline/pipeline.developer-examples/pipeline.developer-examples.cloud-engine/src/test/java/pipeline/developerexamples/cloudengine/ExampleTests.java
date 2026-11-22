@@ -46,7 +46,7 @@ public class ExampleTests {
             "This test runs the cloud engine example against the live "
                 + "51Degrees cloud service, so it needs a resource key, and "
                 + "it is skipped because "
-                + String.join(", ", Main.RESOURCE_KEY_NAMES) + " is not set "
+                + Main.RESOURCE_KEY_NAME + " is not set "
                 + "as an environment variable or as a system property. Any "
                 + "key works here, because the example reports a product "
                 + "the key does not carry rather than failing on it. Create "

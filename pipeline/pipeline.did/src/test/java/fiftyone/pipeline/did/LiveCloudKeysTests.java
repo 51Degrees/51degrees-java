@@ -24,7 +24,7 @@ package fiftyone.pipeline.did;
 
 import org.junit.Test;
 
-import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -35,8 +35,8 @@ public class LiveCloudKeysTests {
 
     @Test
     public void resourceKey_ReadUnderItsOwnNameOnly() {
-        assertArrayEquals(new String[]{"_51DEGREES_RESOURCE_KEY"},
-            LiveCloudKeys.RESOURCE_KEY_NAMES);
+        assertEquals("_51DEGREES_RESOURCE_KEY",
+            LiveCloudKeys.RESOURCE_KEY_NAME);
     }
 
     /**
@@ -46,8 +46,8 @@ public class LiveCloudKeysTests {
      */
     @Test
     public void licenceKey_IsThe51DidLicence() {
-        assertArrayEquals(new String[]{"_51DEGREES_LICENSE_KEY_51DID"},
-            LiveCloudKeys.LICENCE_KEY_NAMES);
+        assertEquals("_51DEGREES_LICENSE_KEY_51DID",
+            LiveCloudKeys.LICENCE_KEY_NAME);
     }
 
     @Test

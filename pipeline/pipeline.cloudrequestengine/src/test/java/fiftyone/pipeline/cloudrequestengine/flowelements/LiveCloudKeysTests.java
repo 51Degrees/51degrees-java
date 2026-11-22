@@ -24,7 +24,7 @@ package fiftyone.pipeline.cloudrequestengine.flowelements;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -35,8 +35,8 @@ public class LiveCloudKeysTests {
 
     @Test
     public void resourceKey_ReadUnderItsOwnNameOnly() {
-        assertArrayEquals(new String[]{"_51DEGREES_RESOURCE_KEY"},
-            LiveCloudKeys.RESOURCE_KEY_NAMES);
+        assertEquals("_51DEGREES_RESOURCE_KEY",
+            LiveCloudKeys.RESOURCE_KEY_NAME);
     }
 
     /**
@@ -46,8 +46,8 @@ public class LiveCloudKeysTests {
      */
     @Test
     public void licenceKey_IsTheCloudLicence() {
-        assertArrayEquals(new String[]{"_51DEGREES_LICENSE_KEY_BESPOKE"},
-            LiveCloudKeys.LICENCE_KEY_NAMES);
+        assertEquals("_51DEGREES_LICENSE_KEY_BESPOKE",
+            LiveCloudKeys.LICENCE_KEY_NAME);
     }
 
     @Test

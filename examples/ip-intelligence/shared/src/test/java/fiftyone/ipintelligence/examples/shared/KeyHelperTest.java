@@ -27,10 +27,7 @@ import org.junit.Test;
 
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
@@ -49,10 +46,10 @@ public class KeyHelperTest {
     private static final String NEW_KEY_NAME = "_51DEGREES_RESOURCE_KEY";
 
     /**
-     * The names getOrSetTestResourceKey reads, in its order.
+     * The name getOrSetTestResourceKey reads.
      */
-    private static final List<String> EXAMPLE_NAMES =
-        Collections.singletonList(KeyHelper.RESOURCE_KEY_VARIABLE);
+    private static final String EXAMPLE_NAME =
+        KeyHelper.RESOURCE_KEY_VARIABLE;
 
     /**
      * With no key anywhere, the lookup logs that there is none and stores
@@ -60,27 +57,17 @@ public class KeyHelperTest {
      */
     @Test
     public void getOrSetTestResourceKey_NoKey_StoresNothing() {
-        List<String> namesRead = new ArrayList<>(EXAMPLE_NAMES);
         // A test can clear a system property but not an environment
         // variable.
-        for (String name : namesRead) {
-            assumeTrue(name + " is set in the environment",
-                System.getenv(name) == null);
-        }
-        Map<String, String> saved = new HashMap<>();
-        for (String name : namesRead) {
-            saved.put(name, System.clearProperty(name));
-        }
+        assumeTrue(EXAMPLE_NAME + " is set in the environment",
+            System.getenv(EXAMPLE_NAME) == null);
+        String saved = System.clearProperty(EXAMPLE_NAME);
         try {
             assertNull(KeyHelper.getOrSetTestResourceKey(false));
-            for (String name : namesRead) {
-                assertNull(name, System.getProperty(name));
-            }
+            assertNull(System.getProperty(EXAMPLE_NAME));
         } finally {
-            for (Map.Entry<String, String> entry : saved.entrySet()) {
-                if (entry.getValue() != null) {
-                    System.setProperty(entry.getKey(), entry.getValue());
-                }
+            if (saved != null) {
+                System.setProperty(EXAMPLE_NAME, saved);
             }
         }
     }
@@ -118,7 +105,7 @@ public class KeyHelperTest {
     public void requireResourceKey_NoKey_SkipsNamingTheVariable() {
         AssumptionViolatedException skipped = assertThrows(
             AssumptionViolatedException.class, () ->
-                KeyHelper.requireResourceKey(name -> null, EXAMPLE_NAMES,
+                KeyHelper.requireResourceKey(name -> null, EXAMPLE_NAME,
                     "the network and location of an IP address, and " +
                         "whether a device is mobile",
                     "ip", "device"));
@@ -135,21 +122,20 @@ public class KeyHelperTest {
     }
 
     /**
-     * Only the names the test gives are read, and a name holding something
-     * that is not a key, such as the empty string a pom passes for a key
-     * that is not set, is passed over.
+     * Only the name the test gives is read, and a name holding something
+     * that is not a key, such as an empty string, is passed over.
      */
     @Test
-    public void requireResourceKey_ReadsOnlyTheNamesGiven() {
+    public void requireResourceKey_ReadsOnlyTheNameGiven() {
         Map<String, String> values = new HashMap<>();
         values.put(NEW_KEY_NAME, "");
         values.put("_51DEGREES_RESOURCE_KEY_BESPOKE", KEY_A);
         assertThrows(AssumptionViolatedException.class, () ->
-            KeyHelper.requireResourceKey(values::get, EXAMPLE_NAMES,
+            KeyHelper.requireResourceKey(values::get, EXAMPLE_NAME,
                 "every IP Intelligence property", "ip"));
         values.put(NEW_KEY_NAME, KEY_B);
         assertEquals(KEY_B, KeyHelper.requireResourceKey(values::get,
-            EXAMPLE_NAMES, "every IP Intelligence property", "ip"));
+            EXAMPLE_NAME, "every IP Intelligence property", "ip"));
     }
 
     /**

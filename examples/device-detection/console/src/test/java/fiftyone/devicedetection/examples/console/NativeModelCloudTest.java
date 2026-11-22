@@ -25,14 +25,11 @@ package fiftyone.devicedetection.examples.console;
 import fiftyone.devicedetection.examples.shared.KeyHelper;
 import org.junit.Test;
 
-import java.util.Collections;
-
 public class NativeModelCloudTest {
     @Test
     public void run() throws Exception {
         String resourceKey = KeyHelper.requireResourceKey(
-            Collections.singletonList(
-                NativeModelCloud.NATIVE_MODEL_EXAMPLE_RESOURCE_KEY_NAME),
+            NativeModelCloud.NATIVE_MODEL_EXAMPLE_RESOURCE_KEY_NAME,
             "the devices that match a native model name", "hardware");
         NativeModelCloud.run(resourceKey, System.out);
 

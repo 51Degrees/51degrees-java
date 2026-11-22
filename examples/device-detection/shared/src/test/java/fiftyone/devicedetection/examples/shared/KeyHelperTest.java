@@ -27,7 +27,6 @@ import org.junit.Test;
 
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -106,7 +105,7 @@ public class KeyHelperTest {
         AssumptionViolatedException skipped = assertThrows(
             AssumptionViolatedException.class, () ->
                 KeyHelper.requireResourceKey(name -> null,
-                    Collections.singletonList(KeyHelper.TEST_RESOURCE_KEY),
+                    KeyHelper.TEST_RESOURCE_KEY,
                     "whether a device is mobile", "device"));
         assertEquals("This test calls the live 51Degrees cloud service, so " +
                 "it needs a resource key, and it is skipped because " +
@@ -131,8 +130,7 @@ public class KeyHelperTest {
         AssumptionViolatedException skipped = assertThrows(
             AssumptionViolatedException.class, () ->
                 KeyHelper.requireResourceKey(name -> null,
-                    Collections.singletonList(
-                        KeyHelper.BESPOKE_RESOURCE_KEY_VARIABLE),
+                    KeyHelper.BESPOKE_RESOURCE_KEY_VARIABLE,
                     "the devices that match a TAC", "hardware", "device"));
         assertTrue(skipped.getMessage(), skipped.getMessage().contains(
             "skipped because _51DEGREES_RESOURCE_KEY_BESPOKE is not set"));
@@ -141,24 +139,23 @@ public class KeyHelperTest {
     }
 
     /**
-     * Only the names the test gives are read. A key under another name,
+     * Only the name the test gives is read. A key under another name,
      * such as the one every cloud example reads, does not stand in for the
      * key with every property.
      */
     @Test
-    public void requireResourceKey_ReadsOnlyTheNamesGiven() {
+    public void requireResourceKey_ReadsOnlyTheNameGiven() {
         Map<String, String> values = new HashMap<>();
         values.put(KeyHelper.TEST_RESOURCE_KEY, KEY_A);
         assertThrows(AssumptionViolatedException.class, () ->
             KeyHelper.requireResourceKey(values::get,
-                Collections.singletonList(
-                    KeyHelper.BESPOKE_RESOURCE_KEY_VARIABLE),
+                KeyHelper.BESPOKE_RESOURCE_KEY_VARIABLE,
                 "the devices that match a TAC", "hardware", "device"));
     }
 
     /**
-     * A name holding something that is not a key, such as the empty
-     * string a pom passes for a key that is not set, is passed over.
+     * A name holding something that is not a key, such as an empty string,
+     * is passed over.
      */
     @Test
     public void requireResourceKey_ValueThatIsNotAKey_IsPassedOver() {
@@ -166,11 +163,11 @@ public class KeyHelperTest {
         values.put(KeyHelper.TEST_RESOURCE_KEY, "");
         assertThrows(AssumptionViolatedException.class, () ->
             KeyHelper.requireResourceKey(values::get,
-                Collections.singletonList(KeyHelper.TEST_RESOURCE_KEY),
+                KeyHelper.TEST_RESOURCE_KEY,
                 "whether a device is mobile", "device"));
         values.put(KeyHelper.TEST_RESOURCE_KEY, KEY_B);
         assertEquals(KEY_B, KeyHelper.requireResourceKey(values::get,
-            Collections.singletonList(KeyHelper.TEST_RESOURCE_KEY),
+            KeyHelper.TEST_RESOURCE_KEY,
             "whether a device is mobile", "device"));
     }
 
