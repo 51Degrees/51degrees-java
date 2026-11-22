@@ -45,14 +45,6 @@ public class FileUtils {
      */
     public static final String IPI_PATH_VARIABLE = "_51DEGREES_IPI_PATH";
 
-    /**
-     * The old name of {@link #IPI_PATH_VARIABLE}. It is no longer read.
-     * @deprecated use {@link #IPI_PATH_VARIABLE}, and set the variable it
-     * names in place of this one.
-     */
-    @Deprecated
-    public static final String IPI_PATH_ENV_VAR = "51DEGREES_IPI_PATH";
-
     public static final String ENTERPRISE_IPI_DATA_FILE_NAME = "Enterprise-IpIntelligenceV41.ipi";
 
     public static final String ENTERPRISE_IPI_V41_DATA_FILE_NAME = "51Degrees-EnterpriseIpiV41.ipi";

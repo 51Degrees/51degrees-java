@@ -41,9 +41,6 @@ public class CloudRequestEngineBuilderTests extends CloudRequestEngineTestsBase 
 	private final String testEndpoint = "https://testEndpoint/";
 	private final String testEnvVarEndpoint = "https://testEnvVarEndpoint/";
 
-	// The deprecated name of the end point variable, which is also the
-	// name of the constant that holds it. The variable is no longer read.
-	private static final String OLD_ENDPOINT_VARIABLE = "FOD_CLOUD_API_URL";
 	
 	public CloudRequestEngineBuilderTests() throws MalformedURLException {
         super();
@@ -126,15 +123,5 @@ public class CloudRequestEngineBuilderTests extends CloudRequestEngineTestsBase 
     		.build();
     	assertEquals(
     		Constants.END_POINT_DEFAULT + "/", getEndpointValue(builder));
-    }
-
-    @Test
-    public void CloudEndPoint_Old_Constant_Is_Kept() throws Exception {
-        Field old = Constants.class.getField(OLD_ENDPOINT_VARIABLE);
-
-        assertEquals(OLD_ENDPOINT_VARIABLE, old.get(null));
-        assertTrue(old.isAnnotationPresent(Deprecated.class));
-        assertEquals(
-            "_51DEGREES_CLOUD_ENDPOINT", Constants.CLOUD_ENDPOINT_VARIABLE);
     }
 }

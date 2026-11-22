@@ -47,7 +47,6 @@ public class KeyHelperTest {
     private static final String KEY_B = "AgAAAAAAAAAAAAAAAAAAAAAA";
 
     private static final String NEW_KEY_NAME = "_51DEGREES_RESOURCE_KEY";
-    private static final String OLD_KEY_NAME = "51DEGREES_RESOURCE_KEY";
 
     /**
      * The names getOrSetTestResourceKey reads, in its order.
@@ -155,16 +154,6 @@ public class KeyHelperTest {
                 System.setProperty(NEW_KEY_NAME, saved);
             }
         }
-    }
-
-    @Test
-    @SuppressWarnings("deprecation")
-    public void oldKeyConstantKeepsItsValue() throws Exception {
-        assertEquals(OLD_KEY_NAME, KeyHelper.RESOURCE_KEY_ENV_VAR);
-        assertEquals(true, KeyHelper.class.getField("RESOURCE_KEY_ENV_VAR")
-            .isAnnotationPresent(Deprecated.class));
-        assertEquals(NEW_KEY_NAME,
-            KeyHelper.class.getField("RESOURCE_KEY_VARIABLE").get(null));
     }
 
     /**

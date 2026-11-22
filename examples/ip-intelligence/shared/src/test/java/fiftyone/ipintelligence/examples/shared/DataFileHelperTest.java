@@ -60,7 +60,6 @@ public class DataFileHelperTest {
     }
 
     private static final String NEW_PATH_NAME = "_51DEGREES_IPI_PATH";
-    private static final String OLD_PATH_NAME = "51DEGREES_IPI_PATH";
 
     /**
      * System properties stand in for the environment variables, because
@@ -80,15 +79,6 @@ public class DataFileHelperTest {
             restore(NEW_PATH_NAME, savedNew);
             newFile.delete();
         }
-    }
-    @Test
-    @SuppressWarnings("deprecation")
-    public void oldPathConstantKeepsItsValue() throws Exception {
-        assertEquals(OLD_PATH_NAME, DataFileHelper.IPI_PATH_ENV_VAR);
-        assertTrue(DataFileHelper.class.getField("IPI_PATH_ENV_VAR")
-                .isAnnotationPresent(Deprecated.class));
-        assertEquals(NEW_PATH_NAME,
-                DataFileHelper.class.getField("IPI_PATH_VARIABLE").get(null));
     }
 
     private static void restore(String name, String value) {

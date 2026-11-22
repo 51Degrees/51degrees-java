@@ -118,16 +118,6 @@ public final class DidClient {
         "_51DEGREES_CLOUD_ENDPOINT";
 
     /**
-     * The old name of the environment variable read for the API base. It
-     * is no longer read.
-     *
-     * @deprecated use {@link #CLOUD_ENDPOINT_VARIABLE}, and set the
-     *             environment variable it names in place of this one.
-     */
-    @Deprecated
-    public static final String ENDPOINT_VARIABLE = "FOD_CLOUD_API_URL";
-
-    /**
      * How old the whole held key list may be before a request for a key
      * fetches it again. A key may be replaced before its end if it is
      * compromised, and the client picks up the replacement on the first

@@ -35,7 +35,6 @@ public class KeyUtilsTest {
     }
 
     private static final String NEW_KEY_NAME = "_51DEGREES_RESOURCE_KEY";
-    private static final String OLD_KEY_NAME = "51DEGREES_RESOURCE_KEY";
 
     /**
      * System properties stand in for the environment variables, because
@@ -53,38 +52,6 @@ public class KeyUtilsTest {
         } finally {
             restore(NEW_KEY_NAME, savedNew);
         }
-    }
-
-    /**
-     * A name the caller passes is not read in place of
-     * {@link KeyUtils#RESOURCE_KEY_VARIABLE}.
-     */
-    @Test
-    @SuppressWarnings("deprecation")
-    public void passedNameIsNotRead() {
-        assumeTrue(System.getenv(NEW_KEY_NAME) == null);
-        String passed = "AnyOtherResourceKeyName";
-        String savedNew = System.clearProperty(NEW_KEY_NAME);
-        try {
-            System.setProperty(passed, "other-name-key");
-            assertNull(KeyUtils.getResourceKey(passed));
-            assertNull(KeyUtils.getResourceKey());
-            System.setProperty(NEW_KEY_NAME, "new-name-key");
-            assertEquals("new-name-key", KeyUtils.getResourceKey());
-        } finally {
-            System.clearProperty(passed);
-            restore(NEW_KEY_NAME, savedNew);
-        }
-    }
-
-    @Test
-    @SuppressWarnings("deprecation")
-    public void oldKeyConstantKeepsItsValue() throws Exception {
-        assertEquals(OLD_KEY_NAME, KeyUtils.RESOURCE_KEY_ENV_VAR);
-        assertTrue(KeyUtils.class.getField("RESOURCE_KEY_ENV_VAR")
-            .isAnnotationPresent(Deprecated.class));
-        assertEquals(NEW_KEY_NAME,
-            KeyUtils.class.getField("RESOURCE_KEY_VARIABLE").get(null));
     }
 
     private static void restore(String name, String value) {

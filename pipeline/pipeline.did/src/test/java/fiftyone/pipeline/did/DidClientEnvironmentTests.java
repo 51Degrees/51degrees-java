@@ -47,7 +47,6 @@ import static org.junit.Assert.assertTrue;
 public class DidClientEnvironmentTests {
 
     private static final String NEW_NAME = "_51DEGREES_CLOUD_ENDPOINT";
-    private static final String OLD_NAME = "FOD_CLOUD_API_URL";
 
     private static final String NEW_ENDPOINT = "https://new.example/api/v4/";
 
@@ -81,17 +80,6 @@ public class DidClientEnvironmentTests {
                 DidClient.DEFAULT_ENDPOINT, DidClient.DEFAULT_ENDPOINT),
             endpoints(output));
         assertEquals(output.toString(), 0, logged(output).size());
-    }
-
-    @Test
-    @SuppressWarnings("deprecation")
-    public void oldConstant_KeepsItsNameAndValue() throws Exception {
-        assertEquals(OLD_NAME, DidClient.ENDPOINT_VARIABLE);
-        assertTrue(DidClient.class.getField("ENDPOINT_VARIABLE")
-            .isAnnotationPresent(Deprecated.class));
-        assertEquals(
-            NEW_NAME,
-            DidClient.class.getField("CLOUD_ENDPOINT_VARIABLE").get(null));
     }
 
     /**

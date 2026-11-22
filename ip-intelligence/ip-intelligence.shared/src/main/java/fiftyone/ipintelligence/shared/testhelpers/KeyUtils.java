@@ -37,14 +37,6 @@ public class KeyUtils {
     public static final String RESOURCE_KEY_VARIABLE = "_51DEGREES_RESOURCE_KEY";
 
     /**
-     * The old name of {@link #RESOURCE_KEY_VARIABLE}. It is no longer read.
-     * @deprecated use {@link #RESOURCE_KEY_VARIABLE}, and set the variable
-     * it names in place of this one.
-     */
-    @Deprecated
-    public static final String RESOURCE_KEY_ENV_VAR = "51DEGREES_RESOURCE_KEY";
-
-    /**
      * Obtain the resource key from the environment variable or system
      * property {@link #RESOURCE_KEY_VARIABLE}, looked up using
      * {@link #getNamedKey(String)}.
@@ -52,18 +44,6 @@ public class KeyUtils {
      */
     public static String getResourceKey() {
         return getNamedKey(RESOURCE_KEY_VARIABLE);
-    }
-
-    /**
-     * Obtain the resource key from {@link #RESOURCE_KEY_VARIABLE}. The name
-     * passed is no longer read.
-     * @param legacyKeyName an old name, which is not read
-     * @return the resource key, or null if it is not set
-     * @deprecated use {@link #getResourceKey()}
-     */
-    @Deprecated
-    public static String getResourceKey(String legacyKeyName) {
-        return getResourceKey();
     }
 
     /**

@@ -38,14 +38,6 @@ public class KeyHelper {
     public static final String RESOURCE_KEY_VARIABLE = "_51DEGREES_RESOURCE_KEY";
 
     /**
-     * The old name of {@link #RESOURCE_KEY_VARIABLE}. It is no longer read.
-     * @deprecated use {@link #RESOURCE_KEY_VARIABLE}, and set the variable
-     * it names in place of this one.
-     */
-    @Deprecated
-    public static final String RESOURCE_KEY_ENV_VAR = "51DEGREES_RESOURCE_KEY";
-
-    /**
      * The variable the cloud examples and their tests read a resource key
      * from, which is {@link #RESOURCE_KEY_VARIABLE}.
      */
