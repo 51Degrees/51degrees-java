@@ -53,7 +53,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * <a href="https://51degrees.com/configure/QKyYH5XT?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-taccloud.java&amp;utm_term=taccloud">here</a>.
  * <p>
  * This resource key can be supplied as a command line argument to this program, as an environment
- * variable "_51DEGREES_RESOURCE_KEY_BESPOKE", as a System Property "_51DEGREES_RESOURCE_KEY_BESPOKE" or by editing the config
+ * variable "_51DEGREES_RESOURCE_KEY", as a System Property "_51DEGREES_RESOURCE_KEY" or by editing the config
  * file tacCloud.xml.
  */
 public class TacCloud {
@@ -66,7 +66,7 @@ public class TacCloud {
     // Example values to use when looking up device details from TACs.
     static final String TAC_1 = "35925406";
     static final String TAC_2 = "86386802";
-    public static final String TAC_EXAMPLE_RESOURCE_KEY_NAME = KeyHelper.BESPOKE_RESOURCE_KEY_VARIABLE;
+    public static final String TAC_EXAMPLE_RESOURCE_KEY_NAME = KeyHelper.RESOURCE_KEY_VARIABLE;
 
     public static void main (String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));

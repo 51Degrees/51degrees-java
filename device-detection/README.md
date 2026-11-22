@@ -233,8 +233,8 @@ To verify the code:
 mvn clean test -D_51DEGREES_RESOURCE_KEY=[Resource Key]
 ```
 The key can be set as the `_51DEGREES_RESOURCE_KEY` environment variable
-instead. The TAC and native model examples read a key with every property
-from `_51DEGREES_RESOURCE_KEY_BESPOKE`. For tests and examples that require a
+instead. The TAC and native model examples need a key with every property,
+which they read from the same variable. For tests and examples that require a
 license key, set `_51DEGREES_LICENSE_KEY` or add the following option:
 - `-D_51DEGREES_LICENSE_KEY=[License Key]`
 

@@ -37,8 +37,9 @@ public class KeyHelper {
     public static final String TEST_RESOURCE_KEY = "_51DEGREES_RESOURCE_KEY";
 
     /**
-     * The variable the TAC and native model examples and their tests read
-     * the resource key with every property from.
+     * The variable the tests of the TAC and native model examples read the
+     * resource key with every property from. Each test gives the key to
+     * its example in {@link #RESOURCE_KEY_VARIABLE}.
      */
     public static final String BESPOKE_RESOURCE_KEY_VARIABLE =
         "_51DEGREES_RESOURCE_KEY_BESPOKE";
@@ -91,7 +92,7 @@ public class KeyHelper {
         "https://51degrees.com/configure/?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-devicedetection-examples-shared-keyhelper.java&utm_term=no-resource-key";
 
     /**
-     * The variable a cloud example reads its resource key from first.
+     * The variable a cloud example reads its resource key from.
      */
     public static final String RESOURCE_KEY_VARIABLE =
         "_51DEGREES_RESOURCE_KEY";

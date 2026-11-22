@@ -52,7 +52,7 @@ public class NativeModelCloud {
     // Example values to use when looking up device details from native model names.
     private static final String NATIVE_MODEL_1 = "SC-03L";
     private static final String NATIVE_MODEL_2 = "iPhone11,8";
-    public static final String NATIVE_MODEL_EXAMPLE_RESOURCE_KEY_NAME = KeyHelper.BESPOKE_RESOURCE_KEY_VARIABLE;
+    public static final String NATIVE_MODEL_EXAMPLE_RESOURCE_KEY_NAME = KeyHelper.RESOURCE_KEY_VARIABLE;
 
     public static void main (String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));

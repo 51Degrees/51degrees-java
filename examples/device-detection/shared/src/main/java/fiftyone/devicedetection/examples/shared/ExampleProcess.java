@@ -34,9 +34,9 @@ import java.util.concurrent.TimeUnit;
 /**
  * Runs an example's main method in a new Java process with no key in its
  * environment, as someone runs it from a fresh clone, for the tests of
- * what an example does with no settings. A new process is needed because
- * a running Java process cannot remove a variable from its own
- * environment.
+ * what an example does with no settings, or with one resource key, as a
+ * customer runs it. A new process is needed because a running Java process
+ * cannot remove a variable from its own environment.
  */
 public final class ExampleProcess {
 
@@ -81,6 +81,29 @@ public final class ExampleProcess {
      *                   within the timeout
      */
     public static Result runWithoutKeys(Class<?> example) throws Exception {
+        return run(example, null);
+    }
+
+    /**
+     * Runs the example's main method as {@link #runWithoutKeys(Class)}
+     * does, and with the resource key given in the variable
+     * {@link KeyHelper#RESOURCE_KEY_VARIABLE} names, as a customer sets
+     * it. A new process is needed because a running Java process cannot
+     * set a variable in its own environment.
+     * @param example the class whose main method runs
+     * @param resourceKey the resource key the example runs with
+     * @return the exit code and the output
+     * @throws Exception if the process cannot start, or does not end
+     *                   within the timeout
+     */
+    public static Result runWithResourceKey(Class<?> example,
+                                            String resourceKey)
+        throws Exception {
+        return run(example, resourceKey);
+    }
+
+    private static Result run(Class<?> example, String resourceKey)
+        throws Exception {
         List<String> command = new ArrayList<>();
         command.add(new File(new File(System.getProperty("java.home"),
             "bin"), "java").getPath());
@@ -95,6 +118,10 @@ public final class ExampleProcess {
         ProcessBuilder builder = new ProcessBuilder(command);
         builder.environment().keySet().removeIf(
             name -> name.toUpperCase(Locale.ROOT).contains("KEY"));
+        if (resourceKey != null) {
+            builder.environment().put(KeyHelper.RESOURCE_KEY_VARIABLE,
+                resourceKey);
+        }
         builder.redirectErrorStream(true);
         Process process = builder.start();
 

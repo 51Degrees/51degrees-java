@@ -49,7 +49,7 @@ To use the resource key in the example it can be supplied as a
 command line parameter, pasted into the configuration file (where there is one)
 or supplied as either an environment variable or a system
 property called "_51DEGREES_RESOURCE_KEY". The TAC and native model
-examples read theirs from "_51DEGREES_RESOURCE_KEY_BESPOKE".
+examples read theirs from the same name.
 
 Some cloud examples require an enhanced resource key containing a license key. And some
 on-premise examples require you to provide a license key. You can find out about 
