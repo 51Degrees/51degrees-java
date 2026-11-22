@@ -36,9 +36,10 @@ package fiftyone.pipeline.cloudrequestengine.flowelements;
 final class LiveCloudKeys {
 
     /**
-     * The name the resource key is read from.
+     * The name the resource key is read from. It holds the key with every
+     * property.
      */
-    static final String RESOURCE_KEY_NAME = "_51DEGREES_RESOURCE_KEY";
+    static final String RESOURCE_KEY_NAME = "_51DEGREES_RESOURCE_KEY_BESPOKE";
 
     /**
      * The name the license key is read from. A license key is optional,

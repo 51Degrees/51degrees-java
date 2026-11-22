@@ -38,10 +38,19 @@ public class KeyHelper {
     public static final String RESOURCE_KEY_VARIABLE = "_51DEGREES_RESOURCE_KEY";
 
     /**
-     * The variable the cloud examples and their tests read a resource key
-     * from, which is {@link #RESOURCE_KEY_VARIABLE}.
+     * The variable the cloud examples read a resource key from, which is
+     * {@link #RESOURCE_KEY_VARIABLE}. A test of an example gives the
+     * example its key under this name.
      */
     public static final String TEST_RESOURCE_KEY = RESOURCE_KEY_VARIABLE;
+
+    /**
+     * The variable the tests of the cloud examples read the resource key
+     * with every property from. Each test gives the key to its example as
+     * an argument or in {@link #RESOURCE_KEY_VARIABLE}.
+     */
+    public static final String BESPOKE_RESOURCE_KEY_VARIABLE =
+        "_51DEGREES_RESOURCE_KEY_BESPOKE";
     static Logger logger = LoggerFactory.getLogger(KeyHelper.class);
 
     static final String CREATE_KEY_URL =
@@ -92,8 +101,7 @@ public class KeyHelper {
 
     /**
      * The resource key for a test that calls the live cloud service, from
-     * {@link #RESOURCE_KEY_VARIABLE}, the name
-     * {@link #getOrSetTestResourceKey()} reads. Skips the test, naming the
+     * {@link #BESPOKE_RESOURCE_KEY_VARIABLE}. Skips the test, naming the
      * variable, when there is none, because a cloud test that passes
      * without a key has called nothing.
      * @param asksFor what the test asks the service for
@@ -102,8 +110,8 @@ public class KeyHelper {
      */
     public static String requireTestResourceKey(String asksFor,
                                                 String... products) {
-        return requireResourceKey(KeyHelper::readKey, RESOURCE_KEY_VARIABLE,
-            asksFor, products);
+        return requireResourceKey(KeyHelper::readKey,
+            BESPOKE_RESOURCE_KEY_VARIABLE, asksFor, products);
     }
 
     static String requireResourceKey(Function<String, String> read,

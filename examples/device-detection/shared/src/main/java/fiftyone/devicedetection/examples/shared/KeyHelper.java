@@ -31,15 +31,15 @@ import java.util.function.Function;
 
 public class KeyHelper {
     /**
-     * The variable the cloud examples and their tests read a resource key
-     * from.
+     * The variable the cloud examples read a resource key from. A test of
+     * an example gives the example its key under this name.
      */
     public static final String TEST_RESOURCE_KEY = "_51DEGREES_RESOURCE_KEY";
 
     /**
-     * The variable the tests of the TAC and native model examples read the
-     * resource key with every property from. Each test gives the key to
-     * its example in {@link #RESOURCE_KEY_VARIABLE}.
+     * The variable the tests of the cloud examples read the resource key
+     * with every property from. Each test gives the key to its example as
+     * an argument or in {@link #RESOURCE_KEY_VARIABLE}.
      */
     public static final String BESPOKE_RESOURCE_KEY_VARIABLE =
         "_51DEGREES_RESOURCE_KEY_BESPOKE";
@@ -159,16 +159,17 @@ public class KeyHelper {
 
     /**
      * The resource key for a test that calls the live cloud service, from
-     * {@link #TEST_RESOURCE_KEY}. Skips the test, naming the variable, when
-     * there is none, because a cloud test that passes without a key has
-     * called nothing.
+     * {@link #BESPOKE_RESOURCE_KEY_VARIABLE}. Skips the test, naming the
+     * variable, when there is none, because a cloud test that passes
+     * without a key has called nothing.
      * @param asksFor what the test asks the service for
      * @param products the products the key has to carry
      * @return the resource key
      */
     public static String requireTestResourceKey(String asksFor,
                                                 String... products) {
-        return requireResourceKey(TEST_RESOURCE_KEY, asksFor, products);
+        return requireResourceKey(BESPOKE_RESOURCE_KEY_VARIABLE, asksFor,
+            products);
     }
 
     /**

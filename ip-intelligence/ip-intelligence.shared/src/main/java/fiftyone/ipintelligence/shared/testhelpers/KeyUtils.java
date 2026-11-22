@@ -32,9 +32,11 @@ import java.util.function.Function;
 public class KeyUtils {
     /**
      * Name of the environment variable or system property which supplies
-     * the resource key. It is the only name read.
+     * the tests with the resource key with every property. It is the only
+     * name read.
      */
-    public static final String RESOURCE_KEY_VARIABLE = "_51DEGREES_RESOURCE_KEY";
+    public static final String RESOURCE_KEY_VARIABLE =
+        "_51DEGREES_RESOURCE_KEY_BESPOKE";
 
     /**
      * Obtain the resource key from the environment variable or system
