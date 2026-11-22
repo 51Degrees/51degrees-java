@@ -70,12 +70,22 @@ public class ShareUsageOverheadTests {
     private static final Map<String, Double> overheadMillis = new LinkedHashMap<>();
 
     /**
+     * The environment variable, or the system property where that is not
+     * set, that names the file to write the measured overheads to.
+     */
+    private static final String RESULTS_FILE_NAME =
+        "_51DEGREES_PERFORMANCE_JSON";
+
+    /**
      * Writes the measured overheads to the results file, if one was asked for.
      */
     @AfterAll
     public static void writeResults() throws IOException {
-        String path = System.getProperty("fiftyone.performance.json");
-        if (path == null) {
+        String path = System.getenv(RESULTS_FILE_NAME);
+        if (path == null || path.trim().isEmpty()) {
+            path = System.getProperty(RESULTS_FILE_NAME);
+        }
+        if (path == null || path.trim().isEmpty()) {
             return;
         }
         JSONObject results = new JSONObject()
