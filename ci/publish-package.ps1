@@ -2,7 +2,6 @@ param(
     [Parameter(Mandatory)][string]$RepoName,
     [Parameter(Mandatory)][string]$OrgName,
     [Parameter(Mandatory)][string]$Version,
-    [Parameter(Mandatory)][Hashtable]$Keys,
     [bool]$DryRun = $false
 )
 $ErrorActionPreference = "Stop"
@@ -15,8 +14,9 @@ $PSNativeCommandUseErrorActionPreference = $true
 $plan = @(Get-ReleasePlan $RepoName)
 
 # Uploads the one publishing bundle build-package.ps1 made, which holds every
-# package this publish releases.
-./java/publish-package-maven.ps1 -RepoName $RepoName -MavenSettings $Keys['MavenSettings'] -Version $Version -DryRun $DryRun
+# package this publish releases. common-ci's script reads the Central Portal
+# token from the environment of the job that publishes.
+./java/publish-package-maven.ps1 -RepoName $RepoName -Version $Version -DryRun $DryRun
 
 # One tag and one GitHub release per package, '<package>/<version>', in place
 # of common-ci's single tag, which would name no package. The tags go up in one

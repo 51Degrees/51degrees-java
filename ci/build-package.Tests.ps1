@@ -9,7 +9,8 @@ BeforeAll {
     $Root = Join-Path ([IO.Path]::GetTempPath()) "build-package-$PID"
     $null = New-Item -ItemType Directory -Force `
         (Join-Path $Root 'steps'), (Join-Path $Root 'java'),
-        (Join-Path $Root 'repo'), (Join-Path $Root 'package')
+        (Join-Path $Root 'repo'), (Join-Path $Root 'package'),
+        (Join-Path $Root 'package-files')
     Copy-Item -Recurse $PSScriptRoot (Join-Path $Root 'repo' 'ci')
     $Script = Join-Path $Root 'repo' 'ci' 'build-package.ps1'
     $Given = Join-Path $Root 'given.json'
