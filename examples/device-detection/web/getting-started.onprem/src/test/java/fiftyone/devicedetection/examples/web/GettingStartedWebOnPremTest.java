@@ -47,7 +47,7 @@ public class GettingStartedWebOnPremTest {
         // With no Enterprise file, the free Lite file is found, or
         // downloaded, as the example finds it, so a fresh clone runs this.
         System.setProperty(
-            "TestDataFile", DataFileHelper.getDataFileLocation(null));
+            "_51DEGREES_DD_PATH", DataFileHelper.getDataFileLocation(null));
         // Listen on the example's default port, so the request below to
         // port 5151 checks that the example listens there.
         SERVER = EmbedJetty.startWebApp(getFilePath(resourceBase).getAbsolutePath(),
