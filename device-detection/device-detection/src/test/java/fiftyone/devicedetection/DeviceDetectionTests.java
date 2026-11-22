@@ -52,7 +52,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import static fiftyone.devicedetection.shared.testhelpers.TestFileUtils.UA_FILE_PATH;
+import static fiftyone.devicedetection.shared.testhelpers.TestFileUtils.EVIDENCE_FILE_PATH;
 import static fiftyone.pipeline.core.Constants.EVIDENCE_HTTPHEADER_PREFIX;
 import static fiftyone.pipeline.core.Constants.EVIDENCE_SEPERATOR;
 import static fiftyone.pipeline.engines.Constants.PerformanceProfiles.*;
@@ -99,7 +99,7 @@ public class DeviceDetectionTests {
     @BeforeClass
     public static void initClass() throws IOException {
         userAgents = new UserAgentGenerator(
-            FileFinder.getFilePath(UA_FILE_PATH));
+            FileFinder.getFilePath(EVIDENCE_FILE_PATH));
     }
 
     private static String reportErrors(Collection<FlowError> errors) {

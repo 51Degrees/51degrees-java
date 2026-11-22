@@ -131,7 +131,7 @@ public class GettingStartedWebOnPrem extends HttpServlet {
         // Set data file location using DataFileHelper
         try {
             String dataFilePath = DataFileHelper.getDataFileLocation(dataFile);
-            System.setProperty("TestDataFile", dataFilePath);
+            System.setProperty("_51DEGREES_IPI_PATH", dataFilePath);
             logger.info("Using data file: {}", dataFilePath);
         } catch (Exception e) {
             logger.warn("Data file not found at expected location: {}. " +

@@ -29,6 +29,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeTrue;
 
 public class GettingStartedMixedTest {
@@ -63,5 +64,30 @@ public class GettingStartedMixedTest {
                 ipiDataFile,
                 GettingStartedMixed.setUpCombinedEvidence(),
                 System.out);
+    }
+
+    /**
+     * The example passes each data file to its options file in a system
+     * property, and puts the properties back as they were, so that a later
+     * run in the same process finds its own files.
+     */
+    @Test
+    public void run_LeavesTheDataFilePropertiesAsTheyWere() throws Exception {
+        assumeTrue("Skipping test, no device detection data file found at " +
+                        GettingStartedMixed.DD_DATA_FILE_DEFAULT,
+                ddDataFileExists());
+        String ipiDataFile = DataFileHelper.findAvailableDataFile();
+        assumeTrue("Skipping test, no IP Intelligence data file found",
+                ipiDataFile != null);
+        String ddBefore = System.getProperty("_51DEGREES_DD_PATH");
+        String ipiBefore =
+                System.getProperty(DataFileHelper.IPI_PATH_VARIABLE);
+        GettingStartedMixed.run(GettingStartedMixed.DD_DATA_FILE_DEFAULT,
+                ipiDataFile,
+                GettingStartedMixed.setUpCombinedEvidence(),
+                System.out);
+        assertEquals(ddBefore, System.getProperty("_51DEGREES_DD_PATH"));
+        assertEquals(ipiBefore,
+                System.getProperty(DataFileHelper.IPI_PATH_VARIABLE));
     }
 }

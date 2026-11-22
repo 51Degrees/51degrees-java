@@ -24,36 +24,97 @@ package fiftyone.pipeline.did;
 
 import org.junit.Test;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Each key the live 51Did tests use is read under its one _51DEGREES_
- * name, and no other name is read in its place.
+ * The live 51Did tests run once for each resource key, and each key is read
+ * under its own _51DEGREES_ name and no other.
  */
 public class LiveCloudKeysTests {
 
-    @Test
-    public void resourceKey_ReadUnderItsOwnNameOnly() {
-        assertEquals("_51DEGREES_RESOURCE_KEY",
-            LiveCloudKeys.RESOURCE_KEY_NAME);
-    }
+    /**
+     * A name nothing else sets, for the tests of the read.
+     */
+    private static final String SAMPLE = "_51DEGREES_LIVE_CLOUD_KEYS_SAMPLE";
 
     /**
-     * A sealed verdict is redeemed with the 51Did license.
-     * _51DEGREES_LICENSE_KEY holds the data file license, so it is not
-     * read here.
+     * A sealed verdict is redeemed only with the license key of the account
+     * the resource key belongs to. So the 51Did resource key runs with the
+     * 51Did license key, and the Bespoke resource key runs with none.
+     * _51DEGREES_LICENSE_KEY holds the data file license, so it is not read.
      */
     @Test
-    public void licenceKey_IsThe51DidLicence() {
-        assertEquals("_51DEGREES_LICENSE_KEY_51DID",
-            LiveCloudKeys.LICENCE_KEY_NAME);
+    public void passes_PairEachResourceKeyWithItsOwnLicenseOrNone() {
+        assertEquals(2, LiveCloudKeys.PASSES.length);
+        assertArrayEquals(new String[]{
+            "_51DEGREES_RESOURCE_KEY_51DID",
+            "_51DEGREES_LICENSE_KEY_51DID"}, LiveCloudKeys.PASSES[0]);
+        assertArrayEquals(new String[]{
+            "_51DEGREES_RESOURCE_KEY_BESPOKE",
+            null}, LiveCloudKeys.PASSES[1]);
+    }
+
+    @Test
+    public void read_GivesTheTrimmedSystemProperty() {
+        System.setProperty(SAMPLE, " value ");
+        try {
+            assertEquals("value", LiveCloudKeys.read(SAMPLE));
+        } finally {
+            System.clearProperty(SAMPLE);
+        }
+    }
+
+    @Test
+    public void read_GivesNullForABlankValue() {
+        System.setProperty(SAMPLE, "  ");
+        try {
+            assertNull(LiveCloudKeys.read(SAMPLE));
+        } finally {
+            System.clearProperty(SAMPLE);
+        }
+    }
+
+    @Test
+    public void read_GivesNullWhenNothingIsSet() {
+        assertNull(LiveCloudKeys.read(SAMPLE));
+    }
+
+    @Test
+    public void read_GivesNullForNoName() {
+        assertNull(LiveCloudKeys.read(null));
     }
 
     @Test
     public void noResourceKey_NamesTheVariable() {
-        assertTrue(LiveCloudKeys.noResourceKey(),
-            LiveCloudKeys.noResourceKey().contains(
-                "_51DEGREES_RESOURCE_KEY is not set"));
+        String message = LiveCloudKeys.noResourceKey(SAMPLE);
+        assertTrue(message, message.contains(SAMPLE + " is not set"));
+    }
+
+    /**
+     * A license key with no resource key of its own account means a key is
+     * missing, and the tests that redeem would never run.
+     */
+    @Test
+    public void missingResourceKey_NamesBothVariables() {
+        String message = LiveCloudKeys.missingResourceKey(
+            SAMPLE, "_51DEGREES_LIVE_CLOUD_KEYS_LICENSE");
+        assertTrue(message, message.contains(SAMPLE + " is not set"));
+        assertTrue(message,
+            message.contains("_51DEGREES_LIVE_CLOUD_KEYS_LICENSE"));
+    }
+
+    @Test
+    public void noLicenseKey_NamesTheVariableToSet() {
+        String message = LiveCloudKeys.noLicenseKey(SAMPLE);
+        assertTrue(message, message.contains("Set " + SAMPLE));
+    }
+
+    @Test
+    public void noLicenseKey_SaysWhenThePassHasNone() {
+        String message = LiveCloudKeys.noLicenseKey(null);
+        assertTrue(message, message.contains("no license key"));
     }
 }

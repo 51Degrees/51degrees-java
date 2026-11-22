@@ -3,19 +3,22 @@
 # would tag, push and release.
 
 BeforeAll {
-    $Script = Join-Path $PSScriptRoot 'publish-package.ps1'
-
-    # release.ps1 needs common-ci's steps/release-plan.ps1, and the publish
-    # runs ./java/publish-package-maven.ps1 from the folder it is run in.
+    # common-ci runs the publish from its own root, with this repository
+    # checked out inside it. release.ps1 finds common-ci's
+    # steps/release-plan.ps1 from where it is, and the publish runs
+    # ./java/publish-package-maven.ps1 from the folder it is run in. So the
+    # scripts are copied into a folder laid out the same way, with a stub for
+    # each of the two.
     $Root = Join-Path ([IO.Path]::GetTempPath()) "publish-package-$PID"
     $null = New-Item -ItemType Directory -Force `
-        (Join-Path $Root 'common-ci' 'steps'), (Join-Path $Root 'java')
-    Set-Content (Join-Path $Root 'common-ci' 'steps' 'release-plan.ps1') `
+        (Join-Path $Root 'steps'), (Join-Path $Root 'java'),
+        (Join-Path $Root 'repo')
+    Copy-Item -Recurse $PSScriptRoot (Join-Path $Root 'repo' 'ci')
+    $Script = Join-Path $Root 'repo' 'ci' 'publish-package.ps1'
+    Set-Content (Join-Path $Root 'steps' 'release-plan.ps1') `
         'function Get-ReleasePlan([string]$RepoPath) { }'
     Set-Content (Join-Path $Root 'java' 'publish-package-maven.ps1') `
         'param($RepoName, $MavenSettings, $Version, $DryRun)'
-    $script:CommonCi = $env:COMMON_CI
-    $env:COMMON_CI = Join-Path $Root 'common-ci'
 
     # Pester mocks only a command it can find, so the plan is defined here
     # as well as in the stub.
@@ -33,7 +36,6 @@ BeforeAll {
 }
 
 AfterAll {
-    $env:COMMON_CI = $script:CommonCi
     Remove-Item -Recurse -Force $Root
 }
 

@@ -115,7 +115,7 @@ public class GettingStartedWebMixed extends HttpServlet {
         // Set Device Detection data file location
         try {
             String ddPath = resolveDataFile(ddDataFile);
-            System.setProperty("TestDeviceDetectionDataFile", ddPath);
+            System.setProperty("_51DEGREES_DD_PATH", ddPath);
             logger.info("Using Device Detection data file: {}", ddPath);
         } catch (Exception e) {
             logger.warn("Device Detection data file not found at: {}", ddDataFile);
@@ -126,7 +126,7 @@ public class GettingStartedWebMixed extends HttpServlet {
         // Set IP Intelligence data file location
         try {
             String ipiPath = DataFileHelper.getDataFileLocation(ipiDataFile);
-            System.setProperty("TestDataFile", ipiPath);
+            System.setProperty("_51DEGREES_IPI_PATH", ipiPath);
             logger.info("Using IP Intelligence data file: {}", ipiPath);
         } catch (Exception e) {
             logger.warn("IP Intelligence data file not found at: {}. " +

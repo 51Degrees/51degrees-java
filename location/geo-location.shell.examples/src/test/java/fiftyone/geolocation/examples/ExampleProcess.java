@@ -73,7 +73,7 @@ final class ExampleProcess {
      * Runs the example's main method with no arguments and with every
      * environment variable whose name holds "KEY", in any case, left out.
      * The process takes the class path of the process that starts it, and
-     * of its system properties only project.root, which says where the
+     * of its system properties only _51DEGREES_PROJECT_ROOT, which says where the
      * files the example reads are.
      * @param example the class whose main method runs
      * @return the exit code and the output
@@ -86,9 +86,9 @@ final class ExampleProcess {
             "bin"), "java").getPath());
         command.add("-cp");
         command.add(System.getProperty("java.class.path"));
-        String projectRoot = System.getProperty("project.root");
+        String projectRoot = System.getProperty("_51DEGREES_PROJECT_ROOT");
         if (projectRoot != null) {
-            command.add("-Dproject.root=" + projectRoot);
+            command.add("-D_51DEGREES_PROJECT_ROOT=" + projectRoot);
         }
         command.add(example.getName());
 

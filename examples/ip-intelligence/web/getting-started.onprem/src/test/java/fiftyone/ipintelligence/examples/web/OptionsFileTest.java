@@ -51,7 +51,7 @@ public class OptionsFileTest {
                 System.getProperty("basedir", "."), "src", "main", "webapp",
                 "WEB-INF", "51Degrees-OnPrem.xml")), StandardCharsets.UTF_8);
         Matcher dataFile = Pattern.compile(
-                "<DataFile>\\$\\{TestDataFile:-([^}]*)\\}</DataFile>")
+                "<DataFile>\\$\\{_51DEGREES_IPI_PATH:-([^}]*)\\}</DataFile>")
                 .matcher(xml);
         assertTrue("51Degrees-OnPrem.xml should give a default IP Intelligence " +
                 "data file", dataFile.find());

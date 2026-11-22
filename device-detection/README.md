@@ -227,16 +227,15 @@ repository.
 You will need [resource keys](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=tests)
 (see above) to complete the tests and run examples which include exercising the cloud API.
 
-To verify the code:
+To verify the code, set the `_51DEGREES_RESOURCE_KEY` environment variable to
+the resource key and run:
 
 ```
-mvn clean test -D_51DEGREES_RESOURCE_KEY=[Resource Key]
+mvn clean test
 ```
-The key can be set as the `_51DEGREES_RESOURCE_KEY` environment variable
-instead. The TAC and native model examples need a key with every property,
-which they read from the same variable. For tests and examples that require a
-license key, set `_51DEGREES_LICENSE_KEY` or add the following option:
-- `-D_51DEGREES_LICENSE_KEY=[License Key]`
+The TAC and native model examples need a key with every property, which they
+read from the same variable. For tests and examples that require a license
+key, set the `_51DEGREES_LICENSE_KEY` environment variable.
 
 ## Projects
 

@@ -26,6 +26,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,6 +53,32 @@ public class FileFinderTest {
         File f = getFilePath(TEST_FILE);
         logger.info(f.getAbsolutePath());
         Assert.assertTrue(TEST_FILE.endsWith(f.getName()));
+    }
+
+    /**
+     * The search is below the folder the system property
+     * _51DEGREES_PROJECT_ROOT names, so a file that is only there is found.
+     **/
+    @Test()
+    public void testGetFilePathBelowProjectRoot() throws Exception {
+        String name = "_51DEGREES_PROJECT_ROOT";
+        String before = System.getProperty(name);
+        Path root = Files.createTempDirectory("filefinder-root");
+        Path file = Files.createTempFile(root, "filefinder-root", ".xml");
+        try {
+            System.setProperty(name, root.toString());
+            File found = getFilePath(file.getFileName().toString());
+            Assert.assertEquals(file.toFile().getCanonicalFile(),
+                found.getCanonicalFile());
+        } finally {
+            if (before == null) {
+                System.clearProperty(name);
+            } else {
+                System.setProperty(name, before);
+            }
+            Files.delete(file);
+            Files.delete(root);
+        }
     }
 
 }

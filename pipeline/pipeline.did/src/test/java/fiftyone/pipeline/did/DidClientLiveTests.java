@@ -26,6 +26,8 @@ import org.json.JSONObject;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -45,31 +47,57 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 /**
- * Tests against the live cloud service. They need a resource key, read
- * from the name {@link LiveCloudKeys} gives, and they are skipped, naming
- * that variable, when there is none. {@code _51DEGREES_CLOUD_ENDPOINT}
- * points them at another host, and the 51Did license key is taken from the
- * name {@link LiveCloudKeys} gives where the account holds one. Each test creates a 51Did through the
- * cloud {@code json} endpoint, which is one use against the resource key,
- * plus one for each cloud call it then makes.
+ * Tests against the live cloud service. They run once for each resource
+ * key {@link LiveCloudKeys#PASSES} names, each with the license key of its
+ * own account where the pass has one, and a pass is skipped, naming the
+ * variable to set, when its resource key is not set.
+ * {@code _51DEGREES_CLOUD_ENDPOINT} points them at another host. Each test
+ * creates a 51Did through the cloud {@code json} endpoint, which is one use
+ * against the resource key, plus one for each cloud call it then makes.
  * <p>
  * The resource key has to carry the fodid product. A key without it gets
  * an answer from the service with no identifier in it, which these tests
  * report as an entitlement failure naming the product.
  */
+@RunWith(Parameterized.class)
 public class DidClientLiveTests {
 
+    /**
+     * The name the resource key of each pass is read from, which names the
+     * pass, and the name its license key is read from, or null.
+     */
+    @Parameterized.Parameters(name = "{0}")
+    public static List<Object[]> passes() {
+        List<Object[]> passes = new ArrayList<>();
+        for (String[] pass : LiveCloudKeys.PASSES) {
+            passes.add(pass);
+        }
+        return passes;
+    }
+
+    private final String resourceKeyName;
+    private final String licenseKeyName;
     private String resourceKey;
     private String licenceKey;
     private DidClient client;
 
+    public DidClientLiveTests(String resourceKeyName, String licenseKeyName) {
+        this.resourceKeyName = resourceKeyName;
+        this.licenseKeyName = licenseKeyName;
+    }
+
     @Before
     public void init() {
-        resourceKey = LiveCloudKeys.find(LiveCloudKeys.RESOURCE_KEY_NAME);
-        Assume.assumeTrue(LiveCloudKeys.noResourceKey(), resourceKey != null);
+        resourceKey = LiveCloudKeys.read(resourceKeyName);
         // One lookup serves both, so the key the form body sends and the
         // one hasLicenceKey() answers for can never disagree.
-        licenceKey = LiveCloudKeys.find(LiveCloudKeys.LICENCE_KEY_NAME);
+        licenceKey = LiveCloudKeys.read(licenseKeyName);
+        if (resourceKey == null && licenceKey != null) {
+            fail(LiveCloudKeys.missingResourceKey(
+                resourceKeyName, licenseKeyName));
+        }
+        Assume.assumeTrue(LiveCloudKeys.noResourceKey(resourceKeyName),
+            resourceKey != null);
         client = new DidClient(resourceKey, licenceKey);
     }
 
@@ -130,7 +158,7 @@ public class DidClientLiveTests {
     public void verifyFullThenRedeemWithTheLicence_ReadsTheVerdict()
             throws Exception {
         Assume.assumeTrue(
-            "Set _51DEGREES_LICENSE_KEY_51DID to redeem a sealed result.",
+            LiveCloudKeys.noLicenseKey(licenseKeyName),
             client.hasLicenceKey());
 
         List<FodId> identifiers = identifiersFor("id.usage", "standard");
@@ -203,7 +231,7 @@ public class DidClientLiveTests {
     public void anIdentifierForAnotherAddress_ReportsEveryFactor()
             throws Exception {
         Assume.assumeTrue(
-            "Set _51DEGREES_LICENSE_KEY_51DID to redeem a sealed result.",
+            LiveCloudKeys.noLicenseKey(licenseKeyName),
             client.hasLicenceKey());
 
         List<FodId> identifiers = identifiersCreatedFor(

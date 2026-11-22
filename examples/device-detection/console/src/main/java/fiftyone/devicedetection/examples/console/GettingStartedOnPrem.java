@@ -96,6 +96,19 @@ public class GettingStartedOnPrem {
     }
 
     /**
+     * Puts a system property back as it was before the example set it.
+     * @param name the name of the property
+     * @param value the value it had, or null if it had none
+     */
+    private static void restoreProperty(String name, String value) {
+        if (value == null) {
+            System.clearProperty(name);
+        } else {
+            System.setProperty(name, value);
+        }
+    }
+
+    /**
      * Run the example
      * @param dataFile a device detection data file
      * @param evidenceList a List&lt;Map&lt;String, String>> representing evidence
@@ -105,12 +118,13 @@ public class GettingStartedOnPrem {
                            List<Map<String, String>> evidenceList,
                            OutputStream outputStream) throws Exception {
         logger.info("Running GettingStarted example");
+        String dataFileBefore = System.getProperty("_51DEGREES_DD_PATH");
         try {
             String dataFileLocation =
                     DataFileHelper.findDataFile(dataFile).getAbsolutePath();
-            // the location of the test data file is interpolated in the pipeline
+            // the location of the data file is interpolated in the pipeline
             // configuration file
-            System.setProperty("TestDataFile", dataFileLocation);
+            System.setProperty("_51DEGREES_DD_PATH", dataFileLocation);
         } catch (Exception e) {
             DataFileHelper.cantFindDataFile(dataFile);
             throw e;
@@ -135,7 +149,9 @@ public class GettingStartedOnPrem {
         FiftyOnePipelineBuilder does unless ShareUsage is false. */
         try (Pipeline pipeline = new FiftyOnePipelineBuilder()
                 .buildFromConfiguration(pipelineOptions)) {
-
+            // The configuration has been read, so the property that passed
+            // the data file to it is put back as it was.
+            restoreProperty("_51DEGREES_DD_PATH", dataFileBefore);
 
             /* Get the 'engine' element within the pipeline that performs device detection. We
             can use this to get details about the data file as well as meta-data describing

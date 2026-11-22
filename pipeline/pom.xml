@@ -248,7 +248,7 @@
                         <logback.configurationFile>${maven.multiModuleProjectDirectory}/logback.xml</logback.configurationFile>
                         <!-- this sets the scope of file search (inter alia in Utils.getFilePath) to the project directory-->
                         <!--suppress UnresolvedMavenProperty -->
-                        <project.root>${maven.multiModuleProjectDirectory}</project.root>
+                        <_51DEGREES_PROJECT_ROOT>${maven.multiModuleProjectDirectory}</_51DEGREES_PROJECT_ROOT>
                         <!-- for JavaScriptBuilderTests -->
                         <polyglot.engine.WarnInterpreterOnly>false</polyglot.engine.WarnInterpreterOnly>
                     </systemPropertyVariables>
