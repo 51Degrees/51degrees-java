@@ -28,56 +28,39 @@ package fiftyone.pipeline.did;
  * resource key and licence key from, and what they say when there is
  * none.
  * <p>
- * Every name is tried as an environment variable first and then as a
- * system property, so a developer can export one and a build can pass one
- * on the command line with {@code -D}. Each key is read under its one
- * _51DEGREES_ name and no other. A test with no key is skipped, naming
- * the variable to set, rather than passed having called nothing.
+ * The tests run once for each resource key in {@link #PASSES}. Every name
+ * is read as an environment variable first and then as a system property
+ * of the same name. Each key is read under its one _51DEGREES_ name and no
+ * other. A pass with no resource key is skipped, naming the variable to
+ * set, rather than passed having called nothing.
  */
 final class LiveCloudKeys {
 
     /**
-     * The name the resource key is read from. The workflow that runs these
-     * tests once for every key the organisation holds sets this single
-     * name to each key in turn.
+     * The resource key and the licence key of each pass of the tests. A
+     * sealed verdict is redeemed only with the licence key of the account
+     * the resource key belongs to, so the 51Did resource key runs with the
+     * 51Did licence key, and the Bespoke resource key runs with none. The
+     * licence key is not _51DEGREES_LICENSE_KEY, which holds the licence
+     * for the data files.
      */
-    static final String[] RESOURCE_KEY_NAMES = {
-        "_51DEGREES_RESOURCE_KEY",
-    };
-
-    /**
-     * The name the license key is read from. A license key is optional,
-     * because an account can hold its products on the resource key alone.
-     * It is the 51Did license, which redeems a sealed verdict, and not
-     * _51DEGREES_LICENSE_KEY, which holds the license for the data files.
-     */
-    static final String[] LICENCE_KEY_NAMES = {
-        "_51DEGREES_LICENSE_KEY_51DID",
+    static final String[][] PASSES = {
+        {"_51DEGREES_RESOURCE_KEY_51DID", "_51DEGREES_LICENSE_KEY_51DID"},
+        {"_51DEGREES_RESOURCE_KEY_BESPOKE", null},
     };
 
     private LiveCloudKeys() {
     }
 
     /**
-     * The first value set under any of the given names, or null when none
-     * of them is set anywhere.
-     */
-    static String find(String[] names) {
-        for (String name : names) {
-            String value = read(name);
-            if (value != null) {
-                return value;
-            }
-        }
-        return null;
-    }
-
-    /**
      * The trimmed value of the environment variable of this name, or of
      * the system property where that is not set or is blank, or null when
-     * neither holds a value.
+     * neither holds a value or there is no name.
      */
-    private static String read(String name) {
+    static String read(String name) {
+        if (name == null) {
+            return null;
+        }
         String value = System.getenv(name);
         if (value == null || value.trim().isEmpty()) {
             value = System.getProperty(name);
@@ -86,18 +69,43 @@ final class LiveCloudKeys {
     }
 
     /**
-     * Why the tests are skipped when no resource key is set, naming the
+     * Why a pass is skipped when its resource key is not set, naming the
      * variable to set and what the key has to be entitled to.
      */
-    static String noResourceKey() {
+    static String noResourceKey(String name) {
         return "These tests call the live 51Degrees cloud service, so they "
             + "need a resource key, and they are skipped because "
-            + String.join(", ", RESOURCE_KEY_NAMES) + " is not set as an "
+            + name + " is not set as an "
             + "environment variable or as a system property. "
             + "The key has to carry the fodid product, because "
             + "these tests ask the cloud for FODiD.IdProbGlobal and "
             + "FODiD.IdProbLic. Create a key at "
             + "https://51degrees.com/configure.";
+    }
+
+    /**
+     * What to fail with when a licence key is set and the resource key of
+     * its account is not. The tests that redeem with that licence key
+     * would otherwise never run, and nothing would say so.
+     */
+    static String missingResourceKey(String name, String licenceName) {
+        return name + " is not set, but " + licenceName + ", the license "
+            + "key of the same account, is. Set " + name + " to a resource "
+            + "key of that account, so the tests that redeem a sealed "
+            + "result run.";
+    }
+
+    /**
+     * Why a test that redeems a sealed result is skipped when the pass has
+     * no licence key.
+     * @param licenceName the name the licence key of the pass is read
+     *                    from, or null when the pass runs with none
+     */
+    static String noLicenceKey(String licenceName) {
+        return licenceName == null
+            ? "This resource key runs with no license key, so there is no "
+                + "sealed result it can redeem."
+            : "Set " + licenceName + " to redeem a sealed result.";
     }
 
     /**

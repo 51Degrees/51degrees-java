@@ -109,7 +109,7 @@ repositories used to do for one package tree each.
 
 Required:
 
-- `ACCESS_TOKEN`: GitHub
+- `_51DEGREES_ACCESS_TOKEN`: GitHub
   [access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#about-personal-access-tokens)
   for cloning repositories and creating pull requests.
 
@@ -127,31 +127,37 @@ To run the on-premise tests:
 To run the cloud tests:
 
 - `_51DEGREES_RESOURCE_KEY_BESPOKE`: [resource key](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=ci-readme.md&utm_term=secrets)
-  from which common-ci fills `_51DEGREES_RESOURCE_KEY`, the key the cloud
-  tests read, and `_51DEGREES_RESOURCE_KEY_SUPER`, the key with every
-  property, which the Location and the TAC and native model tests read.
+  with every property, which the cloud tests read. `_51DEGREES_RESOURCE_KEY`
+  is the name a person running an example sets, so it has no secret, and a
+  test of an example sets it to the key it checks.
 - `_51DEGREES_LICENSE_KEY_BESPOKE`: license key for the cloud products, for
   the Cloud Request Engine's test on a license key alone.
 - `_51DEGREES_RESOURCE_KEY_51DID`: resource key for the 51Did cloud tests.
   It has to belong to the same account as `_51DEGREES_LICENSE_KEY_51DID`,
   or the licensed redeem comes back unreadable.
-- `_51DEGREES_LICENSE_KEY_51DID`: license key for the 51Did cloud tests.
-  `cloud-51did.yml` gives it only to the pass with
-  `_51DEGREES_RESOURCE_KEY_51DID`. The Bespoke pass redeems with none.
+- `_51DEGREES_LICENSE_KEY_51DID`: license key for the 51Did cloud tests,
+  which use it only with `_51DEGREES_RESOURCE_KEY_51DID`. They run again
+  with `_51DEGREES_RESOURCE_KEY_BESPOKE` and no license key.
 
 A cloud test with no key is skipped, naming the variable it reads.
 
+The cloud tests and examples call the cloud service that
+`_51DEGREES_CLOUD_ENDPOINT` names, an organization variable, and the public
+service when it is not set.
+
 To publish to Maven Central (51Degrees only):
 
-- `MAVEN_SETTINGS`: Central Portal token.
-- `JAVA_GPG_KEY_PASSPHRASE` and `JAVA_KEY_PGP_FILE`: the key the packages are
-  signed with.
-- `CODE_SIGNING_KEY_VAULT_NAME`, `CODE_SIGNING_KEY_VAULT_URL`,
-  `CODE_SIGNING_KEY_VAULT_CLIENT_ID`, `CODE_SIGNING_KEY_VAULT_TENANT_ID`,
-  `CODE_SIGNING_KEY_VAULT_CLIENT_SECRET`,
-  `CODE_SIGNING_KEY_VAULT_CERTIFICATE_NAME` and
-  `CODE_SIGNING_KEY_VAULT_CERTIFICATE_DATA`: the key vault that signs the
-  native libraries.
+- `_51DEGREES_MAVEN_SETTINGS`: Central Portal token.
+- `_51DEGREES_JAVA_GPG_KEY_PASSPHRASE` and `_51DEGREES_JAVA_KEY_PGP_FILE`: the
+  key the packages are signed with.
+- `_51DEGREES_CODE_SIGNING_KEY_VAULT_NAME`,
+  `_51DEGREES_CODE_SIGNING_KEY_VAULT_URL`,
+  `_51DEGREES_CODE_SIGNING_KEY_VAULT_CLIENT_ID`,
+  `_51DEGREES_CODE_SIGNING_KEY_VAULT_TENANT_ID`,
+  `_51DEGREES_CODE_SIGNING_KEY_VAULT_CLIENT_SECRET`,
+  `_51DEGREES_CODE_SIGNING_KEY_VAULT_CERTIFICATE_NAME` and
+  `_51DEGREES_CODE_SIGNING_KEY_VAULT_CERTIFICATE_DATA`: the key vault that
+  signs the native libraries.
 
 ## Environment
 
