@@ -31,11 +31,10 @@ Copy-Item "assets/51Degrees-IPIV4AsnIpiV41.ipi" $ipIntelligenceData
 Write-Host "Assets hashes:"
 Get-FileHash -Algorithm MD5 -Path assets/*
 
-# Generate the evidence files used by the IP Intelligence tests and examples.
+# Generate the evidence file used by the IP Intelligence tests and examples.
 Push-Location $ipIntelligenceData
 try {
     ./evidence-gen.ps1 -v4 10000 -v6 10000
-    ./evidence-gen.ps1 -v4 10000 -v6 10000 -csv -path "evidence.csv"
 } finally {
     Pop-Location
 }

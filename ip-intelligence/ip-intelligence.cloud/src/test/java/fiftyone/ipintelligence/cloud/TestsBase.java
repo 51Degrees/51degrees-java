@@ -25,7 +25,7 @@ package fiftyone.ipintelligence.cloud;
 import fiftyone.ipintelligence.shared.testhelpers.IpAddressGenerator;
 import fiftyone.pipeline.util.FileFinder;
 
-import static fiftyone.ipintelligence.shared.testhelpers.FileUtils.IP_ADDRESSES_FILE_NAME;
+import static fiftyone.ipintelligence.shared.testhelpers.FileUtils.EVIDENCE_FILE_NAME;
 
 public class TestsBase {
 
@@ -43,7 +43,7 @@ public class TestsBase {
     protected void testInitialize() throws Exception {
         wrapper = new WrapperCloud();
         ipAddresses = new IpAddressGenerator(
-            FileFinder.getFilePath(IP_ADDRESSES_FILE_NAME));
+            FileFinder.getFilePath(EVIDENCE_FILE_NAME));
     }
 
     public void testCleanup() {

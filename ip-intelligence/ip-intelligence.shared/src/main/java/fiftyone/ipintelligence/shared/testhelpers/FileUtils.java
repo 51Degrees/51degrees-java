@@ -50,7 +50,6 @@ public class FileUtils {
     public static final String ENTERPRISE_IPI_V41_DATA_FILE_NAME = "51Degrees-EnterpriseIpiV41.ipi";
     public static final String LITE_IPI_DATA_FILE_NAME = "51Degrees-LiteV41.ipi";
     private static  Optional<File> IPI_DATA_FILE;
-    public static final String IP_ADDRESSES_FILE_NAME = "evidence.csv";
     public static final String EVIDENCE_FILE_NAME = "evidence.yml";
     private static Optional<File> EVIDENCE_FILE;
 

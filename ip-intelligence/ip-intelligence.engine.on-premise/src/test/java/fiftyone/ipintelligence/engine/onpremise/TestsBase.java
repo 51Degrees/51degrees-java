@@ -26,7 +26,7 @@ import fiftyone.ipintelligence.shared.testhelpers.IpAddressGenerator;
 import fiftyone.ipintelligence.shared.testhelpers.FileUtils;
 import fiftyone.pipeline.engines.Constants;
 
-import static fiftyone.ipintelligence.shared.testhelpers.FileUtils.IP_ADDRESSES_FILE_NAME;
+import static fiftyone.ipintelligence.shared.testhelpers.FileUtils.EVIDENCE_FILE_NAME;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
 public class TestsBase {
@@ -47,7 +47,7 @@ public class TestsBase {
             FileUtils.getHashFile(),
             profile);
         ipAddresses = new IpAddressGenerator(
-            getFilePath(IP_ADDRESSES_FILE_NAME));
+            getFilePath(EVIDENCE_FILE_NAME));
     }
 
     public void testCleanup() {
