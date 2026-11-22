@@ -58,7 +58,7 @@ public class KeyUtilsTest {
         }
     }
 
-    private static final String NEW_KEY_NAME = "_51DEGREES_RESOURCE_KEY";
+    private static final String KEY_NAME = "_51DEGREES_RESOURCE_KEY";
 
     /**
      * System properties stand in for the environment variables, because
@@ -66,15 +66,15 @@ public class KeyUtilsTest {
      * variable.
      */
     @Test
-    public void newKeyNameIsRead() {
-        assumeTrue(System.getenv(NEW_KEY_NAME) == null);
-        String savedNew = System.clearProperty(NEW_KEY_NAME);
+    public void keyNameIsRead() {
+        assumeTrue(System.getenv(KEY_NAME) == null);
+        String saved = System.clearProperty(KEY_NAME);
         try {
-            System.setProperty(NEW_KEY_NAME, "new-name-key");
-            assertEquals("new-name-key",
+            System.setProperty(KEY_NAME, "name-key");
+            assertEquals("name-key",
                 KeyUtils.getResourceKey());
         } finally {
-            restore(NEW_KEY_NAME, savedNew);
+            restore(KEY_NAME, saved);
         }
     }
 

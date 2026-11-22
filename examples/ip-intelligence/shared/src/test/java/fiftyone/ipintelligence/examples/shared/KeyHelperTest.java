@@ -43,7 +43,7 @@ public class KeyHelperTest {
     private static final String KEY_A = "AQAAAAAAAAAAAAAAAAAAAAAA";
     private static final String KEY_B = "AgAAAAAAAAAAAAAAAAAAAAAA";
 
-    private static final String NEW_KEY_NAME = "_51DEGREES_RESOURCE_KEY";
+    private static final String KEY_NAME = "_51DEGREES_RESOURCE_KEY";
 
     /**
      * The name getOrSetTestResourceKey reads.
@@ -94,7 +94,7 @@ public class KeyHelperTest {
 
     @Test
     public void testResourceKey_IsTheSharedName() {
-        assertEquals(NEW_KEY_NAME, KeyHelper.TEST_RESOURCE_KEY);
+        assertEquals(KEY_NAME, KeyHelper.TEST_RESOURCE_KEY);
     }
 
     /**
@@ -128,12 +128,12 @@ public class KeyHelperTest {
     @Test
     public void requireResourceKey_ReadsOnlyTheNameGiven() {
         Map<String, String> values = new HashMap<>();
-        values.put(NEW_KEY_NAME, "");
+        values.put(KEY_NAME, "");
         values.put("_51DEGREES_RESOURCE_KEY_BESPOKE", KEY_A);
         assertThrows(AssumptionViolatedException.class, () ->
             KeyHelper.requireResourceKey(values::get, EXAMPLE_NAME,
                 "every IP Intelligence property", "ip"));
-        values.put(NEW_KEY_NAME, KEY_B);
+        values.put(KEY_NAME, KEY_B);
         assertEquals(KEY_B, KeyHelper.requireResourceKey(values::get,
             EXAMPLE_NAME, "every IP Intelligence property", "ip"));
     }
@@ -143,20 +143,20 @@ public class KeyHelperTest {
      */
     @Test
     public void findResourceKey_ReadsOnlyTheSharedName() {
-        assumeTrue(System.getenv(NEW_KEY_NAME) == null);
+        assumeTrue(System.getenv(KEY_NAME) == null);
         String other = "AnyOtherResourceKeyName";
-        String saved = System.clearProperty(NEW_KEY_NAME);
+        String saved = System.clearProperty(KEY_NAME);
         try {
             System.setProperty(other, KEY_A);
             assertNull(KeyHelper.findResourceKey(null));
-            System.setProperty(NEW_KEY_NAME, KEY_B);
+            System.setProperty(KEY_NAME, KEY_B);
             assertEquals(KEY_B, KeyHelper.findResourceKey(null));
         } finally {
             System.clearProperty(other);
             if (saved == null) {
-                System.clearProperty(NEW_KEY_NAME);
+                System.clearProperty(KEY_NAME);
             } else {
-                System.setProperty(NEW_KEY_NAME, saved);
+                System.setProperty(KEY_NAME, saved);
             }
         }
     }

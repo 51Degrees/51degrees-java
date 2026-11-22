@@ -59,7 +59,7 @@ public class DataFileHelperTest {
         }
     }
 
-    private static final String NEW_PATH_NAME = "_51DEGREES_IPI_PATH";
+    private static final String PATH_NAME = "_51DEGREES_IPI_PATH";
 
     /**
      * System properties stand in for the environment variables, because
@@ -67,17 +67,17 @@ public class DataFileHelperTest {
      * variable.
      */
     @Test
-    public void getDataFileLocation_NewName() throws Exception {
-        assumeTrue(System.getenv(NEW_PATH_NAME) == null);
-        String savedNew = System.clearProperty(NEW_PATH_NAME);
-        File newFile = File.createTempFile("new-path-name", ".ipi");
+    public void getDataFileLocation_ReadsTheVariable() throws Exception {
+        assumeTrue(System.getenv(PATH_NAME) == null);
+        String saved = System.clearProperty(PATH_NAME);
+        File file = File.createTempFile("path-name", ".ipi");
         try {
-            System.setProperty(NEW_PATH_NAME, newFile.getPath());
-            assertEquals(newFile.getPath(),
+            System.setProperty(PATH_NAME, file.getPath());
+            assertEquals(file.getPath(),
                     DataFileHelper.getDataFileLocation(null));
         } finally {
-            restore(NEW_PATH_NAME, savedNew);
-            newFile.delete();
+            restore(PATH_NAME, saved);
+            file.delete();
         }
     }
 
