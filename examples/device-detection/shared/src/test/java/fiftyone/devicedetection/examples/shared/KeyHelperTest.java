@@ -97,14 +97,21 @@ public class KeyHelperTest {
     }
 
     @Test
+    public void bespokeResourceKeyVariable_IsTheEveryPropertyName() {
+        assertEquals("_51DEGREES_RESOURCE_KEY_BESPOKE",
+            KeyHelper.BESPOKE_RESOURCE_KEY_VARIABLE);
+    }
+
+    @Test
     public void requireResourceKey_TwoProducts_NamesBoth() {
         AssumptionViolatedException skipped = assertThrows(
             AssumptionViolatedException.class, () ->
                 KeyHelper.requireResourceKey(name -> null,
-                    Collections.singletonList("_51DEGREES_RESOURCE_KEY_SUPER"),
+                    Collections.singletonList(
+                        KeyHelper.BESPOKE_RESOURCE_KEY_VARIABLE),
                     "the devices that match a TAC", "hardware", "device"));
         assertTrue(skipped.getMessage(), skipped.getMessage().contains(
-            "skipped because _51DEGREES_RESOURCE_KEY_SUPER is not set"));
+            "skipped because _51DEGREES_RESOURCE_KEY_BESPOKE is not set"));
         assertTrue(skipped.getMessage(), skipped.getMessage().contains(
             "carry the hardware and device products, because"));
     }
@@ -120,7 +127,8 @@ public class KeyHelperTest {
         values.put(KeyHelper.TEST_RESOURCE_KEY, KEY_A);
         assertThrows(AssumptionViolatedException.class, () ->
             KeyHelper.requireResourceKey(values::get,
-                Collections.singletonList("_51DEGREES_RESOURCE_KEY_SUPER"),
+                Collections.singletonList(
+                    KeyHelper.BESPOKE_RESOURCE_KEY_VARIABLE),
                 "the devices that match a TAC", "hardware", "device"));
     }
 
