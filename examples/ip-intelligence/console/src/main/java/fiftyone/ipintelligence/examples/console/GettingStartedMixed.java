@@ -117,6 +117,19 @@ public class GettingStartedMixed {
     }
 
     /**
+     * Puts a system property back as it was before the example set it.
+     * @param name the name of the property
+     * @param value the value it had, or null if it had none
+     */
+    private static void restoreProperty(String name, String value) {
+        if (value == null) {
+            System.clearProperty(name);
+        } else {
+            System.setProperty(name, value);
+        }
+    }
+
+    /**
      * Run the example
      * @param ddDataFile path to a Device Detection data file (.hash)
      * @param ipiDataFile path to an IP Intelligence data file (.ipi)
@@ -128,6 +141,10 @@ public class GettingStartedMixed {
                            List<Map<String, String>> evidenceList,
                            OutputStream outputStream) throws Exception {
         logger.info("Running GettingStartedMixed example");
+
+        String ddBefore = System.getProperty("_51DEGREES_DD_PATH");
+        String ipiBefore =
+                System.getProperty(DataFileHelper.IPI_PATH_VARIABLE);
 
         // Resolve and set the Device Detection data file location
         try {
@@ -142,7 +159,7 @@ public class GettingStartedMixed {
         // Resolve and set the IP Intelligence data file location
         try {
             String ipiLocation = DataFileHelper.getDataFileLocation(ipiDataFile);
-            System.setProperty("_51DEGREES_IPI_PATH", ipiLocation);
+            System.setProperty(DataFileHelper.IPI_PATH_VARIABLE, ipiLocation);
         } catch (Exception e) {
             logger.error("Failed to find IP Intelligence data file at '{}'. " +
                     "Please provide a valid path to an IP Intelligence data file (.ipi). " +
@@ -161,6 +178,10 @@ public class GettingStartedMixed {
                 // a Usage Sharing Element to the Pipeline and helps improve the service.
                 .setShareUsage(false)
                 .buildFromConfiguration(pipelineOptions)) {
+            // The configuration has been read, so the properties that passed
+            // the data files to it are put back as they were.
+            restoreProperty("_51DEGREES_DD_PATH", ddBefore);
+            restoreProperty(DataFileHelper.IPI_PATH_VARIABLE, ipiBefore);
 
             // The engines say which properties their data files have.
             DeviceDetectionHashEngine ddEngine = pipeline.getElement(DeviceDetectionHashEngine.class);
