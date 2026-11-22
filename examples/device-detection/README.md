@@ -130,6 +130,9 @@ environment variable, and otherwise uses the free Lite file in
 `cxx/data/device-detection`, which it downloads before the server starts if it is
 missing.
 
+The [Human Confidence](web/human-confidence/README.md) web example is a small server
+and page for the cloud's Human Confidence. Its README gives the steps to run it.
+
 ### Native library access
 
 The on-premise examples use a native library, and
