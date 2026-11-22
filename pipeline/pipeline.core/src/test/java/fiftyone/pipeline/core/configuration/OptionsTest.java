@@ -65,10 +65,10 @@ public class OptionsTest {
     public void findAndSubstituteTest() throws Exception {
         PipelineOptions options = PipelineOptionsFactory.getOptionsFromFile(
                 getFilePath("options-test2.xml"));
-        System.clearProperty("TestMaxLength");
-        assertEquals("${TestMaxLength:-80}", options.find("ListSplitterElement", "MaxLength"));
+        System.clearProperty("_51DEGREES_TEST_MAX_LENGTH");
+        assertEquals("${_51DEGREES_TEST_MAX_LENGTH:-80}", options.find("ListSplitterElement", "MaxLength"));
         assertEquals("80", options.findAndSubstitute("ListSplitterElement", "MaxLength"));
-        System.setProperty("TestMaxLength", "120");
+        System.setProperty("_51DEGREES_TEST_MAX_LENGTH", "120");
         assertEquals("120", options.findAndSubstitute("ListSplitterElement", "MaxLength"));
     }
 

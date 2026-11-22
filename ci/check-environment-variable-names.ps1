@@ -59,11 +59,10 @@ $script:PlatformNames = @(
     # GitHub Actions and its runners.
     'CI', 'GITHUB_ACTIONS', 'GITHUB_ENV', 'GITHUB_TOKEN', 'CHROME_BIN',
     'CHROMEWEBDRIVER'
-    # The shared browser test suite, which is told where the example under
-    # test listens.
+    # The shared browser test suite reads these three to learn where the
+    # example under test listens. They are 51Degrees names, and stay here
+    # only until the suite reads them with the prefix.
     'PORT', 'EXAMPLE_URL', 'EXAMPLE_LANG'
-    # The tests of the options lookup make these up to read back.
-    'myName', 'hometown', 'TestMaxLength', 'TestDelimiter'
 )
 
 # The system properties the JDK defines start with one of these.
