@@ -1,7 +1,0 @@
-<PipelineOptions>
-    <Elements>
-        <Element>
-            <BuilderName>JavaScriptBuilderElement</BuilderName>
-        </Element>
-    </Elements>
-</PipelineOptions>
