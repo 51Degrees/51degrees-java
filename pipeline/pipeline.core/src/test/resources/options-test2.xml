@@ -25,8 +25,8 @@
     <Elements>
         <Element>
             <BuildParameters>
-                <Delimiter>${TestDelimiter:-,}</Delimiter>
-                <MaxLength>${TestMaxLength:-80}</MaxLength>
+                <Delimiter>${_51DEGREES_TEST_DELIMITER:-,}</Delimiter>
+                <MaxLength>${_51DEGREES_TEST_MAX_LENGTH:-80}</MaxLength>
             </BuildParameters>
             <BuilderName>ListSplitterElement</BuilderName>
         </Element>

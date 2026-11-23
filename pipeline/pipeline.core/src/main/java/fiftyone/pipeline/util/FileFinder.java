@@ -38,6 +38,12 @@ public class FileFinder {
     public static int DEPTH_TO_SEARCH = 30;
 
     /**
+     * The environment variable, or the system property where that is not
+     * set, that names the folder {@link #getFilePath(String)} searches below.
+     */
+    public static final String PROJECT_ROOT_NAME = "_51DEGREES_PROJECT_ROOT";
+
+    /**
      * Search for a resource (file) in a context {searchRoot}
      *
      * The file sought must end in the supplied string, where the components of the string
@@ -70,18 +76,24 @@ public class FileFinder {
     /**
      * Search (the project directory) for a resource. If it doesn't exist throw an exception.
      *
-     * If the system property project.root has been set, probably in
-     * the maven surefire plugin config, then this is set as the scope of the search,
-     * otherwise the scope is system property user.dir (the directory Java was launched from).
+     * If the environment variable {@value #PROJECT_ROOT_NAME} has been set,
+     * or the system property of the same name, probably in the maven surefire
+     * plugin config, then this is set as the scope of the search, otherwise
+     * the scope is system property user.dir (the directory Java was launched
+     * from).
      *
      * @param file the qualified name of the resource to find
      * @return a File representing the resource
      * @see #getFilePath(String, String)
      */
     public static File getFilePath(String file) {
-        String searchRoot = isNull(System.getProperty("project.root")) ?
-                System.getProperty("user.dir") :
-                System.getProperty("project.root");
+        String searchRoot = System.getenv(PROJECT_ROOT_NAME);
+        if (isNull(searchRoot) || searchRoot.trim().isEmpty()) {
+            searchRoot = System.getProperty(PROJECT_ROOT_NAME);
+        }
+        if (isNull(searchRoot) || searchRoot.trim().isEmpty()) {
+            searchRoot = System.getProperty("user.dir");
+        }
         return getFilePath(file, searchRoot);
     }
 }

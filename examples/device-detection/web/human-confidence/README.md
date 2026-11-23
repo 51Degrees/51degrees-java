@@ -53,7 +53,7 @@ The page shows three rows, one for each step.
 | `_51DEGREES_RESOURCE_KEY` | The Resource Key. Required. |
 | `_51DEGREES_LICENSE_KEY` | A License Key of the same account. Server side only. Needed to redeem. |
 | `_51DEGREES_CLOUD_ENDPOINT` | Optional. The API base including the `/api/v4/` segment. It defaults to `https://cloud.51degrees.com/api/v4/`. |
-| `PORT` | The port to listen on. It defaults to `5151`. |
+| `_51DEGREES_EXAMPLE_HTTP_PORTS` | The port to listen on. It defaults to `5151`. If it lists several, separated by commas, the example listens on the first. |
 
 ## How to run
 

@@ -48,8 +48,7 @@ public class FileUtilsTest {
         assertEquals(". and user dir should be the same", f.getCanonicalPath(), g.getCanonicalPath());
     }
 
-    private static final String NEW_PATH_NAME = "_51DEGREES_IPI_PATH";
-    private static final String OLD_PATH_NAME = "51DEGREES_IPI_PATH";
+    private static final String PATH_NAME = "_51DEGREES_IPI_PATH";
 
     /**
      * System properties stand in for the environment variables, because
@@ -57,26 +56,17 @@ public class FileUtilsTest {
      * variable.
      */
     @Test
-    public void newPathNameIsRead() throws IOException {
-        assumeTrue(System.getenv(NEW_PATH_NAME) == null);
-        String savedNew = System.clearProperty(NEW_PATH_NAME);
-        File newFile = File.createTempFile("new-path-name", ".ipi");
+    public void pathNameIsRead() throws IOException {
+        assumeTrue(System.getenv(PATH_NAME) == null);
+        String saved = System.clearProperty(PATH_NAME);
+        File file = File.createTempFile("path-name", ".ipi");
         try {
-            System.setProperty(NEW_PATH_NAME, newFile.getPath());
-            assertEquals(newFile, FileUtils.getHashFile());
+            System.setProperty(PATH_NAME, file.getPath());
+            assertEquals(file, FileUtils.getHashFile());
         } finally {
-            restore(NEW_PATH_NAME, savedNew);
-            newFile.delete();
+            restore(PATH_NAME, saved);
+            file.delete();
         }
-    }
-    @Test
-    @SuppressWarnings("deprecation")
-    public void oldPathConstantKeepsItsValue() throws Exception {
-        assertEquals(OLD_PATH_NAME, FileUtils.IPI_PATH_ENV_VAR);
-        assertTrue(FileUtils.class.getField("IPI_PATH_ENV_VAR")
-            .isAnnotationPresent(Deprecated.class));
-        assertEquals(NEW_PATH_NAME,
-            FileUtils.class.getField("IPI_PATH_VARIABLE").get(null));
     }
 
     private static void restore(String name, String value) {

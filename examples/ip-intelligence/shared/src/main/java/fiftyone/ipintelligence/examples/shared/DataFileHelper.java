@@ -25,6 +25,7 @@ package fiftyone.ipintelligence.examples.shared;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngineBuilder;
 import fiftyone.ipintelligence.shared.testhelpers.FileUtils;
+import fiftyone.pipeline.core.configuration.PipelineOptions;
 import fiftyone.pipeline.engines.Constants;
 import fiftyone.pipeline.engines.data.AspectEngineDataFile;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
@@ -134,14 +135,6 @@ public class DataFileHelper {
      * checked first, before any search of the project space.
      */
     public static final String IPI_PATH_VARIABLE = "_51DEGREES_IPI_PATH";
-
-    /**
-     * The old name of {@link #IPI_PATH_VARIABLE}. It is no longer read.
-     * @deprecated use {@link #IPI_PATH_VARIABLE}, and set the variable it
-     * names in place of this one.
-     */
-    @Deprecated
-    public static final String IPI_PATH_ENV_VAR = "51DEGREES_IPI_PATH";
 
 
     /**
@@ -619,5 +612,26 @@ public static class DatafileInfo {
             }
         }
         return WINDOWS_POWERSHELL;
+    }
+
+    /**
+     * Gives the named engine in the options the data file to use, in place
+     * of the one the options file names.
+     * @param options the options loaded from the options file
+     * @param builderName the builder name of the engine in the options file
+     * @param dataFile the data file the engine is to use
+     * @throws IllegalArgumentException when the options have no engine with
+     * that builder name, so the data file would be dropped silently
+     */
+    public static void useDataFile(
+            PipelineOptions options,
+            String builderName,
+            String dataFile) {
+        if (options.replace(builderName, "DataFile", dataFile) == false) {
+            throw new IllegalArgumentException(
+                    "The options have no element with the builder name '" +
+                    builderName + "', so the data file '" + dataFile +
+                    "' cannot be given to it.");
+        }
     }
 }

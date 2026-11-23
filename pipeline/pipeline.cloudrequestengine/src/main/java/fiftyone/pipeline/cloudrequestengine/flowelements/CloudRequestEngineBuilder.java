@@ -210,10 +210,6 @@ public class CloudRequestEngineBuilder extends
         }
     }
     
-    private String getEnvironmentVariable(String name) {
-    	return System.getenv(name);
-    }
-
     public CloudRequestEngine build() throws Exception {
         return buildEngine();
     }

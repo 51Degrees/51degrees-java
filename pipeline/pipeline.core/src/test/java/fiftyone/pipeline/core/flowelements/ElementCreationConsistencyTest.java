@@ -71,7 +71,7 @@ public class ElementCreationConsistencyTest {
         Pattern.MULTILINE);
 
     private static Path root() {
-        String root = System.getProperty("project.root");
+        String root = System.getProperty("_51DEGREES_PROJECT_ROOT");
         return Paths.get(root == null ? "../.." : root).toAbsolutePath()
             .normalize();
     }

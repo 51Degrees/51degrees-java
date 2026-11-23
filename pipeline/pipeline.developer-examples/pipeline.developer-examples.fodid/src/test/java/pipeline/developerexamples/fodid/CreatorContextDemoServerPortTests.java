@@ -28,13 +28,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Checks that the 51Did creator context demo server listens on port 5151
- * when the PORT environment variable does not choose another, as the
- * readme says.
+ * when the _51DEGREES_EXAMPLE_HTTP_PORTS environment variable does not
+ * choose another, as the readme says.
  */
 class CreatorContextDemoServerPortTests {
 
     @Test
     void listensOn5151ByDefault() {
         assertEquals(5151, CreatorContextDemoServer.DEFAULT_PORT);
+        assertEquals(5151, CreatorContextDemoServer.port(null));
+        assertEquals(5151, CreatorContextDemoServer.port(" "));
+    }
+
+    @Test
+    void listensOnTheFirstPortTheVariableLists() {
+        assertEquals(8100, CreatorContextDemoServer.port("8100"));
+        assertEquals(8101, CreatorContextDemoServer.port(" 8101, 8102"));
     }
 }

@@ -39,7 +39,7 @@ import java.io.PrintWriter;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
 import static fiftyone.devicedetection.examples.shared.PropertyHelper.asString;
-import static fiftyone.devicedetection.examples.shared.KeyHelper.getOrSetSuperResourceKey;
+import static fiftyone.devicedetection.examples.shared.KeyHelper.getOrSetPaidResourceKey;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
 public class NativeModelCloud {
@@ -52,7 +52,7 @@ public class NativeModelCloud {
     // Example values to use when looking up device details from native model names.
     private static final String NATIVE_MODEL_1 = "SC-03L";
     private static final String NATIVE_MODEL_2 = "iPhone11,8";
-    public static final String NATIVE_MODEL_EXAMPLE_RESOURCE_KEY_NAME = KeyHelper.SUPER_RESOURCE_KEY_VARIABLE;
+    public static final String NATIVE_MODEL_EXAMPLE_RESOURCE_KEY_NAME = KeyHelper.RESOURCE_KEY_VARIABLE;
 
     public static void main (String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
@@ -75,7 +75,7 @@ public class NativeModelCloud {
         // of how to do this using a configuration file instead, see the TacCloud example.
         // For more information about builders in general see the documentation at
         // https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-nativemodelcloud.java&utm_term=run
-        resourceKey = getOrSetSuperResourceKey(resourceKey, NATIVE_MODEL_EXAMPLE_RESOURCE_KEY_NAME);
+        resourceKey = getOrSetPaidResourceKey(resourceKey, NATIVE_MODEL_EXAMPLE_RESOURCE_KEY_NAME);
 
         try (PrintWriter output = new PrintWriter(os)) {
             output.println("This example shows the details of devices " +

@@ -23,6 +23,8 @@
 package fiftyone.ipintelligence.examples.shared;
 
 import fiftyone.pipeline.engines.Constants.PerformanceProfiles;
+import fiftyone.pipeline.core.configuration.ElementOptions;
+import fiftyone.pipeline.core.configuration.PipelineOptions;
 import org.junit.Test;
 
 import java.io.File;
@@ -32,9 +34,12 @@ import java.io.StringWriter;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
 public class DataFileHelperTest {
+
+    private static final String IPI_ENGINE = "IPIntelligenceOnPremiseEngine";
 
     @Test
     public void findPerformanceProfile_IgnoresCase() {
@@ -59,8 +64,7 @@ public class DataFileHelperTest {
         }
     }
 
-    private static final String NEW_PATH_NAME = "_51DEGREES_IPI_PATH";
-    private static final String OLD_PATH_NAME = "51DEGREES_IPI_PATH";
+    private static final String PATH_NAME = "_51DEGREES_IPI_PATH";
 
     /**
      * System properties stand in for the environment variables, because
@@ -68,27 +72,18 @@ public class DataFileHelperTest {
      * variable.
      */
     @Test
-    public void getDataFileLocation_NewName() throws Exception {
-        assumeTrue(System.getenv(NEW_PATH_NAME) == null);
-        String savedNew = System.clearProperty(NEW_PATH_NAME);
-        File newFile = File.createTempFile("new-path-name", ".ipi");
+    public void getDataFileLocation_ReadsTheVariable() throws Exception {
+        assumeTrue(System.getenv(PATH_NAME) == null);
+        String saved = System.clearProperty(PATH_NAME);
+        File file = File.createTempFile("path-name", ".ipi");
         try {
-            System.setProperty(NEW_PATH_NAME, newFile.getPath());
-            assertEquals(newFile.getPath(),
+            System.setProperty(PATH_NAME, file.getPath());
+            assertEquals(file.getPath(),
                     DataFileHelper.getDataFileLocation(null));
         } finally {
-            restore(NEW_PATH_NAME, savedNew);
-            newFile.delete();
+            restore(PATH_NAME, saved);
+            file.delete();
         }
-    }
-    @Test
-    @SuppressWarnings("deprecation")
-    public void oldPathConstantKeepsItsValue() throws Exception {
-        assertEquals(OLD_PATH_NAME, DataFileHelper.IPI_PATH_ENV_VAR);
-        assertTrue(DataFileHelper.class.getField("IPI_PATH_ENV_VAR")
-                .isAnnotationPresent(Deprecated.class));
-        assertEquals(NEW_PATH_NAME,
-                DataFileHelper.class.getField("IPI_PATH_VARIABLE").get(null));
     }
 
     private static void restore(String name, String value) {
@@ -97,5 +92,40 @@ public class DataFileHelperTest {
         } else {
             System.setProperty(name, value);
         }
+    }
+
+    /**
+     * The engine with the builder name is given the data file.
+     */
+    @Test
+    public void useDataFile_GivesTheEngineTheFile() {
+        PipelineOptions options = optionsWith(IPI_ENGINE);
+        DataFileHelper.useDataFile(options, IPI_ENGINE, "given.dat");
+        assertEquals("given.dat", options.find(IPI_ENGINE, "DataFile"));
+    }
+
+    /**
+     * With no engine of that builder name the data file would be dropped
+     * silently, so the helper throws, naming the builder.
+     */
+    @Test
+    public void useDataFile_ThrowsWhenNoEngineMatches() {
+        PipelineOptions options = optionsWith("OtherEngine");
+        try {
+            DataFileHelper.useDataFile(options, IPI_ENGINE, "given.dat");
+            fail("Expected an IllegalArgumentException");
+        } catch (IllegalArgumentException e) {
+            assertTrue(e.getMessage().contains(IPI_ENGINE));
+        }
+        assertEquals("options.dat", options.find("OtherEngine", "DataFile"));
+    }
+
+    private static PipelineOptions optionsWith(String builderName) {
+        ElementOptions element = new ElementOptions();
+        element.builderName = builderName;
+        element.buildParameters.put("DataFile", "options.dat");
+        PipelineOptions options = new PipelineOptions();
+        options.elements.add(element);
+        return options;
     }
 }

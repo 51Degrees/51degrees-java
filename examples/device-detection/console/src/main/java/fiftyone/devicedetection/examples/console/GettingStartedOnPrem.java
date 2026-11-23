@@ -105,12 +105,10 @@ public class GettingStartedOnPrem {
                            List<Map<String, String>> evidenceList,
                            OutputStream outputStream) throws Exception {
         logger.info("Running GettingStarted example");
+        String dataFileLocation;
         try {
-            String dataFileLocation =
+            dataFileLocation =
                     DataFileHelper.findDataFile(dataFile).getAbsolutePath();
-            // the location of the test data file is interpolated in the pipeline
-            // configuration file
-            System.setProperty("TestDataFile", dataFileLocation);
         } catch (Exception e) {
             DataFileHelper.cantFindDataFile(dataFile);
             throw e;
@@ -128,6 +126,10 @@ public class GettingStartedOnPrem {
         // load the options and if no resource key has been set in the file
         // use the one supplied to this method
         PipelineOptions pipelineOptions = PipelineOptionsFactory.getOptionsFromFile(optionsFile);
+        // The data file this method was given is the one the pipeline uses,
+        // in place of the one the options file names.
+        DataFileHelper.useDataFile(
+                pipelineOptions, "DeviceDetectionHashEngine", dataFileLocation);
         /* Build a new Pipeline from the configuration. The options file sets
         ShareUsage to false, because this example processes evidence 51Degrees
         already holds, but in normal operation usage sharing should be enabled
@@ -135,7 +137,6 @@ public class GettingStartedOnPrem {
         FiftyOnePipelineBuilder does unless ShareUsage is false. */
         try (Pipeline pipeline = new FiftyOnePipelineBuilder()
                 .buildFromConfiguration(pipelineOptions)) {
-
 
             /* Get the 'engine' element within the pipeline that performs device detection. We
             can use this to get details about the data file as well as meta-data describing

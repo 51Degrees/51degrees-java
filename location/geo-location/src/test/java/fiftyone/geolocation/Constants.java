@@ -28,7 +28,7 @@ public class Constants {
     /**
      * The key with every property, which the value tests need.
      */
-    public static final String RESOURCE_KEY_ENV_VAR = "_51DEGREES_RESOURCE_KEY_SUPER";
+    public static final String RESOURCE_KEY_ENV_VAR = "_51DEGREES_RESOURCE_KEY_BESPOKE";
     // For some reason, the value of the 'county' property returned
     // by the call to the cloud is always null on the build agent,
     // despite working correctly locally.

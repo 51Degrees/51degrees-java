@@ -109,9 +109,10 @@ repositories used to do for one package tree each.
 
 Required:
 
-- `ACCESS_TOKEN`: GitHub
+- `CI_ACCESS_TOKEN`: GitHub
   [access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#about-personal-access-tokens)
-  for cloning repositories and creating pull requests.
+  for cloning repositories and creating pull requests. It is an organization
+  secret that only CI uses, so it has no `_51DEGREES_` prefix.
 
 The workflows pass the secrets to common-ci with `secrets: inherit`, and
 common-ci exports each secret and each `_51DEGREES_` organization variable
@@ -129,35 +130,39 @@ To run the cloud tests, the resource keys are organization variables and
 the license keys are organization secrets:
 
 - `_51DEGREES_RESOURCE_KEY_BESPOKE`: [resource key](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=ci-readme.md&utm_term=secrets)
-  from which common-ci fills `_51DEGREES_RESOURCE_KEY`, the key the cloud
-  tests read, and `_51DEGREES_RESOURCE_KEY_SUPER`, the key with every
-  property, which the Location and the TAC and native model tests read.
+  with every property, which the cloud tests read. `_51DEGREES_RESOURCE_KEY`
+  is the name a person running an example sets, so it has no secret, and a
+  test of an example sets it to the key it checks.
 - `_51DEGREES_LICENSE_KEY_BESPOKE`: license key for the cloud products, for
   the Cloud Request Engine's test on a license key alone.
 - `_51DEGREES_RESOURCE_KEY_51DID`: resource key for the 51Did cloud tests.
   It has to belong to the same account as `_51DEGREES_LICENSE_KEY_51DID`,
   or the licensed redeem comes back unreadable.
-- `_51DEGREES_LICENSE_KEY_51DID`: license key for the 51Did cloud tests.
-  `cloud-51did.yml` gives it only to the pass with
-  `_51DEGREES_RESOURCE_KEY_51DID`. The Bespoke pass redeems with none.
+- `_51DEGREES_LICENSE_KEY_51DID`: license key for the 51Did cloud tests,
+  which use it only with `_51DEGREES_RESOURCE_KEY_51DID`. They run again
+  with `_51DEGREES_RESOURCE_KEY_BESPOKE` and no license key.
 - `_51DEGREES_RESOURCE_KEY_BASIC`: resource key whose products don't offer
   `HumanConfidenceSource`.
   [cloud-human-confidence.yml](../.github/workflows/cloud-human-confidence.yml)
   runs the Human Confidence example's live test with it, expecting no
   source, and with `_51DEGREES_RESOURCE_KEY_BESPOKE`, expecting `Passive`.
-- `_51DEGREES_CLOUD_ENDPOINT`: the cloud service that
-  `cloud-human-confidence.yml` gives the example, the API base including
-  `/api/v4/`.
+- `_51DEGREES_CLOUD_ENDPOINT`: an organization variable naming the cloud
+  service the cloud tests and examples call, the API base including
+  `/api/v4/`. They call the public service when it is not set.
 
 A cloud test with no key is skipped, naming the variable it reads.
 
-To publish to Maven Central (51Degrees only):
+To publish to Maven Central (51Degrees only), these organization secrets,
+which only CI uses and so have no `_51DEGREES_` prefix. common-ci reads them
+and gives them only to the jobs that sign or publish:
 
 - `MAVEN_SETTINGS`: Central Portal token.
-- `JAVA_GPG_KEY_PASSPHRASE` and `JAVA_KEY_PGP_FILE`: the key the packages are
-  signed with.
-- `CODE_SIGNING_KEY_VAULT_NAME`, `CODE_SIGNING_KEY_VAULT_URL`,
-  `CODE_SIGNING_KEY_VAULT_CLIENT_ID`, `CODE_SIGNING_KEY_VAULT_TENANT_ID`,
+- `JAVA_GPG_KEY_PASSPHRASE` and `JAVA_KEY_PGP_FILE`: the key the packages
+  are signed with.
+- `CODE_SIGNING_KEY_VAULT_NAME`,
+  `CODE_SIGNING_KEY_VAULT_URL`,
+  `CODE_SIGNING_KEY_VAULT_CLIENT_ID`,
+  `CODE_SIGNING_KEY_VAULT_TENANT_ID`,
   `CODE_SIGNING_KEY_VAULT_CLIENT_SECRET`,
   `CODE_SIGNING_KEY_VAULT_CERTIFICATE_NAME` and
   `CODE_SIGNING_KEY_VAULT_CERTIFICATE_DATA`: the key vault that signs the

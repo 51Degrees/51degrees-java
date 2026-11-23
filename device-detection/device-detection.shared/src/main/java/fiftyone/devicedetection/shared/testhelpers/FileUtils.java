@@ -51,8 +51,6 @@ public class FileUtils {
     public static final String TAC_HASH_DATA_FILE_NAME = "TAC-HashV41.hash";
     public static final String LITE_HASH_DATA_FILE_NAME = "51Degrees-LiteV4.1.hash";
     private static  Optional<File> HASH_DATA_FILE;
-    public static final String UA_FILE_NAME = "20000 User Agents.csv";
-    private static File UA_FILE;
     public static final String EVIDENCE_FILE_NAME = "20000 Evidence Records.yml";
     private static Optional<File> EVIDENCE_FILE;
     // Where each free file is in the data repository. A search for the path
@@ -60,7 +58,6 @@ public class FileUtils {
     // such as a Git LFS pointer in an old device-detection-data folder.
     public static final String LITE_HASH_DATA_FILE_PATH =
         "device-detection/" + LITE_HASH_DATA_FILE_NAME;
-    public static final String UA_FILE_PATH = "device-detection/" + UA_FILE_NAME;
     public static final String EVIDENCE_FILE_PATH =
         "device-detection/" + EVIDENCE_FILE_NAME;
 

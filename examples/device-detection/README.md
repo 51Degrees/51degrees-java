@@ -49,7 +49,7 @@ To use the resource key in the example it can be supplied as a
 command line parameter, pasted into the configuration file (where there is one)
 or supplied as either an environment variable or a system
 property called "_51DEGREES_RESOURCE_KEY". The TAC and native model
-examples read theirs from "_51DEGREES_RESOURCE_KEY_SUPER".
+examples read theirs from the same name.
 
 Some cloud examples require an enhanced resource key containing a license key. And some
 on-premise examples require you to provide a license key. You can find out about 
@@ -118,16 +118,16 @@ java -cp ./console/target/device-detection-java-examples.console-4.5.127-SNAPSHO
 
 The web examples are run from the root of this repository, because they find their
 web content by a path relative to it. They listen on port 5151 and stop when Enter
-is pressed. Set the `PORT` environment variable to listen on another port, in which
-case the example runs until the process is stopped:
+is pressed. Set the `_51DEGREES_EXAMPLE_HTTP_PORTS` environment variable to listen on
+another port, in which case the example runs until the process is stopped:
 
 ```bash
-PORT=8100 java -jar ./web/getting-started.onprem/target/device-detection-java-examples.web.getting-started.onprem-4.5.127-SNAPSHOT-jar-with-dependencies.jar
+_51DEGREES_EXAMPLE_HTTP_PORTS=8100 java -jar ./web/getting-started.onprem/target/device-detection-java-examples.web.getting-started.onprem-4.5.127-SNAPSHOT-jar-with-dependencies.jar
 ```
 
 The on-premise web example takes its data file from the `_51DEGREES_DD_PATH`
-environment variable, then from `TestDataFile`, and otherwise uses the free Lite file
-in `cxx/data/device-detection`, which it downloads before the server starts if it is
+environment variable, and otherwise uses the free Lite file in
+`cxx/data/device-detection`, which it downloads before the server starts if it is
 missing.
 
 The [Human Confidence](web/human-confidence/README.md) web example is a small server

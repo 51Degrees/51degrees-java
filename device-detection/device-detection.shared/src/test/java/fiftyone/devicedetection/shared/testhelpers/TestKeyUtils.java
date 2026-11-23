@@ -24,23 +24,29 @@ package fiftyone.devicedetection.shared.testhelpers;
 
 import java.util.Base64;
 import java.util.Objects;
+import java.util.function.Function;
 
 /**
  * Helpers to obtain keys from the environment
  */
 public class TestKeyUtils {
     /**
-     * Obtain a key either from environment variable or from a property.
-     * <p>
-     * Try resource key as env var, then as upper case env var, the system property
+     * Obtain a key from the environment variable of the name given, or
+     * from the system property of the same name when that is not set.
      */
     public static String getNamedKey(String keyName) {
-        String resourceKey = System.getenv(keyName);
+        return getNamedKey(keyName, System::getenv);
+    }
+
+    /**
+     * Obtain a key from the environment given, or from the system property
+     * of the same name when the environment has none.
+     */
+    static String getNamedKey(String keyName,
+                              Function<String, String> environment) {
+        String resourceKey = environment.apply(keyName);
         if (Objects.isNull(resourceKey)) {
-            resourceKey = System.getenv(keyName.toUpperCase());
-            if (Objects.isNull(resourceKey)) {
-                resourceKey = System.getProperty(keyName);
-            }
+            resourceKey = System.getProperty(keyName);
         }
         return resourceKey;
     }

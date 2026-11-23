@@ -38,18 +38,19 @@ public class KeyHelper {
     public static final String RESOURCE_KEY_VARIABLE = "_51DEGREES_RESOURCE_KEY";
 
     /**
-     * The old name of {@link #RESOURCE_KEY_VARIABLE}. It is no longer read.
-     * @deprecated use {@link #RESOURCE_KEY_VARIABLE}, and set the variable
-     * it names in place of this one.
-     */
-    @Deprecated
-    public static final String RESOURCE_KEY_ENV_VAR = "51DEGREES_RESOURCE_KEY";
-
-    /**
-     * The variable the cloud examples and their tests read a resource key
-     * from, which is {@link #RESOURCE_KEY_VARIABLE}.
+     * The variable the cloud examples read a resource key from, which is
+     * {@link #RESOURCE_KEY_VARIABLE}. A test of an example gives the
+     * example its key under this name.
      */
     public static final String TEST_RESOURCE_KEY = RESOURCE_KEY_VARIABLE;
+
+    /**
+     * The variable the tests of the cloud examples read the resource key
+     * with every property from. Each test gives the key to its example as
+     * an argument or in {@link #RESOURCE_KEY_VARIABLE}.
+     */
+    public static final String BESPOKE_RESOURCE_KEY_VARIABLE =
+        "_51DEGREES_RESOURCE_KEY_BESPOKE";
     static Logger logger = LoggerFactory.getLogger(KeyHelper.class);
 
     static final String CREATE_KEY_URL =
@@ -65,8 +66,7 @@ public class KeyHelper {
     /**
      * The resource key a cloud example runs with, being the key given as
      * its argument, or else the key in {@link #RESOURCE_KEY_VARIABLE}, read
-     * as an environment variable, under its upper case name and as a
-     * system property.
+     * as an environment variable and then as a system property.
      * @param argument the key given on the command line, or null
      * @return the key, or null when there is none
      */
@@ -101,8 +101,7 @@ public class KeyHelper {
 
     /**
      * The resource key for a test that calls the live cloud service, from
-     * {@link #RESOURCE_KEY_VARIABLE}, the name
-     * {@link #getOrSetTestResourceKey()} reads. Skips the test, naming the
+     * {@link #BESPOKE_RESOURCE_KEY_VARIABLE}. Skips the test, naming the
      * variable, when there is none, because a cloud test that passes
      * without a key has called nothing.
      * @param asksFor what the test asks the service for
@@ -112,21 +111,18 @@ public class KeyHelper {
     public static String requireTestResourceKey(String asksFor,
                                                 String... products) {
         return requireResourceKey(KeyHelper::readKey,
-            Collections.singletonList(RESOURCE_KEY_VARIABLE), asksFor,
-            products);
+            BESPOKE_RESOURCE_KEY_VARIABLE, asksFor, products);
     }
 
     static String requireResourceKey(Function<String, String> read,
-                                     List<String> exampleNames,
+                                     String exampleName,
                                      String asksFor,
                                      String... products) {
-        for (String name : exampleNames) {
-            String value = read.apply(name);
-            if (KeyUtils.isInvalidKey(value) == false) {
-                return value.trim();
-            }
+        String value = read.apply(exampleName);
+        if (KeyUtils.isInvalidKey(value) == false) {
+            return value.trim();
         }
-        throw skipTest(noResourceKey(exampleNames, asksFor, products));
+        throw skipTest(noResourceKey(exampleName, asksFor, products));
     }
 
     /**
@@ -150,11 +146,11 @@ public class KeyHelper {
         }
     }
 
-    static String noResourceKey(List<String> names, String asksFor,
+    static String noResourceKey(String name, String asksFor,
                                 String... products) {
         return "This test calls the live 51Degrees cloud service, so it " +
             "needs a resource key, and it is skipped because " +
-            String.join(", ", names) + " is not set as an environment " +
+            name + " is not set as an environment " +
             "variable or as a system property. " +
             "The key has to carry the " + productList(products) +
             ", because the test asks the service for " + asksFor + ". To " +
@@ -175,14 +171,17 @@ public class KeyHelper {
     }
 
     /**
-     * A key read as an environment variable, as its upper case name, and
-     * then as a system property, skipping any that is not a key, such as
-     * the empty string the example poms pass for a key that is not set.
+     * A key read as an environment variable, and then as a system property
+     * of the same name, skipping any that is not a key.
      */
     private static String readKey(String name) {
+        return readKey(name, System::getenv);
+    }
+
+    static String readKey(String name,
+                          Function<String, String> environment) {
         for (String value : new String[]{
-            System.getenv(name),
-            System.getenv(name.toUpperCase(Locale.ROOT)),
+            environment.apply(name),
             System.getProperty(name)}) {
             if (KeyUtils.isInvalidKey(value) == false) {
                 return value;
@@ -245,10 +244,10 @@ public class KeyHelper {
         }
         return value;
     }
-    public static String getOrSetSuperResourceKey(String value, String variablename) {
-        return getOrSetSuperResourceKey(value, variablename, true);
+    public static String getOrSetPaidResourceKey(String value, String variablename) {
+        return getOrSetPaidResourceKey(value, variablename, true);
     }
-    public static String getOrSetSuperResourceKey(String value, String variablename, boolean shouldThrow) {
+    public static String getOrSetPaidResourceKey(String value, String variablename, boolean shouldThrow) {
         return getOrSetResourceKey(value, variablename, "TAC lookup and native model are not " +
                 "available with a free resource key. " +
                 "See https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-ipintelligence-examples-shared-keyhelper.java&utm_term=super-resource-key-required to get a paid subscription " +

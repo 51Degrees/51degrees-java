@@ -35,6 +35,27 @@ import java.util.Map;
 import java.util.Scanner;
 
 public class EmbedJetty {
+    /**
+     * The environment variable an automated run, such as the shared browser
+     * tests, sets to the port the example listens on. It may hold a comma
+     * separated list, and the example listens on the first port in it.
+     */
+    public static final String HTTP_PORTS_ENV_VAR =
+            "_51DEGREES_EXAMPLE_HTTP_PORTS";
+
+    /**
+     * Reads the port from the value of {@link #HTTP_PORTS_ENV_VAR}.
+     * @param value the variable's value, or null when it is not set
+     * @return the first port the value lists, or null when it lists none
+     */
+    public static Integer portFrom(String value) {
+        if (value == null) {
+            return null;
+        }
+        String first = value.split(",", -1)[0].trim();
+        return first.isEmpty() ? null : Integer.valueOf(first);
+    }
+
     public static void runWebApp(String resourceBase, int port) throws Exception {
         Server server = startWebApp(resourceBase, port);
         System.out.format("Browse to http://localhost:%d using a 'private' window in your browser\n" +

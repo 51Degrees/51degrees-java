@@ -41,18 +41,18 @@ public class PipelineBuilderInterpolationTest {
                 "options-test2.xml"));
 
         assertTrue(options.find("ListSplitterElement", "Delimiter")
-                .contains("${TestDelimiter:-,}"));
+                .contains("${_51DEGREES_TEST_DELIMITER:-,}"));
         // default values
-        System.clearProperty("TestMaxLength");
-        System.clearProperty("TestDelimiter");
+        System.clearProperty("_51DEGREES_TEST_MAX_LENGTH");
+        System.clearProperty("_51DEGREES_TEST_DELIMITER");
         try (Pipeline pipeline = new PipelineBuilder().buildFromConfiguration(options)) {
             ListSplitterElement lse = pipeline.getElement(ListSplitterElement.class);
             assertEquals(80,lse.getMaxLength());
             assertEquals(",", lse.getDelimiter());
         }
         // set values from properties
-        System.setProperty("TestDelimiter", "::::");
-        System.setProperty("TestMaxLength", "120");
+        System.setProperty("_51DEGREES_TEST_DELIMITER", "::::");
+        System.setProperty("_51DEGREES_TEST_MAX_LENGTH", "120");
         try (Pipeline pipeline = new PipelineBuilder().buildFromConfiguration(options)) {
             ListSplitterElement lse = pipeline.getElement(ListSplitterElement.class);
             assertEquals(120,lse.getMaxLength());

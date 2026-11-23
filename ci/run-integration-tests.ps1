@@ -7,7 +7,10 @@ param(
     [string]$Version,
     # False, from select-options.ps1, on every entry of a pull request but
     # one, so the browser contract runs once.
-    [bool]$SeleniumContract = $true
+    [bool]$SeleniumContract = $true,
+    # The branch of the shared Selenium contract tests to run, so a change
+    # there can be tried here before it is merged.
+    [string]$SeleniumTestsRef = 'main'
 )
 $ErrorActionPreference = "Stop"
 # Each part's exit code is checked below, so one failing part does not stop
@@ -35,8 +38,9 @@ if ($Version) {
 Write-Host "::group::Pipeline developer examples"
 Push-Location "$RepoName/pipeline"
 try {
-    # The cloud engine example calls the live cloud service, with the key in
-    # _51DEGREES_RESOURCE_KEY.
+    # The cloud engine example calls the live cloud service. Its test reads
+    # the key from _51DEGREES_RESOURCE_KEY_BESPOKE and gives it to the example
+    # as _51DEGREES_RESOURCE_KEY.
     mvn test @MavenOptions -DfailIfNoTests=false "-Dsurefire.failIfNoSpecifiedTests=false" -Dtest=ExampleTests
     if ($LASTEXITCODE -ne 0) { $failed += 'pipeline developer examples' }
 } finally {
@@ -86,7 +90,9 @@ function Invoke-ContractTests {
         mvn @MavenOptions -pl $Module -am package -DskipTests @versionArgs
         if ($LASTEXITCODE -ne 0) { throw "Building the $Label web example failed." }
         $jar = (Get-ChildItem "$Module/target/*-jar-with-dependencies.jar" | Select-Object -First 1).FullName
-        $env:PORT = $Port
+        # The port the example listens on, under the name the shared suite
+        # gives an example it starts itself.
+        ${env:_51DEGREES_EXAMPLE_HTTP_PORTS} = $Port
         foreach ($name in $ExampleEnv.Keys) {
             Set-Item "env:$name" $ExampleEnv[$name]
         }
@@ -118,7 +124,7 @@ function Invoke-ContractTests {
         throw
     } finally {
         if ($example) { Remove-Job -Force $example }
-        Remove-Item env:PORT, env:_51DEGREES_EXAMPLE_URL, env:_51DEGREES_EXAMPLE_LANG `
+        Remove-Item env:_51DEGREES_EXAMPLE_HTTP_PORTS, env:_51DEGREES_EXAMPLE_URL, env:_51DEGREES_EXAMPLE_LANG `
             -ErrorAction SilentlyContinue
         foreach ($name in $ExampleEnv.Keys) {
             Remove-Item "env:$name" -ErrorAction SilentlyContinue
@@ -134,13 +140,12 @@ if (-not $SeleniumContract) {
 } elseif ($IsLinux -and [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -eq [System.Runtime.InteropServices.Architecture]::Arm64) {
     Write-Host "::warning title=Selenium skipped::Selenium contract skipped on linux-arm64, which has no selenium-manager build. It runs on x64 and macOS arm64."
 } else {
-    # Get the shared contract tests. SELENIUM_TESTS_REF picks a branch of the
-    # suite, so a change there can be tried here before it is merged.
-    $seleniumRef = if ($env:SELENIUM_TESTS_REF) { $env:SELENIUM_TESTS_REF } else { 'main' }
+    # Get the shared contract tests.
     if (-not (Test-Path selenium-api-tests)) {
-        Write-Host "Cloning the Selenium contract tests from '$seleniumRef'"
-        git clone --depth 1 --branch $seleniumRef https://github.com/51Degrees/selenium-api-tests.git
+        Write-Host "Cloning the Selenium contract tests from '$SeleniumTestsRef'"
+        git clone --depth 1 --branch $SeleniumTestsRef https://github.com/51Degrees/selenium-api-tests.git
     }
+
     # Chrome's first start on a fresh runner is many times slower than the
     # starts after it, so it is made here rather than inside the first test.
     # The tests still run when it cannot be made.

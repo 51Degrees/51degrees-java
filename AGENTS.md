@@ -183,8 +183,8 @@ most of the Device Detection examples use can be made
 The Device Detection, IP Intelligence and Location cloud examples take the
 key as their first argument, or from the `_51DEGREES_RESOURCE_KEY`
 environment variable or system property, and no other name. The TAC and
-native model examples need a key with paid properties and read it from
-`_51DEGREES_RESOURCE_KEY_SUPER`, which each names when it has no key.
+native model examples need a key with paid properties, and read it from the
+same name.
 
 ```
 java -cp examples/device-detection/console/target/device-detection-java-examples.console-4.5.127-SNAPSHOT-jar-with-dependencies.jar fiftyone.devicedetection.examples.console.GettingStartedCloud <key>
@@ -249,16 +249,15 @@ with its "Find out more" section and exits with code 0. The tests named
 
 ## Environment variable names
 
-[common-ci's list of environment variable names](https://github.com/51Degrees/common-ci/blob/d8a9c596eabf69dd5581a08e9360cdd1c9b3d9e8/environment-variables.md)
-holds every environment variable name that the packages, tests, examples and
-CI scripts of every language read, with what each name holds and the
-deprecated names each replaced. The list decides. Use the names it gives, and
-when a change needs a new name, or reads an old name again, change
-[`environment-variables.json`](https://github.com/51Degrees/common-ci/blob/d8a9c596eabf69dd5581a08e9360cdd1c9b3d9e8/environment-variables.json)
-in common-ci in the same piece of work. This repository's own name
-check, [`ci/check-environment-variable-names.ps1`](ci/check-environment-variable-names.ps1), still keeps a
-list of its own. Where the two differ, common-ci's list is the one to
-follow.
+Every name 51Degrees defines for an environment variable or a Java system
+property starts `_51DEGREES_`, each name holds one thing, and no name is
+filled from another. A name the platform or a build tool defines keeps the
+name its owner gave it.
+[`ci/check-environment-variable-names.ps1`](ci/check-environment-variable-names.ps1)
+reads every tracked file and fails on a name read or set that is neither. It
+holds the short list of platform and tool names. Run it, and its tests in
+[`ci/check-environment-variable-names.Tests.ps1`](ci/check-environment-variable-names.Tests.ps1),
+after a change that reads or sets a name.
 
 ## One reactor, six package trees
 
@@ -279,10 +278,12 @@ module starts to depend on another, add it to `ci/packages.json` as well, or
 the pull request build fails. `ci/README.md` describes how a release is
 planned.
 
-## Data files and `project.root`
+## Data files and `_51DEGREES_PROJECT_ROOT`
 
 Tests and examples find data files with `FileFinder`, which searches below
-`project.root`. The surefire configuration sets that to
+the folder `_51DEGREES_PROJECT_ROOT` names, read as an environment variable
+and then as a system property. The surefire configuration sets the system
+property to
 `maven.multiModuleProjectDirectory`, which Maven takes from the nearest `.mvn`
 folder above the working directory. The only `.mvn` folder is at the root, so
 the search covers `cxx/data/device-detection` and `cxx/data/ip-intelligence`

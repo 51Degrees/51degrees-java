@@ -27,7 +27,6 @@ import org.junit.Test;
 
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -55,8 +54,7 @@ public class KeyHelperTest {
         // A test can clear a system property but not an environment
         // variable.
         assumeTrue(name + " is set in the environment",
-            System.getenv(name) == null &&
-                System.getenv(name.toUpperCase()) == null);
+            System.getenv(name) == null);
         String saved = System.clearProperty(name);
         try {
             assertNull(KeyHelper.getOrSetTestResourceKey(false));
@@ -65,6 +63,31 @@ public class KeyHelperTest {
             if (saved != null) {
                 System.setProperty(name, saved);
             }
+        }
+    }
+
+    /**
+     * A key is read from the environment under the name given, and from
+     * the system property of that name when the environment has none.
+     */
+    @Test
+    public void readKey_ReadsTheEnvironmentThenTheSystemProperty() {
+        String name = "Key_Helper_Test_Name";
+        Map<String, String> environment = new HashMap<>();
+        environment.put("KEY_HELPER_TEST_NAME", KEY_A);
+        assertNull(KeyHelper.readKey(name, environment::get));
+        assertNull(KeyHelper.getNamedKey(name, environment::get));
+        System.setProperty(name, KEY_B);
+        try {
+            assertEquals(KEY_B, KeyHelper.readKey(name, environment::get));
+            assertEquals(KEY_B,
+                KeyHelper.getNamedKey(name, environment::get));
+            environment.put(name, KEY_A);
+            assertEquals(KEY_A, KeyHelper.readKey(name, environment::get));
+            assertEquals(KEY_A,
+                KeyHelper.getNamedKey(name, environment::get));
+        } finally {
+            System.clearProperty(name);
         }
     }
 
@@ -82,7 +105,7 @@ public class KeyHelperTest {
         AssumptionViolatedException skipped = assertThrows(
             AssumptionViolatedException.class, () ->
                 KeyHelper.requireResourceKey(name -> null,
-                    Collections.singletonList(KeyHelper.TEST_RESOURCE_KEY),
+                    KeyHelper.TEST_RESOURCE_KEY,
                     "whether a device is mobile", "device"));
         assertEquals("This test calls the live 51Degrees cloud service, so " +
                 "it needs a resource key, and it is skipped because " +
@@ -97,36 +120,42 @@ public class KeyHelperTest {
     }
 
     @Test
+    public void bespokeResourceKeyVariable_IsTheEveryPropertyName() {
+        assertEquals("_51DEGREES_RESOURCE_KEY_BESPOKE",
+            KeyHelper.BESPOKE_RESOURCE_KEY_VARIABLE);
+    }
+
+    @Test
     public void requireResourceKey_TwoProducts_NamesBoth() {
         AssumptionViolatedException skipped = assertThrows(
             AssumptionViolatedException.class, () ->
                 KeyHelper.requireResourceKey(name -> null,
-                    Collections.singletonList("_51DEGREES_RESOURCE_KEY_SUPER"),
+                    KeyHelper.BESPOKE_RESOURCE_KEY_VARIABLE,
                     "the devices that match a TAC", "hardware", "device"));
         assertTrue(skipped.getMessage(), skipped.getMessage().contains(
-            "skipped because _51DEGREES_RESOURCE_KEY_SUPER is not set"));
+            "skipped because _51DEGREES_RESOURCE_KEY_BESPOKE is not set"));
         assertTrue(skipped.getMessage(), skipped.getMessage().contains(
             "carry the hardware and device products, because"));
     }
 
     /**
-     * Only the names the test gives are read. A key under another name,
+     * Only the name the test gives is read. A key under another name,
      * such as the one every cloud example reads, does not stand in for the
      * key with every property.
      */
     @Test
-    public void requireResourceKey_ReadsOnlyTheNamesGiven() {
+    public void requireResourceKey_ReadsOnlyTheNameGiven() {
         Map<String, String> values = new HashMap<>();
         values.put(KeyHelper.TEST_RESOURCE_KEY, KEY_A);
         assertThrows(AssumptionViolatedException.class, () ->
             KeyHelper.requireResourceKey(values::get,
-                Collections.singletonList("_51DEGREES_RESOURCE_KEY_SUPER"),
+                KeyHelper.BESPOKE_RESOURCE_KEY_VARIABLE,
                 "the devices that match a TAC", "hardware", "device"));
     }
 
     /**
-     * A name holding something that is not a key, such as the empty
-     * string a pom passes for a key that is not set, is passed over.
+     * A name holding something that is not a key, such as an empty string,
+     * is passed over.
      */
     @Test
     public void requireResourceKey_ValueThatIsNotAKey_IsPassedOver() {
@@ -134,11 +163,11 @@ public class KeyHelperTest {
         values.put(KeyHelper.TEST_RESOURCE_KEY, "");
         assertThrows(AssumptionViolatedException.class, () ->
             KeyHelper.requireResourceKey(values::get,
-                Collections.singletonList(KeyHelper.TEST_RESOURCE_KEY),
+                KeyHelper.TEST_RESOURCE_KEY,
                 "whether a device is mobile", "device"));
         values.put(KeyHelper.TEST_RESOURCE_KEY, KEY_B);
         assertEquals(KEY_B, KeyHelper.requireResourceKey(values::get,
-            Collections.singletonList(KeyHelper.TEST_RESOURCE_KEY),
+            KeyHelper.TEST_RESOURCE_KEY,
             "whether a device is mobile", "device"));
     }
 
@@ -156,6 +185,45 @@ public class KeyHelperTest {
     }
 
     /**
+     * A test of a cloud example reads the key with every property. A key
+     * under the name the example reads does not stand in for it.
+     */
+    @Test
+    public void requireTestResourceKey_ReadsTheKeyWithEveryProperty() {
+        String example = "_51DEGREES_RESOURCE_KEY";
+        String bespoke = "_51DEGREES_RESOURCE_KEY_BESPOKE";
+        // A test can set a system property but not an environment
+        // variable.
+        assumeTrue(System.getenv(example) == null &&
+            System.getenv(bespoke) == null);
+        String savedExample = System.getProperty(example);
+        String savedBespoke = System.clearProperty(bespoke);
+        try {
+            System.setProperty(example, KEY_A);
+            AssumptionViolatedException skipped = assertThrows(
+                AssumptionViolatedException.class, () ->
+                    KeyHelper.requireTestResourceKey(
+                        "whether a device is mobile", "device"));
+            assertTrue(skipped.getMessage(),
+                skipped.getMessage().contains(bespoke + " is not set"));
+            System.setProperty(bespoke, KEY_B);
+            assertEquals(KEY_B, KeyHelper.requireTestResourceKey(
+                "whether a device is mobile", "device"));
+        } finally {
+            putBack(example, savedExample);
+            putBack(bespoke, savedBespoke);
+        }
+    }
+
+    private static void putBack(String name, String value) {
+        if (value == null) {
+            System.clearProperty(name);
+        } else {
+            System.setProperty(name, value);
+        }
+    }
+
+    /**
      * A cloud example runs as an application, with no test library on its
      * class path, and reads its key with KeyHelper. So KeyHelper has to
      * load, and find a key, where JUnit cannot be found.
@@ -168,8 +236,8 @@ public class KeyHelperTest {
                 loader);
             assertNotSame(KeyHelper.class, helper);
             String key = (String) helper
-                .getMethod("findResourceKey", String.class, String[].class)
-                .invoke(null, KEY_A, new String[0]);
+                .getMethod("findResourceKey", String.class, String.class)
+                .invoke(null, KEY_A, KeyHelper.TEST_RESOURCE_KEY);
             assertEquals(KEY_A, key);
         }
     }

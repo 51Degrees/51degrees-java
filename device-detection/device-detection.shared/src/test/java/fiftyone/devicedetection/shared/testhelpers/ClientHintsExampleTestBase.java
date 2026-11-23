@@ -23,7 +23,6 @@
 package fiftyone.devicedetection.shared.testhelpers;
 
 import static fiftyone.devicedetection.shared.testhelpers.Constants.*;
-import static org.junit.Assert.fail;
 
 public class ClientHintsExampleTestBase {
 
@@ -55,26 +54,4 @@ public class ClientHintsExampleTestBase {
 	public static String BASE_URL = "http://localhost:"+ TEST_PORT_NUMBER + "/";
 	public static String CLOUD_URL = BASE_URL + "pipeline.uachmanual.cloud.examples.servlet";
 	public static String HASH_URL = BASE_URL + "pipeline.uachmanual.examples.servlet";
-	
-
-    /*
-     *  Function to get environment variable value.
-     */
-    private static String getEnvVar(String name, String description) {
-    	String resourceKey = null;
-    	String envResourceKey =  System.getenv(name);
-    	String propertyResourceKey = System.getProperty(name);
-    	    	
-        if(envResourceKey == null || envResourceKey.isEmpty()) {
-        	if (propertyResourceKey == null || propertyResourceKey.isEmpty())
-        		fail(description + " needs to be set in " + name + " environment variable to run Cloud tests.");
-        	else {
-        		   resourceKey = propertyResourceKey;
-        	}
-        }
-        else {
-            	resourceKey = envResourceKey;
-        }       
-        return resourceKey;
-    }
 }

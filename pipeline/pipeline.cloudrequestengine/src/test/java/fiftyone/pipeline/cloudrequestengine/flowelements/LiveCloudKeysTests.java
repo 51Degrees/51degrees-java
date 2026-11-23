@@ -24,7 +24,7 @@ package fiftyone.pipeline.cloudrequestengine.flowelements;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -33,10 +33,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class LiveCloudKeysTests {
 
+    /**
+     * The live tests read the resource key with every property.
+     */
     @Test
-    public void resourceKey_ReadUnderItsOwnNameOnly() {
-        assertArrayEquals(new String[]{"_51DEGREES_RESOURCE_KEY"},
-            LiveCloudKeys.RESOURCE_KEY_NAMES);
+    public void resourceKey_IsTheKeyWithEveryProperty() {
+        assertEquals("_51DEGREES_RESOURCE_KEY_BESPOKE",
+            LiveCloudKeys.RESOURCE_KEY_NAME);
     }
 
     /**
@@ -45,15 +48,15 @@ public class LiveCloudKeysTests {
      * read here.
      */
     @Test
-    public void licenceKey_IsTheCloudLicence() {
-        assertArrayEquals(new String[]{"_51DEGREES_LICENSE_KEY_BESPOKE"},
-            LiveCloudKeys.LICENCE_KEY_NAMES);
+    public void licenseKey_IsTheCloudLicense() {
+        assertEquals("_51DEGREES_LICENSE_KEY_BESPOKE",
+            LiveCloudKeys.LICENSE_KEY_NAME);
     }
 
     @Test
     public void noResourceKey_NamesTheVariable() {
         assertTrue(LiveCloudKeys.noResourceKey().contains(
-            "_51DEGREES_RESOURCE_KEY is not set"),
+            "_51DEGREES_RESOURCE_KEY_BESPOKE is not set"),
             LiveCloudKeys.noResourceKey());
     }
 }

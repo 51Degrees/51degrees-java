@@ -51,11 +51,30 @@ public class OptionsFileTest {
                 System.getProperty("basedir", "."), "src", "main", "webapp",
                 "WEB-INF", "51Degrees-Mixed.xml")), StandardCharsets.UTF_8);
         Matcher dataFile = Pattern.compile(
-                "<DataFile>\\$\\{TestDataFile:-([^}]*)\\}</DataFile>")
+                "<DataFile>\\$\\{_51DEGREES_IPI_PATH:-([^}]*)\\}</DataFile>")
                 .matcher(xml);
         assertTrue("51Degrees-Mixed.xml should give a default IP Intelligence " +
                 "data file", dataFile.find());
         assertEquals("cxx/data/" + DataFileHelper.LITE_DATA_FILE_REL_PATH,
+                dataFile.group(1));
+    }
+
+    /**
+     * The Device Detection data file is the one _51DEGREES_DD_PATH names,
+     * and the free Lite file when that is not set.
+     */
+    @Test
+    public void defaultDeviceDetectionDataFile_FreeLiteFile()
+            throws IOException {
+        String xml = new String(Files.readAllBytes(Paths.get(
+                System.getProperty("basedir", "."), "src", "main", "webapp",
+                "WEB-INF", "51Degrees-Mixed.xml")), StandardCharsets.UTF_8);
+        Matcher dataFile = Pattern.compile(
+                "<DataFile>\\$\\{_51DEGREES_DD_PATH:-([^}]*)\\}</DataFile>")
+                .matcher(xml);
+        assertTrue("51Degrees-Mixed.xml should give a default Device " +
+                "Detection data file", dataFile.find());
+        assertEquals("cxx/data/" + GettingStartedWebMixed.DD_DATA_FILE_DEFAULT,
                 dataFile.group(1));
     }
 }

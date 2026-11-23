@@ -54,11 +54,14 @@ public class FindOutMoreTests {
 
     @Test
     public void Main_EndsWithFindOutMore() throws Exception {
-        assumeTrue(Main.configuredResourceKey() != null,
+        String resourceKey = ExampleKey.find();
+        assumeTrue(resourceKey != null,
             "This test runs the example against the live cloud service, so "
                 + "it needs a resource key, and it is skipped because "
-                + String.join(", ", Main.RESOURCE_KEY_NAMES) + " is not set.");
-        String output = runMain();
+                + ExampleKey.NAME + " is not set.");
+        String[] written = new String[1];
+        ExampleKey.runWith(resourceKey, () -> written[0] = runMain());
+        String output = written[0];
         int example = output.lastIndexOf("star sign");
         int heading = output.lastIndexOf(RULE + "\n" + HEADING + "\n");
         assertTrue(example >= 0, "The example wrote nothing:\n" + output);

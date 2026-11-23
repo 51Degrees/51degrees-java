@@ -63,8 +63,7 @@ public class ExamplesWithoutSettingsTest {
      */
     private static String runWithoutSettings(Main main) throws Exception {
         assumeTrue("Skipping, a licence key is set in the environment",
-                System.getenv(LICENSE_KEY) == null &&
-                        System.getenv(LICENSE_KEY.toUpperCase()) == null);
+                System.getenv(LICENSE_KEY) == null);
         String licenseKey = System.clearProperty(LICENSE_KEY);
         PrintStream out = System.out;
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();

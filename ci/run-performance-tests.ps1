@@ -36,7 +36,7 @@ Remove-Item -Path $pipelineResults -Force -ErrorAction SilentlyContinue
 Push-Location "$RepoName/pipeline"
 try {
     mvn test @MavenOptions -DfailIfNoTests=false "-Dsurefire.failIfNoSpecifiedTests=false" `
-        "-Dtest=*ShareUsageOverheadTests*" "-Dfiftyone.performance.json=$pipelineResults"
+        "-Dtest=*ShareUsageOverheadTests*" "-D_51DEGREES_PERFORMANCE_JSON=$pipelineResults"
     if ($LASTEXITCODE -ne 0) { $failed += 'Pipeline API' }
 } finally {
     Pop-Location

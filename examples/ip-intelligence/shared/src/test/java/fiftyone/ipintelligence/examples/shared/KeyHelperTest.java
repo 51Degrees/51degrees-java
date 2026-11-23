@@ -27,16 +27,14 @@ import org.junit.Test;
 
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 public class KeyHelperTest {
@@ -46,14 +44,13 @@ public class KeyHelperTest {
     private static final String KEY_A = "AQAAAAAAAAAAAAAAAAAAAAAA";
     private static final String KEY_B = "AgAAAAAAAAAAAAAAAAAAAAAA";
 
-    private static final String NEW_KEY_NAME = "_51DEGREES_RESOURCE_KEY";
-    private static final String OLD_KEY_NAME = "51DEGREES_RESOURCE_KEY";
+    private static final String KEY_NAME = "_51DEGREES_RESOURCE_KEY";
 
     /**
-     * The names getOrSetTestResourceKey reads, in its order.
+     * The name getOrSetTestResourceKey reads.
      */
-    private static final List<String> EXAMPLE_NAMES =
-        Collections.singletonList(KeyHelper.RESOURCE_KEY_VARIABLE);
+    private static final String EXAMPLE_NAME =
+        KeyHelper.RESOURCE_KEY_VARIABLE;
 
     /**
      * With no key anywhere, the lookup logs that there is none and stores
@@ -61,35 +58,44 @@ public class KeyHelperTest {
      */
     @Test
     public void getOrSetTestResourceKey_NoKey_StoresNothing() {
-        List<String> namesRead = new ArrayList<>(EXAMPLE_NAMES);
         // A test can clear a system property but not an environment
         // variable.
-        for (String name : namesRead) {
-            assumeTrue(name + " is set in the environment",
-                System.getenv(name) == null &&
-                    System.getenv(name.toUpperCase()) == null);
-        }
-        Map<String, String> saved = new HashMap<>();
-        for (String name : namesRead) {
-            saved.put(name, System.clearProperty(name));
-        }
+        assumeTrue(EXAMPLE_NAME + " is set in the environment",
+            System.getenv(EXAMPLE_NAME) == null);
+        String saved = System.clearProperty(EXAMPLE_NAME);
         try {
             assertNull(KeyHelper.getOrSetTestResourceKey(false));
-            for (String name : namesRead) {
-                assertNull(name, System.getProperty(name));
-            }
+            assertNull(System.getProperty(EXAMPLE_NAME));
         } finally {
-            for (Map.Entry<String, String> entry : saved.entrySet()) {
-                if (entry.getValue() != null) {
-                    System.setProperty(entry.getKey(), entry.getValue());
-                }
+            if (saved != null) {
+                System.setProperty(EXAMPLE_NAME, saved);
             }
+        }
+    }
+
+    /**
+     * A key is read from the environment under the name given, and from
+     * the system property of that name when the environment has none.
+     */
+    @Test
+    public void readKey_ReadsTheEnvironmentThenTheSystemProperty() {
+        String name = "Key_Helper_Test_Name";
+        Map<String, String> environment = new HashMap<>();
+        environment.put("KEY_HELPER_TEST_NAME", KEY_A);
+        assertNull(KeyHelper.readKey(name, environment::get));
+        System.setProperty(name, KEY_B);
+        try {
+            assertEquals(KEY_B, KeyHelper.readKey(name, environment::get));
+            environment.put(name, KEY_A);
+            assertEquals(KEY_A, KeyHelper.readKey(name, environment::get));
+        } finally {
+            System.clearProperty(name);
         }
     }
 
     @Test
     public void testResourceKey_IsTheSharedName() {
-        assertEquals(NEW_KEY_NAME, KeyHelper.TEST_RESOURCE_KEY);
+        assertEquals(KEY_NAME, KeyHelper.TEST_RESOURCE_KEY);
     }
 
     /**
@@ -100,7 +106,7 @@ public class KeyHelperTest {
     public void requireResourceKey_NoKey_SkipsNamingTheVariable() {
         AssumptionViolatedException skipped = assertThrows(
             AssumptionViolatedException.class, () ->
-                KeyHelper.requireResourceKey(name -> null, EXAMPLE_NAMES,
+                KeyHelper.requireResourceKey(name -> null, EXAMPLE_NAME,
                     "the network and location of an IP address, and " +
                         "whether a device is mobile",
                     "ip", "device"));
@@ -117,21 +123,20 @@ public class KeyHelperTest {
     }
 
     /**
-     * Only the names the test gives are read, and a name holding something
-     * that is not a key, such as the empty string a pom passes for a key
-     * that is not set, is passed over.
+     * Only the name the test gives is read, and a name holding something
+     * that is not a key, such as an empty string, is passed over.
      */
     @Test
-    public void requireResourceKey_ReadsOnlyTheNamesGiven() {
+    public void requireResourceKey_ReadsOnlyTheNameGiven() {
         Map<String, String> values = new HashMap<>();
-        values.put(NEW_KEY_NAME, "");
+        values.put(KEY_NAME, "");
         values.put("_51DEGREES_RESOURCE_KEY_BESPOKE", KEY_A);
         assertThrows(AssumptionViolatedException.class, () ->
-            KeyHelper.requireResourceKey(values::get, EXAMPLE_NAMES,
+            KeyHelper.requireResourceKey(values::get, EXAMPLE_NAME,
                 "every IP Intelligence property", "ip"));
-        values.put(NEW_KEY_NAME, KEY_B);
+        values.put(KEY_NAME, KEY_B);
         assertEquals(KEY_B, KeyHelper.requireResourceKey(values::get,
-            EXAMPLE_NAMES, "every IP Intelligence property", "ip"));
+            EXAMPLE_NAME, "every IP Intelligence property", "ip"));
     }
 
     /**
@@ -139,32 +144,61 @@ public class KeyHelperTest {
      */
     @Test
     public void findResourceKey_ReadsOnlyTheSharedName() {
-        assumeTrue(System.getenv(NEW_KEY_NAME) == null);
+        assumeTrue(System.getenv(KEY_NAME) == null);
         String other = "AnyOtherResourceKeyName";
-        String saved = System.clearProperty(NEW_KEY_NAME);
+        String saved = System.clearProperty(KEY_NAME);
         try {
             System.setProperty(other, KEY_A);
             assertNull(KeyHelper.findResourceKey(null));
-            System.setProperty(NEW_KEY_NAME, KEY_B);
+            System.setProperty(KEY_NAME, KEY_B);
             assertEquals(KEY_B, KeyHelper.findResourceKey(null));
         } finally {
             System.clearProperty(other);
             if (saved == null) {
-                System.clearProperty(NEW_KEY_NAME);
+                System.clearProperty(KEY_NAME);
             } else {
-                System.setProperty(NEW_KEY_NAME, saved);
+                System.setProperty(KEY_NAME, saved);
             }
         }
     }
 
+    /**
+     * A test of a cloud example reads the key with every property. A key
+     * under the name the example reads does not stand in for it.
+     */
     @Test
-    @SuppressWarnings("deprecation")
-    public void oldKeyConstantKeepsItsValue() throws Exception {
-        assertEquals(OLD_KEY_NAME, KeyHelper.RESOURCE_KEY_ENV_VAR);
-        assertEquals(true, KeyHelper.class.getField("RESOURCE_KEY_ENV_VAR")
-            .isAnnotationPresent(Deprecated.class));
-        assertEquals(NEW_KEY_NAME,
-            KeyHelper.class.getField("RESOURCE_KEY_VARIABLE").get(null));
+    public void requireTestResourceKey_ReadsTheKeyWithEveryProperty() {
+        String example = "_51DEGREES_RESOURCE_KEY";
+        String bespoke = "_51DEGREES_RESOURCE_KEY_BESPOKE";
+        // A test can set a system property but not an environment
+        // variable.
+        assumeTrue(System.getenv(example) == null &&
+            System.getenv(bespoke) == null);
+        String savedExample = System.getProperty(example);
+        String savedBespoke = System.clearProperty(bespoke);
+        try {
+            System.setProperty(example, KEY_A);
+            AssumptionViolatedException skipped = assertThrows(
+                AssumptionViolatedException.class, () ->
+                    KeyHelper.requireTestResourceKey(
+                        "the network of an IP address", "ip"));
+            assertTrue(skipped.getMessage(),
+                skipped.getMessage().contains(bespoke + " is not set"));
+            System.setProperty(bespoke, KEY_B);
+            assertEquals(KEY_B, KeyHelper.requireTestResourceKey(
+                "the network of an IP address", "ip"));
+        } finally {
+            putBack(example, savedExample);
+            putBack(bespoke, savedBespoke);
+        }
+    }
+
+    private static void putBack(String name, String value) {
+        if (value == null) {
+            System.clearProperty(name);
+        } else {
+            System.setProperty(name, value);
+        }
     }
 
     /**

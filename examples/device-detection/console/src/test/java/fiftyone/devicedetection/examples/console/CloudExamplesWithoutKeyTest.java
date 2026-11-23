@@ -83,7 +83,7 @@ public class CloudExamplesWithoutKeyTest {
     @Test
     public void tacCloud() throws Exception {
         String output = runWithoutKey(TacCloud.class,
-            "_51DEGREES_RESOURCE_KEY_SUPER");
+            "_51DEGREES_RESOURCE_KEY");
         assertTrue("The output should link to the contact page",
             output.contains(CONTACT_US));
     }
@@ -91,7 +91,7 @@ public class CloudExamplesWithoutKeyTest {
     @Test
     public void nativeModelCloud() throws Exception {
         String output = runWithoutKey(NativeModelCloud.class,
-            "_51DEGREES_RESOURCE_KEY_SUPER");
+            "_51DEGREES_RESOURCE_KEY");
         assertTrue("The output should link to the contact page",
             output.contains(CONTACT_US));
     }

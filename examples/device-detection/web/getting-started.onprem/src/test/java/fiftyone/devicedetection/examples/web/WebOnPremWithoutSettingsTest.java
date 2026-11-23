@@ -48,16 +48,14 @@ public class WebOnPremWithoutSettingsTest {
 
     private static final int PORT = 8083;
 
-    private static final String[] DATA_FILE_NAMES = {
-            "TestDataFile", "_51DEGREES_DD_PATH"};
+    private static final String DATA_FILE_NAME = "_51DEGREES_DD_PATH";
 
     @Test
     public void runsWithoutSettings() throws Exception {
-        for (String name : DATA_FILE_NAMES) {
-            assumeTrue("Skipping, " + name + " is set in the environment",
-                    System.getenv(name) == null);
-        }
-        String saved = System.clearProperty("TestDataFile");
+        assumeTrue("Skipping, " + DATA_FILE_NAME +
+                " is set in the environment",
+                System.getenv(DATA_FILE_NAME) == null);
+        String saved = System.clearProperty(DATA_FILE_NAME);
         Server server = GettingStartedWebOnPrem.start(PORT);
         try {
             HttpURLConnection connection = (HttpURLConnection)
@@ -78,7 +76,9 @@ public class WebOnPremWithoutSettingsTest {
         } finally {
             server.stop();
             if (saved != null) {
-                System.setProperty("TestDataFile", saved);
+                System.setProperty(DATA_FILE_NAME, saved);
+            } else {
+                System.clearProperty(DATA_FILE_NAME);
             }
         }
     }

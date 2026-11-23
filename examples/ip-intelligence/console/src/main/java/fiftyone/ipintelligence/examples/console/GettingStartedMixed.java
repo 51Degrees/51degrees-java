@@ -129,20 +129,20 @@ public class GettingStartedMixed {
                            OutputStream outputStream) throws Exception {
         logger.info("Running GettingStartedMixed example");
 
-        // Resolve and set the Device Detection data file location
+        // Resolve the Device Detection data file location
+        String ddLocation;
         try {
-            String ddLocation = resolveDataFile(ddDataFile);
-            System.setProperty("TestDeviceDetectionDataFile", ddLocation);
+            ddLocation = resolveDataFile(ddDataFile);
         } catch (Exception e) {
             logger.error("Failed to find Device Detection data file at '{}'. " +
                     "Please provide a valid path to a Device Detection data file (.hash).", ddDataFile);
             throw e;
         }
 
-        // Resolve and set the IP Intelligence data file location
+        // Resolve the IP Intelligence data file location
+        String ipiLocation;
         try {
-            String ipiLocation = DataFileHelper.getDataFileLocation(ipiDataFile);
-            System.setProperty("TestDataFile", ipiLocation);
+            ipiLocation = DataFileHelper.getDataFileLocation(ipiDataFile);
         } catch (Exception e) {
             logger.error("Failed to find IP Intelligence data file at '{}'. " +
                     "Please provide a valid path to an IP Intelligence data file (.ipi). " +
@@ -154,6 +154,12 @@ public class GettingStartedMixed {
         // Load the pipeline configuration that includes both engines
         File optionsFile = getFilePath("gettingStartedMixed.xml");
         PipelineOptions pipelineOptions = PipelineOptionsFactory.getOptionsFromFile(optionsFile);
+        // The data files this method was given are the ones the pipeline
+        // uses, in place of the ones the options file names.
+        DataFileHelper.useDataFile(
+                pipelineOptions, "DeviceDetectionHashEngine", ddLocation);
+        DataFileHelper.useDataFile(
+                pipelineOptions, "IPIntelligenceOnPremiseEngine", ipiLocation);
 
         try (Pipeline pipeline = new FiftyOnePipelineBuilder()
                 // Usage sharing is off because this example's evidence is already

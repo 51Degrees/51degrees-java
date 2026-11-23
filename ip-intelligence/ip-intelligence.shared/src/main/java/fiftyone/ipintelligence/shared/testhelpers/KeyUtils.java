@@ -23,8 +23,8 @@
 package fiftyone.ipintelligence.shared.testhelpers;
 
 import java.util.Base64;
-import java.util.Locale;
 import java.util.Objects;
+import java.util.function.Function;
 
 /**
  * Helpers to obtain keys from the environment
@@ -32,17 +32,11 @@ import java.util.Objects;
 public class KeyUtils {
     /**
      * Name of the environment variable or system property which supplies
-     * the resource key. It is the only name read.
+     * the tests with the resource key with every property. It is the only
+     * name read.
      */
-    public static final String RESOURCE_KEY_VARIABLE = "_51DEGREES_RESOURCE_KEY";
-
-    /**
-     * The old name of {@link #RESOURCE_KEY_VARIABLE}. It is no longer read.
-     * @deprecated use {@link #RESOURCE_KEY_VARIABLE}, and set the variable
-     * it names in place of this one.
-     */
-    @Deprecated
-    public static final String RESOURCE_KEY_ENV_VAR = "51DEGREES_RESOURCE_KEY";
+    public static final String RESOURCE_KEY_VARIABLE =
+        "_51DEGREES_RESOURCE_KEY_BESPOKE";
 
     /**
      * Obtain the resource key from the environment variable or system
@@ -55,29 +49,22 @@ public class KeyUtils {
     }
 
     /**
-     * Obtain the resource key from {@link #RESOURCE_KEY_VARIABLE}. The name
-     * passed is no longer read.
-     * @param legacyKeyName an old name, which is not read
-     * @return the resource key, or null if it is not set
-     * @deprecated use {@link #getResourceKey()}
+     * Obtain a key from the environment variable of the name given, or
+     * from the system property of the same name when that is not set.
      */
-    @Deprecated
-    public static String getResourceKey(String legacyKeyName) {
-        return getResourceKey();
+    public static String getNamedKey(String keyName) {
+        return getNamedKey(keyName, System::getenv);
     }
 
     /**
-     * Obtain a key either from environment variable or from a property.
-     * <p>
-     * Try resource key as env var, then as upper case env var, the system property
+     * Obtain a key from the environment given, or from the system property
+     * of the same name when the environment has none.
      */
-    public static String getNamedKey(String keyName) {
-        String resourceKey = System.getenv(keyName);
+    static String getNamedKey(String keyName,
+                              Function<String, String> environment) {
+        String resourceKey = environment.apply(keyName);
         if (Objects.isNull(resourceKey)) {
-            resourceKey = System.getenv(keyName.toUpperCase(Locale.ROOT));
-            if (Objects.isNull(resourceKey)) {
-                resourceKey = System.getProperty(keyName);
-            }
+            resourceKey = System.getProperty(keyName);
         }
         return resourceKey;
     }

@@ -54,7 +54,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import static fiftyone.ipintelligence.shared.testhelpers.FileUtils.IP_ADDRESSES_FILE_NAME;
+import static fiftyone.ipintelligence.shared.testhelpers.FileUtils.EVIDENCE_FILE_NAME;
 import static fiftyone.pipeline.engines.Constants.PerformanceProfiles.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -83,7 +83,7 @@ public class IPIntelligenceTests {
     @BeforeClass
     public static void initClass() throws IOException {
         ipAddresses = new IpAddressGenerator(
-            FileFinder.getFilePath(IP_ADDRESSES_FILE_NAME));
+            FileFinder.getFilePath(EVIDENCE_FILE_NAME));
     }
 
     private static String reportErrors(Collection<FlowError> errors) {

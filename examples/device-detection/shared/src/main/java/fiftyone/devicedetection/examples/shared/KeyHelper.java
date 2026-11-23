@@ -31,17 +31,18 @@ import java.util.function.Function;
 
 public class KeyHelper {
     /**
-     * The variable the cloud examples and their tests read a resource key
-     * from.
+     * The variable the cloud examples read a resource key from. A test of
+     * an example gives the example its key under this name.
      */
     public static final String TEST_RESOURCE_KEY = "_51DEGREES_RESOURCE_KEY";
 
     /**
-     * The variable the TAC and native model examples and their tests read
-     * the resource key with every property from.
+     * The variable the tests of the cloud examples read the resource key
+     * with every property from. Each test gives the key to its example as
+     * an argument or in {@link #RESOURCE_KEY_VARIABLE}.
      */
-    public static final String SUPER_RESOURCE_KEY_VARIABLE =
-        "_51DEGREES_RESOURCE_KEY_SUPER";
+    public static final String BESPOKE_RESOURCE_KEY_VARIABLE =
+        "_51DEGREES_RESOURCE_KEY_BESPOKE";
     static Logger logger = LoggerFactory.getLogger(KeyHelper.class);
 
     /**
@@ -52,18 +53,20 @@ public class KeyHelper {
     private static final int MIN_DECODED_KEY_LENGTH = 14;
 
     /**
-     * Read a key as an environment variable, then as its upper case name,
-     * then as a system property.
+     * Read a key as an environment variable, then as a system property of
+     * the same name.
      * @param keyName the name of the key
      * @return the key, or null when none is set
      */
     public static String getNamedKey(String keyName) {
-        String key = System.getenv(keyName);
+        return getNamedKey(keyName, System::getenv);
+    }
+
+    static String getNamedKey(String keyName,
+                              Function<String, String> environment) {
+        String key = environment.apply(keyName);
         if (Objects.isNull(key)) {
-            key = System.getenv(keyName.toUpperCase(Locale.ROOT));
-            if (Objects.isNull(key)) {
-                key = System.getProperty(keyName);
-            }
+            key = System.getProperty(keyName);
         }
         return key;
     }
@@ -89,7 +92,7 @@ public class KeyHelper {
         "https://51degrees.com/configure/?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=shared-src-main-java-fiftyone-devicedetection-examples-shared-keyhelper.java&utm_term=no-resource-key";
 
     /**
-     * The variable a cloud example reads its resource key from first.
+     * The variable a cloud example reads its resource key from.
      */
     public static final String RESOURCE_KEY_VARIABLE =
         "_51DEGREES_RESOURCE_KEY";
@@ -110,24 +113,18 @@ public class KeyHelper {
 
     /**
      * The resource key a cloud example runs with, being the key given as
-     * its argument, or else the first of the names that holds one, read as
-     * an environment variable, under its upper case name and as a system
-     * property.
+     * its argument, or else the key under the name given, read as an
+     * environment variable and then as a system property.
      * @param argument the key given on the command line, or null
-     * @param names the names to read, in order
+     * @param name the name to read
      * @return the key, or null when there is none
      */
-    public static String findResourceKey(String argument, String... names) {
+    public static String findResourceKey(String argument, String name) {
         if (isInvalidKey(argument) == false) {
             return argument.trim();
         }
-        for (String name : names) {
-            String value = readKey(name);
-            if (value != null) {
-                return value.trim();
-            }
-        }
-        return null;
+        String value = readKey(name);
+        return value == null ? null : value.trim();
     }
 
     /**
@@ -162,46 +159,43 @@ public class KeyHelper {
 
     /**
      * The resource key for a test that calls the live cloud service, from
-     * {@link #TEST_RESOURCE_KEY}. Skips the test, naming the variable, when
-     * there is none, because a cloud test that passes without a key has
-     * called nothing.
+     * {@link #BESPOKE_RESOURCE_KEY_VARIABLE}. Skips the test, naming the
+     * variable, when there is none, because a cloud test that passes
+     * without a key has called nothing.
      * @param asksFor what the test asks the service for
      * @param products the products the key has to carry
      * @return the resource key
      */
     public static String requireTestResourceKey(String asksFor,
                                                 String... products) {
-        return requireResourceKey(Collections.singletonList(TEST_RESOURCE_KEY),
-            asksFor, products);
+        return requireResourceKey(BESPOKE_RESOURCE_KEY_VARIABLE, asksFor,
+            products);
     }
 
     /**
      * The resource key for a test that calls the live cloud service, from
-     * the given names only. Skips the test, naming them, when there is none.
-     * @param exampleNames the names the example reads, in the order it
-     *                     reads them
+     * the given name only. Skips the test, naming it, when there is none.
+     * @param exampleName the name the example reads
      * @param asksFor what the test asks the service for
      * @param products the products the key has to carry
      * @return the resource key
      */
-    public static String requireResourceKey(List<String> exampleNames,
+    public static String requireResourceKey(String exampleName,
                                             String asksFor,
                                             String... products) {
-        return requireResourceKey(KeyHelper::readKey, exampleNames, asksFor,
+        return requireResourceKey(KeyHelper::readKey, exampleName, asksFor,
             products);
     }
 
     static String requireResourceKey(Function<String, String> read,
-                                     List<String> exampleNames,
+                                     String exampleName,
                                      String asksFor,
                                      String... products) {
-        for (String name : exampleNames) {
-            String value = read.apply(name);
-            if (isInvalidKey(value) == false) {
-                return value.trim();
-            }
+        String value = read.apply(exampleName);
+        if (isInvalidKey(value) == false) {
+            return value.trim();
         }
-        throw skipTest(noResourceKey(exampleNames, asksFor, products));
+        throw skipTest(noResourceKey(exampleName, asksFor, products));
     }
 
     /**
@@ -225,11 +219,11 @@ public class KeyHelper {
         }
     }
 
-    static String noResourceKey(List<String> names, String asksFor,
+    static String noResourceKey(String name, String asksFor,
                                 String... products) {
         return "This test calls the live 51Degrees cloud service, so it " +
             "needs a resource key, and it is skipped because " +
-            String.join(", ", names) + " is not set as an environment " +
+            name + " is not set as an environment " +
             "variable or as a system property. " +
             "The key has to carry the " + productList(products) +
             ", because the test asks the service for " + asksFor + ". To " +
@@ -266,14 +260,17 @@ public class KeyHelper {
     }
 
     /**
-     * A key read as an environment variable, as its upper case name, and
-     * then as a system property, skipping any that is not a key, such as
-     * the empty string the example poms pass for a key that is not set.
+     * A key read as an environment variable, and then as a system property
+     * of the same name, skipping any that is not a key.
      */
     private static String readKey(String name) {
+        return readKey(name, System::getenv);
+    }
+
+    static String readKey(String name,
+                          Function<String, String> environment) {
         for (String value : new String[]{
-            System.getenv(name),
-            System.getenv(name.toUpperCase(Locale.ROOT)),
+            environment.apply(name),
             System.getProperty(name)}) {
             if (isInvalidKey(value) == false) {
                 return value;
@@ -335,10 +332,10 @@ public class KeyHelper {
         }
         return value;
     }
-    public static String getOrSetSuperResourceKey(String value, String variablename) {
-        return getOrSetSuperResourceKey(value, variablename, true);
+    public static String getOrSetPaidResourceKey(String value, String variablename) {
+        return getOrSetPaidResourceKey(value, variablename, true);
     }
-    public static String getOrSetSuperResourceKey(String value, String variablename, boolean shouldThrow) {
+    public static String getOrSetPaidResourceKey(String value, String variablename, boolean shouldThrow) {
         return getOrSetResourceKey(value, variablename, "TAC lookup and Native Model are not " +
                 "available as a free service.\nThis means " +
                 "that you will first need a license key, which can be purchased " +

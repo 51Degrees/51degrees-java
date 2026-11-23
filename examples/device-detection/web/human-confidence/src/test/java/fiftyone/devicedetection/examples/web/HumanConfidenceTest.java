@@ -158,8 +158,15 @@ public class HumanConfidenceTest {
         assertEquals(5151, HumanConfidence.port(
                 Collections.<String, String>emptyMap()));
         Map<String, String> env = new HashMap<>();
-        env.put("PORT", "8100");
+        env.put("_51DEGREES_EXAMPLE_HTTP_PORTS", "8100");
         assertEquals(8100, HumanConfidence.port(env));
+        env.put("_51DEGREES_EXAMPLE_HTTP_PORTS", " 8101, 8102");
+        assertEquals(8101, HumanConfidence.port(env));
+        env.put("_51DEGREES_EXAMPLE_HTTP_PORTS", " ");
+        assertEquals(5151, HumanConfidence.port(env));
+        env.clear();
+        env.put("PORT", "8100");
+        assertEquals(5151, HumanConfidence.port(env));
     }
 
     @Test

@@ -1,7 +1,6 @@
 param(
     [Parameter(Mandatory)][string]$RepoName,
     [Parameter(Mandatory)][string]$Version,
-    [Parameter(Mandatory)][Hashtable]$Keys,
     [string]$Name
 )
 $ErrorActionPreference = "Stop"
@@ -40,23 +39,15 @@ Set-PomVersions $RepoName (Get-BuildVersions $RepoName $plan)
 $modules = @($plan | ForEach-Object { Get-ModulePath $_ })
 
 # common-ci deploys from the root to a local staging folder with signing, and
-# copies the result and the publishing bundle into the package folder. The
-# versions are already set, so it is given no folder to set them in.
+# copies the result and the publishing bundle into the package folder. It reads
+# the signing keys from the environment of the job that signs. The versions are
+# already set, so it is given no folder to set them in.
 ./java/build-package.ps1 `
     -RepoName $RepoName `
     -Name $Name `
     -Version $Version `
     -VersionPaths @() `
-    -ExtraArgs "-DskipNativeBuild=true", "-pl", ($modules -join ',') `
-    -JavaGpgKeyPassphrase $Keys['JavaGpgKeyPassphrase'] `
-    -JavaPGP $Keys['JavaPGP'] `
-    -CodeSigningKeyVaultName: $Keys['CodeSigningKeyVaultName'] `
-    -CodeSigningKeyVaultUrl $Keys['CodeSigningKeyVaultUrl'] `
-    -CodeSigningKeyVaultClientId $Keys['CodeSigningKeyVaultClientId'] `
-    -CodeSigningKeyVaultTenantId $Keys['CodeSigningKeyVaultTenantId'] `
-    -CodeSigningKeyVaultClientSecret $Keys['CodeSigningKeyVaultClientSecret'] `
-    -CodeSigningKeyVaultCertificateName $Keys['CodeSigningKeyVaultCertificateName'] `
-    -CodeSigningKeyVaultCertificateData $Keys['CodeSigningKeyVaultCertificateData']
+    -ExtraArgs "-DskipNativeBuild=true", "-pl", ($modules -join ',')
 $exitCode = $LASTEXITCODE
 
 # Maven Central limits each organisation's release size and file count in a

@@ -38,24 +38,24 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  */
 public class EndpointTests {
 
-    private static final String NEW_NAME = "_51DEGREES_CLOUD_ENDPOINT";
+    private static final String ENDPOINT_NAME = "_51DEGREES_CLOUD_ENDPOINT";
 
     @BeforeEach
     public void setUp() {
-        assumeTrue(System.getenv(NEW_NAME) == null);
+        assumeTrue(System.getenv(ENDPOINT_NAME) == null);
         clear();
     }
 
     @AfterEach
     public void clear() {
-        System.clearProperty(NEW_NAME);
+        System.clearProperty(ENDPOINT_NAME);
     }
 
     @Test
     public void Endpoint_New_Name() {
-        System.setProperty(NEW_NAME, "https://new.example/api/v4");
+        System.setProperty(ENDPOINT_NAME, "https://other.example/api/v4");
 
-        assertEquals("https://new.example/api/v4/", Main.endpoint());
+        assertEquals("https://other.example/api/v4/", Main.endpoint());
     }
 
     @Test
@@ -67,20 +67,20 @@ public class EndpointTests {
         assertEquals(expected, Main.endpoint());
     }
 
-    private static final String NEW_KEY_NAME = "_51DEGREES_RESOURCE_KEY";
+    private static final String KEY_NAME = "_51DEGREES_RESOURCE_KEY";
 
     @Test
     public void ResourceKey_New_Name() {
-        assumeTrue(System.getenv(NEW_KEY_NAME) == null);
-        String savedNew = System.clearProperty(NEW_KEY_NAME);
+        assumeTrue(System.getenv(KEY_NAME) == null);
+        String saved = System.clearProperty(KEY_NAME);
         try {
-            System.setProperty(NEW_KEY_NAME, "new-name-key");
+            System.setProperty(KEY_NAME, "name-key");
 
-            assertEquals("new-name-key", Main.configuredResourceKey());
+            assertEquals("name-key", Main.configuredResourceKey());
         } finally {
-            System.clearProperty(NEW_KEY_NAME);
-            if (savedNew != null) {
-                System.setProperty(NEW_KEY_NAME, savedNew);
+            System.clearProperty(KEY_NAME);
+            if (saved != null) {
+                System.setProperty(KEY_NAME, saved);
             }
         }
     }

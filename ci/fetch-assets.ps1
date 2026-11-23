@@ -11,7 +11,7 @@ $data = "$PSScriptRoot/../cxx/data"
 $deviceDetectionData = "$data/device-detection"
 $ipIntelligenceData = "$data/ip-intelligence"
 
-$deviceDetectionAssets = 'TAC-HashV41.hash', '51Degrees-LiteV4.1.hash', '20000 Evidence Records.yml', '20000 User Agents.csv'
+$deviceDetectionAssets = 'TAC-HashV41.hash', '51Degrees-LiteV4.1.hash', '20000 Evidence Records.yml'
 ./steps/fetch-assets.ps1 -Assets $deviceDetectionAssets
 foreach ($asset in $deviceDetectionAssets) {
     New-Item -ItemType SymbolicLink -Force -Target "$PWD/assets/$asset" -Path "$deviceDetectionData/$asset"
@@ -31,11 +31,10 @@ Copy-Item "assets/51Degrees-IPIV4AsnIpiV41.ipi" $ipIntelligenceData
 Write-Host "Assets hashes:"
 Get-FileHash -Algorithm MD5 -Path assets/*
 
-# Generate the evidence files used by the IP Intelligence tests and examples.
+# Generate the evidence file used by the IP Intelligence tests and examples.
 Push-Location $ipIntelligenceData
 try {
     ./evidence-gen.ps1 -v4 10000 -v6 10000
-    ./evidence-gen.ps1 -v4 10000 -v6 10000 -csv -path "evidence.csv"
 } finally {
     Pop-Location
 }

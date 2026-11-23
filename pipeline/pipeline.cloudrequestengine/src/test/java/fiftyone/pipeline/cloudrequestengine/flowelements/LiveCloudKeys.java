@@ -36,11 +36,10 @@ package fiftyone.pipeline.cloudrequestengine.flowelements;
 final class LiveCloudKeys {
 
     /**
-     * The name the resource key is read from.
+     * The name the resource key is read from. It holds the key with every
+     * property.
      */
-    static final String[] RESOURCE_KEY_NAMES = {
-        "_51DEGREES_RESOURCE_KEY",
-    };
+    static final String RESOURCE_KEY_NAME = "_51DEGREES_RESOURCE_KEY_BESPOKE";
 
     /**
      * The name the license key is read from. A license key is optional,
@@ -48,28 +47,22 @@ final class LiveCloudKeys {
      * It is the license for the cloud products, and not
      * _51DEGREES_LICENSE_KEY, which holds the license for the data files.
      */
-    static final String[] LICENCE_KEY_NAMES = {
-        "_51DEGREES_LICENSE_KEY_BESPOKE",
-    };
+    static final String LICENSE_KEY_NAME = "_51DEGREES_LICENSE_KEY_BESPOKE";
 
     private LiveCloudKeys() {
     }
 
     /**
-     * The first value set under any of the given names, or null when none
-     * of them is set anywhere.
+     * The trimmed value of the environment variable of this name, or of
+     * the system property where that is not set or is blank, or null when
+     * neither holds a value.
      */
-    static String find(String[] names) {
-        for (String name : names) {
-            String value = System.getenv(name);
-            if (value == null || value.trim().isEmpty()) {
-                value = System.getProperty(name);
-            }
-            if (value != null && value.trim().isEmpty() == false) {
-                return value.trim();
-            }
+    static String find(String name) {
+        String value = System.getenv(name);
+        if (value == null || value.trim().isEmpty()) {
+            value = System.getProperty(name);
         }
-        return null;
+        return value == null || value.trim().isEmpty() ? null : value.trim();
     }
 
     /**
@@ -79,7 +72,7 @@ final class LiveCloudKeys {
     static String noResourceKey() {
         return "This test calls the live 51Degrees cloud service, so it "
             + "needs a resource key, and it is skipped because "
-            + String.join(", ", RESOURCE_KEY_NAMES) + " is not set as an "
+            + RESOURCE_KEY_NAME + " is not set as an "
             + "environment variable or as a system property. "
             + "The key has to carry the device product, because "
             + "the test asks the service for device detection properties. "

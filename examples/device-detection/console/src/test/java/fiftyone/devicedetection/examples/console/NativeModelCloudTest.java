@@ -22,19 +22,31 @@
 
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.ExampleProcess;
 import fiftyone.devicedetection.examples.shared.KeyHelper;
 import org.junit.Test;
 
-import java.util.Collections;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class NativeModelCloudTest {
+    /**
+     * The example runs as a customer runs it, in a process of its own
+     * that reads its key from _51DEGREES_RESOURCE_KEY. The test gives that
+     * process the key with every property.
+     */
     @Test
     public void run() throws Exception {
         String resourceKey = KeyHelper.requireResourceKey(
-            Collections.singletonList(
-                NativeModelCloud.NATIVE_MODEL_EXAMPLE_RESOURCE_KEY_NAME),
+            KeyHelper.BESPOKE_RESOURCE_KEY_VARIABLE,
             "the devices that match a native model name", "hardware");
-        NativeModelCloud.run(resourceKey, System.out);
-
+        ExampleProcess.Result result = ExampleProcess.runWithResourceKey(
+            NativeModelCloud.class, resourceKey);
+        System.out.println(result.output);
+        assertEquals("NativeModelCloud should end with exit code 0",
+            0, result.exitCode);
+        assertTrue("The output should hold the example's results",
+            result.output.contains("This example shows the details of " +
+                "devices associated with a given 'native model name'"));
     }
 }

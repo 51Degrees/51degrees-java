@@ -99,7 +99,6 @@ public class GettingStarted {
         else {
             try (Pipeline pipeline = new GeoLocationPipelineBuilder(loggerFactory)
                 .useCloud(resourceKey, Enums.GeoLocationProvider.FiftyOneDegrees)
-                .setEndPoint("https://cloud.51degrees.com/api/v4")
                 .setAutoCloseElements(true)
                 .build();
                 FlowData flowData = pipeline.createFlowData()) {

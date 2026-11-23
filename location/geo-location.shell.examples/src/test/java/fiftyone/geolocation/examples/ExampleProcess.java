@@ -27,8 +27,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -73,7 +75,7 @@ final class ExampleProcess {
      * Runs the example's main method with no arguments and with every
      * environment variable whose name holds "KEY", in any case, left out.
      * The process takes the class path of the process that starts it, and
-     * of its system properties only project.root, which says where the
+     * of its system properties only _51DEGREES_PROJECT_ROOT, which says where the
      * files the example reads are.
      * @param example the class whose main method runs
      * @return the exit code and the output
@@ -81,20 +83,36 @@ final class ExampleProcess {
      *                   within the timeout
      */
     public static Result runWithoutKeys(Class<?> example) throws Exception {
+        return runWith(example, Collections.<String, String>emptyMap());
+    }
+
+    /**
+     * Runs the example as {@link #runWithoutKeys(Class)} does, then with
+     * each of these environment variables set, so a test chooses the key
+     * and the cloud service the example runs with.
+     * @param example the class whose main method runs
+     * @param environment the environment variables to set, by name
+     * @return the exit code and the output
+     * @throws Exception if the process cannot start, or does not end
+     *                   within the timeout
+     */
+    public static Result runWith(Class<?> example,
+        Map<String, String> environment) throws Exception {
         List<String> command = new ArrayList<>();
         command.add(new File(new File(System.getProperty("java.home"),
             "bin"), "java").getPath());
         command.add("-cp");
         command.add(System.getProperty("java.class.path"));
-        String projectRoot = System.getProperty("project.root");
+        String projectRoot = System.getProperty("_51DEGREES_PROJECT_ROOT");
         if (projectRoot != null) {
-            command.add("-Dproject.root=" + projectRoot);
+            command.add("-D_51DEGREES_PROJECT_ROOT=" + projectRoot);
         }
         command.add(example.getName());
 
         ProcessBuilder builder = new ProcessBuilder(command);
         builder.environment().keySet().removeIf(
             name -> name.toUpperCase(Locale.ROOT).contains("KEY"));
+        builder.environment().putAll(environment);
         builder.redirectErrorStream(true);
         Process process = builder.start();
 

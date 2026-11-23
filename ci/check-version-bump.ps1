@@ -9,8 +9,8 @@ $ErrorActionPreference = "Stop"
 # has its own version (see release.ps1). Every package about to be published
 # goes through the shared steps/check-version-bump.ps1, run from the common-ci
 # root, against its own '<package>/<version>' tags. That refuses a major or
-# minor move unless ALLOW_VERSION_BUMP is 'true'. $Version is common-ci's label
-# for the run.
+# minor move unless _51DEGREES_ALLOW_VERSION_BUMP is 'true'. $Version is
+# common-ci's label for the run.
 
 Write-Host "The publish worked out $Version, its highest. Each package is checked on its own."
 

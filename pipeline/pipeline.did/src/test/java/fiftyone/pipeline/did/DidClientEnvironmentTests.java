@@ -46,24 +46,23 @@ import static org.junit.Assert.assertTrue;
  */
 public class DidClientEnvironmentTests {
 
-    private static final String NEW_NAME = "_51DEGREES_CLOUD_ENDPOINT";
-    private static final String OLD_NAME = "FOD_CLOUD_API_URL";
+    private static final String NAME = "_51DEGREES_CLOUD_ENDPOINT";
 
-    private static final String NEW_ENDPOINT = "https://new.example/api/v4/";
+    private static final String ENDPOINT = "https://other.example/api/v4/";
 
     private static final int PROBE_TIMEOUT_SECONDS = 120;
 
     @Test
-    public void newName_GivesItsEndpoint() throws Exception {
-        List<String> output = probe(NEW_ENDPOINT);
+    public void variable_GivesItsEndpoint() throws Exception {
+        List<String> output = probe(ENDPOINT);
 
         assertEquals(
-            Arrays.asList(NEW_ENDPOINT, NEW_ENDPOINT), endpoints(output));
+            Arrays.asList(ENDPOINT, ENDPOINT), endpoints(output));
         assertEquals(output.toString(), 0, logged(output).size());
     }
 
     @Test
-    public void newNameBlank_GivesTheDefault() throws Exception {
+    public void variableBlank_GivesTheDefault() throws Exception {
         List<String> output = probe(" ");
 
         assertEquals(
@@ -73,7 +72,7 @@ public class DidClientEnvironmentTests {
     }
 
     @Test
-    public void neitherName_GivesTheDefault() throws Exception {
+    public void variableUnset_GivesTheDefault() throws Exception {
         List<String> output = probe(null);
 
         assertEquals(
@@ -83,22 +82,11 @@ public class DidClientEnvironmentTests {
         assertEquals(output.toString(), 0, logged(output).size());
     }
 
-    @Test
-    @SuppressWarnings("deprecation")
-    public void oldConstant_KeepsItsNameAndValue() throws Exception {
-        assertEquals(OLD_NAME, DidClient.ENDPOINT_VARIABLE);
-        assertTrue(DidClient.class.getField("ENDPOINT_VARIABLE")
-            .isAnnotationPresent(Deprecated.class));
-        assertEquals(
-            NEW_NAME,
-            DidClient.class.getField("CLOUD_ENDPOINT_VARIABLE").get(null));
-    }
-
     /**
      * Runs the probe with the variable set to the value given, or absent
      * where the value is null, and returns the lines it printed.
      */
-    private static List<String> probe(String newValue)
+    private static List<String> probe(String value)
         throws Exception {
         String java = Paths.get(
             System.getProperty("java.home"), "bin", "java").toString();
@@ -106,7 +94,7 @@ public class DidClientEnvironmentTests {
             new ProcessBuilder(java, EndpointProbe.class.getName());
         Map<String, String> environment = builder.environment();
         environment.put("CLASSPATH", classPath());
-        set(environment, NEW_NAME, newValue);
+        set(environment, NAME, value);
         builder.redirectErrorStream(true);
 
         Process process = builder.start();
