@@ -49,7 +49,7 @@ message(STATUS "OS name: ${OS}")
 # The C and C++ code is the 51degrees-cxx submodule at the root of this
 # repository. Only IP Intelligence is built here, without its tests.
 get_filename_component(FIFTYONE_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../../../.." ABSOLUTE)
-set(FIFTYONE_BUILD_DEVICE_DETECTION OFF CACHE BOOL "" FORCE)
+set(_51DEGREES_BUILD_DEVICE_DETECTION OFF CACHE BOOL "" FORCE)
 set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 include(${FIFTYONE_ROOT}/cxx/CMakeLists.txt NO_POLICY_SCOPE)
 
