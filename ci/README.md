@@ -105,7 +105,7 @@ repositories used to do for one package tree each.
   tests are [publish-package.Tests.ps1](publish-package.Tests.ps1), which the
   same workflow runs.
 
-## Secrets
+## Secrets and variables
 
 Required:
 
@@ -114,8 +114,9 @@ Required:
   for cloning repositories and creating pull requests.
 
 The workflows pass the secrets to common-ci with `secrets: inherit`, and
-common-ci exports each under its own name before the scripts here run. The
-tests read only these names.
+common-ci exports each secret and each `_51DEGREES_` organization variable
+under its own name before the scripts here run. The tests read only these
+names.
 
 To run the on-premise tests:
 
@@ -124,7 +125,8 @@ To run the on-premise tests:
   Intelligence Enterprise data files from the Distributor with it, and the
   data file update example uses it.
 
-To run the cloud tests:
+To run the cloud tests, the resource keys are organization variables and
+the license keys are organization secrets:
 
 - `_51DEGREES_RESOURCE_KEY_BESPOKE`: [resource key](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=ci-readme.md&utm_term=secrets)
   from which common-ci fills `_51DEGREES_RESOURCE_KEY`, the key the cloud
