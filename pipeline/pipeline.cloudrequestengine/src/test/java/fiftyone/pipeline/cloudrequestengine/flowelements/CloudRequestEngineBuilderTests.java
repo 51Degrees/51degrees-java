@@ -23,18 +23,26 @@
 package fiftyone.pipeline.cloudrequestengine.flowelements;
 
 import fiftyone.pipeline.cloudrequestengine.CloudRequestException;
+import fiftyone.pipeline.core.configuration.ElementOptions;
+import fiftyone.pipeline.core.configuration.PipelineOptions;
 import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
+import fiftyone.pipeline.core.flowelements.Pipeline;
+import fiftyone.pipeline.core.flowelements.PipelineBuilder;
 import fiftyone.pipeline.engines.services.HttpClientDefault;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.verify;
 
 public class CloudRequestEngineBuilderTests extends CloudRequestEngineTestsBase {
     private final String testResourceKey = "resource_key";
@@ -123,5 +131,63 @@ public class CloudRequestEngineBuilderTests extends CloudRequestEngineTestsBase 
     		.build();
     	assertEquals(
     		Constants.END_POINT_DEFAULT + "/", getEndpointValue(builder));
+    }
+
+    /**
+     * A variable that is set but empty counts as not set, so the default
+     * is used.
+     */
+    @Test
+    public void CloudEndPoint_Blank_Environment_Setting() throws Exception {
+        CloudRequestEngineBuilder builder =
+            new CloudRequestEngineBuilder(loggerFactory, httpClient);
+        setExpectedEnvVarValue(builder, "");
+
+        builder.setResourceKey(testResourceKey)
+            .build();
+        assertEquals(
+            Constants.END_POINT_DEFAULT + "/", getEndpointValue(builder));
+    }
+
+    /**
+     * With no address given, the engine uses the address the environment
+     * this test runs in gives, which is what {@link ExpectedEndpoint}
+     * expects for the other tests.
+     */
+    @Test
+    public void CloudEndPoint_Matches_Expected() throws Exception {
+        CloudRequestEngineBuilder builder =
+            new CloudRequestEngineBuilder(loggerFactory, httpClient);
+
+        builder.setResourceKey(testResourceKey)
+            .build();
+        assertEquals(ExpectedEndpoint.root(), getEndpointValue(builder));
+    }
+
+    /**
+     * An address given in configuration is used whatever the environment
+     * variable holds, so every request goes to that address.
+     */
+    @Test
+    public void CloudEndPoint_Configuration_Setting() throws Exception {
+        ElementOptions element = new ElementOptions();
+        element.builderName = "CloudRequestEngineBuilder";
+        element.buildParameters.put("ResourceKey", testResourceKey);
+        element.buildParameters.put("Endpoint", testEndpoint);
+        PipelineOptions options = new PipelineOptions();
+        options.elements.add(element);
+
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+            .addService(httpClient)
+            .buildFromConfiguration(options)) {
+            assertNotNull(pipeline.getElement(CloudRequestEngine.class));
+        }
+
+        ArgumentCaptor<URL> urls = ArgumentCaptor.forClass(URL.class);
+        verify(httpClient, atLeastOnce()).connect(urls.capture());
+        for (URL url : urls.getAllValues()) {
+            assertTrue(url.toString().startsWith(testEndpoint),
+                url.toString());
+        }
     }
 }
