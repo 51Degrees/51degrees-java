@@ -109,7 +109,7 @@ Describe 'the workflows' {
         # A license key with no resource key of its own account means an
         # organization secret is missing. The licensed tests would then
         # never run, and the job would still pass, so the step fails naming
-        # the missing variable.
+        # the missing secret.
         It 'fails naming <Resource> when <License> has a value and it is empty' -ForEach @(
             @{ Resource = '_51DEGREES_RESOURCE_KEY_51DID'; License = '_51DEGREES_LICENSE_KEY_51DID' }
             @{ Resource = '_51DEGREES_RESOURCE_KEY_BESPOKE'; License = '_51DEGREES_LICENSE_KEY_BESPOKE' }
