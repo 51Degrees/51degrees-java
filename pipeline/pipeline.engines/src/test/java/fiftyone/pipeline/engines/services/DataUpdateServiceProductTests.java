@@ -102,6 +102,16 @@ public class DataUpdateServiceProductTests {
      * first URI offered.
      */
     private volatile boolean sendLocation = true;
+    /**
+     * The status the server gives a request that names a product. A 300
+     * carries the same body as the one for a request that names none.
+     */
+    private volatile int productStatus = 200;
+    /**
+     * The body of the 300 response, or null for the list of the two
+     * products.
+     */
+    private volatile String choicesBody = null;
 
     private Logger logger;
     private DataUpdateServiceDefault service;
@@ -126,6 +136,25 @@ public class DataUpdateServiceProductTests {
                 requests.add("moved");
                 exchange.getResponseHeaders().add("Location",
                     address + PATH + "?" + FIRST_QUERY + "&Product=V4TAC");
+                send(exchange, 302, new byte[0]);
+            }
+        });
+        server.createContext("/moved-to-choices", new HttpHandler() {
+            @Override
+            public void handle(HttpExchange exchange) throws IOException {
+                requests.add("moved-to-choices");
+                // A location relative to the address requested.
+                exchange.getResponseHeaders().add("Location",
+                    PATH + "?" + FIRST_QUERY);
+                send(exchange, 307, new byte[0]);
+            }
+        });
+        server.createContext("/moved-in-a-circle", new HttpHandler() {
+            @Override
+            public void handle(HttpExchange exchange) throws IOException {
+                requests.add("moved-in-a-circle");
+                exchange.getResponseHeaders().add("Location",
+                    address + "/moved-in-a-circle?" + FIRST_QUERY);
                 send(exchange, 302, new byte[0]);
             }
         });
@@ -282,7 +311,8 @@ public class DataUpdateServiceProductTests {
     }
 
     /**
-     * A redirect that names one new location is followed to it.
+     * A redirect that names one new location is followed to it, with one
+     * request to each address.
      */
     @Test
     public void Redirect_IsFollowed() {
@@ -290,24 +320,239 @@ public class DataUpdateServiceProductTests {
 
         AutoUpdateStatus status = service.checkForUpdate(engine);
 
-        assertEquals(logged(), AutoUpdateStatus.AUTO_UPDATE_SUCCESS, status);
+        String logged = logged();
+        assertEquals(logged, AutoUpdateStatus.AUTO_UPDATE_SUCCESS, status);
         verify(engine).refreshData(any(), eq(TAC_DATA));
+        assertEquals(requests.toString(), 2, requests.size());
+        assertEquals("moved", requests.get(0));
+        assertEquals(FIRST_QUERY + "&Product=V4TAC", requests.get(1));
+        assertFalse(logged, logged.contains(KEY));
     }
 
     /**
-     * The fake data update service. A request that names a product gets
-     * that product's data. One that names none gets the status under test.
+     * A redirect leads to an address that answers 300. The product needed
+     * is chosen there as it is for a first request, and the request to that
+     * address is repeated with the product added.
+     */
+    @Test
+    public void Redirect_ToSeveralProducts_RepeatsTheRequestWithTheProductNeeded() {
+        configure("/moved-to-choices", "V4TAC");
+
+        AutoUpdateStatus status = service.checkForUpdate(engine);
+
+        assertEquals(logged(), AutoUpdateStatus.AUTO_UPDATE_SUCCESS, status);
+        verify(engine).refreshData(any(), eq(TAC_DATA));
+        assertEquals(requests.toString(), 3, requests.size());
+        assertEquals("moved-to-choices", requests.get(0));
+        assertEquals(FIRST_QUERY, requests.get(1));
+        assertEquals(FIRST_QUERY + "&Product=V4TAC", requests.get(2));
+    }
+
+    /**
+     * Redirects that never reach a data file end the check with an error
+     * after a fixed number of requests.
+     */
+    @Test
+    public void Redirect_InACircle_Fails() {
+        configure("/moved-in-a-circle", "V4TAC");
+
+        AutoUpdateStatus status = service.checkForUpdate(engine);
+
+        String logged = logged();
+        assertEquals(logged, AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR, status);
+        verify(engine, never()).refreshData(any(), any(byte[].class));
+        assertTrue(requests.toString(), requests.size() <= 21);
+        assertTrue(logged, logged.contains("HTTP status code '302'"));
+        assertFalse(logged, logged.contains(KEY));
+    }
+
+    /**
+     * The request that names the product chosen is answered with 300 too.
+     * It is not followed again, and is reported by its status.
+     */
+    @Test
+    public void SeveralProducts_SecondRequestAnswers300_IsNotFollowed() {
+        productStatus = 300;
+        configure(PATH, "V4TAC");
+
+        AutoUpdateStatus status = service.checkForUpdate(engine);
+
+        String logged = logged();
+        assertEquals(logged, AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR, status);
+        verify(engine, never()).refreshData(any(), any(byte[].class));
+        assertEquals(requests.toString(), 2, requests.size());
+        assertEquals(FIRST_QUERY + "&Product=V4TAC", requests.get(1));
+        assertTrue(logged, logged.contains("HTTP status code '300'"));
+        assertFalse(logged, logged.contains(KEY));
+    }
+
+    /**
+     * A 300 whose body is not JSON is reported by its status.
+     */
+    @Test
+    public void SeveralProducts_BodyIsNotJson_ReportsTheStatus() {
+        choicesBody = "<html>Multiple choices</html>";
+        assertReportsTheStatus();
+    }
+
+    /**
+     * A 300 whose JSON body has no list of URIs is reported by its status.
+     */
+    @Test
+    public void SeveralProducts_BodyHasNoList_ReportsTheStatus() {
+        choicesBody = "{\"Error\":\"There are multiple products\"}";
+        assertReportsTheStatus();
+    }
+
+    /**
+     * A 300 whose list of URIs names no product is reported by its status.
+     */
+    @Test
+    public void SeveralProducts_ListNamesNoProduct_ReportsTheStatus() {
+        choicesBody = "{\"AvailableUris\":[\"" + address + PATH +
+            "?LicenseKeys=" + KEY + "&Type=HashV41\"]}";
+        assertReportsTheStatus();
+    }
+
+    /**
+     * The name of the product parameter in a URI offered is matched
+     * whatever its letter case.
+     */
+    @Test
+    public void SeveralProducts_ParameterNameIsMatchedIgnoringCase() {
+        choicesBody = "{\"AvailableUris\":[\"" + address + PATH +
+            "?LicenseKeys=" + KEY + "&Type=HashV41&product=V4TAC\"]}";
+        configure(PATH, "V4TAC");
+
+        AutoUpdateStatus status = service.checkForUpdate(engine);
+
+        assertEquals(logged(), AutoUpdateStatus.AUTO_UPDATE_SUCCESS, status);
+        verify(engine).refreshData(any(), eq(TAC_DATA));
+        assertEquals(FIRST_QUERY + "&Product=V4TAC", requests.get(1));
+    }
+
+    /**
+     * The URL formatter raises an error when asked for the product needed.
+     * The product is then not known, and the error names the products
+     * offered.
+     */
+    @Test
+    public void SeveralProducts_ProductLookupRaisesAnError_FailsNamingTheProductsOffered() {
+        configure(PATH, null);
+        file.getConfiguration().setUrlFormatter(new ProductFormatter(null) {
+            @Override
+            public String getDataUpdateProduct(AspectEngineDataFile dataFile) {
+                throw new IllegalStateException("closed");
+            }
+        });
+
+        AutoUpdateStatus status = service.checkForUpdate(engine);
+
+        String logged = logged();
+        assertEquals(logged, AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR, status);
+        assertEquals(logged, 1, requests.size());
+        assertTrue(logged, logged.contains(
+            "Product '' is not offered by data update service at '"));
+        assertTrue(logged, logged.contains(
+            "Products offered: 'IPIV4Enterprise,V4TAC'"));
+    }
+
+    /**
+     * A product is configured, so the first request names it and gets its
+     * data.
+     */
+    @Test
+    public void ConfiguredProduct_IsNamedInTheFirstRequest() {
+        configure(PATH, null);
+        file.getConfiguration().setUrlFormatter(
+            new ConfiguredFormatter("V4TAC"));
+
+        AutoUpdateStatus status = service.checkForUpdate(engine);
+
+        assertEquals(logged(), AutoUpdateStatus.AUTO_UPDATE_SUCCESS, status);
+        verify(engine).refreshData(any(), eq(TAC_DATA));
+        assertEquals(requests.toString(), 1, requests.size());
+        assertEquals(FIRST_QUERY + "&Product=V4TAC", requests.get(0));
+    }
+
+    /**
+     * A product is configured and the response is 300. No product is chosen
+     * from it and no second request is made. It is reported by its status.
+     */
+    @Test
+    public void ConfiguredProduct_Answers300_IsNotFollowed() {
+        productStatus = 300;
+        configure(PATH, null);
+        file.getConfiguration().setUrlFormatter(
+            new ConfiguredFormatter("V4TAC"));
+
+        AutoUpdateStatus status = service.checkForUpdate(engine);
+
+        String logged = logged();
+        assertEquals(logged, AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR, status);
+        verify(engine, never()).refreshData(any(), any(byte[].class));
+        assertEquals(requests.toString(), 1, requests.size());
+        assertTrue(logged, logged.contains("HTTP status code '300'"));
+        assertFalse(logged, logged.contains("Requesting product"));
+    }
+
+    /**
+     * A product is configured that the license key does not hold. It is
+     * reported as access denied.
+     */
+    @Test
+    public void ConfiguredProduct_NotHeld_ReportsAccessDenied() {
+        configure(PATH, null);
+        file.getConfiguration().setUrlFormatter(
+            new ConfiguredFormatter("V4Enterprise"));
+
+        AutoUpdateStatus status = service.checkForUpdate(engine);
+
+        String logged = logged();
+        assertEquals(logged,
+            AutoUpdateStatus.AUTO_UPDATE_ERR_403_FORBIDDEN, status);
+        assertEquals(requests.toString(), 1, requests.size());
+        assertTrue(logged, logged.contains(
+            "Access denied to data update service"));
+    }
+
+    private void assertReportsTheStatus() {
+        configure(PATH, "V4TAC");
+
+        AutoUpdateStatus status = service.checkForUpdate(engine);
+
+        String logged = logged();
+        assertEquals(logged, AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR, status);
+        verify(engine, never()).refreshData(any(), any(byte[].class));
+        assertEquals(requests.toString(), 1, requests.size());
+        assertTrue(logged, logged.contains("HTTP status code '300'"));
+        assertFalse(logged, logged.contains("is not offered"));
+        assertFalse(logged, logged.contains(KEY));
+    }
+
+    /**
+     * The fake data update service. A request that names a product the
+     * license key holds gets that product's data, or the status under test
+     * for such a request. A request that names another product gets 403.
+     * One that names none gets the status under test.
      */
     private void respond(HttpExchange exchange) throws IOException {
         String query = exchange.getRequestURI().getRawQuery();
         requests.add(query);
-        if (query.contains("Download=True&Type=HashV41&Product=V4TAC")) {
+        boolean namesProduct = query.contains("Product=");
+        if (namesProduct && productStatus == 200 && query.contains(
+            "Download=True&Type=HashV41&Product=V4TAC")) {
             send(exchange, 200, TAC_DATA);
-        } else if (query.contains(
+        } else if (namesProduct && productStatus == 200 && query.contains(
             "Download=True&Type=HashV41&Product=IPIV4Enterprise")) {
             send(exchange, 200, IPI_DATA);
-        } else if (firstStatus == 300) {
-            String body = "{\"AvailableUris\":[\"" +
+        } else if (namesProduct && productStatus == 200) {
+            send(exchange, 403, ("{\"Error\":\"The license key provided " +
+                "does not contain the requested product.\"}")
+                .getBytes(StandardCharsets.UTF_8));
+        } else if (namesProduct || firstStatus == 300) {
+            String body = choicesBody != null ? choicesBody :
+                "{\"AvailableUris\":[\"" +
                 productUri("IPIV4Enterprise") + "\",\"" +
                 productUri("V4TAC") + "\"],\"Error\":\"There are " +
                 "multiple products associated with this license key. " +
@@ -389,6 +634,25 @@ public class DataUpdateServiceProductTests {
         @Override
         public String getDataUpdateProduct(AspectEngineDataFile dataFile) {
             return product;
+        }
+    }
+
+    /**
+     * Formats the URL with a configured product, as the 51Degrees URL
+     * formatter does when it is built with one.
+     */
+    private static class ConfiguredFormatter extends ProductFormatter {
+        private final String configured;
+
+        ConfiguredFormatter(String product) {
+            super(product);
+            this.configured = product;
+        }
+
+        @Override
+        public String getFormattedDataUpdateUrl(AspectEngineDataFile dataFile) {
+            return super.getFormattedDataUpdateUrl(dataFile) +
+                "&Product=" + configured;
         }
     }
 

@@ -32,6 +32,7 @@ import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectEngineDataFile;
 import fiftyone.pipeline.engines.data.AspectEngineDataFileDefault;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
+import fiftyone.pipeline.engines.data.DataUpdateUrlFormatter;
 import fiftyone.pipeline.engines.flowelements.OnPremiseAspectEngine;
 import fiftyone.pipeline.engines.services.update.FutureFactory;
 import fiftyone.pipeline.engines.services.update.FutureFactoryDefault;
@@ -47,6 +48,7 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -104,6 +106,11 @@ public class DataUpdateServiceDefault implements DataUpdateService {
      * The most that is read of the body of that response.
      */
     private static final int MAX_CHOICES_BODY_BYTES = 64 * 1024;
+
+    /**
+     * The most redirects that one check follows.
+     */
+    private static final int MAX_REDIRECTS = 20;
 
     /**
      * How long a watched data file is tried before the update gives up with
@@ -927,7 +934,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             FileWrapper tempFile) {
 
         return downloadFile(dataFile, tempFile, dataFile.getFormattedUrl(),
-                true, false);
+                true, MAX_REDIRECTS, true);
     }
 
     /**
@@ -939,8 +946,11 @@ public class DataUpdateServiceDefault implements DataUpdateService {
      * @param chooseProduct  true to ask again for the product the data
      *                       file needs when the response lists one URI for
      *                       each product the license key holds
-     * @param followRedirect true to let the connection follow a redirect to
-     *                       the location the response names
+     * @param redirects      the number of redirects that may still be
+     *                       followed to the location a response names
+     * @param firstRequest   true for a request to the data update URL or
+     *                       one that names the product chosen, false for a
+     *                       request to the location of a redirect
      * @return the {@link AutoUpdateStatus} value indicating the result
      */
     private AutoUpdateStatus downloadFile(
@@ -948,7 +958,8 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             FileWrapper tempFile,
             String url,
             boolean chooseProduct,
-            boolean followRedirect) {
+            int redirects,
+            boolean firstRequest) {
 
         String engineType = getEngineType(dataFile);
         // The URL carries the license keys, so every message names it with
@@ -958,8 +969,10 @@ public class DataUpdateServiceDefault implements DataUpdateService {
         logger.debug("downloadFile from {}", loggedUrl);
 
         try {
-            logger.info("Checking for update from '{}' for Engine '{}'",
-                    loggedUrl, engineType);
+            if (firstRequest) {
+                logger.info("Checking for update from '{}' for Engine '{}'",
+                        loggedUrl, engineType);
+            }
             HttpURLConnection connection = httpClient.connect(new URI(url.trim()).toURL());
             if (connection == null) {
                 logCheckFailure("No response from data update service at '" +
@@ -975,41 +988,47 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                     connection.setIfModifiedSince(ifModifiedSince);
                 }
 
-                // A redirect is not followed by the connection at first,
-                // because it would follow the Location header of a 300
-                // response, which names a product without regard to the
-                // one the data file needs.
-                connection.setInstanceFollowRedirects(followRedirect);
+                // The connection follows no redirect by itself, because it
+                // would follow the Location header of a 300 response, which
+                // names a product without regard to the one the data file
+                // needs. A redirect to one location is followed here.
+                connection.setInstanceFollowRedirects(false);
 
                 int status = connection.getResponseCode();
-                if (followRedirect == false && isRedirect(status)) {
-                    // A redirect to one location. Ask again, and let the
-                    // connection follow it.
-                    connection.disconnect();
-                    return downloadFile(dataFile, tempFile, url,
-                            false, true);
+                if (isRedirect(status) && redirects > 0) {
+                    String location = redirectLocation(connection, url);
+                    if (location != null) {
+                        logger.debug("Redirected from '{}' to '{}'",
+                                loggedUrl, LicenseKeyMask.maskIn(location,
+                                        licenseKeysToMask(dataFile, location)));
+                        connection.disconnect();
+                        return downloadFile(dataFile, tempFile, location,
+                                chooseProduct, redirects - 1, false);
+                    }
                 }
                 switch (status) {
                     case HTTP_MULTIPLE_CHOICES:
-                        List<String> uris = availableUris(connection);
-                        if (chooseProduct == false || uris.isEmpty()) {
+                        // A URL that names a product already, as it does
+                        // when a product is configured, is not asked for
+                        // another one.
+                        List<String> offered = new ArrayList<>();
+                        if (chooseProduct && productOf(url) == null) {
+                            for (String uri : availableUris(connection)) {
+                                String product = productOf(uri);
+                                if (product != null) {
+                                    offered.add(product);
+                                }
+                            }
+                        }
+                        if (offered.isEmpty()) {
                             logCheckFailure("HTTP status code '" + status +
                                     "' from data update service at '" +
                                     loggedUrl + "' for engine '" +
                                     engineType + "'", null);
                             return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
                         }
-                        String needed = dataFile.getConfiguration()
-                                .getUrlFormatter() == null ? null :
-                                dataFile.getConfiguration().getUrlFormatter()
-                                        .getDataUpdateProduct(dataFile);
-                        List<String> offered = new ArrayList<>();
-                        for (String uri : uris) {
-                            String product = productOf(uri);
-                            if (product == null) {
-                                continue;
-                            }
-                            offered.add(product);
+                        String needed = productNeeded(dataFile);
+                        for (String product : offered) {
                             if (product.equalsIgnoreCase(needed)) {
                                 // Only the product name is taken from the
                                 // response. The request is the first one
@@ -1020,7 +1039,7 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                                 connection.disconnect();
                                 return downloadFile(dataFile, tempFile,
                                         withProduct(url.trim(), product),
-                                        false, false);
+                                        false, redirects, true);
                             }
                         }
                         logCheckFailure(productNotOffered(
@@ -1087,9 +1106,51 @@ public class DataUpdateServiceDefault implements DataUpdateService {
         return status == HttpURLConnection.HTTP_MOVED_PERM ||
                 status == HttpURLConnection.HTTP_MOVED_TEMP ||
                 status == HttpURLConnection.HTTP_SEE_OTHER ||
-                status == 305 ||
                 status == 307 ||
                 status == 308;
+    }
+
+    /**
+     * The location a redirect names, made absolute against the URL that was
+     * requested. It is null if the response names none, or names one of
+     * another protocol, which is not followed.
+     */
+    private static String redirectLocation(
+            HttpURLConnection connection,
+            String url) {
+        String location = connection.getHeaderField("Location");
+        if (location == null || location.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            URI from = new URI(url.trim());
+            URI to = from.resolve(location.trim());
+            if (to.getScheme() == null ||
+                    to.getScheme().equalsIgnoreCase(from.getScheme()) == false) {
+                return null;
+            }
+            return to.toString();
+        } catch (URISyntaxException | IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    /**
+     * The product the data file needs, as its URL formatter gives it, or
+     * null if the formatter gives none or cannot say.
+     */
+    private String productNeeded(AspectEngineDataFile dataFile) {
+        DataUpdateUrlFormatter formatter =
+                dataFile.getConfiguration().getUrlFormatter();
+        if (formatter == null) {
+            return null;
+        }
+        try {
+            return formatter.getDataUpdateProduct(dataFile);
+        } catch (RuntimeException e) {
+            logger.debug("The product of the data file is not known", e);
+            return null;
+        }
     }
 
     /**

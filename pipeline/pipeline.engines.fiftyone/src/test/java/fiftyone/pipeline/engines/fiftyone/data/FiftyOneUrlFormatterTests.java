@@ -124,6 +124,31 @@ public class FiftyOneUrlFormatterTests {
     }
 
     @Test
+    public void Product_NotKnownForAnEmptyTier() {
+        assertNull(new FiftyOneUrlFormatter().getDataUpdateProduct(
+            dataFile("HashV41", "")));
+        assertNull(new FiftyOneUrlFormatter().getDataUpdateProduct(
+            dataFile("IPIV41", "")));
+    }
+
+    @Test
+    public void Product_GivenIsUsedWithoutLookingUpTheTier() {
+        FiftyOneDataFile file = dataFile("HashV41", "Enterprise");
+        assertEquals("V4TAC",
+            new FiftyOneUrlFormatter("V4TAC").getDataUpdateProduct(file));
+        org.mockito.Mockito.verify(file.getEngine(),
+            org.mockito.Mockito.never()).getDataSourceTier();
+    }
+
+    @Test
+    public void Product_GivenAsEmptyNamesNoProduct() {
+        assertEquals(
+            URL + "?LicenseKeys=" + KEY + "&Download=True&Type=HashV41",
+            new FiftyOneUrlFormatter("").getFormattedDataUpdateUrl(
+                dataFile("HashV41", "TAC")));
+    }
+
+    @Test
     public void Product_NotKnownWithoutAnEngine() {
         assertNull(new FiftyOneUrlFormatter().getDataUpdateProduct(
             dataFile("HashV41", null)));
