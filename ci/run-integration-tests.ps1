@@ -100,8 +100,11 @@ function Invoke-ContractTests {
         curl -sS -o $(if ($IsWindows) { 'NUL' } else { '/dev/null' }) --retry 20 --retry-delay 3 --retry-max-time 120 --retry-connrefused "http://localhost:$Port"
         if ($LASTEXITCODE -ne 0) { throw "The $Label web example did not start on port $Port." }
 
-        $env:EXAMPLE_URL = "http://localhost:$Port"
-        $env:EXAMPLE_LANG = 'java'
+        # The suite reads the running example's address and language under
+        # its _51DEGREES_ names. Without _51DEGREES_EXAMPLE_URL it launches
+        # an example of its own.
+        ${env:_51DEGREES_EXAMPLE_URL} = "http://localhost:$Port"
+        ${env:_51DEGREES_EXAMPLE_LANG} = 'java'
         # Normal verbosity prints each test's time, passed or failed.
         dotnet test selenium-api-tests -c Release --filter TestCategory=Contract --logger "console;verbosity=normal"
         # PowerShell does not stop for a native command that returns non-zero,
@@ -115,7 +118,8 @@ function Invoke-ContractTests {
         throw
     } finally {
         if ($example) { Remove-Job -Force $example }
-        Remove-Item env:PORT, env:EXAMPLE_URL -ErrorAction SilentlyContinue
+        Remove-Item env:PORT, env:_51DEGREES_EXAMPLE_URL, env:_51DEGREES_EXAMPLE_LANG `
+            -ErrorAction SilentlyContinue
         foreach ($name in $ExampleEnv.Keys) {
             Remove-Item "env:$name" -ErrorAction SilentlyContinue
         }
@@ -137,10 +141,6 @@ if (-not $SeleniumContract) {
         Write-Host "Cloning the Selenium contract tests from '$seleniumRef'"
         git clone --depth 1 --branch $seleniumRef https://github.com/51Degrees/selenium-api-tests.git
     }
-    $env:CLOUD_ROOT_URL = "https://cloud.51degrees.com/"
-    # The shared suite reads its key under this name of its own.
-    $env:PAID_RESOURCE_KEY = $env:_51DEGREES_RESOURCE_KEY
-
     # Chrome's first start on a fresh runner is many times slower than the
     # starts after it, so it is made here rather than inside the first test.
     # The tests still run when it cannot be made.
