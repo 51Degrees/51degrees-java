@@ -39,6 +39,8 @@ import fiftyone.pipeline.util.Check;
 import fiftyone.pipeline.util.LicenseKeyMask;
 import jakarta.xml.bind.DatatypeConverter;
 import org.apache.commons.lang3.ObjectUtils;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +48,8 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.time.Instant;
 import java.security.DigestInputStream;
@@ -79,6 +83,27 @@ public class DataUpdateServiceDefault implements DataUpdateService {
      * as the 51Degrees URL formatter writes it.
      */
     private static final String LICENSE_KEYS_PARAMETER = "LicenseKeys";
+
+    /**
+     * The query parameter of a data update URL that names the product.
+     */
+    private static final String PRODUCT_PARAMETER = "Product";
+
+    /**
+     * The status of a response that lists one URI for each product the
+     * license key holds.
+     */
+    private static final int HTTP_MULTIPLE_CHOICES = 300;
+
+    /**
+     * The field of that response's JSON body that holds the URIs.
+     */
+    private static final String AVAILABLE_URIS = "AvailableUris";
+
+    /**
+     * The most that is read of the body of that response.
+     */
+    private static final int MAX_CHOICES_BODY_BYTES = 64 * 1024;
 
     /**
      * How long a watched data file is tried before the update gives up with
@@ -901,7 +926,30 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             AspectEngineDataFile dataFile,
             FileWrapper tempFile) {
 
-        String url = dataFile.getFormattedUrl();
+        return downloadFile(dataFile, tempFile, dataFile.getFormattedUrl(),
+                true, false);
+    }
+
+    /**
+     * Request the URL and download the data file it answers with.
+     *
+     * @param dataFile       the data file to use
+     * @param tempFile       the temp file to write the data to
+     * @param url            the URL to request
+     * @param chooseProduct  true to ask again for the product the data
+     *                       file needs when the response lists one URI for
+     *                       each product the license key holds
+     * @param followRedirect true to let the connection follow a redirect to
+     *                       the location the response names
+     * @return the {@link AutoUpdateStatus} value indicating the result
+     */
+    private AutoUpdateStatus downloadFile(
+            AspectEngineDataFile dataFile,
+            FileWrapper tempFile,
+            String url,
+            boolean chooseProduct,
+            boolean followRedirect) {
+
         String engineType = getEngineType(dataFile);
         // The URL carries the license keys, so every message names it with
         // each key masked.
@@ -927,9 +975,57 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                     connection.setIfModifiedSince(ifModifiedSince);
                 }
 
-                connection.setInstanceFollowRedirects(true);
+                // A redirect is not followed by the connection at first,
+                // because it would follow the Location header of a 300
+                // response, which names a product without regard to the
+                // one the data file needs.
+                connection.setInstanceFollowRedirects(followRedirect);
 
-                switch (connection.getResponseCode()) {
+                int status = connection.getResponseCode();
+                if (followRedirect == false && isRedirect(status)) {
+                    // A redirect to one location. Ask again, and let the
+                    // connection follow it.
+                    connection.disconnect();
+                    return downloadFile(dataFile, tempFile, url,
+                            false, true);
+                }
+                switch (status) {
+                    case HTTP_MULTIPLE_CHOICES:
+                        List<String> uris = availableUris(connection);
+                        if (chooseProduct == false || uris.isEmpty()) {
+                            logCheckFailure("HTTP status code '" + status +
+                                    "' from data update service at '" +
+                                    loggedUrl + "' for engine '" +
+                                    engineType + "'", null);
+                            return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
+                        }
+                        String needed = dataFile.getConfiguration()
+                                .getUrlFormatter() == null ? null :
+                                dataFile.getConfiguration().getUrlFormatter()
+                                        .getDataUpdateProduct(dataFile);
+                        List<String> offered = new ArrayList<>();
+                        for (String uri : uris) {
+                            String product = productOf(uri);
+                            if (product == null) {
+                                continue;
+                            }
+                            offered.add(product);
+                            if (product.equalsIgnoreCase(needed)) {
+                                // Only the product name is taken from the
+                                // response. The request is the first one
+                                // with the product added.
+                                logger.info("Requesting product '{}' from " +
+                                        "'{}' for Engine '{}'",
+                                        product, loggedUrl, engineType);
+                                connection.disconnect();
+                                return downloadFile(dataFile, tempFile,
+                                        withProduct(url.trim(), product),
+                                        false, false);
+                            }
+                        }
+                        logCheckFailure(productNotOffered(
+                                needed, offered, loggedUrl, engineType), null);
+                        return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
                     case (HttpURLConnection.HTTP_OK):
                         AutoUpdateStatus downloaded;
                         try {
@@ -981,6 +1077,115 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                     LicenseKeyMask.maskIn(e, licenseKeys));
             return AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR;
         }
+    }
+
+    /**
+     * True if the status is a redirect to the one location that the
+     * response names in its Location header.
+     */
+    private static boolean isRedirect(int status) {
+        return status == HttpURLConnection.HTTP_MOVED_PERM ||
+                status == HttpURLConnection.HTTP_MOVED_TEMP ||
+                status == HttpURLConnection.HTTP_SEE_OTHER ||
+                status == 305 ||
+                status == 307 ||
+                status == 308;
+    }
+
+    /**
+     * The URIs listed in the JSON body of a 300 response, one for each
+     * product the license key holds, in the order given. The list is empty
+     * if the response has no such body.
+     */
+    private static List<String> availableUris(HttpURLConnection connection) {
+        List<String> uris = new ArrayList<>();
+        try {
+            InputStream body = connection.getInputStream();
+            if (body == null) {
+                return uris;
+            }
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            try (InputStream in = body) {
+                byte[] buffer = new byte[4096];
+                int n;
+                while (bytes.size() < MAX_CHOICES_BODY_BYTES &&
+                        (n = in.read(buffer)) != -1) {
+                    bytes.write(buffer, 0, n);
+                }
+            }
+            JSONArray array = new JSONObject(new String(
+                    bytes.toByteArray(), StandardCharsets.UTF_8))
+                    .optJSONArray(AVAILABLE_URIS);
+            if (array != null) {
+                for (int i = 0; i < array.length(); i++) {
+                    String uri = array.optString(i, null);
+                    if (uri != null && uri.isEmpty() == false) {
+                        uris.add(uri);
+                    }
+                }
+            }
+        } catch (IOException | RuntimeException e) {
+            // No list of URIs, which the caller reports by the status.
+            uris.clear();
+        }
+        return uris;
+    }
+
+    /**
+     * The value of the Product parameter in the query of the URI, or null
+     * if it has none.
+     */
+    private static String productOf(String uri) {
+        int query = uri.indexOf('?');
+        if (query < 0) {
+            return null;
+        }
+        for (String parameter : uri.substring(query + 1).split("&")) {
+            int equals = parameter.indexOf('=');
+            if (equals > 0 && parameter.substring(0, equals)
+                    .equalsIgnoreCase(PRODUCT_PARAMETER)) {
+                String value = parameter.substring(equals + 1);
+                try {
+                    value = URLDecoder.decode(value, "UTF-8");
+                } catch (UnsupportedEncodingException |
+                         IllegalArgumentException e) {
+                    // Used as it is written.
+                }
+                return value.isEmpty() ? null : value;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The URL with the product added to its query.
+     */
+    private static String withProduct(String url, String product) {
+        String value = product;
+        try {
+            value = URLEncoder.encode(product, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            // Used as it is written.
+        }
+        return url + (url.indexOf('?') < 0 ? "?" : "&") +
+                PRODUCT_PARAMETER + "=" + value;
+    }
+
+    /**
+     * The message of the Errors table's row for a 300 response that does
+     * not offer the product the data file needs, which is empty when it is
+     * not known. It names the products and not their URIs, which carry the
+     * license key. The URL is given with each license key already masked.
+     */
+    private static String productNotOffered(
+            String needed,
+            List<String> offered,
+            String loggedUrl,
+            String engineType) {
+        return "Product '" + (needed == null ? "" : needed) +
+                "' is not offered by data update service at '" + loggedUrl +
+                "' for engine '" + engineType + "'. Products offered: '" +
+                String.join(",", offered) + "'";
     }
 
     /**

@@ -31,6 +31,11 @@ import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeNoException;
 
 public class UpdateDataFileTest {
+    /**
+     * Runs the example for the product
+     * {@link UpdateDataFile#UPDATE_EXAMPLE_PRODUCT}, which the license key
+     * must hold.
+     */
     @Test
     public void updateExampleTest () throws Exception {
         String licenseKey = KeyHelper.getNamedKey(UpdateDataFile.UPDATE_EXAMPLE_LICENSE_KEY_NAME);
@@ -39,7 +44,7 @@ public class UpdateDataFileTest {
                 " is not set to a license key for the data files.",
                 KeyHelper.isInvalidKey(licenseKey));
         try {
-            run(null, licenseKey, false);
+            run(null, licenseKey, UpdateDataFile.UPDATE_EXAMPLE_PRODUCT, false);
         } catch (IllegalStateException e) {
             if (e.getMessage().contains("ERR_429")) {
                 assumeFalse("Download failed because of too many requests error", true);

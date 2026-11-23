@@ -35,4 +35,17 @@ public interface DataUpdateUrlFormatter {
      * @return formatted URL
      */
     String getFormattedDataUpdateUrl(AspectEngineDataFile dataFile);
+
+    /**
+     * Get the name of the product the data file needs from the data update
+     * service, for example V4TAC. A license key can hold several products.
+     * The data update service then answers a request that names no product
+     * with a list of one URI for each product, and the update asks again
+     * for this product.
+     * @param dataFile file to get the product for
+     * @return the product name, or null if it is not known
+     */
+    default String getDataUpdateProduct(AspectEngineDataFile dataFile) {
+        return null;
+    }
 }
