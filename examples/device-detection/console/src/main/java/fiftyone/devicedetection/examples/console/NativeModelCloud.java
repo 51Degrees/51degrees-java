@@ -109,28 +109,20 @@ public class NativeModelCloud {
                         .setResourceKey(resourceKey)
                         .build())
                 // Create the hardware profile engine to process the response from the
-                // request engine - and add to the pipleine
+                // request engine - and add to the pipeline
                 .addFlowElement(new HardwareProfileCloudEngineBuilder(LoggerFactory.getILoggerFactory())
                         .build())
                 // very important to ask pipeline to close the engines we added since
                 //   we are not closing them ourselves
                 .setAutoCloseElements(true)
                 .build()) {
+                // The pipeline asked the cloud for the key's accessible
+                // properties as it was built, so unless that request failed,
+                // a key without the lookup is found here, before any lookup.
                 if (lacksHardwareLookup(pipeline)) {
-                    output.println("The resource key does not include " +
-                            "HardwarePlatform.Profiles, the hardware lookup " +
-                            "this example needs, so no devices are listed. " +
-                            "Create a resource key that includes it at " +
-                            FindOutMore.link(
-                                    KeyHelper.PAID_PROPERTIES_CONFIGURATION,
-                                    EXAMPLE_TAG, NO_HARDWARE_LOOKUP) +
-                            ", or contact us about it at " +
-                            FindOutMore.link("contact-us", EXAMPLE_TAG,
-                                    NO_HARDWARE_LOOKUP) + ".");
-                } else {
-                    // Pass a native model into the pipeline and list the
-                    // matching devices.
-                    analyseNativeModel(NATIVE_MODEL_1, pipeline, output);
+                    writeNoHardwareLookup(output);
+                } else if (analyseNativeModel(NATIVE_MODEL_1, pipeline,
+                        output)) {
                     // Repeat for an alternative native model name.
                     analyseNativeModel(NATIVE_MODEL_2, pipeline, output);
                 }
@@ -142,14 +134,28 @@ public class NativeModelCloud {
         }
     }
 
-    static void analyseNativeModel(String nativemodel, Pipeline pipeline, PrintWriter output) throws Exception {
+    /**
+     * Lists the devices associated with the native model name, or says that
+     * the resource key does not include the hardware lookup.
+     * @return false if the key does not include the lookup
+     */
+    static boolean analyseNativeModel(String nativemodel, Pipeline pipeline, PrintWriter output) throws Exception {
         // Create the FlowData instance. This is wrapped in a try with resources to ensure
         // that resources are disposed correctly.
         try (FlowData data = pipeline.createFlowData()) {
             // Add the native model key as evidence.
             data.addEvidence(Constants.EVIDENCE_QUERY_NATIVE_MODEL_KEY, nativemodel);
-            // Process the supplied evidence.
+            // Process the supplied evidence. If the accessible properties
+            // could not be fetched as the pipeline was built, processing
+            // fetches them first, and throws the cloud service's error if
+            // that fails again.
             data.process();
+            // So they are known now, and are checked before the result is
+            // used.
+            if (lacksHardwareLookup(pipeline)) {
+                writeNoHardwareLookup(output);
+                return false;
+            }
             // Get result data from the flow data.
             MultiDeviceDataCloud result = data.get(MultiDeviceDataCloud.class);
             // The 'MultiDeviceDataCloud' object contains one or more instances
@@ -168,15 +174,32 @@ public class NativeModelCloud {
                         asString(device.getHardwareModel()));
 
             }
+            return true;
         }
     }
 
     /**
-     * Whether the resource key lacks the hardware lookup. The hardware
-     * engine's properties come from the cloud's accessible properties for
-     * the key, and hold Profiles only when the key includes the lookup.
-     * When the accessible properties could not be fetched nothing is known
-     * to be missing, so the lookups run and report what went wrong.
+     * Says that the resource key does not include the hardware lookup, with
+     * where to create a key that does.
+     */
+    static void writeNoHardwareLookup(PrintWriter output) {
+        output.println("The resource key does not include " +
+                "HardwarePlatform.Profiles, the hardware lookup this " +
+                "example needs, so no devices are listed. Create a " +
+                "resource key that includes it at " +
+                FindOutMore.link(KeyHelper.PAID_PROPERTIES_CONFIGURATION,
+                        EXAMPLE_TAG, NO_HARDWARE_LOOKUP) +
+                ", or contact us about it at " +
+                FindOutMore.link("contact-us", EXAMPLE_TAG,
+                        NO_HARDWARE_LOOKUP) + ".");
+    }
+
+    /**
+     * Whether the resource key is known to lack the hardware lookup. The
+     * hardware engine's properties come from the cloud's accessible
+     * properties for the key, and hold Profiles only when the key includes
+     * the lookup. Until the accessible properties have been fetched nothing
+     * is known to be missing.
      */
     static boolean lacksHardwareLookup(Pipeline pipeline) {
         if (pipeline.getElement(CloudRequestEngine.class)

@@ -104,7 +104,7 @@ public class TacCloud {
     public static void run(String resourceKey, OutputStream os) throws Exception {
         // In this example, we use the FiftyOnePipelineBuilder and configure it from a file.
         // For a demonstration of how to do this in code instead, see the
-        // NativeModelLookup example.
+        // NativeModelCloud example.
         // For more information about builders in general see the documentation at
         // https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-taccloud.java&utm_term=run
 
@@ -130,21 +130,14 @@ public class TacCloud {
             // Create the pipeline using the service provider and the configured options.
             try (Pipeline pipeline = new FiftyOnePipelineBuilder()
                     .buildFromConfiguration(pipelineOptions)) {
+                // The pipeline asked the cloud for the key's accessible
+                // properties as it was built, so unless that request failed,
+                // a key without the lookup is found here, before any lookup.
                 if (lacksHardwareLookup(pipeline)) {
-                    writer.println("The resource key does not include " +
-                            "HardwarePlatform.Profiles, the hardware lookup " +
-                            "this example needs, so no devices are listed. " +
-                            "Create a resource key that includes it at " +
-                            FindOutMore.link(
-                                    KeyHelper.PAID_PROPERTIES_CONFIGURATION,
-                                    EXAMPLE_TAG, NO_HARDWARE_LOOKUP) +
-                            ", or contact us about it at " +
-                            FindOutMore.link("contact-us", EXAMPLE_TAG,
-                                    NO_HARDWARE_LOOKUP) + ".");
-                } else {
-                    // Pass a TAC into the pipeline and list the matching
-                    // devices.
-                    analyseTac(TAC_1, pipeline, writer);
+                    writeNoHardwareLookup(writer);
+                } else if (analyseTac(TAC_1, pipeline, writer)) {
+                    // Pass the second TAC into the pipeline and list the
+                    // matching devices.
                     analyseTac(TAC_2, pipeline, writer);
                 }
             }
@@ -155,13 +148,27 @@ public class TacCloud {
         }
     }
 
-    static void analyseTac(String tac, Pipeline pipeline, PrintWriter output) throws Exception {
+    /**
+     * Lists the devices associated with the TAC, or says that the resource
+     * key does not include the hardware lookup.
+     * @return false if the key does not include the lookup
+     */
+    static boolean analyseTac(String tac, Pipeline pipeline, PrintWriter output) throws Exception {
         // Create the FlowData instance.
         try (FlowData data = pipeline.createFlowData()) {
             // Add the TAC as evidence.
             data.addEvidence(Constants.EVIDENCE_QUERY_TAC_KEY, tac);
-            // Process the supplied evidence.
+            // Process the supplied evidence. If the accessible properties
+            // could not be fetched as the pipeline was built, processing
+            // fetches them first, and throws the cloud service's error if
+            // that fails again.
             data.process();
+            // So they are known now, and are checked before the result is
+            // used.
+            if (lacksHardwareLookup(pipeline)) {
+                writeNoHardwareLookup(output);
+                return false;
+            }
             // Get result data from the flow data.
             MultiDeviceDataCloud result = data.get(MultiDeviceDataCloud.class);
             // The 'MultiDeviceDataCloud' object contains one or more instances
@@ -179,15 +186,32 @@ public class TacCloud {
                 // output the result, taking care to deal with "no value" cases
                 output.format("\t%s %s (%s)%n", asString(vendor), asString(name), asString(model));
             }
+            return true;
         }
     }
 
     /**
-     * Whether the resource key lacks the hardware lookup. The hardware
-     * engine's properties come from the cloud's accessible properties for
-     * the key, and hold Profiles only when the key includes the lookup.
-     * When the accessible properties could not be fetched nothing is known
-     * to be missing, so the lookups run and report what went wrong.
+     * Says that the resource key does not include the hardware lookup, with
+     * where to create a key that does.
+     */
+    static void writeNoHardwareLookup(PrintWriter output) {
+        output.println("The resource key does not include " +
+                "HardwarePlatform.Profiles, the hardware lookup this " +
+                "example needs, so no devices are listed. Create a " +
+                "resource key that includes it at " +
+                FindOutMore.link(KeyHelper.PAID_PROPERTIES_CONFIGURATION,
+                        EXAMPLE_TAG, NO_HARDWARE_LOOKUP) +
+                ", or contact us about it at " +
+                FindOutMore.link("contact-us", EXAMPLE_TAG,
+                        NO_HARDWARE_LOOKUP) + ".");
+    }
+
+    /**
+     * Whether the resource key is known to lack the hardware lookup. The
+     * hardware engine's properties come from the cloud's accessible
+     * properties for the key, and hold Profiles only when the key includes
+     * the lookup. Until the accessible properties have been fetched nothing
+     * is known to be missing.
      */
     static boolean lacksHardwareLookup(Pipeline pipeline) {
         if (pipeline.getElement(CloudRequestEngine.class)

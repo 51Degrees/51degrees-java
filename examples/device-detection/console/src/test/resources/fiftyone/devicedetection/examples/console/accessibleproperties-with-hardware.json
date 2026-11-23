@@ -1,0 +1,50 @@
+{
+  "Products": {
+    "device": {
+      "DataTier": "CloudV5Bespoke",
+      "Properties": [
+        {
+          "Name": "IsMobile",
+          "Type": "Boolean",
+          "Category": "Device",
+          "DelayExecution": false
+        }
+      ]
+    },
+    "hardware": {
+      "DataTier": "CloudV5Bespoke",
+      "Properties": [
+        {
+          "Name": "Profiles",
+          "Type": "Array",
+          "Category": "",
+          "ItemProperties": [
+            {
+              "Name": "HardwareVendor",
+              "Type": "String",
+              "Category": "Name",
+              "DelayExecution": false,
+              "EvidenceProperties": []
+            },
+            {
+              "Name": "HardwareModel",
+              "Type": "String",
+              "Category": "Name",
+              "DelayExecution": false,
+              "EvidenceProperties": []
+            },
+            {
+              "Name": "HardwareName",
+              "Type": "Array",
+              "Category": "Name",
+              "DelayExecution": false,
+              "EvidenceProperties": []
+            }
+          ],
+          "DelayExecution": false,
+          "EvidenceProperties": []
+        }
+      ]
+    }
+  }
+}
