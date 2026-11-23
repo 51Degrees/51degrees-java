@@ -26,15 +26,15 @@ import fiftyone.devicedetection.examples.shared.ExampleProcess;
 import fiftyone.devicedetection.examples.shared.KeyHelper;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 public class TacCloudTest {
 
     /**
      * The example runs as a customer runs it, in a process of its own
-     * that reads its key from _51DEGREES_RESOURCE_KEY. The test gives that
-     * process the key with every property.
+     * that reads its key from _51DEGREES_RESOURCE_KEY, and the cloud that
+     * _51DEGREES_CLOUD_ENDPOINT names when that is set. The test gives that
+     * process the key with every property, and fails unless the example
+     * lists a device with a vendor and a model for each TAC, so a key that
+     * does not include HardwarePlatform.Profiles fails it.
      */
     @Test
     public void run() throws Exception {
@@ -44,10 +44,7 @@ public class TacCloudTest {
         ExampleProcess.Result result =
             ExampleProcess.runWithResourceKey(TacCloud.class, resourceKey);
         System.out.println(result.output);
-        assertEquals("TacCloud should end with exit code 0",
-            0, result.exitCode);
-        assertTrue("The output should hold the example's results",
-            result.output.contains("This example shows the details of " +
-                "devices associated with a given 'Type Allocation Code'"));
+        HardwareLookupOutput.requireDevices(TacCloud.class, result,
+            "TAC lookup", "the TAC", TacCloud.TAC_1, TacCloud.TAC_2);
     }
 }

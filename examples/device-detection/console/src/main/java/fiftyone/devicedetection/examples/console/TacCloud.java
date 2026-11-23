@@ -25,12 +25,15 @@ package fiftyone.devicedetection.examples.console;
 import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.devicedetection.examples.shared.KeyHelper;
 import fiftyone.devicedetection.cloud.data.MultiDeviceDataCloud;
+import fiftyone.devicedetection.cloud.flowelements.HardwareProfileCloudEngine;
 import fiftyone.devicedetection.shared.Constants;
 import fiftyone.devicedetection.shared.DeviceData;
+import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
 import fiftyone.pipeline.core.configuration.PipelineOptions;
 import fiftyone.pipeline.core.configuration.PipelineOptionsFactory;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
+import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.engines.fiftyone.flowelements.FiftyOnePipelineBuilder;
 
@@ -62,6 +65,16 @@ public class TacCloud {
      */
     private static final String EXAMPLE_TAG =
             "console-src-main-java-fiftyone-devicedetection-examples-console-taccloud.java";
+
+    /**
+     * The hardware engine's property that holds the matching devices.
+     */
+    private static final String PROFILES = "Profiles";
+
+    /**
+     * The tag of the links given when the resource key lacks the lookup.
+     */
+    private static final String NO_HARDWARE_LOOKUP = "no-hardware-lookup";
 
     // Example values to use when looking up device details from TACs.
     static final String TAC_1 = "35925406";
@@ -117,9 +130,23 @@ public class TacCloud {
             // Create the pipeline using the service provider and the configured options.
             try (Pipeline pipeline = new FiftyOnePipelineBuilder()
                     .buildFromConfiguration(pipelineOptions)) {
-                // Pass a TAC into the pipeline and list the matching devices.
-                analyseTac(TAC_1, pipeline, writer);
-                analyseTac(TAC_2, pipeline, writer);
+                if (lacksHardwareLookup(pipeline)) {
+                    writer.println("The resource key does not include " +
+                            "HardwarePlatform.Profiles, the hardware lookup " +
+                            "this example needs, so no devices are listed. " +
+                            "Create a resource key that includes it at " +
+                            FindOutMore.link(
+                                    KeyHelper.PAID_PROPERTIES_CONFIGURATION,
+                                    EXAMPLE_TAG, NO_HARDWARE_LOOKUP) +
+                            ", or contact us about it at " +
+                            FindOutMore.link("contact-us", EXAMPLE_TAG,
+                                    NO_HARDWARE_LOOKUP) + ".");
+                } else {
+                    // Pass a TAC into the pipeline and list the matching
+                    // devices.
+                    analyseTac(TAC_1, pipeline, writer);
+                    analyseTac(TAC_2, pipeline, writer);
+                }
             }
             // The writer closes the stream it was given, so the section is
             // written before it.
@@ -141,15 +168,40 @@ public class TacCloud {
             // implementing 'DeviceData' which is the same interface used for standard device
             // detection, so we have access to all the same properties.
             output.format("Which devices are associated with the TAC '%s'?%n", tac);
+            if (result.getProfiles().isEmpty()) {
+                output.println("\tNo devices are associated with this TAC.");
+            }
             for (DeviceData device : result.getProfiles()) {
                 AspectPropertyValue<String> vendor = device.getHardwareVendor();
                 AspectPropertyValue<List<String>> name = device.getHardwareName();
                 AspectPropertyValue<String> model = device.getHardwareModel();
 
                 // output the result, taking care to deal with "no value" cases
-                output.format("\t%s; %s; %s%n", asString(vendor), asString(name), asString(model));
+                output.format("\t%s %s (%s)%n", asString(vendor), asString(name), asString(model));
             }
         }
+    }
+
+    /**
+     * Whether the resource key lacks the hardware lookup. The hardware
+     * engine's properties come from the cloud's accessible properties for
+     * the key, and hold Profiles only when the key includes the lookup.
+     * When the accessible properties could not be fetched nothing is known
+     * to be missing, so the lookups run and report what went wrong.
+     */
+    static boolean lacksHardwareLookup(Pipeline pipeline) {
+        if (pipeline.getElement(CloudRequestEngine.class)
+                .getPublicProperties() == null) {
+            return false;
+        }
+        for (AspectPropertyMetaData property : pipeline
+                .getElement(HardwareProfileCloudEngine.class)
+                .getProperties()) {
+            if (property.getName().equalsIgnoreCase(PROFILES)) {
+                return false;
+            }
+        }
+        return true;
     }
 }
 /*!

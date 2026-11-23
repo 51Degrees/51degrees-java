@@ -1,0 +1,15 @@
+{
+  "Products": {
+    "device": {
+      "DataTier": "CloudV5Basic",
+      "Properties": [
+        {
+          "Name": "IsMobile",
+          "Type": "Boolean",
+          "Category": "Device",
+          "DelayExecution": false
+        }
+      ]
+    }
+  }
+}

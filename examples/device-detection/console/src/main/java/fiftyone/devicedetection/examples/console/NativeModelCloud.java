@@ -25,13 +25,16 @@ package fiftyone.devicedetection.examples.console;
 import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.devicedetection.examples.shared.KeyHelper;
 import fiftyone.devicedetection.cloud.data.MultiDeviceDataCloud;
+import fiftyone.devicedetection.cloud.flowelements.HardwareProfileCloudEngine;
 import fiftyone.devicedetection.cloud.flowelements.HardwareProfileCloudEngineBuilder;
 import fiftyone.devicedetection.shared.Constants;
 import fiftyone.devicedetection.shared.DeviceData;
+import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngineBuilder;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
+import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import org.slf4j.LoggerFactory;
 
 import java.io.OutputStream;
@@ -49,9 +52,19 @@ public class NativeModelCloud {
     private static final String EXAMPLE_TAG =
             "console-src-main-java-fiftyone-devicedetection-examples-console-nativemodelcloud.java";
 
+    /**
+     * The hardware engine's property that holds the matching devices.
+     */
+    private static final String PROFILES = "Profiles";
+
+    /**
+     * The tag of the links given when the resource key lacks the lookup.
+     */
+    private static final String NO_HARDWARE_LOOKUP = "no-hardware-lookup";
+
     // Example values to use when looking up device details from native model names.
-    private static final String NATIVE_MODEL_1 = "SC-03L";
-    private static final String NATIVE_MODEL_2 = "iPhone11,8";
+    static final String NATIVE_MODEL_1 = "SC-03L";
+    static final String NATIVE_MODEL_2 = "iPhone11,8";
     public static final String NATIVE_MODEL_EXAMPLE_RESOURCE_KEY_NAME = KeyHelper.RESOURCE_KEY_VARIABLE;
 
     public static void main (String[] args) throws Exception {
@@ -103,10 +116,24 @@ public class NativeModelCloud {
                 //   we are not closing them ourselves
                 .setAutoCloseElements(true)
                 .build()) {
-                    // Pass a native model into the pipeline and list the matching devices.
+                if (lacksHardwareLookup(pipeline)) {
+                    output.println("The resource key does not include " +
+                            "HardwarePlatform.Profiles, the hardware lookup " +
+                            "this example needs, so no devices are listed. " +
+                            "Create a resource key that includes it at " +
+                            FindOutMore.link(
+                                    KeyHelper.PAID_PROPERTIES_CONFIGURATION,
+                                    EXAMPLE_TAG, NO_HARDWARE_LOOKUP) +
+                            ", or contact us about it at " +
+                            FindOutMore.link("contact-us", EXAMPLE_TAG,
+                                    NO_HARDWARE_LOOKUP) + ".");
+                } else {
+                    // Pass a native model into the pipeline and list the
+                    // matching devices.
                     analyseNativeModel(NATIVE_MODEL_1, pipeline, output);
                     // Repeat for an alternative native model name.
                     analyseNativeModel(NATIVE_MODEL_2, pipeline, output);
+                }
             }
             // The writer closes the stream it was given, so the section is
             // written before it.
@@ -130,14 +157,40 @@ public class NativeModelCloud {
             // detection, so we have access to all the same properties.
             output.format("Which devices are associated with the " +
                     "native model name '%s'?%n", nativemodel);
+            if (result.getProfiles().isEmpty()) {
+                output.println("\tNo devices are associated with this " +
+                        "native model name.");
+            }
             for (DeviceData device : result.getProfiles()) {
                 // output the result, taking care to deal with "no value" cases
-                output.format("\t%s; %s; %s%n", asString(device.getHardwareVendor()),
+                output.format("\t%s %s (%s)%n", asString(device.getHardwareVendor()),
                         asString(device.getHardwareName()),
                         asString(device.getHardwareModel()));
 
             }
         }
+    }
+
+    /**
+     * Whether the resource key lacks the hardware lookup. The hardware
+     * engine's properties come from the cloud's accessible properties for
+     * the key, and hold Profiles only when the key includes the lookup.
+     * When the accessible properties could not be fetched nothing is known
+     * to be missing, so the lookups run and report what went wrong.
+     */
+    static boolean lacksHardwareLookup(Pipeline pipeline) {
+        if (pipeline.getElement(CloudRequestEngine.class)
+                .getPublicProperties() == null) {
+            return false;
+        }
+        for (AspectPropertyMetaData property : pipeline
+                .getElement(HardwareProfileCloudEngine.class)
+                .getProperties()) {
+            if (property.getName().equalsIgnoreCase(PROFILES)) {
+                return false;
+            }
+        }
+        return true;
     }
 }
 /*!
