@@ -165,11 +165,44 @@ public class CloudRequestEngineBuilderTests extends CloudRequestEngineTestsBase 
     }
 
     /**
-     * An address given in configuration is used whatever the environment
-     * variable holds, so every request goes to that address.
+     * With no address given, the engine uses the address
+     * {@link ExpectedEndpoint} works out from the variable, when the
+     * variable is missing, empty, an address without a trailing slash or
+     * an address with one.
+     */
+    @Test
+    public void CloudEndPoint_Matches_Expected_For_Each_Variable()
+        throws Exception {
+        String[] values = {
+            null,
+            "",
+            "https://a.example/api/v4",
+            "https://a.example/api/v4/"
+        };
+        for (String value : values) {
+            CloudRequestEngineBuilder builder =
+                new CloudRequestEngineBuilder(loggerFactory, httpClient);
+            setExpectedEnvVarValue(builder, value);
+
+            builder.setResourceKey(testResourceKey)
+                .build();
+            assertEquals(
+                ExpectedEndpoint.root(value),
+                getEndpointValue(builder),
+                String.valueOf(value));
+        }
+    }
+
+    /**
+     * An address given in configuration is used over the environment
+     * variable, so every request goes to that address.
      */
     @Test
     public void CloudEndPoint_Configuration_Setting() throws Exception {
+        CloudRequestEngineBuilder builder =
+            new CloudRequestEngineBuilder(loggerFactory, httpClient);
+        setExpectedEnvVarValue(builder, testEnvVarEndpoint);
+
         ElementOptions element = new ElementOptions();
         element.builderName = "CloudRequestEngineBuilder";
         element.buildParameters.put("ResourceKey", testResourceKey);
@@ -178,10 +211,11 @@ public class CloudRequestEngineBuilderTests extends CloudRequestEngineTestsBase 
         options.elements.add(element);
 
         try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
-            .addService(httpClient)
+            .addElementBuilder(builder)
             .buildFromConfiguration(options)) {
             assertNotNull(pipeline.getElement(CloudRequestEngine.class));
         }
+        assertEquals(testEndpoint, getEndpointValue(builder));
 
         ArgumentCaptor<URL> urls = ArgumentCaptor.forClass(URL.class);
         verify(httpClient, atLeastOnce()).connect(urls.capture());
