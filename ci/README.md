@@ -140,6 +140,14 @@ the license keys are organization secrets:
 - `_51DEGREES_LICENSE_KEY_51DID`: license key for the 51Did cloud tests.
   `cloud-51did.yml` gives it only to the pass with
   `_51DEGREES_RESOURCE_KEY_51DID`. The Bespoke pass redeems with none.
+- `_51DEGREES_RESOURCE_KEY_BASIC`: resource key whose products don't offer
+  `HumanConfidenceSource`.
+  [cloud-human-confidence.yml](../.github/workflows/cloud-human-confidence.yml)
+  runs the Human Confidence example's live test with it, expecting no
+  source, and with `_51DEGREES_RESOURCE_KEY_BESPOKE`, expecting `Passive`.
+- `_51DEGREES_CLOUD_ENDPOINT`: the cloud service that
+  `cloud-human-confidence.yml` gives the example, the API base including
+  `/api/v4/`.
 
 A cloud test with no key is skipped, naming the variable it reads.
 
