@@ -270,11 +270,13 @@ and for a list of properties that fails once or every time.
 
 Every name 51Degrees defines for an environment variable or a Java system
 property starts `_51DEGREES_`, each name holds one thing, and no name is
-filled from another. A name the platform or a build tool defines keeps the
-name its owner gave it.
+filled from another. A name only CI uses, which no customer sets, has no
+prefix and says what it holds. A name the platform or a build tool defines
+keeps the name its owner gave it.
 [`ci/check-environment-variable-names.ps1`](ci/check-environment-variable-names.ps1)
-reads every tracked file and fails on a name read or set that is neither. It
-holds the short list of platform and tool names. Run it, and its tests in
+reads every tracked file and fails on a name read or set that is none of
+these. It holds the short lists of CI names and of platform and tool
+names. Run it, and its tests in
 [`ci/check-environment-variable-names.Tests.ps1`](ci/check-environment-variable-names.Tests.ps1),
 after a change that reads or sets a name.
 

@@ -107,9 +107,10 @@ on-premise tests need the free data files, which the script in
 Intelligence data file, see `ip-intelligence/README.md`.
 
 Every environment variable name that the packages, tests, examples and CI
-scripts define starts `_51DEGREES_`, which
+scripts define starts `_51DEGREES_`, apart from the few that only CI uses,
+which
 [`ci/check-environment-variable-names.ps1`](ci/check-environment-variable-names.ps1)
-checks.
+lists and checks.
 Tests find data files by searching from the root of this repository, so run
 Maven from here rather than from inside a package folder.
 
