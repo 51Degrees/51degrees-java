@@ -63,6 +63,11 @@ Describe 'Test-AllowedName' {
         @{ Name = 'X_51DEGREES_SAMPLE' }
         @{ Name = 'path' }
         @{ Name = 'javax.sample' }
+        # The shared browser tests give an example its port, address and
+        # language under _51DEGREES_ names.
+        @{ Name = 'PORT' }
+        @{ Name = 'EXAMPLE_URL' }
+        @{ Name = 'EXAMPLE_LANG' }
     ) {
         Test-AllowedName $Name | Should -BeFalse
     }

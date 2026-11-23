@@ -90,7 +90,9 @@ function Invoke-ContractTests {
         mvn @MavenOptions -pl $Module -am package -DskipTests @versionArgs
         if ($LASTEXITCODE -ne 0) { throw "Building the $Label web example failed." }
         $jar = (Get-ChildItem "$Module/target/*-jar-with-dependencies.jar" | Select-Object -First 1).FullName
-        $env:PORT = $Port
+        # The port the example listens on, under the name the shared suite
+        # gives an example it starts itself.
+        ${env:_51DEGREES_EXAMPLE_HTTP_PORTS} = $Port
         foreach ($name in $ExampleEnv.Keys) {
             Set-Item "env:$name" $ExampleEnv[$name]
         }
@@ -122,7 +124,7 @@ function Invoke-ContractTests {
         throw
     } finally {
         if ($example) { Remove-Job -Force $example }
-        Remove-Item env:PORT, env:_51DEGREES_EXAMPLE_URL, env:_51DEGREES_EXAMPLE_LANG `
+        Remove-Item env:_51DEGREES_EXAMPLE_HTTP_PORTS, env:_51DEGREES_EXAMPLE_URL, env:_51DEGREES_EXAMPLE_LANG `
             -ErrorAction SilentlyContinue
         foreach ($name in $ExampleEnv.Keys) {
             Remove-Item "env:$name" -ErrorAction SilentlyContinue

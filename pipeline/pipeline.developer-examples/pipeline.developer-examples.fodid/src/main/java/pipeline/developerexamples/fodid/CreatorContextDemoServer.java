@@ -109,7 +109,9 @@ import java.util.concurrent.CompletionException;
  * the {@code /api/v4/} segment, defaulting to
  * {@code https://cloud.51degrees.com/api/v4/}. This is the same variable
  * the cloud request engine of this package honours.</li>
- * <li>{@code PORT}, optional, defaulting to {@code 5151}.</li>
+ * <li>{@code _51DEGREES_EXAMPLE_HTTP_PORTS}, optional, defaulting to
+ * {@code 5151}. If it lists several ports, separated by commas, the server
+ * listens on the first.</li>
  * </ul>
  * Then open {@code http://localhost:5151/}.
  */
@@ -119,10 +121,14 @@ public class CreatorContextDemoServer {
     static final String RESOURCES = "/fodid/creator-context/";
 
     /**
-     * The port the server listens on when the PORT environment variable
+     * The port the server listens on when the
+     * _51DEGREES_EXAMPLE_HTTP_PORTS environment variable
      * does not choose another.
      */
     public static final int DEFAULT_PORT = 5151;
+
+    /** The environment variable that names the port to listen on. */
+    static final String HTTP_PORTS_ENV_VAR = "_51DEGREES_EXAMPLE_HTTP_PORTS";
 
     static final String RESOURCE = env("_51DEGREES_RESOURCE_KEY");
     static final String LICENCE = env("_51DEGREES_LICENSE_KEY");
@@ -173,7 +179,7 @@ public class CreatorContextDemoServer {
         // web examples vendor it.
         resource("page.html");
         resource("examples-main.min.css");
-        int port = Integer.parseInt(envOr("PORT", String.valueOf(DEFAULT_PORT)));
+        int port = port(env(HTTP_PORTS_ENV_VAR));
         HttpServer server = HttpServer.create(
             new InetSocketAddress(port), 0);
         server.createContext("/", CreatorContextDemoServer::servePage);
@@ -468,8 +474,13 @@ public class CreatorContextDemoServer {
             ? value : null;
     }
 
-    static String envOr(String name, String fallback) {
-        String value = env(name);
-        return value == null ? fallback : value;
+    /**
+     * Reads the port to listen on.
+     * @param value the value of {@link #HTTP_PORTS_ENV_VAR}, or null
+     * @return the first port the value lists, or {@link #DEFAULT_PORT}
+     */
+    static int port(String value) {
+        String first = value == null ? "" : value.split(",", -1)[0].trim();
+        return first.isEmpty() ? DEFAULT_PORT : Integer.parseInt(first);
     }
 }

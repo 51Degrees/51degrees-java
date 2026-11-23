@@ -53,15 +53,17 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * cxx/data/device-detection is used, which is downloaded before the server
  * starts if it is missing.
  * <p>
- * The server listens on port 5151 and stops when Enter is pressed. If the PORT
- * environment variable is set, the server listens on that port instead and runs
- * until the process is stopped, which is how automated tests start it.
+ * The server listens on port 5151 and stops when Enter is pressed. If the
+ * _51DEGREES_EXAMPLE_HTTP_PORTS environment variable is set, the server listens
+ * on the first port it lists instead and runs until the process is stopped,
+ * which is how automated tests start it.
  */
 public class GettingStartedWebOnPrem extends HttpServlet {
     private static final long serialVersionUID = 1734154705981153540L;
     /**
-     * The port the example listens on when the PORT environment variable
-     * does not choose another.
+     * The port the example listens on when the
+     * _51DEGREES_EXAMPLE_HTTP_PORTS environment variable does not choose
+     * another.
      */
     public static final int DEFAULT_PORT = 5151;
     public static String resourceBase = "examples/device-detection/web/getting-started.onprem/src/main/webapp";
@@ -71,11 +73,13 @@ public class GettingStartedWebOnPrem extends HttpServlet {
         configureLogback(getFilePath("logback.xml"));
         logger.info("Running Example {}", GettingStartedWebOnPrem.class);
 
-        String portEnv = System.getenv("PORT");
-        if (portEnv != null) {
-            // Automated runs (e.g. the unified Selenium suite) inject a port and have no
-            // interactive stdin, so keep the server alive by joining it instead of waiting on Enter.
-            start(Integer.parseInt(portEnv)).join();
+        Integer port = EmbedJetty.portFrom(
+                System.getenv(EmbedJetty.HTTP_PORTS_ENV_VAR));
+        if (port != null) {
+            // An automated run, such as the shared browser tests, sets the
+            // port and has no console input, so keep the server running by
+            // joining it rather than waiting on Enter.
+            start(port).join();
         } else {
             // start Jetty with this WebApp
             findDataFile();

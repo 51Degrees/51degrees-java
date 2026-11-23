@@ -76,13 +76,19 @@ import java.util.concurrent.Executors;
  * redeem</li>
  * <li>_51DEGREES_CLOUD_ENDPOINT, the API base including /api/v4/, which
  * defaults to https://cloud.51degrees.com/api/v4/</li>
- * <li>PORT, the port to listen on, which defaults to 5151</li>
+ * <li>_51DEGREES_EXAMPLE_HTTP_PORTS, the port to listen on, which defaults
+ * to 5151. It may hold a comma separated list, and the example listens on
+ * the first port in it</li>
  * </ul>
  * See the README beside this example's pom.xml for the steps.
  */
 public class HumanConfidence {
 
-    /** The port the example listens on when PORT isn't set. */
+    /** The environment variable that names the port to listen on. */
+    public static final String HTTP_PORTS_ENV_VAR =
+            "_51DEGREES_EXAMPLE_HTTP_PORTS";
+
+    /** The port the example listens on when no port is set. */
     public static final int DEFAULT_PORT = 5151;
 
     /** The cloud API base used when _51DEGREES_CLOUD_ENDPOINT isn't set. */
@@ -151,13 +157,15 @@ public class HumanConfidence {
     }
 
     /**
-     * Reads the port from PORT, or uses {@link #DEFAULT_PORT}.
+     * Reads the first port {@link #HTTP_PORTS_ENV_VAR} lists, or uses
+     * {@link #DEFAULT_PORT}.
      * @param env the environment variables
      * @return the port to listen on
      */
     public static int port(Map<String, String> env) {
-        String value = env.get("PORT");
-        return isBlank(value) ? DEFAULT_PORT : Integer.parseInt(value.trim());
+        String value = env.get(HTTP_PORTS_ENV_VAR);
+        String first = isBlank(value) ? "" : value.split(",", -1)[0].trim();
+        return first.isEmpty() ? DEFAULT_PORT : Integer.parseInt(first);
     }
 
     /**

@@ -27,8 +27,9 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
 /**
- * Checks that the example listens on port 5151 when the PORT environment
- * variable does not choose another, as the readme says. It needs no
+ * Checks that the example listens on port 5151 when the
+ * _51DEGREES_EXAMPLE_HTTP_PORTS environment variable does not choose another,
+ * as the readme says. It needs no
  * resource key, so it runs where the page test is skipped.
  */
 public class DefaultPortTest {

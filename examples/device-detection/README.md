@@ -118,11 +118,11 @@ java -cp ./console/target/device-detection-java-examples.console-4.5.127-SNAPSHO
 
 The web examples are run from the root of this repository, because they find their
 web content by a path relative to it. They listen on port 5151 and stop when Enter
-is pressed. Set the `PORT` environment variable to listen on another port, in which
-case the example runs until the process is stopped:
+is pressed. Set the `_51DEGREES_EXAMPLE_HTTP_PORTS` environment variable to listen on
+another port, in which case the example runs until the process is stopped:
 
 ```bash
-PORT=8100 java -jar ./web/getting-started.onprem/target/device-detection-java-examples.web.getting-started.onprem-4.5.127-SNAPSHOT-jar-with-dependencies.jar
+_51DEGREES_EXAMPLE_HTTP_PORTS=8100 java -jar ./web/getting-started.onprem/target/device-detection-java-examples.web.getting-started.onprem-4.5.127-SNAPSHOT-jar-with-dependencies.jar
 ```
 
 The on-premise web example takes its data file from the `_51DEGREES_DD_PATH`
