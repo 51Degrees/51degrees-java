@@ -5,8 +5,9 @@
 # on:
 #
 # - any name that starts with the digit, wherever it is written, and
-# - any name read or set that neither starts _51DEGREES_ nor is one the
-#   platform or a build tool defines, which are listed below.
+# - any name read or set that neither starts _51DEGREES_, nor is one of the
+#   names only CI uses, nor is one the platform or a build tool defines,
+#   which are listed below.
 #
 # A name counts as read or set when it is a string given to getenv or to
 # System.getProperty, setProperty or clearProperty, a name on PowerShell's
@@ -61,13 +62,22 @@ $script:PlatformNames = @(
     'CHROMEWEBDRIVER'
 )
 
+# The names only CI uses. No customer sets them, so they have no
+# _51DEGREES_ prefix, and each name says what it holds.
+$script:CiNames = @(
+    # The staging cloud and a Bespoke key it resolves, for the tests of what
+    # only the staging cloud serves.
+    'CLOUD_STAGING_ENDPOINT', 'RESOURCE_KEY_BESPOKE_STAGING'
+)
+
 # The system properties the JDK defines start with one of these.
 $script:PlatformPropertyPattern = [regex]::new('^(?:java|os|user|sun|file|line)\.[A-Za-z0-9_.]+$')
 
-# Whether a name read or set is one 51Degrees defines under its prefix, or
-# one the platform or a build tool defines.
+# Whether a name read or set is one 51Degrees defines under its prefix, one
+# only CI uses, or one the platform or a build tool defines.
 function Test-AllowedName([string]$Name) {
     return $script:OwnNamePattern.IsMatch($Name) -or
+        $script:CiNames -ccontains $Name -or
         $script:PlatformNames -ccontains $Name -or
         $script:PlatformPropertyPattern.IsMatch($Name)
 }
@@ -259,8 +269,9 @@ if ($digits.Count -gt 0 -or $names.Count -gt 0) {
     throw ("$($digits.Count) names start with a digit, which a POSIX shell " +
         'cannot set, so each must start with an underscore, and ' +
         "$($names.Count) names are read or set that are not _51DEGREES_ " +
-        'names or names the platform or a build tool defines.')
+        'names, names only CI uses, or names the platform or a build tool ' +
+        'defines.')
 }
 
-Write-Output ('Every name read or set is a _51DEGREES_ name or one the ' +
-    'platform or a build tool defines.')
+Write-Output ('Every name read or set is a _51DEGREES_ name, one only CI ' +
+    'uses, or one the platform or a build tool defines.')

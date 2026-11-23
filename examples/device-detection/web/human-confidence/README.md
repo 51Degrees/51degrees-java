@@ -105,22 +105,26 @@ tests, or by itself from `examples/device-detection`.
 ../../mvnw -pl web/human-confidence -am test
 ```
 
-`HumanConfidenceLiveTest` starts the server with the key in
-`_51DEGREES_RESOURCE_KEY` and the cloud service that
-`_51DEGREES_CLOUD_ENDPOINT` names, and asks it for the passive result as the
-page does. By default the answer must have `HumanConfidenceSource` set to
-`Passive` and a plain level. For a key whose products don't offer the source,
-give `-DhumanConfidenceSource=none`, and the answer must have no source.
+`HumanConfidenceLiveTest` starts the server with a key and asks it for the
+passive result as the page does. The production cloud does not serve
+`HumanConfidenceSource` yet, so CI runs these tests against the staging
+cloud, with two names that only CI sets. `CLOUD_STAGING_ENDPOINT` names the
+cloud, the API base including `/api/v4/`, and `RESOURCE_KEY_BESPOKE_STAGING`
+holds a Bespoke key that cloud resolves. With that key the answer must have
+`HumanConfidenceSource` set to `Passive` and a plain level. With a key whose
+products don't offer the source, in `_51DEGREES_RESOURCE_KEY_BASIC`, the
+cloud must answer the source as null, with the reason, and the example's
+answer must have no source.
 
 ```
 ../../mvnw -pl web/human-confidence -am test -Dtest=HumanConfidenceLiveTest -Dsurefire.failIfNoSpecifiedTests=false
 ```
 
-The test is skipped when `_51DEGREES_RESOURCE_KEY` is not set, and when the
-service doesn't serve `HumanConfidenceSource`. The `Active` source needs the
-client script to run in a browser, so the test doesn't check it.
+Each test is skipped when its key or `CLOUD_STAGING_ENDPOINT` is not set.
+The `Active` source needs the client script to run in a browser, so the
+tests don't check it.
 [cloud-human-confidence.yml](../../../../.github/workflows/cloud-human-confidence.yml)
-runs it once for each of the CI resource keys.
+runs both, and fails if either is skipped.
 
 ## What a run costs
 

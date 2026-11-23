@@ -1,19 +1,21 @@
 name: Cloud Human Confidence Tests
 
-# Runs the Human Confidence web example's live test
+# Runs the Human Confidence web example's live tests
 # (examples/device-detection/web/human-confidence, HumanConfidenceLiveTest)
-# once for each resource key below. Each pass sets the single
-# _51DEGREES_RESOURCE_KEY the example reads, and tells the test with
-# -DhumanConfidenceSource what that key's answer carries. The Bespoke key's
-# products offer HumanConfidenceSource, so its answer carries Passive. The
-# Basic key's products don't, so its answer carries no source.
+# once, against the staging cloud, because the production cloud does not
+# serve HumanConfidenceSource yet. Each test reads its own resource key under
+# the key's own name. The Bespoke key's products offer HumanConfidenceSource,
+# so its answer carries Passive and a level. The Basic key's products don't,
+# so the cloud answers its source as null, with the reason.
 #
-# The resource keys are organization secrets, and _51DEGREES_CLOUD_ENDPOINT,
-# the service the example calls, is an organization variable. A new key needs
-# a line here as well as the organization secret.
+# CLOUD_STAGING_ENDPOINT, the staging cloud's API base, is an organization
+# variable that only CI uses. RESOURCE_KEY_BESPOKE_STAGING is a Bespoke key
+# the staging cloud resolves, and _51DEGREES_RESOURCE_KEY_BASIC resolves on
+# both clouds. Both keys are organization secrets. A new key needs a line
+# here and in the test, as well as the organization secret.
 #
-# A pass fails when its key is empty or when the test is skipped. A cloud
-# test that passes without calling the cloud reports success having proved
+# The run fails when a name is empty or when a test is skipped. A cloud test
+# that passes without calling the cloud reports success having proved
 # nothing, and that is worse than a red job.
 
 on:
@@ -42,52 +44,40 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
-      - name: Human Confidence test for each resource key
+      - name: Human Confidence tests
         shell: pwsh
         working-directory: examples/device-detection
         env:
-          _51DEGREES_RESOURCE_KEY_BESPOKE: ${{ secrets._51DEGREES_RESOURCE_KEY_BESPOKE }}
+          RESOURCE_KEY_BESPOKE_STAGING: ${{ secrets.RESOURCE_KEY_BESPOKE_STAGING }}
           _51DEGREES_RESOURCE_KEY_BASIC: ${{ secrets._51DEGREES_RESOURCE_KEY_BASIC }}
-          _51DEGREES_CLOUD_ENDPOINT: ${{ vars._51DEGREES_CLOUD_ENDPOINT }}
+          CLOUD_STAGING_ENDPOINT: ${{ vars.CLOUD_STAGING_ENDPOINT }}
         run: |
-          # Each key, with the source its answer carries.
-          $passes = [ordered]@{
-            _51DEGREES_RESOURCE_KEY_BESPOKE = 'Passive'
-            _51DEGREES_RESOURCE_KEY_BASIC = 'none'
+          # Each test skips without its key or the endpoint, so a missing one
+          # fails here, naming every organization secret or variable missing.
+          $missing = @(
+            'RESOURCE_KEY_BESPOKE_STAGING'
+            '_51DEGREES_RESOURCE_KEY_BASIC'
+            'CLOUD_STAGING_ENDPOINT'
+          ) | Where-Object { -not [Environment]::GetEnvironmentVariable($_) }
+          if ($missing) {
+            throw ("The organization secret or variable " +
+              "$($missing -join ', ') is empty or missing, so the live " +
+              'tests cannot run.')
           }
           $report = 'web/human-confidence/target/surefire-reports/' +
             'TEST-fiftyone.devicedetection.examples.web.HumanConfidenceLiveTest.xml'
-          $failed = $false
-          foreach ($name in $passes.Keys) {
-            Write-Host "::group::Live test with $name"
-            $key = [Environment]::GetEnvironmentVariable($name)
-            if (-not $key) {
-              Write-Host ("::error::The organization secret $name is " +
-                'empty or missing, so the live test cannot run with it.')
-              $failed = $true
-              Write-Host '::endgroup::'
-              continue
-            }
-            $env:_51DEGREES_RESOURCE_KEY = $key
-            Remove-Item $report -ErrorAction SilentlyContinue
-            mvn -B --no-transfer-progress -pl web/human-confidence -am test `
-              '-Dtest=HumanConfidenceLiveTest' `
-              '-Dsurefire.failIfNoSpecifiedTests=false' `
-              "-DhumanConfidenceSource=$($passes[$name])"
-            if ($LASTEXITCODE -ne 0) {
-              $failed = $true
-            } elseif (-not (Test-Path $report)) {
-              Write-Host "::error::The live test with $name did not run."
-              $failed = $true
-            } else {
-              $suite = ([xml](Get-Content -Raw $report)).testsuite
-              if ([int]$suite.tests -eq 0 -or [int]$suite.skipped -gt 0) {
-                Write-Host ("::error::The live test with $name was " +
-                  "skipped, so it proved nothing. " +
-                  "$($suite.testcase.skipped.message)")
-                $failed = $true
-              }
-            }
-            Write-Host '::endgroup::'
+          Remove-Item $report -ErrorAction SilentlyContinue
+          mvn -B --no-transfer-progress -pl web/human-confidence -am test `
+            '-Dtest=HumanConfidenceLiveTest' `
+            '-Dsurefire.failIfNoSpecifiedTests=false'
+          if ($LASTEXITCODE -ne 0) {
+            throw 'The live tests failed.'
           }
-          if ($failed) { exit 1 }
+          if (-not (Test-Path $report)) {
+            throw 'The live tests did not run.'
+          }
+          $suite = ([xml](Get-Content -Raw $report)).testsuite
+          if ([int]$suite.tests -eq 0 -or [int]$suite.skipped -gt 0) {
+            throw ('A live test was skipped, so it proved nothing. ' +
+              "$($suite.testcase.skipped.message)")
+          }

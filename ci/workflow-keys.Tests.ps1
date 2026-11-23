@@ -23,14 +23,17 @@ Describe 'the workflows' {
         } | ForEach-Object Text | Should -BeNullOrEmpty
     }
 
-    # The resource keys and the license keys are organization secrets, so
-    # each comes from the secret of its own name.
+    # The resource keys and the license keys are organization secrets, and
+    # the staging cloud's address an organization variable, so each comes
+    # from the secret or variable of its own name.
     It 'fill <Name> from the organization <Kind> of the same name' -ForEach @(
         @{ Name = '_51DEGREES_RESOURCE_KEY_51DID'; Kind = 'secret'; Context = 'secrets' }
         @{ Name = '_51DEGREES_RESOURCE_KEY_BESPOKE'; Kind = 'secret'; Context = 'secrets' }
         @{ Name = '_51DEGREES_RESOURCE_KEY_BASIC'; Kind = 'secret'; Context = 'secrets' }
         @{ Name = '_51DEGREES_LICENSE_KEY_51DID'; Kind = 'secret'; Context = 'secrets' }
         @{ Name = '_51DEGREES_LICENSE_KEY_BESPOKE'; Kind = 'secret'; Context = 'secrets' }
+        @{ Name = 'RESOURCE_KEY_BESPOKE_STAGING'; Kind = 'secret'; Context = 'secrets' }
+        @{ Name = 'CLOUD_STAGING_ENDPOINT'; Kind = 'variable'; Context = 'vars' }
     ) {
         $workflows = Join-Path $PSScriptRoot '../.github/workflows'
         $lines = @(Get-ChildItem $workflows -Filter *.yml |
@@ -161,6 +164,144 @@ Describe 'the workflows' {
         It 'takes the cloud endpoint from the variable of the same name' {
             $script:Lines | Where-Object {
                 $_ -match '^\s*_51DEGREES_CLOUD_ENDPOINT:\s*\$\{\{\s*vars\._51DEGREES_CLOUD_ENDPOINT\s*\}\}\s*$'
+            } | Should -Not -BeNullOrEmpty
+        }
+    }
+
+    # cloud-human-confidence.yml runs the Human Confidence live tests once,
+    # against the staging cloud. Each test reads its own key and the endpoint
+    # under their own names, so the step sets no name of its own. The step's
+    # script runs here with mvn replaced by a function that records what it
+    # is handed and writes the report Maven would write.
+    Context 'cloud-human-confidence.yml' {
+
+        BeforeAll {
+            $workflow = Join-Path $PSScriptRoot '../.github/workflows/cloud-human-confidence.yml'
+            $script:Lines = @(Get-Content $workflow)
+            $start = $script:Lines | Select-String -Pattern '^(\s*)run: \|\s*$' |
+                Select-Object -First 1
+            $indent = $start.Matches[0].Groups[1].Value.Length
+            $body = foreach ($line in $script:Lines[$start.LineNumber..($script:Lines.Count - 1)]) {
+                if ($line.Trim() -and $line -notmatch "^\s{$($indent + 1),}") { break }
+                if ($line.Length -gt $indent + 2) { $line.Substring($indent + 2) } else { '' }
+            }
+            $script:Step = [scriptblock]::Create($body -join "`n")
+            $script:Report = 'web/human-confidence/target/surefire-reports/' +
+                'TEST-fiftyone.devicedetection.examples.web.HumanConfidenceLiveTest.xml'
+            # The names the step and the tests read.
+            $script:Read = '^(_51DEGREES_.*|CLOUD_STAGING_ENDPOINT|RESOURCE_KEY_BESPOKE_STAGING)$'
+
+            # Writes the report of a run of the given number of tests, of
+            # which the given number were skipped.
+            function script:Write-Report([int]$Tests, [int]$Skipped) {
+                New-Item -ItemType Directory -Force (Split-Path $script:Report) | Out-Null
+                $cases = (1..$Tests | ForEach-Object {
+                    if ($_ -le $Skipped) {
+                        "<testcase name=`"t$_`"><skipped message=`"skipped`"/></testcase>"
+                    } else {
+                        "<testcase name=`"t$_`"/>"
+                    }
+                }) -join ''
+                Set-Content $script:Report ("<testsuite tests=`"$Tests`" " +
+                    "skipped=`"$Skipped`">$cases</testsuite>")
+            }
+        }
+
+        BeforeEach {
+            $script:Saved = @(Get-ChildItem env: |
+                Where-Object { $_.Name -match $script:Read })
+            $script:Saved | ForEach-Object { Remove-Item "Env:$($_.Name)" }
+            $env:RESOURCE_KEY_BESPOKE_STAGING = 'resource-bespoke-staging'
+            $env:_51DEGREES_RESOURCE_KEY_BASIC = 'resource-basic'
+            $env:CLOUD_STAGING_ENDPOINT = 'endpoint-staging'
+            Push-Location TestDrive:
+        }
+
+        AfterEach {
+            Pop-Location
+            Remove-Item TestDrive:/web -Recurse -Force -ErrorAction SilentlyContinue
+            Get-ChildItem env: | Where-Object { $_.Name -match $script:Read } |
+                ForEach-Object { Remove-Item "Env:$($_.Name)" }
+            $script:Saved | ForEach-Object { Set-Item "Env:$($_.Name)" $_.Value }
+        }
+
+        It 'runs the tests once, with each name under its own name and no other' {
+            $runs = [System.Collections.Generic.List[object]]::new()
+            function mvn {
+                $names = @(Get-ChildItem env: |
+                    Where-Object { $_.Name -match $script:Read } |
+                    ForEach-Object { "$($_.Name)=$($_.Value)" })
+                $runs.Add(@{ Names = $names; Arguments = "$args" })
+                Write-Report -Tests 2 -Skipped 0
+                $global:LASTEXITCODE = 0
+            }
+            { & $script:Step 6> $null } | Should -Not -Throw
+
+            $runs.Count | Should -Be 1
+            @($runs[0].Names | Sort-Object) | Should -Be @(@(
+                'CLOUD_STAGING_ENDPOINT=endpoint-staging'
+                'RESOURCE_KEY_BESPOKE_STAGING=resource-bespoke-staging'
+                '_51DEGREES_RESOURCE_KEY_BASIC=resource-basic') | Sort-Object)
+            $runs[0].Arguments | Should -BeLike '*-Dtest=HumanConfidenceLiveTest*'
+            $runs[0].Arguments | Should -Not -BeLike '*humanConfidenceSource*'
+        }
+
+        # Each test needs its own key and the endpoint, so a missing one means
+        # a test that would skip, and the job would still pass having proved
+        # nothing.
+        It 'fails naming <Name> when it is empty' -ForEach @(
+            @{ Name = 'RESOURCE_KEY_BESPOKE_STAGING' }
+            @{ Name = '_51DEGREES_RESOURCE_KEY_BASIC' }
+            @{ Name = 'CLOUD_STAGING_ENDPOINT' }
+        ) {
+            $runs = [System.Collections.Generic.List[object]]::new()
+            function mvn {
+                $runs.Add('run')
+                $global:LASTEXITCODE = 0
+            }
+            Remove-Item "Env:$Name"
+
+            { & $script:Step 6> $null } | Should -Throw "*$Name*"
+            $runs | Should -BeNullOrEmpty
+        }
+
+        It 'names every missing name at once' {
+            function mvn { $global:LASTEXITCODE = 0 }
+            Remove-Item Env:RESOURCE_KEY_BESPOKE_STAGING, Env:CLOUD_STAGING_ENDPOINT
+
+            { & $script:Step 6> $null } |
+                Should -Throw '*RESOURCE_KEY_BESPOKE_STAGING, CLOUD_STAGING_ENDPOINT*'
+        }
+
+        It 'fails when a test was skipped' {
+            function mvn {
+                Write-Report -Tests 2 -Skipped 1
+                $global:LASTEXITCODE = 0
+            }
+
+            { & $script:Step 6> $null } | Should -Throw '*skipped*'
+        }
+
+        It 'fails when the tests did not run' {
+            function mvn {
+                $global:LASTEXITCODE = 0
+            }
+
+            { & $script:Step 6> $null } | Should -Throw '*did not run*'
+        }
+
+        It 'fails when Maven fails' {
+            function mvn {
+                Write-Report -Tests 2 -Skipped 0
+                $global:LASTEXITCODE = 1
+            }
+
+            { & $script:Step 6> $null } | Should -Throw
+        }
+
+        It 'takes the staging cloud from the variable of the same name' {
+            $script:Lines | Where-Object {
+                $_ -match '^\s*CLOUD_STAGING_ENDPOINT:\s*\$\{\{\s*vars\.CLOUD_STAGING_ENDPOINT\s*\}\}\s*$'
             } | Should -Not -BeNullOrEmpty
         }
     }
