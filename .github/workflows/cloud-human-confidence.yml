@@ -8,9 +8,9 @@ name: Cloud Human Confidence Tests
 # products offer HumanConfidenceSource, so its answer carries Passive. The
 # Basic key's products don't, so its answer carries no source.
 #
-# The resource keys, and _51DEGREES_CLOUD_ENDPOINT, the service the example
-# calls, are organization variables. A new key needs a line here as well as
-# the organization variable.
+# The resource keys are organization secrets, and _51DEGREES_CLOUD_ENDPOINT,
+# the service the example calls, is an organization variable. A new key needs
+# a line here as well as the organization secret.
 #
 # A pass fails when its key is empty or when the test is skipped. A cloud
 # test that passes without calling the cloud reports success having proved
@@ -46,8 +46,8 @@ jobs:
         shell: pwsh
         working-directory: examples/device-detection
         env:
-          _51DEGREES_RESOURCE_KEY_BESPOKE: ${{ vars._51DEGREES_RESOURCE_KEY_BESPOKE }}
-          _51DEGREES_RESOURCE_KEY_BASIC: ${{ vars._51DEGREES_RESOURCE_KEY_BASIC }}
+          _51DEGREES_RESOURCE_KEY_BESPOKE: ${{ secrets._51DEGREES_RESOURCE_KEY_BESPOKE }}
+          _51DEGREES_RESOURCE_KEY_BASIC: ${{ secrets._51DEGREES_RESOURCE_KEY_BASIC }}
           _51DEGREES_CLOUD_ENDPOINT: ${{ vars._51DEGREES_CLOUD_ENDPOINT }}
         run: |
           # Each key, with the source its answer carries.
@@ -62,7 +62,7 @@ jobs:
             Write-Host "::group::Live test with $name"
             $key = [Environment]::GetEnvironmentVariable($name)
             if (-not $key) {
-              Write-Host ("::error::The organization variable $name is " +
+              Write-Host ("::error::The organization secret $name is " +
                 'empty or missing, so the live test cannot run with it.')
               $failed = $true
               Write-Host '::endgroup::'
