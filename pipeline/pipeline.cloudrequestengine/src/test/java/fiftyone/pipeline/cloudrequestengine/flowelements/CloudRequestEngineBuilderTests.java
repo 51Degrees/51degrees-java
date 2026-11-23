@@ -166,8 +166,9 @@ public class CloudRequestEngineBuilderTests extends CloudRequestEngineTestsBase 
 
     /**
      * With no address given, the engine uses the address
-     * {@link ExpectedEndpoint} works out from the variable, for a missing,
-     * empty, unslashed and slashed value.
+     * {@link ExpectedEndpoint} works out from the variable, when the
+     * variable is missing, empty, an address without a trailing slash or
+     * an address with one.
      */
     @Test
     public void CloudEndPoint_Matches_Expected_For_Each_Variable()
