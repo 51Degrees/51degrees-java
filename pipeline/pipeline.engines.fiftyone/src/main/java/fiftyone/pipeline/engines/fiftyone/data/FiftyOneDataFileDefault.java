@@ -29,7 +29,43 @@ import fiftyone.pipeline.engines.data.AspectEngineDataFileDefault;
  */
 public class FiftyOneDataFileDefault extends AspectEngineDataFileDefault implements FiftyOneDataFile {
 
+    /**
+     * The start of a download type and the prefix of the product names of
+     * its data files. The product name is the prefix followed by the tier
+     * of the data file, so a Device Detection Hash file of tier TAC is
+     * V4TAC and an IP Intelligence file of tier Enterprise is
+     * IPIV4Enterprise.
+     */
+    private static final String[][] PREFIXES = {
+        {"Hash", "V4"},
+        {"IPI", "IPIV4"},
+    };
+
     private String downloadType;
+
+    @Override
+    public String getDataUpdateProduct() {
+        if (getEngine() == null) {
+            return null;
+        }
+        String type = getDataUpdateDownloadType();
+        String tier = getEngine().getDataSourceTier();
+        if (type == null || tier == null || tier.isEmpty()) {
+            return null;
+        }
+        for (String[] row : PREFIXES) {
+            if (startsWith(type, row[0])) {
+                // A tier that already starts with the prefix is the
+                // product name as it is.
+                return startsWith(tier, row[1]) ? tier : row[1] + tier;
+            }
+        }
+        return null;
+    }
+
+    private static boolean startsWith(String value, String prefix) {
+        return value.regionMatches(true, 0, prefix, 0, prefix.length());
+    }
 
     @Override
     public String getDataUpdateDownloadType() {

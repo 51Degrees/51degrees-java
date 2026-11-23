@@ -149,6 +149,25 @@ public class FiftyOneUrlFormatterTests {
     }
 
     @Test
+    public void Product_GivenIsSentAsGiven() {
+        assertEquals(
+            URL + "?LicenseKeys=" + KEY +
+                "&Download=True&Type=HashV41&Product=v4tac",
+            new FiftyOneUrlFormatter("v4tac").getFormattedDataUpdateUrl(
+                dataFile("HashV41", "TAC")));
+        assertEquals("v4tac",
+            new FiftyOneUrlFormatter("v4tac").getDataUpdateProduct(
+                dataFile("HashV41", "TAC")));
+    }
+
+    @Test
+    public void Product_GivenAsEmptyIsFoundFromTheTier() {
+        assertEquals("V4TAC",
+            new FiftyOneUrlFormatter("").getDataUpdateProduct(
+                dataFile("HashV41", "TAC")));
+    }
+
+    @Test
     public void Product_NotKnownWithoutAnEngine() {
         assertNull(new FiftyOneUrlFormatter().getDataUpdateProduct(
             dataFile("HashV41", null)));

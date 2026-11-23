@@ -78,6 +78,7 @@ import static org.mockito.Mockito.when;
 public class DataUpdateServiceProductTests {
 
     private static final String KEY = "TESTKEYNOTREALABCDEFGHIJ1234";
+    private static final String MASKED = "************************1234";
     private static final String PATH = "/api/v2/download";
     private static final String FIRST_QUERY =
         "LicenseKeys=" + KEY + "&Download=True&Type=HashV41";
@@ -516,6 +517,222 @@ public class DataUpdateServiceProductTests {
             "Access denied to data update service"));
     }
 
+    /**
+     * A 300 whose list of URIs is empty is reported by its status.
+     */
+    @Test
+    public void SeveralProducts_ListIsEmpty_ReportsTheStatus() {
+        choicesBody = "{\"AvailableUris\":[]}";
+        assertReportsTheStatus();
+    }
+
+    /**
+     * A URI offered whose product has no value is ignored. It is not
+     * chosen and not named among the products offered.
+     */
+    @Test
+    public void SeveralProducts_UriWithAnEmptyProduct_IsIgnored() {
+        choicesBody = "{\"AvailableUris\":[\"" + address + PATH +
+            "?LicenseKeys=" + KEY + "&Type=HashV41&Product=\",\"" +
+            productUri("IPIV4Enterprise") + "\"]}";
+        configure(PATH, "");
+
+        AutoUpdateStatus status = service.checkForUpdate(engine);
+
+        String logged = logged();
+        assertEquals(logged, AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR, status);
+        assertEquals(requests.toString(), 1, requests.size());
+        assertTrue(logged, logged.contains(
+            "Product '' is not offered by data update service at '"));
+        assertTrue(logged, logged.contains(
+            "Products offered: 'IPIV4Enterprise'"));
+    }
+
+    /**
+     * The request that names the product chosen is logged as a request is,
+     * with its own URL and the license key masked.
+     */
+    @Test
+    public void SeveralProducts_SecondRequestIsLoggedWithItsOwnUrl() {
+        configure(PATH, "V4TAC");
+
+        service.checkForUpdate(engine);
+
+        String logged = logged();
+        String first = address + PATH + "?LicenseKeys=" + MASKED +
+            "&Download=True&Type=HashV41";
+        assertTrue(logged, logged.contains(
+            "Checking for update from '{}' for Engine '{}' " + first + " "));
+        assertTrue(logged, logged.contains(
+            "Requesting product '{}' from '{}' for Engine '{}' V4TAC " +
+            first + " "));
+        assertTrue(logged, logged.contains(
+            "Checking for update from '{}' for Engine '{}' " + first +
+            "&Product=V4TAC "));
+        assertFalse(logged, logged.contains(KEY));
+    }
+
+    /**
+     * After a redirect, the messages name the address that answered 300.
+     */
+    @Test
+    public void Redirect_ToSeveralProducts_MessagesNameTheAddressThatAnswered() {
+        configure("/moved-to-choices", "V4TAC");
+
+        service.checkForUpdate(engine);
+
+        String logged = logged();
+        assertTrue(logged, logged.contains(
+            "Requesting product '{}' from '{}' for Engine '{}' V4TAC " +
+            address + PATH + "?LicenseKeys=" + MASKED +
+            "&Download=True&Type=HashV41 "));
+    }
+
+    /**
+     * The data update URL names a product itself and no URL formatter is
+     * used. The URL is requested as it is. A 300 is reported by its status,
+     * with no second request.
+     */
+    @Test
+    public void ProductInTheUrl_Answers300_IsNotFollowed() {
+        productStatus = 300;
+        configure(PATH, null);
+        file.getConfiguration().setUrlFormatter(null);
+        file.getConfiguration().setDataUpdateUrl(
+            address + PATH + "?" + FIRST_QUERY + "&product=Other");
+
+        AutoUpdateStatus status = service.checkForUpdate(engine);
+
+        String logged = logged();
+        assertEquals(logged, AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR, status);
+        assertEquals(requests.toString(), 1, requests.size());
+        assertEquals(FIRST_QUERY + "&product=Other", requests.get(0));
+        assertTrue(logged, logged.contains("HTTP status code '300'"));
+        assertFalse(logged, logged.contains("Requesting product"));
+    }
+
+    /**
+     * The data update URL names a product itself and no URL formatter is
+     * used. The URL is requested as it is and its data is applied.
+     */
+    @Test
+    public void ProductInTheUrl_IsRequestedAsItIs() {
+        configure(PATH, null);
+        file.getConfiguration().setUrlFormatter(null);
+        file.getConfiguration().setDataUpdateUrl(
+            address + PATH + "?" + FIRST_QUERY + "&Product=V4TAC");
+
+        AutoUpdateStatus status = service.checkForUpdate(engine);
+
+        assertEquals(logged(), AutoUpdateStatus.AUTO_UPDATE_SUCCESS, status);
+        verify(engine).refreshData(any(), eq(TAC_DATA));
+        assertEquals(requests.toString(), 1, requests.size());
+        assertEquals(FIRST_QUERY + "&Product=V4TAC", requests.get(0));
+    }
+
+    /**
+     * A product parameter with no value in the data update URL names no
+     * product, so the product needed is chosen from a 300 and added.
+     */
+    @Test
+    public void EmptyProductInTheUrl_IsNotAConfiguredProduct() {
+        configure(PATH, "V4TAC");
+        file.getConfiguration().setUrlFormatter(new ProductFormatter("V4TAC") {
+            @Override
+            public String getFormattedDataUpdateUrl(AspectEngineDataFile dataFile) {
+                return dataFile.getConfiguration().getDataUpdateUrl() +
+                    "?Product=&" + FIRST_QUERY;
+            }
+        });
+
+        AutoUpdateStatus status = service.checkForUpdate(engine);
+
+        assertEquals(logged(), AutoUpdateStatus.AUTO_UPDATE_SUCCESS, status);
+        verify(engine).refreshData(any(), eq(TAC_DATA));
+        assertEquals(requests.toString(), 2, requests.size());
+        assertEquals("Product=&" + FIRST_QUERY + "&Product=V4TAC",
+            requests.get(1));
+    }
+
+    /**
+     * No URL formatter is used. The product needed is the one the data
+     * file names, and the request is repeated with it added.
+     */
+    @Test
+    public void NoUrlFormatter_RepeatsTheRequestWithTheProductOfTheDataFile() {
+        configureFileThatNamesItsProduct("V4TAC");
+        file.getConfiguration().setUrlFormatter(null);
+        file.getConfiguration().setDataUpdateUrl(
+            address + PATH + "?" + FIRST_QUERY);
+
+        AutoUpdateStatus status = service.checkForUpdate(engine);
+
+        assertEquals(logged(), AutoUpdateStatus.AUTO_UPDATE_SUCCESS, status);
+        verify(engine).refreshData(any(), eq(TAC_DATA));
+        assertEquals(requests.toString(), 2, requests.size());
+        assertEquals(FIRST_QUERY + "&Product=V4TAC", requests.get(1));
+    }
+
+    /**
+     * The URL formatter does not say which product is needed. The product
+     * needed is the one the data file names.
+     */
+    @Test
+    public void FormatterNamesNoProduct_RepeatsTheRequestWithTheProductOfTheDataFile() {
+        configureFileThatNamesItsProduct("V4TAC");
+        file.getConfiguration().setUrlFormatter(dataFile ->
+            dataFile.getConfiguration().getDataUpdateUrl() + "?" +
+                FIRST_QUERY);
+
+        AutoUpdateStatus status = service.checkForUpdate(engine);
+
+        assertEquals(logged(), AutoUpdateStatus.AUTO_UPDATE_SUCCESS, status);
+        verify(engine).refreshData(any(), eq(TAC_DATA));
+        assertEquals(requests.toString(), 2, requests.size());
+        assertEquals(FIRST_QUERY + "&Product=V4TAC", requests.get(1));
+    }
+
+    /**
+     * No URL formatter is used and the data file names no product. The
+     * error names the products offered.
+     */
+    @Test
+    public void NoUrlFormatter_ProductNotKnown_FailsNamingTheProductsOffered() {
+        configure(PATH, null);
+        file.getConfiguration().setUrlFormatter(null);
+        file.getConfiguration().setDataUpdateUrl(
+            address + PATH + "?" + FIRST_QUERY);
+
+        AutoUpdateStatus status = service.checkForUpdate(engine);
+
+        String logged = logged();
+        assertEquals(logged, AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR, status);
+        assertEquals(requests.toString(), 1, requests.size());
+        assertTrue(logged, logged.contains(
+            "Product '' is not offered by data update service at '"));
+        assertTrue(logged, logged.contains(
+            "Products offered: 'IPIV4Enterprise,V4TAC'"));
+    }
+
+    /**
+     * As {@link #configure}, with a data file that names the product it
+     * needs itself.
+     */
+    @SuppressWarnings("unchecked")
+    private void configureFileThatNamesItsProduct(final String product) {
+        configure(PATH, null);
+        DataFileConfiguration config = file.getConfiguration();
+        file = new AspectEngineDataFileDefault() {
+            @Override
+            public String getDataUpdateProduct() {
+                return product;
+            }
+        };
+        file.setConfiguration(config);
+        when(engine.getDataFileMetaData()).thenReturn(file);
+        file.setEngine(engine);
+    }
+
     private void assertReportsTheStatus() {
         configure(PATH, "V4TAC");
 
@@ -539,7 +756,8 @@ public class DataUpdateServiceProductTests {
     private void respond(HttpExchange exchange) throws IOException {
         String query = exchange.getRequestURI().getRawQuery();
         requests.add(query);
-        boolean namesProduct = query.contains("Product=");
+        // A product parameter with no value names no product.
+        boolean namesProduct = query.matches("(?i).*\\bProduct=[^&].*");
         if (namesProduct && productStatus == 200 && query.contains(
             "Download=True&Type=HashV41&Product=V4TAC")) {
             send(exchange, 200, TAC_DATA);

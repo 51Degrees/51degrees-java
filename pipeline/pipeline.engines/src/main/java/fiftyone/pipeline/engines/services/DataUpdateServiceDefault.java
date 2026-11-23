@@ -1137,16 +1137,17 @@ public class DataUpdateServiceDefault implements DataUpdateService {
 
     /**
      * The product the data file needs, as its URL formatter gives it, or
-     * null if the formatter gives none or cannot say.
+     * as the data file gives it where there is no formatter or the
+     * formatter gives none. It is null if neither can say.
      */
     private String productNeeded(AspectEngineDataFile dataFile) {
         DataUpdateUrlFormatter formatter =
                 dataFile.getConfiguration().getUrlFormatter();
-        if (formatter == null) {
-            return null;
-        }
         try {
-            return formatter.getDataUpdateProduct(dataFile);
+            String product = formatter == null ? null :
+                    formatter.getDataUpdateProduct(dataFile);
+            return product == null || product.isEmpty() ?
+                    dataFile.getDataUpdateProduct() : product;
         } catch (RuntimeException e) {
             logger.debug("The product of the data file is not known", e);
             return null;
