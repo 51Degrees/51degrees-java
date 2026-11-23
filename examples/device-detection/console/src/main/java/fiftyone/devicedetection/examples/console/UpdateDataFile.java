@@ -30,6 +30,8 @@ import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetecti
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
+import fiftyone.pipeline.engines.data.DataUpdateUrlFormatter;
+import fiftyone.pipeline.engines.fiftyone.data.FiftyOneUrlFormatter;
 import fiftyone.pipeline.engines.flowelements.OnPremiseAspectEngine;
 import fiftyone.pipeline.engines.services.DataUpdateService;
 import fiftyone.pipeline.engines.services.DataUpdateServiceDefault;
@@ -69,6 +71,18 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * Updating the data file needs a 51Degrees licence key for the Enterprise data file. Without
  * one, the example shows the free Lite data file and says where to ask for a key. Contact us for
  * a key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&utm_term=updatedatafile
+ * ## Product
+ * A license key that holds one product needs nothing more, and the example then names no
+ * product. A license key can also hold several products, for example a Device Detection data
+ * file and an IP Intelligence data file. Update on start-up runs before any data file is
+ * loaded, so with such a key give the name of the product to download, for example V4TAC,
+ * as the third command line argument, or in the environment variable or system property
+ * {@link UpdateDataFile#UPDATE_EXAMPLE_PRODUCT_NAME}. The example then adds it to the URL of
+ * each request.
+ * ``` {java}
+ *      .setDataUpdateUrlFormatter(productFormatter(product))
+ * ```
+ * Once a data file is loaded, an update asks for the product of that file without being told.
  * # Data Files
  * You can find out more about data files, licenses etc. at our [FAQ page](https://51degrees.com/resources/faqs?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&utm_term=updatedatafile)
  * ## Enterprise Data File
@@ -214,6 +228,11 @@ public class UpdateDataFile {
             "console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java";
 
     public static final String UPDATE_EXAMPLE_LICENSE_KEY_NAME = "_51DEGREES_LICENSE_KEY";
+    /**
+     * The environment variable or system property that names the product to
+     * download, when the command line gives none.
+     */
+    public static final String UPDATE_EXAMPLE_PRODUCT_NAME = "_51DEGREES_DD_PRODUCT";
     public static final String DEFAULT_DATA_FILENAME =
             System.getProperty("user.dir") + File.separator +  ENTERPRISE_HASH_DATA_FILE_NAME;
 
@@ -232,7 +251,8 @@ public class UpdateDataFile {
         configureLogback(getFilePath("logback.xml"));
         String licenseKey = args.length > 0 ? args[0] : null;
         String dataFilename = args.length > 1 ? args[1] : null;
-        run(dataFilename, licenseKey, true);
+        String product = args.length > 2 ? args[2] : null;
+        run(dataFilename, licenseKey, product, true);
         FindOutMore.write(System.out, EXAMPLE_TAG,
                 FindOutMore.ON_PREMISE_REPOSITORIES);
     }
@@ -249,7 +269,28 @@ public class UpdateDataFile {
      * @throws Exception in the event of file not found, license key not found etc.
      */
     static void run(String dataFilename, String licenseKey, boolean interactive) throws Exception {
+        run(dataFilename, licenseKey, null, interactive);
+    }
+
+    /**
+     * Run the UpdateDataFile example for the product given.
+     * @param dataFilename the path for a datafile to download, as above
+     * @param licenseKey a license key that holds the product, as above
+     * @param product the product of the data update service to download, for
+     *                example V4TAC. If null, the environment variable or system
+     *                property {@link UpdateDataFile#UPDATE_EXAMPLE_PRODUCT_NAME} is
+     *                checked, and with none there the example names no product,
+     *                which suits a license key that holds one product
+     * @throws Exception in the event of file not found, license key not found etc.
+     */
+    static void run(String dataFilename, String licenseKey, String product,
+                    boolean interactive) throws Exception {
         logger.info("Starting example");
+
+        // the product to download, when one is given
+        if (Objects.isNull(product)) {
+            product = KeyHelper.getNamedKey(UPDATE_EXAMPLE_PRODUCT_NAME);
+        }
 
         // try to find a license key
         if (Objects.isNull(licenseKey)) {
@@ -337,6 +378,11 @@ public class UpdateDataFile {
                     // For automatic updates to work you will need to provide a license key.
                     // Contact us for a licence key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&utm_term=run
                     .setDataUpdateLicenseKey(licenseKey)
+                    // Name the product to download, when one is given. A
+                    // license key can hold several products, and update on
+                    // start-up runs before a data file is loaded that would
+                    // say which is needed.
+                    .setDataUpdateUrlFormatter(productFormatter(product))
                     // Enable update on startup, the auto update system
                     // will be used to check for an update before the
                     // device detection engine is created. This will block
@@ -451,6 +497,22 @@ public class UpdateDataFile {
                 "system property '" + UPDATE_EXAMPLE_LICENSE_KEY_NAME + "'. " +
                 "Contact us for a key and a copy at " + CONTACT_US);
         output.flush();
+    }
+
+    /**
+     * A URL formatter that adds the product given to the URL the 51Degrees
+     * URL formatter builds, so every request names that product.
+     * @param product the product name, for example V4TAC, or null
+     * @return the formatter, or null to keep the default formatter, which
+     * names no product
+     */
+    static DataUpdateUrlFormatter productFormatter(final String product) {
+        if (Objects.isNull(product) || product.isEmpty()) {
+            return null;
+        }
+        final DataUpdateUrlFormatter formatter = new FiftyOneUrlFormatter();
+        return dataFile ->
+                formatter.getFormattedDataUpdateUrl(dataFile) + "&Product=" + product;
     }
 
     private static void logFileInfo(DataFileHelper.DatafileInfo metadata) {
