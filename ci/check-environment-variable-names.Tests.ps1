@@ -184,16 +184,20 @@ Describe 'the workflows' {
 
     # The 51Did license key unseals only results made with the resource key
     # of its own account. Filled from the Bespoke key, the licensed redeem
-    # comes back unreadable, so the 51Did resource key is taken from the
-    # secret of its own name.
-    It 'fill _51DEGREES_RESOURCE_KEY_51DID from the secret of the same name' {
+    # comes back unreadable, so each resource key is taken from the
+    # organization variable of its own name. The resource keys are
+    # organization variables and the license keys organization secrets.
+    It 'fill <Name> from the organization variable of the same name' -ForEach @(
+        @{ Name = '_51DEGREES_RESOURCE_KEY_51DID' }
+        @{ Name = '_51DEGREES_RESOURCE_KEY_BESPOKE' }
+    ) {
         $workflows = Join-Path $PSScriptRoot '../.github/workflows'
         $lines = @(Get-ChildItem $workflows -Filter *.yml |
-            Select-String -Pattern '^\s*_51DEGREES_RESOURCE_KEY_51DID\s*:' |
+            Select-String -Pattern "^\s*$Name\s*:" |
             ForEach-Object { "$($_.Filename):$($_.LineNumber): $($_.Line.Trim())" })
         $lines | Should -Not -BeNullOrEmpty
         $lines | Where-Object {
-            $_ -notmatch ':\s*\$\{\{\s*secrets\._51DEGREES_RESOURCE_KEY_51DID\s*\}\}\s*$'
+            $_ -notmatch (':\s*\$\{\{\s*vars\.' + $Name + '\s*\}\}\s*$')
         } | Should -BeNullOrEmpty
     }
 
@@ -253,9 +257,10 @@ Describe 'the workflows' {
                 Should -BeNullOrEmpty
         }
 
-        # A license key with no resource key of its own suffix means a secret
-        # is missing. The licensed redeem would then never run, and the job
-        # would still pass, so the step fails naming the missing secret.
+        # A license key with no resource key of its own suffix means an
+        # organization variable is missing. The licensed redeem would then
+        # never run, and the job would still pass, so the step fails naming
+        # the missing variable.
         It 'fails naming <Resource> when <License> has a value and it is empty' -ForEach @(
             @{ Resource = '_51DEGREES_RESOURCE_KEY_51DID'; License = '_51DEGREES_LICENSE_KEY_51DID' }
             @{ Resource = '_51DEGREES_RESOURCE_KEY_BESPOKE'; License = '_51DEGREES_LICENSE_KEY_BESPOKE' }
@@ -271,7 +276,7 @@ Describe 'the workflows' {
             $passes | Should -BeNullOrEmpty
         }
 
-        # A deployment without 51Did has neither secret, and the runner then
+        # A deployment without 51Did has neither key, and the runner then
         # sets both names empty. The Bespoke pass must still run, with no
         # 51Did license and no failure.
         It 'runs the Bespoke pass alone when both 51Did keys are empty' {
