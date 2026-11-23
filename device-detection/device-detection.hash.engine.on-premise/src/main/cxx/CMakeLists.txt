@@ -36,7 +36,7 @@ else()
     elseif (${CMAKE_SYSTEM_PROCESSOR} MATCHES ^arm64)
         set(ARCH aarch64)
     elseif (${CMAKE_SYSTEM_PROCESSOR} MATCHES .*64.*)
-        if (32bit)
+        if (_51DEGREES_32BIT)
             set (ARCH x86)
         else()
             set (ARCH x64)
@@ -59,7 +59,7 @@ message(STATUS "OS name: ${OS}")
 # The C and C++ code is the 51degrees-cxx submodule at the root of this
 # repository. Only Device Detection is built here, without its tests.
 get_filename_component(FIFTYONE_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../../../.." ABSOLUTE)
-set(FIFTYONE_BUILD_IP_INTELLIGENCE OFF CACHE BOOL "" FORCE)
+set(_51DEGREES_BUILD_IP_INTELLIGENCE OFF CACHE BOOL "" FORCE)
 set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 include(${FIFTYONE_ROOT}/cxx/CMakeLists.txt NO_POLICY_SCOPE)
 
