@@ -129,8 +129,8 @@ function Invoke-ContractTests {
 Write-Host "::group::Selenium contract tests"
 if (-not $SeleniumContract) {
     Write-Host "Another entry runs the Selenium contract tests for this pull request."
-} elseif (-not $env:_51DEGREES_RESOURCE_KEY) {
-    Write-Host "::warning title=Selenium skipped::_51DEGREES_RESOURCE_KEY is not set, so the Selenium contract tests were not run against the web examples."
+} elseif (-not $env:_51DEGREES_RESOURCE_KEY_BESPOKE) {
+    Write-Host "::warning title=Selenium skipped::_51DEGREES_RESOURCE_KEY_BESPOKE is not set, so the Selenium contract tests were not run against the web examples."
 } elseif ($IsLinux -and [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -eq [System.Runtime.InteropServices.Architecture]::Arm64) {
     Write-Host "::warning title=Selenium skipped::Selenium contract skipped on linux-arm64, which has no selenium-manager build. It runs on x64 and macOS arm64."
 } else {
@@ -154,9 +154,14 @@ if (-not $SeleniumContract) {
         @{
             Label = 'cloud'
             Module = 'web/getting-started.cloud'
-            # The example reads _51DEGREES_RESOURCE_KEY, and the production
-            # cloud unless _51DEGREES_CLOUD_ENDPOINT names another.
+            # The example reads its key as _51DEGREES_RESOURCE_KEY, and the
+            # production cloud unless _51DEGREES_CLOUD_ENDPOINT names another.
+            # The contract needs every property, so it is given the key that
+            # carries them all.
             Port = 8099
+            ExampleEnv = @{
+                '_51DEGREES_RESOURCE_KEY' = $env:_51DEGREES_RESOURCE_KEY_BESPOKE
+            }
         }
         # The on-premise example, against the TAC data file that
         # fetch-assets.ps1 links into the data repository. The Lite data file
