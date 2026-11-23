@@ -154,7 +154,8 @@ public class GettingStartedOnPrem {
         PipelineOptions pipelineOptions = PipelineOptionsFactory.getOptionsFromFile(optionsFile);
         // The data file this method was given is the one the pipeline uses,
         // in place of the one the options file names.
-        pipelineOptions.replace("IPIntelligenceOnPremiseEngine", "DataFile", dataFileLocation);
+        DataFileHelper.useDataFile(
+                pipelineOptions, "IPIntelligenceOnPremiseEngine", dataFileLocation);
         // Build a new Pipeline from the configuration.
         try (Pipeline pipeline = new FiftyOnePipelineBuilder()
                 // Usage sharing is off because this example's evidence is already

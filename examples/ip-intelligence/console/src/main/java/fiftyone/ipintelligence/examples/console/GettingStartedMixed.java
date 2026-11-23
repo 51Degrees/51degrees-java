@@ -156,8 +156,10 @@ public class GettingStartedMixed {
         PipelineOptions pipelineOptions = PipelineOptionsFactory.getOptionsFromFile(optionsFile);
         // The data files this method was given are the ones the pipeline
         // uses, in place of the ones the options file names.
-        pipelineOptions.replace("DeviceDetectionHashEngine", "DataFile", ddLocation);
-        pipelineOptions.replace("IPIntelligenceOnPremiseEngine", "DataFile", ipiLocation);
+        DataFileHelper.useDataFile(
+                pipelineOptions, "DeviceDetectionHashEngine", ddLocation);
+        DataFileHelper.useDataFile(
+                pipelineOptions, "IPIntelligenceOnPremiseEngine", ipiLocation);
 
         try (Pipeline pipeline = new FiftyOnePipelineBuilder()
                 // Usage sharing is off because this example's evidence is already

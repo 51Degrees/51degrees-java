@@ -128,7 +128,8 @@ public class GettingStartedOnPrem {
         PipelineOptions pipelineOptions = PipelineOptionsFactory.getOptionsFromFile(optionsFile);
         // The data file this method was given is the one the pipeline uses,
         // in place of the one the options file names.
-        pipelineOptions.replace("DeviceDetectionHashEngine", "DataFile", dataFileLocation);
+        DataFileHelper.useDataFile(
+                pipelineOptions, "DeviceDetectionHashEngine", dataFileLocation);
         /* Build a new Pipeline from the configuration. The options file sets
         ShareUsage to false, because this example processes evidence 51Degrees
         already holds, but in normal operation usage sharing should be enabled

@@ -23,6 +23,8 @@
 package fiftyone.ipintelligence.examples.shared;
 
 import fiftyone.pipeline.engines.Constants.PerformanceProfiles;
+import fiftyone.pipeline.core.configuration.ElementOptions;
+import fiftyone.pipeline.core.configuration.PipelineOptions;
 import org.junit.Test;
 
 import java.io.File;
@@ -32,9 +34,12 @@ import java.io.StringWriter;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
 public class DataFileHelperTest {
+
+    private static final String IPI_ENGINE = "IPIntelligenceOnPremiseEngine";
 
     @Test
     public void findPerformanceProfile_IgnoresCase() {
@@ -87,5 +92,40 @@ public class DataFileHelperTest {
         } else {
             System.setProperty(name, value);
         }
+    }
+
+    /**
+     * The engine with the builder name is given the data file.
+     */
+    @Test
+    public void useDataFile_GivesTheEngineTheFile() {
+        PipelineOptions options = optionsWith(IPI_ENGINE);
+        DataFileHelper.useDataFile(options, IPI_ENGINE, "given.dat");
+        assertEquals("given.dat", options.find(IPI_ENGINE, "DataFile"));
+    }
+
+    /**
+     * With no engine of that builder name the data file would be dropped
+     * silently, so the helper throws, naming the builder.
+     */
+    @Test
+    public void useDataFile_ThrowsWhenNoEngineMatches() {
+        PipelineOptions options = optionsWith("OtherEngine");
+        try {
+            DataFileHelper.useDataFile(options, IPI_ENGINE, "given.dat");
+            fail("Expected an IllegalArgumentException");
+        } catch (IllegalArgumentException e) {
+            assertTrue(e.getMessage().contains(IPI_ENGINE));
+        }
+        assertEquals("options.dat", options.find("OtherEngine", "DataFile"));
+    }
+
+    private static PipelineOptions optionsWith(String builderName) {
+        ElementOptions element = new ElementOptions();
+        element.builderName = builderName;
+        element.buildParameters.put("DataFile", "options.dat");
+        PipelineOptions options = new PipelineOptions();
+        options.elements.add(element);
+        return options;
     }
 }
