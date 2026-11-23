@@ -109,9 +109,10 @@ repositories used to do for one package tree each.
 
 Required:
 
-- `_51DEGREES_ACCESS_TOKEN`: GitHub
+- `CI_ACCESS_TOKEN`: GitHub
   [access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#about-personal-access-tokens)
-  for cloning repositories and creating pull requests.
+  for cloning repositories and creating pull requests. It is an organization
+  secret that only CI uses, so it has no `_51DEGREES_` prefix.
 
 The workflows pass the secrets to common-ci with `secrets: inherit`, and
 common-ci exports each secret and each `_51DEGREES_` organization variable
@@ -151,19 +152,21 @@ the license keys are organization secrets:
 
 A cloud test with no key is skipped, naming the variable it reads.
 
-To publish to Maven Central (51Degrees only):
+To publish to Maven Central (51Degrees only), these organization secrets,
+which only CI uses and so have no `_51DEGREES_` prefix. common-ci reads them
+and gives them only to the jobs that sign or publish:
 
-- `_51DEGREES_PUBLISH_MAVEN_SETTINGS`: Central Portal token.
-- `_51DEGREES_SIGN_JAVA_GPG_KEY_PASSPHRASE` and
-  `_51DEGREES_SIGN_JAVA_KEY_PGP_FILE`: the key the packages are signed with.
-- `_51DEGREES_SIGN_KEY_VAULT_NAME`,
-  `_51DEGREES_SIGN_KEY_VAULT_URL`,
-  `_51DEGREES_SIGN_KEY_VAULT_CLIENT_ID`,
-  `_51DEGREES_SIGN_KEY_VAULT_TENANT_ID`,
-  `_51DEGREES_SIGN_KEY_VAULT_CLIENT_SECRET`,
-  `_51DEGREES_SIGN_KEY_VAULT_CERTIFICATE_NAME` and
-  `_51DEGREES_SIGN_KEY_VAULT_CERTIFICATE_DATA`: the key vault that
-  signs the native libraries.
+- `MAVEN_SETTINGS`: Central Portal token.
+- `JAVA_GPG_KEY_PASSPHRASE` and `JAVA_KEY_PGP_FILE`: the key the packages
+  are signed with.
+- `CODE_SIGNING_KEY_VAULT_NAME`,
+  `CODE_SIGNING_KEY_VAULT_URL`,
+  `CODE_SIGNING_KEY_VAULT_CLIENT_ID`,
+  `CODE_SIGNING_KEY_VAULT_TENANT_ID`,
+  `CODE_SIGNING_KEY_VAULT_CLIENT_SECRET`,
+  `CODE_SIGNING_KEY_VAULT_CERTIFICATE_NAME` and
+  `CODE_SIGNING_KEY_VAULT_CERTIFICATE_DATA`: the key vault that signs the
+  native libraries.
 
 ## Environment
 
