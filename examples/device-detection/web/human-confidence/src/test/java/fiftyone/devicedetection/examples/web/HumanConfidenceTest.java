@@ -64,6 +64,12 @@ public class HumanConfidenceTest {
             "{\"derived\":{"
             + "\"humanconfidencesource\":\"Passive\","
             + "\"humanconfidence\":\"Medium\"}}";
+    /**
+     * The answer to a request that doesn't name the source, for a key whose
+     * saved list holds HumanConfidence alone.
+     */
+    private static final String LEVEL_ONLY =
+            "{\"derived\":{\"humanconfidence\":\"Medium\"}}";
     /** The answer for a key outside Bespoke, with no source and no level. */
     private static final String NO_SOURCE =
             "{\"derived\":{"
@@ -125,7 +131,10 @@ public class HumanConfidenceTest {
                 exchange -> reply(exchange, 200, properties));
         cloud.createContext("/api/v4/" + RESOURCE + ".json", exchange -> {
             passiveForm = HumanConfidence.parseForm(body(exchange));
-            reply(exchange, 200, passiveAnswer);
+            String values = passiveForm.get("values");
+            reply(exchange, 200, values != null
+                    && values.contains("derived.humanconfidencesource")
+                    ? passiveAnswer : LEVEL_ONLY);
         });
         cloud.createContext("/api/v4/hc/redeem", exchange -> {
             redeemForm = HumanConfidence.parseForm(body(exchange));
@@ -183,6 +192,8 @@ public class HumanConfidenceTest {
         assertEquals("Passive", answer.optString("source"));
         assertEquals("Medium", answer.optString("humanConfidence"));
 
+        assertEquals("derived.humanconfidence,derived.humanconfidencesource",
+                passiveForm.get("values"));
         assertEquals("Test Agent", passiveForm.get("user-agent"));
         assertEquals("\"Test\";v=\"1\"", passiveForm.get("sec-ch-ua"));
         assertEquals("127.0.0.1", passiveForm.get("client-ip"));

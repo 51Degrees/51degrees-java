@@ -16,7 +16,9 @@ The page shows three rows, one for each step.
 1. **Passive.** The server asks the cloud itself, passing on the visitor's
    request headers and IP address. It sends only the headers the cloud lists
    in its `evidencekeys`, so headers such as `Authorization` stay on the
-   server. The answer has `HumanConfidenceSource` as `Passive` and
+   server. The request names `HumanConfidence` and `HumanConfidenceSource`,
+   so the answer carries both whatever properties the Resource Key was saved
+   with. The answer has `HumanConfidenceSource` as `Passive` and
    `HumanConfidence` as a plain level, `High`, `Medium`, or `Low`. The server
    asks for it rather than reading it from the page, because a level sent by
    a browser can be forged.
