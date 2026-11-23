@@ -199,6 +199,18 @@ key, names the variable to set, gives the page where a key is created, ends
 with its "Find out more" section and exits with code 0. The tests named
 `WithoutKey` run each one that way.
 
+The TAC and native model examples need a key that includes
+HardwarePlatform.Profiles. With one, they list each device as
+`<vendor> <name> (<model>)` under the value looked up. With a key that does
+not include it, they say so in one line that links to where a key is created
+and to the contact page, make no lookup, end with their "Find out more"
+section and exit with code 0. The published packages up to 4.5.130 cannot
+build the pipeline for such a key, so with those the examples end with that
+error instead. `TacCloudTest` and `NativeModelCloudTest` fail when the key in
+`_51DEGREES_RESOURCE_KEY_BESPOKE` lacks the property, and
+`HardwareLookupWithoutProfilesTest` checks the message against a stand-in for
+the cloud service.
+
 ### Pitfalls
 
 - **A data file that is not there.** `cxx/data` holds a `.link` for each file
