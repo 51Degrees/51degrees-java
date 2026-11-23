@@ -2,19 +2,22 @@ name: Cloud Human Confidence Tests
 
 # Runs the Human Confidence web example's live test
 # (examples/device-detection/web/human-confidence, HumanConfidenceLiveTest)
-# once for each resource key below. Each pass sets the single
-# _51DEGREES_RESOURCE_KEY the example reads, and tells the test with
-# -DhumanConfidenceSource what that key's answer carries. The Bespoke key's
-# products offer HumanConfidenceSource, so its answer carries Passive. The
-# Basic key's products don't, so its answer carries no source.
+# once for each resource key below, against the staging cloud, because the
+# production cloud does not serve HumanConfidenceSource yet. Each pass sets
+# the single _51DEGREES_RESOURCE_KEY the example reads, and tells the test
+# with -DhumanConfidenceSource what that key's answer carries. The Bespoke
+# key's products offer HumanConfidenceSource, so its answer carries Passive.
+# The Basic key's products don't, so its answer carries no source.
 #
-# The resource keys are organization secrets, and _51DEGREES_CLOUD_ENDPOINT,
-# the service the example calls, is an organization variable. A new key needs
-# a line here as well as the organization secret.
+# CLOUD_STAGING_ENDPOINT, the staging cloud's API base, is an organization
+# variable that only CI uses. RESOURCE_KEY_BESPOKE_STAGING is a Bespoke key
+# the staging cloud resolves, and _51DEGREES_RESOURCE_KEY_BASIC resolves on
+# both clouds. Both keys are organization secrets. A new key needs a line
+# here as well as the organization secret.
 #
-# A pass fails when its key is empty or when the test is skipped. A cloud
-# test that passes without calling the cloud reports success having proved
-# nothing, and that is worse than a red job.
+# A pass fails when its key or the endpoint is empty, or when the test is
+# skipped. A cloud test that passes without calling the cloud reports
+# success having proved nothing, and that is worse than a red job.
 
 on:
   workflow_dispatch:
@@ -46,13 +49,19 @@ jobs:
         shell: pwsh
         working-directory: examples/device-detection
         env:
-          _51DEGREES_RESOURCE_KEY_BESPOKE: ${{ secrets._51DEGREES_RESOURCE_KEY_BESPOKE }}
+          RESOURCE_KEY_BESPOKE_STAGING: ${{ secrets.RESOURCE_KEY_BESPOKE_STAGING }}
           _51DEGREES_RESOURCE_KEY_BASIC: ${{ secrets._51DEGREES_RESOURCE_KEY_BASIC }}
-          _51DEGREES_CLOUD_ENDPOINT: ${{ vars._51DEGREES_CLOUD_ENDPOINT }}
+          CLOUD_STAGING_ENDPOINT: ${{ vars.CLOUD_STAGING_ENDPOINT }}
         run: |
+          if (-not $env:CLOUD_STAGING_ENDPOINT) {
+            Write-Host ('::error::The organization variable ' +
+              'CLOUD_STAGING_ENDPOINT is empty or missing, so the live ' +
+              'test has no cloud to call.')
+            exit 1
+          }
           # Each key, with the source its answer carries.
           $passes = [ordered]@{
-            _51DEGREES_RESOURCE_KEY_BESPOKE = 'Passive'
+            RESOURCE_KEY_BESPOKE_STAGING = 'Passive'
             _51DEGREES_RESOURCE_KEY_BASIC = 'none'
           }
           $report = 'web/human-confidence/target/surefire-reports/' +

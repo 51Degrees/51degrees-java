@@ -144,11 +144,22 @@ organization secrets:
 - `_51DEGREES_RESOURCE_KEY_BASIC`: resource key whose products don't offer
   `HumanConfidenceSource`.
   [cloud-human-confidence.yml](../.github/workflows/cloud-human-confidence.yml)
-  runs the Human Confidence example's live test with it, expecting no
-  source, and with `_51DEGREES_RESOURCE_KEY_BESPOKE`, expecting `Passive`.
+  runs the Human Confidence example's live test with it on the staging
+  cloud, expecting no source.
 - `_51DEGREES_CLOUD_ENDPOINT`: an organization variable naming the cloud
   service the cloud tests and examples call, the API base including
   `/api/v4/`. They call the public service when it is not set.
+
+The production cloud does not serve `HumanConfidenceSource` yet, so the
+Human Confidence example's live test runs against the staging cloud, with
+two names that only CI uses and so have no `_51DEGREES_` prefix:
+
+- `CLOUD_STAGING_ENDPOINT`: an organization variable naming the staging
+  cloud, the API base including `/api/v4/`.
+- `RESOURCE_KEY_BESPOKE_STAGING`: an organization secret holding a Bespoke
+  resource key the staging cloud resolves.
+  [cloud-human-confidence.yml](../.github/workflows/cloud-human-confidence.yml)
+  runs the live test with it, expecting `Passive`.
 
 A cloud test with no key is skipped, naming the variable it reads.
 

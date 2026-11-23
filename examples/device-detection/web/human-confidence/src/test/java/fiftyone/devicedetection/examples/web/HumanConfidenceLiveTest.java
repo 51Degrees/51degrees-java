@@ -43,21 +43,25 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 /**
- * Runs the example against the live cloud service, with the Resource Key in
+ * Runs the example against the staging cloud service that
+ * CLOUD_STAGING_ENDPOINT names, with the Resource Key in
  * _51DEGREES_RESOURCE_KEY, and asks its /passive path as the page does. The
- * service is the one _51DEGREES_CLOUD_ENDPOINT names, or production.
+ * production cloud does not serve HumanConfidenceSource yet, so the test
+ * asks the staging cloud.
  * <p>
  * The system property humanConfidenceSource says what the key's answer
  * carries. Passive, the default, is for a key whose products offer
  * HumanConfidenceSource, and none is for a key whose products don't. The
- * test is skipped when the key isn't set, and when the service doesn't
- * serve HumanConfidenceSource at all. Keys are never printed.
+ * test is skipped when the key or CLOUD_STAGING_ENDPOINT isn't set, and when
+ * the service doesn't serve HumanConfidenceSource at all. Keys are never
+ * printed.
  */
 public class HumanConfidenceLiveTest {
 
     private static final String RESOURCE_KEY = "_51DEGREES_RESOURCE_KEY";
 
-    private static final String ENDPOINT = "_51DEGREES_CLOUD_ENDPOINT";
+    /** The staging cloud's API base, a variable only CI sets. */
+    private static final String ENDPOINT = "CLOUD_STAGING_ENDPOINT";
 
     /** The system property naming the source the key's answer carries. */
     private static final String EXPECTED_SOURCE = "humanConfidenceSource";
@@ -132,12 +136,15 @@ public class HumanConfidenceLiveTest {
         return key.trim();
     }
 
-    /** The API base the example calls, ending in one slash. */
+    /**
+     * The API base the example calls, ending in one slash, or a skip that
+     * names the variable.
+     */
     private static String api() {
         String endpoint = System.getenv(ENDPOINT);
-        if (endpoint == null || endpoint.trim().isEmpty()) {
-            endpoint = HumanConfidence.DEFAULT_ENDPOINT;
-        }
+        assumeTrue(ENDPOINT + " is not set, so this live cloud test is "
+                        + "skipped.",
+                endpoint != null && endpoint.trim().isEmpty() == false);
         return endpoint.trim().replaceAll("/+$", "") + "/";
     }
 
@@ -177,9 +184,8 @@ public class HumanConfidenceLiveTest {
                 }
             }
         }
-        assumeTrue("The service " + ENDPOINT + " names, or production when "
-                        + "it isn't set, doesn't serve HumanConfidenceSource, "
-                        + "so this test is skipped.",
+        assumeTrue("The service " + ENDPOINT + " names doesn't serve "
+                        + "HumanConfidenceSource, so this test is skipped.",
                 served.length() > 0);
         return served;
     }

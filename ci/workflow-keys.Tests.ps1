@@ -23,14 +23,17 @@ Describe 'the workflows' {
         } | ForEach-Object Text | Should -BeNullOrEmpty
     }
 
-    # The resource keys and the license keys are organization secrets, so
-    # each comes from the secret of its own name.
+    # The resource keys and the license keys are organization secrets, and
+    # the staging cloud's address an organization variable, so each comes
+    # from the secret or variable of its own name.
     It 'fill <Name> from the organization <Kind> of the same name' -ForEach @(
         @{ Name = '_51DEGREES_RESOURCE_KEY_51DID'; Kind = 'secret'; Context = 'secrets' }
         @{ Name = '_51DEGREES_RESOURCE_KEY_BESPOKE'; Kind = 'secret'; Context = 'secrets' }
         @{ Name = '_51DEGREES_RESOURCE_KEY_BASIC'; Kind = 'secret'; Context = 'secrets' }
         @{ Name = '_51DEGREES_LICENSE_KEY_51DID'; Kind = 'secret'; Context = 'secrets' }
         @{ Name = '_51DEGREES_LICENSE_KEY_BESPOKE'; Kind = 'secret'; Context = 'secrets' }
+        @{ Name = 'RESOURCE_KEY_BESPOKE_STAGING'; Kind = 'secret'; Context = 'secrets' }
+        @{ Name = 'CLOUD_STAGING_ENDPOINT'; Kind = 'variable'; Context = 'vars' }
     ) {
         $workflows = Join-Path $PSScriptRoot '../.github/workflows'
         $lines = @(Get-ChildItem $workflows -Filter *.yml |
