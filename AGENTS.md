@@ -204,12 +204,19 @@ HardwarePlatform.Profiles. With one, they list each device as
 `<vendor> <name> (<model>)` under the value looked up. With a key that does
 not include it, they say so in one line that links to where a key is created
 and to the contact page, make no lookup, end with their "Find out more"
-section and exit with code 0. The published packages up to 4.5.130 cannot
-build the pipeline for such a key, so with those the examples end with that
-error instead. `TacCloudTest` and `NativeModelCloudTest` fail when the key in
-`_51DEGREES_RESOURCE_KEY_BESPOKE` lacks the property, and
-`HardwareLookupWithoutProfilesTest` checks the message against a stand-in for
-the cloud service.
+section and exit with code 0. A lookup that matches no device prints
+`No devices are associated with this TAC.` or `... this native model name.`
+under its heading. When the cloud's list of the key's properties cannot be
+fetched, the examples end with the cloud service's error and a non-zero exit
+code. The published packages up to 4.5.130 cannot build the pipeline for a
+key without the lookup, so with those the examples log
+`Aspect properties could not be loaded for fiftyone.devicedetection.cloud.flowelements.HardwareProfileCloudEngine`,
+end with `java.lang.RuntimeException: Failed to load aspect properties for element 'hardware'`
+and exit with code 1. `TacCloudTest` and `NativeModelCloudTest` fail when the
+key in `_51DEGREES_RESOURCE_KEY_BESPOKE` lacks the property.
+`HardwareLookupStandInTest` runs both examples against a stand-in for the
+cloud service, for a key without the lookup, for lookups that match nothing,
+and for a list of properties that fails once or every time.
 
 ### Pitfalls
 
