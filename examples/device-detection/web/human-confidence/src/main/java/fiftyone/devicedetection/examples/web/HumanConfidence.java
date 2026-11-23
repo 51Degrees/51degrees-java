@@ -57,7 +57,9 @@ import java.util.concurrent.Executors;
  * <ol>
  * <li>Passive. This server asks the cloud itself, passing on the visitor's
  * request headers and IP address, and reads HumanConfidenceSource and
- * HumanConfidence from the answer. The server asks rather than reading a
+ * HumanConfidence from the answer. The request names both properties, so
+ * the answer carries them whatever the Resource Key's saved list of
+ * properties holds. The server asks rather than reading a
  * level from the page, because a level a browser sends can be forged.</li>
  * <li>Active. The page loads the 51Degrees client script. When the script
  * completes, HumanConfidenceSource is Active and HumanConfidence holds a
@@ -89,6 +91,10 @@ public class HumanConfidence {
 
     /** Where to ask for a Resource Key that includes HumanConfidence. */
     public static final String CONTACT_URL = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-human-confidence-src-main-java-fiftyone-devicedetection-examples-web-humanconfidence.java&utm_term=contact-us";
+
+    /** The properties the passive call reads, named in its request. */
+    public static final String PASSIVE_VALUES =
+            "derived.humanconfidence,derived.humanconfidencesource";
 
     /** A short limit, so a slow cloud can't hang the demo. */
     private static final int TIMEOUT_MS = 10000;
@@ -269,27 +275,29 @@ public class HumanConfidence {
 
     /**
      * Passes the visitor's headers that the cloud reads, and the visitor's
-     * IP address, to the cloud, and returns source and humanConfidence from
-     * its answer.
+     * IP address, to the cloud, naming {@link #PASSIVE_VALUES}, and returns
+     * source and humanConfidence from its answer.
      */
     private void passive(HttpExchange exchange) throws IOException {
         JSONObject result = new JSONObject();
         try {
             Set<String> names = cloudHeaders();
-            Map<String, String> evidence = new LinkedHashMap<>();
+            Map<String, String> fields = new LinkedHashMap<>();
             for (Map.Entry<String, List<String>> header
                     : exchange.getRequestHeaders().entrySet()) {
                 String name = header.getKey().toLowerCase(Locale.ROOT);
                 if (names.contains(name)) {
-                    evidence.put(name, String.join(",", header.getValue()));
+                    fields.put(name, String.join(",", header.getValue()));
                 }
             }
             // Behind a load balancer or CDN, use the visitor's address it
-            // passes on. Set last, so no header can replace it.
-            evidence.put("client-ip",
+            // passes on. Set after the headers, so no header can replace
+            // it or the properties named.
+            fields.put("client-ip",
                     exchange.getRemoteAddress().getAddress().getHostAddress());
+            fields.put("values", PASSIVE_VALUES);
             Answer answer = send("POST", api + resource + ".json",
-                    form(evidence));
+                    form(fields));
             if (answer.status / 100 != 2) {
                 result.put("error", "HTTP " + answer.status + ": "
                         + trim(answer.body));
