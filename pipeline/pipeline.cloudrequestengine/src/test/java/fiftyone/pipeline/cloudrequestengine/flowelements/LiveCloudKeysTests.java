@@ -48,7 +48,7 @@ public class LiveCloudKeysTests {
      * read here.
      */
     @Test
-    public void licenceKey_IsTheCloudLicence() {
+    public void licenseKey_IsTheCloudLicense() {
         assertEquals("_51DEGREES_LICENSE_KEY_BESPOKE",
             LiveCloudKeys.LICENSE_KEY_NAME);
     }

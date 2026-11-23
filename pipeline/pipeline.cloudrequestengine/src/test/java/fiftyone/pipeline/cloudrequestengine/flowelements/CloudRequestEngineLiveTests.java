@@ -93,10 +93,10 @@ public class CloudRequestEngineLiveTests {
         CloudRequestEngineBuilder builder = new CloudRequestEngineBuilder(
             LoggerFactory.getILoggerFactory(), new HttpClientDefault())
             .setResourceKey(resourceKey);
-        String licenceKey =
+        String licenseKey =
             LiveCloudKeys.find(LiveCloudKeys.LICENSE_KEY_NAME);
-        if (licenceKey != null) {
-            builder.setLicenseKey(licenceKey);
+        if (licenseKey != null) {
+            builder.setLicenseKey(licenseKey);
         }
 
         // Building asks the service for its accessible properties and its
@@ -168,9 +168,9 @@ public class CloudRequestEngineLiveTests {
     @Test
     public void build_Process_LicenseKeyAlone_AnswersOnlyWhatWasAsked()
             throws Exception {
-        String licenceKey =
+        String licenseKey =
             LiveCloudKeys.find(LiveCloudKeys.LICENSE_KEY_NAME);
-        assumeTrue(licenceKey != null,
+        assumeTrue(licenseKey != null,
             LiveCloudKeys.LICENSE_KEY_NAME
             + " is not set, so there is no license key to authenticate with.");
 
@@ -180,7 +180,7 @@ public class CloudRequestEngineLiveTests {
         String granted;
         try (CloudRequestEngine discovery = new CloudRequestEngineBuilder(
                 LoggerFactory.getILoggerFactory(), new HttpClientDefault())
-                .setLicenseKey(licenceKey)
+                .setLicenseKey(licenseKey)
                 .setRequestedProperties(Collections.singletonList(IS_MOBILE))
                 .build()) {
             granted = firstProperty(discovery.getPublicProperties());
@@ -196,7 +196,7 @@ public class CloudRequestEngineLiveTests {
             Arrays.asList(granted, IS_MOBILE, NOT_A_PROPERTY);
         CloudRequestEngine engine = new CloudRequestEngineBuilder(
             loggerFactory, new HttpClientDefault())
-            .setLicenseKey(licenceKey)
+            .setLicenseKey(licenseKey)
             .setRequestedProperties(asked)
             .build();
 

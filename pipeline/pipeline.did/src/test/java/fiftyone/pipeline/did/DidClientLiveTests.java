@@ -78,7 +78,7 @@ public class DidClientLiveTests {
     private final String resourceKeyName;
     private final String licenseKeyName;
     private String resourceKey;
-    private String licenceKey;
+    private String licenseKey;
     private DidClient client;
 
     public DidClientLiveTests(String resourceKeyName, String licenseKeyName) {
@@ -91,14 +91,14 @@ public class DidClientLiveTests {
         resourceKey = LiveCloudKeys.read(resourceKeyName);
         // One lookup serves both, so the key the form body sends and the
         // one hasLicenceKey() answers for can never disagree.
-        licenceKey = LiveCloudKeys.read(licenseKeyName);
-        if (resourceKey == null && licenceKey != null) {
+        licenseKey = LiveCloudKeys.read(licenseKeyName);
+        if (resourceKey == null && licenseKey != null) {
             fail(LiveCloudKeys.missingResourceKey(
                 resourceKeyName, licenseKeyName));
         }
         Assume.assumeTrue(LiveCloudKeys.noResourceKey(resourceKeyName),
             resourceKey != null);
-        client = new DidClient(resourceKey, licenceKey);
+        client = new DidClient(resourceKey, licenseKey);
     }
 
     @Test
@@ -395,7 +395,7 @@ public class DidClientLiveTests {
     private List<FodId> identifiersCreatedFor(
             String name, String value, String clientIp) throws Exception {
         String form = "resource=" + DidClient.encode(resourceKey)
-            + "&license=" + DidClient.encode(licenceKey)
+            + "&license=" + DidClient.encode(licenseKey)
             + "&" + name + "=" + DidClient.encode(value)
             + "&client-ip=" + DidClient.encode(clientIp)
             + "&values=FODiD.IdProbGlobal&values=FODiD.IdProbLic";
