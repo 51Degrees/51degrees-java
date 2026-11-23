@@ -105,14 +105,22 @@ tests, or by itself from `examples/device-detection`.
 ../../mvnw -pl web/human-confidence -am test
 ```
 
-`HumanConfidenceLiveTest` makes the server's passive call against the cloud
-service that `_51DEGREES_CLOUD_ENDPOINT` names. With the key in
-`_51DEGREES_RESOURCE_KEY_BESPOKE` the answer has `HumanConfidenceSource` set
-to `Passive` and a plain level. With the key in
-`_51DEGREES_RESOURCE_KEY_BASIC`, which is outside the Bespoke product, the
-answer has no source. A test whose key is not set is skipped. The active
-source comes back only to a browser that has run the tests, so these tests
-don't check it.
+`HumanConfidenceLiveTest` starts the server with the key in
+`_51DEGREES_RESOURCE_KEY` and the cloud service that
+`_51DEGREES_CLOUD_ENDPOINT` names, and asks it for the passive result as the
+page does. By default the answer must have `HumanConfidenceSource` set to
+`Passive` and a plain level. For a key whose products don't offer the source,
+give `-DhumanConfidenceSource=none`, and the answer must have no source.
+
+```
+../../mvnw -pl web/human-confidence -am test -Dtest=HumanConfidenceLiveTest -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+The test is skipped when `_51DEGREES_RESOURCE_KEY` is not set, and when the
+service doesn't serve `HumanConfidenceSource`. The `Active` source needs the
+client script to run in a browser, so the test doesn't check it.
+[cloud-human-confidence.yml](../../../../.github/workflows/cloud-human-confidence.yml)
+runs it once for each of the CI resource keys.
 
 ## What a run costs
 

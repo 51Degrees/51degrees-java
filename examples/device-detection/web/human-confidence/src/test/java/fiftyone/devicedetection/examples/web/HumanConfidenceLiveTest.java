@@ -23,6 +23,7 @@
 package fiftyone.devicedetection.examples.web;
 
 import org.json.JSONObject;
+import org.junit.After;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -37,29 +38,34 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 /**
- * The passive call the example makes, against the live cloud service with
- * keys from the environment. The request names HumanConfidence and
- * HumanConfidenceSource, so the answer carries both whatever the key's own
- * property list holds. A test with no key is skipped and names the
- * variable it needs. Keys are never printed.
+ * Runs the example against the live cloud service, with the Resource Key in
+ * _51DEGREES_RESOURCE_KEY, and asks its /passive path as the page does. The
+ * service is the one _51DEGREES_CLOUD_ENDPOINT names, or production.
+ * <p>
+ * The system property humanConfidenceSource says what the key's answer
+ * carries. Passive, the default, is for a key whose products offer
+ * HumanConfidenceSource, and none is for a key whose products don't. The
+ * test is skipped when the key isn't set, and when the service doesn't
+ * serve HumanConfidenceSource at all. Keys are never printed.
  */
 public class HumanConfidenceLiveTest {
 
-    /** A Resource Key with the Bespoke product, which gets the source. */
-    private static final String BESPOKE_KEY = "_51DEGREES_RESOURCE_KEY_BESPOKE";
-
-    /** A Resource Key outside the Bespoke product, which gets no source. */
-    private static final String BASIC_KEY = "_51DEGREES_RESOURCE_KEY_BASIC";
+    private static final String RESOURCE_KEY = "_51DEGREES_RESOURCE_KEY";
 
     private static final String ENDPOINT = "_51DEGREES_CLOUD_ENDPOINT";
 
-    private static final String VALUES =
-            "derived.humanconfidence,derived.humanconfidencesource";
+    /** The system property naming the source the key's answer carries. */
+    private static final String EXPECTED_SOURCE = "humanConfidenceSource";
+
+    /** The expected source for a key whose products don't offer it. */
+    private static final String NONE = "none";
+
+    private static final String PASSIVE = "Passive";
 
     private static final String USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -70,36 +76,63 @@ public class HumanConfidenceLiveTest {
 
     private static final int TIMEOUT_MS = 20000;
 
-    @Test
-    public void bespokeKeyGetsSourcePassive() throws IOException {
-        String key = key(BESPOKE_KEY);
-        JSONObject derived = passive(key);
-        String text = redact(derived.toString(), key);
-        assertEquals("A request with no browser tests is passive: " + text,
-                "Passive", derived.optString("humanconfidencesource", null));
-        assertTrue("A passive level is one of the plain levels: " + text,
-                LEVELS.contains(derived.optString("humanconfidence", null)));
+    private HumanConfidence example;
+
+    @After
+    public void stop() {
+        if (example != null) {
+            example.stop();
+        }
     }
 
     @Test
-    public void keyOutsideBespokeGetsNoSource() throws IOException {
-        String key = key(BASIC_KEY);
-        JSONObject derived = passive(key);
-        assertNull("A key outside Bespoke gets no source: "
-                        + redact(derived.toString(), key),
-                derived.optString("humanconfidencesource", null));
+    public void passiveAnswerCarriesTheKeysSource() throws IOException {
+        String expected = expectedSource();
+        String key = key();
+        JSONObject served = servedSource(key);
+        example = new HumanConfidence(api(), key, null);
+        int port = example.start(0);
+        JSONObject answer = passive(port);
+        String text = redact(answer.toString(), key);
+
+        assertFalse("The example's passive call failed: " + text,
+                answer.has("error"));
+        if (NONE.equals(expected)) {
+            assertFalse("This key's answer carries no source: " + text
+                            + ". The service says: "
+                            + redact(served.toString(), key),
+                    answer.has("source"));
+        } else {
+            assertEquals("This key's answer carries the source " + PASSIVE
+                            + ": " + text + ". The service says: "
+                            + redact(served.toString(), key),
+                    PASSIVE, answer.optString("source", null));
+            assertTrue("A passive level is one of the plain levels: "
+                            + text,
+                    LEVELS.contains(answer.optString(
+                            "humanConfidence", null)));
+        }
     }
 
-    /** The key in the named variable, or a skip that names it. */
-    private static String key(String name) {
-        String key = System.getenv(name);
-        assumeTrue(name + " is not set, so this live cloud test is "
+    /** Passive or none, from the system property, or a failure. */
+    private static String expectedSource() {
+        String expected = System.getProperty(EXPECTED_SOURCE, PASSIVE).trim();
+        assertTrue(EXPECTED_SOURCE + " is " + PASSIVE + " or " + NONE
+                        + ", not " + expected,
+                PASSIVE.equals(expected) || NONE.equals(expected));
+        return expected;
+    }
+
+    /** The key in _51DEGREES_RESOURCE_KEY, or a skip that names it. */
+    private static String key() {
+        String key = System.getenv(RESOURCE_KEY);
+        assumeTrue(RESOURCE_KEY + " is not set, so this live cloud test is "
                         + "skipped. " + ENDPOINT + " names the service.",
                 key != null && key.trim().isEmpty() == false);
         return key.trim();
     }
 
-    /** The API base the example would call, ending in one slash. */
+    /** The API base the example calls, ending in one slash. */
     private static String api() {
         String endpoint = System.getenv(ENDPOINT);
         if (endpoint == null || endpoint.trim().isEmpty()) {
@@ -109,13 +142,14 @@ public class HumanConfidenceLiveTest {
     }
 
     /**
-     * Posts a browser's User-Agent to the key's JSON path, naming the two
-     * properties, and returns the answer's derived object, empty when the
-     * answer has none.
+     * Asks the service for HumanConfidenceSource with the key, and returns
+     * the source's value and null reason from the answer. Skips the test
+     * when the answer has neither, as the service doesn't serve the
+     * property, so no key can get it there.
      */
-    private static JSONObject passive(String key) throws IOException {
+    private static JSONObject servedSource(String key) throws IOException {
         String form = "user-agent=" + encode(USER_AGENT)
-                + "&values=" + encode(VALUES);
+                + "&values=" + encode("derived.humanconfidencesource");
         HttpURLConnection connection = (HttpURLConnection)
                 new URL(api() + key + ".json").openConnection();
         connection.setConnectTimeout(TIMEOUT_MS);
@@ -130,10 +164,36 @@ public class HumanConfidenceLiveTest {
         int status = connection.getResponseCode();
         String body = read(status >= 400
                 ? connection.getErrorStream() : connection.getInputStream());
-        assertEquals("The passive call did not succeed: "
+        assertEquals("The service didn't answer the key: "
                 + redact(body, key), 200, status);
         JSONObject derived = new JSONObject(body).optJSONObject("derived");
-        return derived == null ? new JSONObject() : derived;
+        JSONObject served = new JSONObject();
+        if (derived != null) {
+            for (String name : new String[] {
+                    "humanconfidencesource",
+                    "humanconfidencesourcenullreason" }) {
+                if (derived.has(name)) {
+                    served.put(name, derived.get(name));
+                }
+            }
+        }
+        assumeTrue("The service " + ENDPOINT + " names, or production when "
+                        + "it isn't set, doesn't serve HumanConfidenceSource, "
+                        + "so this test is skipped.",
+                served.length() > 0);
+        return served;
+    }
+
+    /** The example's answer to a browser's GET of /passive. */
+    private static JSONObject passive(int port) throws IOException {
+        HttpURLConnection connection = (HttpURLConnection)
+                new URL("http://127.0.0.1:" + port + "/passive")
+                        .openConnection();
+        connection.setConnectTimeout(TIMEOUT_MS);
+        connection.setReadTimeout(TIMEOUT_MS);
+        connection.setRequestProperty("User-Agent", USER_AGENT);
+        assertEquals(200, connection.getResponseCode());
+        return new JSONObject(read(connection.getInputStream()));
     }
 
     private static String encode(String text) {
