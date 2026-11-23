@@ -23,12 +23,12 @@ Describe 'the workflows' {
         } | ForEach-Object Text | Should -BeNullOrEmpty
     }
 
-    # The resource keys are organization variables and the license keys
-    # organization secrets, so each comes from the one it is.
+    # The resource keys and the license keys are organization secrets, so
+    # each comes from the secret of its own name.
     It 'fill <Name> from the organization <Kind> of the same name' -ForEach @(
-        @{ Name = '_51DEGREES_RESOURCE_KEY_51DID'; Kind = 'variable'; Context = 'vars' }
-        @{ Name = '_51DEGREES_RESOURCE_KEY_BESPOKE'; Kind = 'variable'; Context = 'vars' }
-        @{ Name = '_51DEGREES_RESOURCE_KEY_BASIC'; Kind = 'variable'; Context = 'vars' }
+        @{ Name = '_51DEGREES_RESOURCE_KEY_51DID'; Kind = 'secret'; Context = 'secrets' }
+        @{ Name = '_51DEGREES_RESOURCE_KEY_BESPOKE'; Kind = 'secret'; Context = 'secrets' }
+        @{ Name = '_51DEGREES_RESOURCE_KEY_BASIC'; Kind = 'secret'; Context = 'secrets' }
         @{ Name = '_51DEGREES_LICENSE_KEY_51DID'; Kind = 'secret'; Context = 'secrets' }
         @{ Name = '_51DEGREES_LICENSE_KEY_BESPOKE'; Kind = 'secret'; Context = 'secrets' }
     ) {
@@ -40,6 +40,16 @@ Describe 'the workflows' {
         $lines | Where-Object {
             $_ -notmatch (':\s*\$\{\{\s*' + $Context + '\.' + $Name + '\s*\}\}\s*$')
         } | Should -BeNullOrEmpty
+    }
+
+    # Every resource key is an organization secret, so no workflow reads a
+    # _51DEGREES_RESOURCE_KEY name as an organization variable.
+    It 'read no _51DEGREES_RESOURCE_KEY name as an organization variable' {
+        $workflows = Join-Path $PSScriptRoot '../.github/workflows'
+        @(Get-ChildItem $workflows -Filter *.yml |
+            Select-String -Pattern '\bvars\._51DEGREES_RESOURCE_KEY' |
+            ForEach-Object { "$($_.Filename):$($_.LineNumber): $($_.Line.Trim())" }) |
+            Should -BeNullOrEmpty
     }
 
     # cloud-51did.yml runs the live tests once. The tests read each key
@@ -97,7 +107,7 @@ Describe 'the workflows' {
         }
 
         # A license key with no resource key of its own account means an
-        # organization variable is missing. The licensed tests would then
+        # organization secret is missing. The licensed tests would then
         # never run, and the job would still pass, so the step fails naming
         # the missing variable.
         It 'fails naming <Resource> when <License> has a value and it is empty' -ForEach @(

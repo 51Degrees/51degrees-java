@@ -126,8 +126,8 @@ To run the on-premise tests:
   Intelligence Enterprise data files from the Distributor with it, and the
   data file update example uses it.
 
-To run the cloud tests, the resource keys are organization variables and
-the license keys are organization secrets:
+To run the cloud tests, the resource keys and the license keys are
+organization secrets:
 
 - `_51DEGREES_RESOURCE_KEY_BESPOKE`: [resource key](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=ci-readme.md&utm_term=secrets)
   with every property, which the cloud tests read. `_51DEGREES_RESOURCE_KEY`
