@@ -1,0 +1,8 @@
+# Tests that the standard set of a pull request leaves out, for
+# run-unit-tests.ps1. Each loads the multi-gigabyte IP Intelligence Enterprise
+# data file.
+**/fiftyone/ipintelligence/IPIntelligenceTests.*
+**/fiftyone/ipintelligence/examples/console/MetadataOnPremTest.*
+**/fiftyone/ipintelligence/examples/console/CompareOnPremTest.*
+# Surefire's own default, which a file of excludes replaces.
+**/*$*

@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="51Degrees Resource Cleanup"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+    <description>
+        Fails the build when a FlowData, a Pipeline or a collection of
+        metadata is not closed on every path. The native results in a FlowData
+        and the native metadata collections each hold the engine's data set,
+        so while one is open, closing the Pipeline cannot free the data set.
+        Java never frees the native results by itself.
+
+        Where something is closed by its owner elsewhere, such as the FlowData
+        the web integration closes at the end of a request, the code says so
+        with @SuppressWarnings and a comment naming the owner.
+    </description>
+
+    <rule name="FlowDataInTryWithResources"
+          language="java"
+          message="Create the FlowData in a try-with-resources statement, so its native results are freed on every path"
+          class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+        <description>
+            Every FlowData created is closed by a try-with-resources statement,
+            unless it is returned to the caller or kept in a field.
+        </description>
+        <priority>3</priority>
+        <properties>
+            <property name="xpath">
+                <value>
+<![CDATA[
+(//MethodCall[@MethodName = 'createFlowData']
+ | //ConstructorCall[pmd-java:typeIs('fiftyone.pipeline.core.data.FlowData')])
+    [not(ancestor::Resource)]
+    [not(parent::ReturnStatement)]
+    [not(parent::AssignmentExpression)]
+]]>
+                </value>
+            </property>
+        </properties>
+    </rule>
+
+    <rule name="CloseableIterableInTryWithResources"
+          language="java"
+          message="Use the metadata collection in a try-with-resources statement, so it releases the data set on every path"
+          class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+        <description>
+            Every CloseableIterable a method returns, such as the profiles or
+            the components of an engine, is closed by a try-with-resources
+            statement, unless it is returned to the caller.
+        </description>
+        <priority>3</priority>
+        <properties>
+            <property name="xpath">
+                <value>
+<![CDATA[
+//MethodCall[pmd-java:typeIs('fiftyone.pipeline.engines.fiftyone.data.CloseableIterable')]
+    [not(ancestor::Resource)]
+    [not(parent::ReturnStatement)]
+]]>
+                </value>
+            </property>
+        </properties>
+    </rule>
+
+    <rule name="PipelineClosed"
+          language="java"
+          message="Close the Pipeline in a try-with-resources statement or a finally block, so its elements and their data sets are freed on every path"
+          class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+        <description>
+            A local variable holding a Pipeline that a builder has just built
+            is a try-with-resources resource, is closed in a finally block of
+            the same method, or is returned to the caller.
+        </description>
+        <priority>3</priority>
+        <properties>
+            <property name="xpath">
+                <value>
+<![CDATA[
+//LocalVariableDeclaration[not(parent::Resource)]
+    /VariableDeclarator[MethodCall
+        [@MethodName = ('build', 'buildFromConfiguration')]
+        [pmd-java:typeIs('fiftyone.pipeline.core.flowelements.Pipeline')]]
+    /VariableId[
+        let $name := @Name,
+            $body := ancestor::*[self::MethodDeclaration
+                or self::ConstructorDeclaration
+                or self::Initializer
+                or self::LambdaExpression][1]
+        return not($body//FinallyClause//MethodCall[@MethodName = 'close']
+                        /VariableAccess[@Name = $name])
+            and not($body//ReturnStatement/VariableAccess[@Name = $name])]
+]]>
+                </value>
+            </property>
+        </properties>
+    </rule>
+
+</ruleset>

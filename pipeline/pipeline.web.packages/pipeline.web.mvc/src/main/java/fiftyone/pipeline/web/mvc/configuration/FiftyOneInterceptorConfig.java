@@ -1,0 +1,88 @@
+/* *********************************************************************
+ * This Original Work is copyright of 51 Degrees Mobile Experts Limited.
+ * Copyright 2026 51 Degrees Mobile Experts Limited, Davidson House,
+ * Forbury Square, Reading, Berkshire, United Kingdom RG1 3EU.
+ *
+ * This Original Work is licensed under the European Union Public Licence
+ * (EUPL) v.1.2 and is subject to its terms as set out below.
+ *
+ * If a copy of the EUPL was not distributed with this file, You can obtain
+ * one at https://opensource.org/licenses/EUPL-1.2.
+ *
+ * The 'Compatible Licences' set out in the Appendix to the EUPL (as may be
+ * amended by the European Commission) shall be deemed incompatible for
+ * the purposes of the Work and the provisions of the compatibility
+ * clause in Article 5 of the EUPL shall not apply.
+ *
+ * If using the Work as, or as part of, a network application, by
+ * including the attribution notice(s) required under Article 5 of the EUPL
+ * in the end user terms of the application under an appropriate heading,
+ * such notice(s) shall fulfill the requirements of that article.
+ * ********************************************************************* */
+
+package fiftyone.pipeline.web.mvc.configuration;
+
+import fiftyone.pipeline.web.mvc.components.FiftyOneInterceptor;
+
+import static fiftyone.pipeline.web.Constants.DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS;
+
+/**
+ * Configuration class for the {@link FiftyOneInterceptor}.
+ */
+public interface FiftyOneInterceptorConfig {
+
+    /**
+     * Get the path to the data file.
+     * @return data file path
+     */
+    String getDataFilePath();
+
+    /**
+     * Get whether client-side properties are enabled.
+     * @return true if client-side properties are enabled
+     */
+    boolean getClientsidePropertiesEnabled();
+
+    /**
+     * Get how many seconds a browser may keep the client-side JavaScript or
+     * JSON before it asks again, the max-age of their Cache-Control header.
+     * @return the max-age in seconds, 0 or more
+     */
+    default int getClientsideCacheMaxAge() {
+        return DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS;
+    }
+
+    /**
+     * Get the end of the request path the JavaScript is served for.
+     * @return the path, or null or empty for the default
+     */
+    default String getJavaScriptPath() {
+        return null;
+    }
+
+    /**
+     * Get the end of the request path the JSON is served for.
+     * @return the path, or null or empty for the default
+     */
+    default String getJsonPath() {
+        return null;
+    }
+
+    /**
+     * Get whether the Sequence Element is added to the Pipeline when the
+     * configuration does not include it.
+     * @return true to add the Sequence Element
+     */
+    default boolean getSequenceElementEnabled() {
+        return true;
+    }
+
+    /**
+     * Get whether the Set Headers Element is added to the Pipeline when the
+     * configuration does not include it.
+     * @return true to add the Set Headers Element
+     */
+    default boolean getSetHeadersElementEnabled() {
+        return true;
+    }
+}

@@ -1,0 +1,10 @@
+<PipelineOptions>
+    <Elements>
+        <Element>
+            <BuilderName>JsonBuilderElement</BuilderName>
+        </Element>
+        <Element>
+            <BuilderName>JavaScriptBuilderElement</BuilderName>
+        </Element>
+    </Elements>
+</PipelineOptions>

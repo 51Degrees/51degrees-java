@@ -1,0 +1,325 @@
+/* *********************************************************************
+ * This Original Work is copyright of 51 Degrees Mobile Experts Limited.
+ * Copyright 2026 51 Degrees Mobile Experts Limited, Davidson House,
+ * Forbury Square, Reading, Berkshire, United Kingdom RG1 3EU.
+ *
+ * This Original Work is licensed under the European Union Public Licence
+ * (EUPL) v.1.2 and is subject to its terms as set out below.
+ *
+ * If a copy of the EUPL was not distributed with this file, You can obtain
+ * one at https://opensource.org/licenses/EUPL-1.2.
+ *
+ * The 'Compatible Licences' set out in the Appendix to the EUPL (as may be
+ * amended by the European Commission) shall be deemed incompatible for
+ * the purposes of the Work and the provisions of the compatibility
+ * clause in Article 5 of the EUPL shall not apply.
+ *
+ * If using the Work as, or as part of, a network application, by
+ * including the attribution notice(s) required under Article 5 of the EUPL
+ * in the end user terms of the application under an appropriate heading,
+ * such notice(s) shall fulfill the requirements of that article.
+ * ********************************************************************* */
+
+package fiftyone.pipeline.engines.fiftyone.trackers;
+
+import fiftyone.caching.LruPutCache;
+import fiftyone.pipeline.core.data.*;
+import fiftyone.pipeline.engines.configuration.CacheConfiguration;
+import fiftyone.pipeline.engines.fiftyone.data.EvidenceKeyFilterShareUsage;
+import fiftyone.pipeline.engines.testhelpers.data.MockFlowData;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static fiftyone.pipeline.core.Constants.*;
+import static fiftyone.pipeline.engines.Constants.DEFAULT_SESSION_COOKIE_NAME;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.when;
+
+public class ShareUsageTrackerTests {
+
+    /**
+     * An interval no run of these tests comes near, for the tests that do
+     * not test expiry, so a slow runner cannot make a repeat count as new.
+     */
+    private static final long NO_EXPIRY_INTERVAL_MILLIS = 60 * 60 * 1000;
+
+    /**
+     * A short interval, for a test that sleeps past it to test expiry.
+     */
+    private static final long EXPIRY_INTERVAL_MILLIS = 50;
+
+    /**
+     * Added to the wait for an interval to pass, so that a sleep that returns
+     * early or a slow clock cannot leave a repeat inside the interval.
+     */
+    private static final long EXPIRY_MARGIN_MILLIS = 250;
+
+    private EvidenceKeyFilter evidenceKeyFilter;
+
+    private ShareUsageTracker shareUsageTracker;
+    private String sessionCookieName;
+    private List<String> blockedHttpHeaders;
+    private List<String> includedQueryStringParameters;
+    private Map<String, Object> evidenceData;
+    private FlowData data;
+
+    @BeforeEach
+    public void Init() {
+        blockedHttpHeaders = new ArrayList<>();
+        includedQueryStringParameters = new ArrayList<>();
+        sessionCookieName = DEFAULT_SESSION_COOKIE_NAME;
+
+        evidenceKeyFilter = new EvidenceKeyFilterShareUsage(
+            blockedHttpHeaders,
+            includedQueryStringParameters,
+            true,
+            sessionCookieName);
+        CacheConfiguration cacheConfig = new CacheConfiguration(
+            new LruPutCache.Builder(),
+            1000);
+        shareUsageTracker = new ShareUsageTracker(
+            cacheConfig,
+            NO_EXPIRY_INTERVAL_MILLIS,
+            evidenceKeyFilter);
+
+        evidenceData = new HashMap<>();
+        evidenceData.put(EVIDENCE_HTTPHEADER_PREFIX + EVIDENCE_SEPERATOR + "user-agent", "iPhone");
+
+        DataKeyBuilder dataKeyBuilder = new DataKeyBuilderDefault();
+        for (Map.Entry<String, Object> evidence : evidenceData.entrySet()) {
+            dataKeyBuilder.add(100, evidence.getKey(), evidence.getValue());
+        }
+
+        data = MockFlowData.createFromEvidence(evidenceData, false);
+        when(data.generateKey(any(EvidenceKeyFilter.class))).thenReturn(dataKeyBuilder.build());
+    }
+
+    @Test
+    public void ShareUsageTracker_RepeatEvidence_BeforeSessionTimeout() {
+        int trackedEvents = 0;
+        for (int i = 0; i < 2; i++) {
+            if (shareUsageTracker.track(data)) {
+                trackedEvents++;
+            }
+        }
+
+        assertEquals(1, trackedEvents);
+    }
+
+    @Test
+    public void ShareUsageTracker_RepeatEvidence_AfterSessionTimeout() throws InterruptedException {
+        ShareUsageTracker shareUsageTracker = new ShareUsageTracker(
+            new CacheConfiguration(new LruPutCache.Builder(), 1000),
+            EXPIRY_INTERVAL_MILLIS,
+            evidenceKeyFilter);
+        int trackedEvents = 0;
+        for (int i = 0; i < 2; i++) {
+            if (shareUsageTracker.track(data)) {
+                trackedEvents++;
+            }
+
+            // Wait for the interval to pass, with a margin.
+            Thread.sleep(EXPIRY_INTERVAL_MILLIS + EXPIRY_MARGIN_MILLIS);
+        }
+
+        assertEquals(2, trackedEvents);
+    }
+
+    /**
+     * A repeat is shared at most once in each interval. Sharing a repeat after
+     * the interval starts a new interval, so a repeat straight after it is not
+     * shared.
+     */
+    @Test
+    public void ShareUsageTracker_RepeatEvidence_SharedOncePerInterval()
+        throws InterruptedException {
+        long interval = 500;
+        ShareUsageTracker shareUsageTracker = new ShareUsageTracker(
+            new CacheConfiguration(new LruPutCache.Builder(), 1000),
+            interval,
+            evidenceKeyFilter);
+
+        assertTrue(shareUsageTracker.track(data),
+            "New evidence was not shared.");
+        Thread.sleep(interval + EXPIRY_MARGIN_MILLIS);
+        assertTrue(shareUsageTracker.track(data),
+            "A repeat after the interval was not shared.");
+        assertFalse(shareUsageTracker.track(data),
+            "A repeat straight after a repeat was shared was also shared, " +
+                "so the time it was shared was not stored.");
+    }
+
+    @Test
+    public void ShareUsageTracker_Session_Track() {
+        // The interval does not expire, so only the session cookie keeps the
+        // two requests apart.
+        shareUsageTracker = new ShareUsageTracker(
+            new CacheConfiguration(new LruPutCache.Builder(), 1000),
+            NO_EXPIRY_INTERVAL_MILLIS,
+            evidenceKeyFilter);
+
+        int trackedEvents = 0;
+        for (int i = 0; i < 2; i++) {
+            final Map<String, Object> evidenceData = new HashMap<>();
+            evidenceData.put(EVIDENCE_HTTPHEADER_PREFIX + EVIDENCE_SEPERATOR + "user-agent", "iPone");
+            evidenceData.put(EVIDENCE_COOKIE_PREFIX + EVIDENCE_SEPERATOR + DEFAULT_SESSION_COOKIE_NAME, i);
+            FlowData data = MockFlowData.createFromEvidence(evidenceData, true);
+            when(data.generateKey(any(EvidenceKeyFilter.class))).then(
+                new Answer<DataKey>() {
+                    @Override
+                    public DataKey answer(InvocationOnMock invocationOnMock) throws Throwable {
+                        return generateKey(
+                            (EvidenceKeyFilter) invocationOnMock.getArgument(0),
+                            evidenceData);
+                    }
+                }
+            );
+            if (shareUsageTracker.track(data)) {
+                trackedEvents++;
+            }
+        }
+
+        assertEquals(2, trackedEvents);
+    }
+
+    @Test
+    public void ShareUsageTracker_Session_DoNotTrack() {
+        EvidenceKeyFilter evidenceKeyFilter = new EvidenceKeyFilterShareUsage(
+            blockedHttpHeaders,
+            includedQueryStringParameters,
+            false,
+            sessionCookieName);
+        ShareUsageTracker shareUsageTracker = new ShareUsageTracker(
+            new CacheConfiguration(new LruPutCache.Builder(), 1000),
+            NO_EXPIRY_INTERVAL_MILLIS,
+            evidenceKeyFilter);
+
+        int trackedEvents = 0;
+        for (int i = 0; i < 2; i++) {
+            final Map<String, Object> evidenceData = new HashMap<>();
+            evidenceData.put(EVIDENCE_HTTPHEADER_PREFIX + EVIDENCE_SEPERATOR + "user-agent", "iPhone");
+            evidenceData.put(EVIDENCE_COOKIE_PREFIX + EVIDENCE_SEPERATOR + DEFAULT_SESSION_COOKIE_NAME, i);
+            FlowData data = MockFlowData.createFromEvidence(evidenceData, true);
+            when(data.generateKey(any(EvidenceKeyFilter.class))).then(
+                new Answer<DataKey>() {
+                    @Override
+                    public DataKey answer(InvocationOnMock invocationOnMock) throws Throwable {
+                        return generateKey(
+                            (EvidenceKeyFilter) invocationOnMock.getArgument(0),
+                            evidenceData);
+                    }
+                }
+            );
+            if (shareUsageTracker.track(data)) {
+                trackedEvents++;
+            }
+
+        }
+
+        assertEquals(1, trackedEvents);
+    }
+
+    /**
+     * The tracker's key is of the values usage sharing would share, which
+     * take in those of the web request. Two requests that differ only in the
+     * session cookie the web request holds are both tracked.
+     */
+    @Test
+    public void ShareUsageTracker_WebRequest_SessionCookieTracked() {
+        assertEquals(2, trackWebRequests(
+            "cookie." + DEFAULT_SESSION_COOKIE_NAME, "session-0", "session-1"));
+    }
+
+    /**
+     * Two requests whose web requests differ only in a value usage sharing
+     * leaves out, here a cookie other than the session or 51Degrees ones,
+     * have the same key, so only the first is tracked.
+     */
+    @Test
+    public void ShareUsageTracker_WebRequest_UnsharedValueIgnored() {
+        assertEquals(1, trackWebRequests(
+            "cookie.other", "value-0", "value-1"));
+    }
+
+    private int trackWebRequests(String key, String... values) {
+        // An interval no run of these tests comes near, so a slow runner
+        // cannot make the second request count as new.
+        long noExpiryIntervalMillis = 60 * 60 * 1000;
+        ShareUsageTracker tracker = new ShareUsageTracker(
+            new CacheConfiguration(new LruPutCache.Builder(), 1000),
+            noExpiryIntervalMillis,
+            evidenceKeyFilter);
+        int trackedEvents = 0;
+        for (String value : values) {
+            Map<String, Object> request = new HashMap<>();
+            request.put(EVIDENCE_HTTPHEADER_PREFIX + EVIDENCE_SEPERATOR +
+                "user-agent", "iPhone");
+            request.put(key, value);
+            final Map<String, Object> evidenceData = new HashMap<>();
+            evidenceData.put("server.http-request", request);
+            FlowData data = MockFlowData.createFromEvidence(evidenceData, false);
+            // A real FlowData makes its key from its Evidence and a filter.
+            when(data.generateKey(any(EvidenceKeyFilter.class))).then(
+                invocation -> generateKey(
+                    (EvidenceKeyFilter) invocation.getArgument(0),
+                    evidenceData));
+            if (tracker.track(data)) {
+                trackedEvents++;
+            }
+        }
+        return trackedEvents;
+    }
+
+    public DataKey generateKey(
+        EvidenceKeyFilter filter,
+        Map<String, Object> evidence) {
+        DataKeyBuilder result = new DataKeyBuilderDefault();
+        for (Map.Entry<String, Object> entry : evidence.entrySet()) {
+            if (filter.include(entry.getKey())) {
+                result.add(100, entry.getKey(), entry.getValue());
+            }
+        }
+        return result.build();
+    }
+
+    /**
+     * A repeat less than the interval after the entry was shared is not
+     * shared and leaves the entry's time as it was, so the next share comes
+     * one interval after the last one however often the evidence is seen. A
+     * repeat the interval or more after it is shared, and its time is
+     * stored.
+     */
+    @Test
+    public void ShareUsageTracker_Match_TimeChangesOnlyWhenShared() {
+        ShareUsageTracker tracker = new ShareUsageTracker(
+            new CacheConfiguration(new LruPutCache.Builder(), 1000),
+            NO_EXPIRY_INTERVAL_MILLIS,
+            evidenceKeyFilter);
+        long now = System.currentTimeMillis();
+
+        Date recent = new Date(now - NO_EXPIRY_INTERVAL_MILLIS / 2);
+        long sharedAt = recent.getTime();
+        assertFalse(tracker.match(data, recent),
+            "A repeat inside the interval was shared.");
+        assertEquals(sharedAt, recent.getTime(),
+            "A repeat that was not shared changed the entry's time.");
+
+        Date due = new Date(now - NO_EXPIRY_INTERVAL_MILLIS);
+        long before = System.currentTimeMillis();
+        assertTrue(tracker.match(data, due),
+            "A repeat one interval after the entry was shared was not shared.");
+        assertTrue(due.getTime() >= before,
+            "Sharing a repeat did not store the time it was shared.");
+    }
+}

@@ -1,0 +1,445 @@
+/* *********************************************************************
+ * This Original Work is copyright of 51 Degrees Mobile Experts Limited.
+ * Copyright 2026 51 Degrees Mobile Experts Limited, Davidson House,
+ * Forbury Square, Reading, Berkshire, United Kingdom RG1 3EU.
+ *
+ * This Original Work is licensed under the European Union Public Licence
+ * (EUPL) v.1.2 and is subject to its terms as set out below.
+ *
+ * If a copy of the EUPL was not distributed with this file, You can obtain
+ * one at https://opensource.org/licenses/EUPL-1.2.
+ *
+ * The 'Compatible Licences' set out in the Appendix to the EUPL (as may be
+ * amended by the European Commission) shall be deemed incompatible for
+ * the purposes of the Work and the provisions of the compatibility
+ * clause in Article 5 of the EUPL shall not apply.
+ *
+ * If using the Work as, or as part of, a network application, by
+ * including the attribution notice(s) required under Article 5 of the EUPL
+ * in the end user terms of the application under an appropriate heading,
+ * such notice(s) shall fulfill the requirements of that article.
+ * ********************************************************************* */
+
+package fiftyone.pipeline.cloudrequestengine.flowelements;
+
+
+import fiftyone.caching.PutCacheBuilder;
+import fiftyone.pipeline.annotations.DefaultValue;
+import fiftyone.pipeline.annotations.ElementBuilder;
+import fiftyone.pipeline.cloudrequestengine.Constants.Messages;
+import fiftyone.pipeline.cloudrequestengine.CloudDiscoveryState;
+import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
+import fiftyone.pipeline.core.data.FlowData;
+import fiftyone.pipeline.core.data.factories.ElementDataFactory;
+import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
+import fiftyone.pipeline.core.flowelements.FlowElement;
+import fiftyone.pipeline.engines.configuration.CacheConfiguration;
+import fiftyone.pipeline.engines.flowelements.AspectEngineBuilderBase;
+import fiftyone.pipeline.engines.services.HttpClient;
+import fiftyone.pipeline.engines.services.HttpClientDefault;
+import org.slf4j.ILoggerFactory;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.function.Function;
+
+/**
+ * Builder for the {@link CloudRequestEngine}.
+ */
+@ElementBuilder
+public class CloudRequestEngineBuilder extends
+    AspectEngineBuilderBase<CloudRequestEngineBuilder, CloudRequestEngine> {
+	
+    private final HttpClient httpClient;
+
+    private String endPoint = null;
+    private String dataEndpoint = null;
+    private String propertiesEndpoint = null;
+    private String evidenceKeysEndpoint = null;
+    private String resourceKey = null;
+    private String licenseKey = null;
+    private final List<String> requestedProperties = new ArrayList<>();
+    private String cloudRequestOrigin = null;
+    private int timeoutMillis = Constants.DEFAULT_TIMEOUT_MILLIS;
+    private CloudDiscoveryState discoveryState = null;
+    private CloudRequestEngineDefault built = null;
+    
+    // Function to get environment variable value. This enable testable code.
+    private Function<String, String> getEnvVar = (name) -> {
+    	return System.getenv(name);
+    };
+
+    public CloudRequestEngineBuilder(ILoggerFactory loggerFactory) {
+        this(loggerFactory, new HttpClientDefault());
+    }
+
+    public CloudRequestEngineBuilder(
+        ILoggerFactory loggerFactory,
+        HttpClient httpClient) {
+        super(loggerFactory);
+        this.httpClient = httpClient;
+    }
+
+    @Override
+    protected CloudRequestEngine newEngine(List<String> properties) throws Exception {
+        String trimmedResourceKey = trimmed(resourceKey);
+        String trimmedLicenseKey = trimmed(licenseKey);
+        List<String> requested = normalized(requestedProperties);
+        checkCredentials(trimmedResourceKey, trimmedLicenseKey, requested);
+
+        /*
+         *  Check if endPoint has been explicitly set via setEndpoint.
+         *  If not check for environment variable _51DEGREES_CLOUD_ENDPOINT.
+         *  If nothing else is set, use default value.
+         */
+        if (endPoint == null || endPoint.isEmpty()) {
+        	String envVarEndPoint = endPointFromEnvironment();
+        	if (envVarEndPoint == null || envVarEndPoint.isEmpty()) {
+        		setEndpoint(Constants.END_POINT_DEFAULT);
+        	}
+        	else {
+        		setEndpoint(envVarEndPoint);
+        	}
+        }
+        
+        CloudRequestEngineDefault engine = new CloudRequestEngineDefault(
+            loggerFactory.getLogger(CloudRequestEngine.class.getName()),
+            new CloudRequestDataFactory(loggerFactory),
+            httpClient,
+            dataEndpoint,
+            trimmedResourceKey,
+            trimmedLicenseKey,
+            propertiesEndpoint,
+            evidenceKeysEndpoint,
+            timeoutMillis,
+            cloudRequestOrigin,
+            requested);
+        if (discoveryState != null) {
+            engine.useDiscoveryState(discoveryState);
+        }
+        else {
+            // Fetch the accessible properties and the accepted evidence
+            // keys now, so that the built engine is ready. A 4xx answer
+            // fails the build, and any other failure is retried on first
+            // use.
+            engine.discover();
+        }
+        built = engine;
+        return engine;
+    }
+
+    /**
+     * Build the engine from a copy of what an earlier engine discovered for
+     * the same resource key, so that the build makes no discovery request.
+     * The copy comes from {@link #getDiscoveryState()} after a successful
+     * build, and can be kept with {@link CloudDiscoveryState#toJson()}.
+     * @param state the copy, or null to discover when building
+     * @return this builder
+     */
+    @DefaultValue("None - discovered when the engine is built")
+    public CloudRequestEngineBuilder setDiscoveryState(
+        CloudDiscoveryState state) {
+        this.discoveryState = state;
+        return this;
+    }
+
+    /**
+     * A copy of what the engine this builder last built discovered, to give
+     * to a later build with {@link #setDiscoveryState(CloudDiscoveryState)}.
+     * @return the copy, or null if no engine has been built or it does not
+     * yet know both the accepted evidence keys and the accessible properties
+     */
+    public CloudDiscoveryState getDiscoveryState() {
+        CloudRequestEngineDefault engine = built;
+        return engine == null ? null : engine.getDiscoveryState();
+    }
+
+    /**
+     * The end point that {@link Constants#CLOUD_ENDPOINT_VARIABLE} gives,
+     * or null or empty when it gives none.
+     */
+    private String endPointFromEnvironment() {
+        return getEnvVar.apply(Constants.CLOUD_ENDPOINT_VARIABLE);
+    }
+
+    private static String trimmed(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    /**
+     * The property names to send as values, trimmed and sent as given,
+     * with blank names and repeats left out. A repeat differs only in
+     * letter case, as the cloud service reads names without regard to
+     * case, and the first spelling given is kept.
+     */
+    private static List<String> normalized(List<String> names) {
+        List<String> result = new ArrayList<>();
+        Set<String> seen = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        for (String name : names) {
+            String normal = trimmed(name);
+            if (normal.isEmpty() == false && seen.add(normal)) {
+                result.add(normal);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Refuse the two combinations of keys and requested properties that the
+     * cloud service refuses on every request, so that a deployment sees one
+     * configuration error when the engine is built. A blank value counts as
+     * absent.
+     */
+    private static void checkCredentials(
+        String resourceKey,
+        String licenseKey,
+        List<String> requestedProperties) {
+        boolean hasResourceKey = resourceKey.isEmpty() == false;
+        boolean hasLicenseKey = licenseKey.isEmpty() == false;
+
+        if (hasResourceKey == false && hasLicenseKey == false) {
+            throw new PipelineConfigurationException(
+                Messages.NoCredential);
+        }
+        if (hasResourceKey == false && requestedProperties.isEmpty()) {
+            throw new PipelineConfigurationException(
+                Messages.LicenseKeyNeedsProperties);
+        }
+    }
+    
+    public CloudRequestEngine build() throws Exception {
+        return buildEngine();
+    }
+
+    /**
+     * The root endpoint which the CloudRequestsEngine will query. This will set
+     * the data, properties and evidence keys endpoints.
+     * <p>
+     * By default, "https://cloud.51degrees.com/api/v4"
+     * @param uri root endpoint
+     * @return this builder
+     */
+    @DefaultValue(Constants.END_POINT_DEFAULT)
+    public CloudRequestEngineBuilder setEndpoint(String uri) {
+        if (uri.endsWith("/") == false) {
+            uri += '/';
+        }
+        endPoint = uri;
+        String key = trimmed(resourceKey);
+        return setDataEndpoint(uri + (key.isEmpty() ? "" : key + ".") + "json")
+            .setPropertiesEndpoint(uri + "accessibleproperties")
+            .setEvidenceKeysEndpoint(uri + "evidencekeys");
+
+    }
+
+    /**
+     * The endpoint the CloudRequestEngine will query to get a processing result.
+     * <p>
+     * By default, this is the endpoint value suffixed with the resourcekey and
+     * ".json", or with "json" alone when no resource key is set
+     * @param uri data endpoint
+     * @return this builder
+     */
+    @DefaultValue(Constants.END_POINT_DEFAULT + "/{resourcekey}.json")
+    public CloudRequestEngineBuilder setDataEndpoint(String uri) {
+        dataEndpoint = uri;
+        return this;
+    }
+
+    /**
+     * The endpoint the cloudRequestEngine will query to get the available
+     * properties.
+     * <p>
+     * By default, this is the endpoint value suffixed with "accessibleproperties"
+     * @param uri properties endpoint
+     * @return this builder
+     */
+    @DefaultValue(Constants.END_POINT_DEFAULT + "/accessibleproperties")
+    public CloudRequestEngineBuilder setPropertiesEndpoint(String uri) {
+        propertiesEndpoint = uri;
+        return this;
+    }
+
+    /**
+     * The endpoint the cloudRequestEngine will query to get the required
+     * evidence keys.
+     * <p>
+     * By default, this is the endpoint value suffixed with "evidencekeys"
+     * @param uri evidence keys endpoint
+     * @return this builder
+     */
+    @DefaultValue(Constants.END_POINT_DEFAULT + "/evidencekeys")
+    public CloudRequestEngineBuilder setEvidenceKeysEndpoint(String uri) {
+        evidenceKeysEndpoint = uri;
+        return this;
+    }
+
+    /**
+     * The resource key to query the endpoint with.
+     * <p>
+     * No default. Either a resource key or a license key must be supplied.
+     * @param resourceKey resource key
+     * @return this builder
+     */
+    @DefaultValue("No default - a resource key or a license key must be supplied")
+    public CloudRequestEngineBuilder setResourceKey(String resourceKey) {
+        this.resourceKey = resourceKey;
+        return this;
+    }
+
+    /**
+     * The license key to query the endpoint with.
+     * <p>
+     * A license key used without a resource key needs the properties
+     * wanted, named with {@link #setRequestedProperties(List)}. Beside a
+     * resource key it adds the requested properties the license grants to
+     * what the resource key carries.
+     * <p>
+     * There is no default
+     * @param licenseKey license key
+     * @return this builder
+     */
+    @DefaultValue("No default")
+    public CloudRequestEngineBuilder setLicenseKey(String licenseKey) {
+        this.licenseKey = licenseKey;
+        return this;
+    }
+
+    /**
+     * The properties each request asks the cloud service for, as fully
+     * qualified names such as {@code device.ismobile}, sent as values.
+     * Required with a license key alone. Beside a resource key the cloud
+     * service adds them to the properties the resource key carries. Names
+     * are trimmed and sent as given, and a name given again in another
+     * letter case is sent once. The properties set with
+     * {@link #setProperty(String)} and {@link #setProperties(List)} are not
+     * sent.
+     * <p>
+     * By default no properties are requested
+     * @param properties the fully qualified property names
+     * @return this builder
+     */
+    @DefaultValue("None - required with a license key alone")
+    public CloudRequestEngineBuilder setRequestedProperties(
+        List<String> properties) {
+        if (properties == null) {
+            throw new IllegalArgumentException(
+                "properties must not be null");
+        }
+        requestedProperties.addAll(properties);
+        return this;
+    }
+
+    /**
+     * As {@link #setRequestedProperties(List)}, taking the names as one
+     * comma separated string, as a configuration file gives them.
+     * @param properties comma separated fully qualified property names
+     * @return this builder
+     */
+    @DefaultValue("None - required with a license key alone")
+    public CloudRequestEngineBuilder setRequestedProperties(
+        String properties) {
+        if (properties == null) {
+            throw new IllegalArgumentException(
+                "properties must not be null");
+        }
+        return setRequestedProperties(Arrays.asList(properties.split(",")));
+    }
+
+    /**
+     * Timeout in seconds for each request to the cloud service, the two
+     * discovery requests when the engine is built and each data request.
+     * <p>
+     * Default value is 2 seconds
+     * @param timeout in seconds
+     * @return this builder
+     */
+    @DefaultValue(intValue = Constants.DEFAULT_TIMEOUT_MILLIS / 1000)
+    public CloudRequestEngineBuilder setTimeOutSeconds(int timeout) {
+        this.timeoutMillis = timeout * 1000;
+        return this;
+    }
+
+    /**
+     * The value to set for the Origin header when making requests
+     * to the cloud service.
+     * This is used by the cloud service to check that the request
+     * is being made from a origin matching those allowed by the 
+     * resource key.
+     * For more detail, see the 'Request Headers' section in the 
+     * <a href="https://cloud.51degrees.com/api-docs/index.html">cloud documentation</a>.
+     * <p>
+     * There is no default value
+     * @param cloudRequestOrigin The value to use for the Origin header.
+     * @return this builder
+     */
+    @DefaultValue("None")
+    public CloudRequestEngineBuilder setCloudRequestOrigin(String cloudRequestOrigin) {
+        this.cloudRequestOrigin = cloudRequestOrigin;
+        return this;
+    }
+
+    private static class CloudRequestDataFactory
+        implements ElementDataFactory<CloudRequestData> {
+
+        private final ILoggerFactory loggerFactory;
+
+        public CloudRequestDataFactory(ILoggerFactory loggerFactory) {
+            this.loggerFactory = loggerFactory;
+        }
+
+        @Override
+        public CloudRequestData create(
+            FlowData flowData,
+            FlowElement<CloudRequestData, ?> engine) {
+            return new CloudRequestData(
+                loggerFactory.getLogger(CloudRequestData.class.getName()),
+                flowData,
+                (CloudRequestEngine) engine);
+        }
+    }
+
+
+    /**
+     * Configure the size of a {@link fiftyone.caching.LruPutCache} cache to use.
+     * <p>
+     * Default is that there is no cache unless one is configured using this method
+     * or by using {@link AspectEngineBuilderBase#setCache(CacheConfiguration)} - or
+     * if it is set in a pipelineBuilder e.g.
+     * {@link fiftyone.pipeline.engines.flowelements.PrePackagedPipelineBuilderBase#useResultsCache()}
+     * @param size the size of the cache
+     * @return this builder
+     */
+    @DefaultValue("No cache")
+    public CloudRequestEngineBuilder setCacheSize(int size) {
+        this.cacheConfig = new CacheConfiguration(size);
+        return this;
+    }
+
+    /**
+     * Where the cache is built by a {@link PutCacheBuilder}, as it is by
+     * {@link #setCacheSize(int)} and by a {@link CacheConfiguration} made
+     * with a size, the cache is set to replace an entry when a result is put
+     * for its key. A result is stored while its cloud request is still
+     * running, and an entry whose request then fails, or answers with a
+     * 51Did, is never served, so the next result for that key must take its
+     * place. The builder in the {@link CacheConfiguration} is set, not
+     * copied, so a configuration shared with another engine's builder is set
+     * for that engine too.
+     * @param engine the engine to configure
+     * @throws Exception if the engine could not be configured
+     */
+    @Override
+    protected void configureEngine(CloudRequestEngine engine)
+        throws Exception {
+        if (cacheConfig != null &&
+            cacheConfig.getCacheBuilder() instanceof PutCacheBuilder) {
+            ((PutCacheBuilder) cacheConfig.getCacheBuilder())
+                .setUpdateExisting(true);
+        }
+        super.configureEngine(engine);
+    }
+}

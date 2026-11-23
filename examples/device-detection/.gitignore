@@ -1,0 +1,46 @@
+# Compiled class file
+*.class
+
+# Log file
+*.log
+
+# BlueJ files
+*.ctxt
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Package Files #
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
+
+**/target
+.idea
+*.iml
+nbactions*.xml
+
+# vscode files
+**/.project
+**/.classpath
+**/.settings/*.*
+4.*/*
+
+# netbeans files
+nbactions.xml
+
+build*/
+Enterprise-HashV41.hash
+SESSIONS.ser
+Enterprise-HashV41.hash.gz
+Enterprise-HashV41.hash
+Enterprise-HashV41.hash.bak
+TAC-HashV41.hash
+TAC-HashV41.hash.gz

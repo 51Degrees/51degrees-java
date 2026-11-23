@@ -1,0 +1,120 @@
+/* *********************************************************************
+ * This Original Work is copyright of 51 Degrees Mobile Experts Limited.
+ * Copyright 2026 51 Degrees Mobile Experts Limited, Davidson House,
+ * Forbury Square, Reading, Berkshire, United Kingdom RG1 3EU.
+ *
+ * This Original Work is licensed under the European Union Public Licence
+ * (EUPL) v.1.2 and is subject to its terms as set out below.
+ *
+ * If a copy of the EUPL was not distributed with this file, You can obtain
+ * one at https://opensource.org/licenses/EUPL-1.2.
+ *
+ * The 'Compatible Licences' set out in the Appendix to the EUPL (as may be
+ * amended by the European Commission) shall be deemed incompatible for
+ * the purposes of the Work and the provisions of the compatibility
+ * clause in Article 5 of the EUPL shall not apply.
+ *
+ * If using the Work as, or as part of, a network application, by
+ * including the attribution notice(s) required under Article 5 of the EUPL
+ * in the end user terms of the application under an appropriate heading,
+ * such notice(s) shall fulfill the requirements of that article.
+ * ********************************************************************* */
+
+package fiftyone.ipintelligence.engine.onpremise.data;
+
+import fiftyone.ipintelligence.shared.testhelpers.Wrapper;
+import fiftyone.ipintelligence.shared.testhelpers.data.MetaDataHasher;
+import fiftyone.pipeline.engines.fiftyone.data.CloseableIterable;
+import fiftyone.pipeline.engines.fiftyone.data.ComponentMetaData;
+import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
+import fiftyone.pipeline.engines.fiftyone.data.ProfileMetaData;
+import fiftyone.pipeline.engines.fiftyone.data.ValueMetaData;
+
+
+public class MetaDataHasherHash implements MetaDataHasher {
+
+    @Override
+    public int hashProperties(int hash, Wrapper wrapper) throws Exception {
+        int i = 0;
+        Iterable<FiftyOneAspectPropertyMetaData> properties = wrapper.getProperties();
+        for (FiftyOneAspectPropertyMetaData property : properties) {
+            if (i % 10 == 0) {
+                hash ^= property.hashCode();
+
+                int j = 0;
+                try (CloseableIterable<ValueMetaData> propertyValues = property.getValues()) {
+                    for (ValueMetaData value : propertyValues) {
+                        if (j % 10 == 0) {
+                            hash ^= value.hashCode();
+                        }
+                        j++;
+                    }
+                }
+                if (property.getDefaultValue() != null) {
+                    hash ^= property.getDefaultValue().hashCode();
+                }
+            }
+            i++;
+        }
+        return hash;
+    }
+
+    @Override
+    public int hashValues(int hash, Wrapper wrapper) throws Exception {
+        int i = 0;
+        try (CloseableIterable<ValueMetaData> values = wrapper.getValues()) {
+            for (ValueMetaData value : values) {
+                if (i % 100 == 0) {
+                    hash ^= value.hashCode();
+                    hash ^= value.getProperty().hashCode();
+                }
+                i++;
+            }
+        }
+        return hash;
+    }
+
+    @Override
+    public int hashComponents(int hash, Wrapper wrapper) throws Exception {
+        try (CloseableIterable<ComponentMetaData> components = wrapper.getComponents()) {
+            for (ComponentMetaData component : components) {
+                hash ^= component.hashCode();
+                int i = 0;
+                try (CloseableIterable<FiftyOneAspectPropertyMetaData> componentProperties = component.getProperties()) {
+                    for (FiftyOneAspectPropertyMetaData property : componentProperties) {
+                        if (i % 10 == 0) {
+                            hash ^= property.hashCode();
+                        }
+                        i++;
+                    }
+                }
+                hash ^= component.getDefaultProfile().hashCode();
+            }
+        }
+        return hash;
+    }
+
+    @Override
+    public int hashProfiles(int hash, Wrapper wrapper) throws Exception {
+        int i = 0;
+        try (CloseableIterable<ProfileMetaData> profiles = wrapper.getProfiles()) {
+            for (ProfileMetaData profile : profiles) {
+                if (i % 100 == 0) {
+                    hash ^= profile.hashCode();
+                    hash ^= profile.getComponent().hashCode();
+                    int j = 0;
+                    try (CloseableIterable<ValueMetaData> profileValues = profile.getValues()) {
+                        for (ValueMetaData value : profileValues) {
+                            if (j % 10 == 0) {
+                                hash ^= value.hashCode();
+                            }
+                            j++;
+                        }
+                    }
+                }
+                i++;
+            }
+        }
+        return hash;
+    }
+}

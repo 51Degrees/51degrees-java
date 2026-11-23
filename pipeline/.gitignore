@@ -1,0 +1,14 @@
+.i*
+*/target/*
+*/*/target/*
+*.iml
+nbactions.xml
+nb-configuration.xml
+*.class
+pom.xml.versionsBackup
+*.log
+/target/
+.project
+.settings/
+*.classpath
+bin/

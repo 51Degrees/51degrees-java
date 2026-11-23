@@ -1,0 +1,182 @@
+# 51Degrees Device Detection Engines - Examples
+
+![51Degrees](https://raw.githubusercontent.com/51Degrees/51degrees-java/main/.github/images/logo-160.png "Data rewards the curious") **Java Device Detection**
+
+[Developer Documentation](https://51degrees.com/documentation/_device_detection__quickstart.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=51degrees-device-detection-engines-examples "developer documentation")
+
+## Introduction
+
+These examples are not distributed as maven jars and need to be built by you.
+
+This project contains sub-modules - **console**, giving examples that are intended 
+to be run from the command line/console and **web**, illustrating use
+of 51Degrees Web/Servlet integration. There is also a **shared** sub-module
+containing various helpers for the examples.
+
+Among other things, the examples illustrate:
+- use of the fluent builder to configure a pipeline
+- use of a configuration options file to configure a pipeline
+- use of the cloud device detection service
+- use of the on-premise "hash" device detection service
+- use of device detection pipeline for off-line processing tasks
+- configuring device detection trade-offs between speed and conserving memory
+
+## Data files
+
+The on-premise examples use the free Lite data file and the evidence files in
+`cxx/data/device-detection`, a folder of the
+[data](https://github.com/51Degrees/data) repository. An example that cannot
+find one of these files runs the data repository's download script for it,
+and logs the command it runs. The examples find `cxx/data` whether they are
+run from the root of this repository or from this folder.
+
+Each example shows the properties that only the Enterprise data file has,
+such as HardwareVendor, HardwareName and DeviceType, as needing it, and gives
+a link to ask for a copy. [Contact us](https://51degrees.com/contact-us?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=enterprise-data-file)
+for a copy of the Enterprise data file, and pass its path as the first
+argument to use it.
+
+## Cloud resource keys
+
+You will require [resource keys](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-resource-keys)
+to use the Cloud API, as described on our website. Get resource keys from
+our [configuration page](https://51degrees.com/configure/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-resource-keys), see our [documentation](https://51degrees.com/documentation/_services__configurator.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-resource-keys) on
+how to use this.
+ 
+A resource key configured with the properties needed
+to run most of the examples can be obtained [here](https://51degrees.com/configure/jqz435Nc?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-resource-keys). 
+To use the resource key in the example it can be supplied as a
+command line parameter, pasted into the configuration file (where there is one)
+or supplied as either an environment variable or a system
+property called "_51DEGREES_RESOURCE_KEY". The TAC and native model
+examples read theirs from the same name.
+
+Some cloud examples require an enhanced resource key containing a license key. And some
+on-premise examples require you to provide a license key. You can find out about 
+resource keys and license keys at our [pricing page](https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-resource-keys). 
+
+## Running examples with changes to Pipeline packages
+
+A common use case is to make a change to the Device Detection or Pipeline
+packages in this repository and then use these examples to observe the
+results of the change.
+
+By default, the examples use the packages from Maven Central. To build them
+against the packages in this repository instead, run Maven from the root of
+the repository with the `dev` profile, as the
+[root README](../../README.md#examples) describes:
+
+```
+mvn install -DskipTests -Pdev
+```
+
+## Examples
+
+The tables below describe the examples available in this repository.
+
+### Cloud
+
+| Example                                | Description                                                                                                                                        |
+|----------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
+| GettingStarted (Console)               | How to use the 51Degrees Cloud service to determine details about a device based on its User-Agent and User-Agent Client Hints HTTP header values. |
+| GettingStarted (Web)                   | How to use the 51Degrees Cloud service to determine details about a device as part of a simple Java servlet website.                               |
+| Metadata                               | How to access the meta-data that relates to things like the properties populated device detection                                                  |
+| TacLookup                              | How to get device details from a TAC (Type Allocation Code) using the 51Degrees cloud service.                                                     |
+| NativeModelLookup                      | How to get device details from a native model name using the 51Degrees cloud service.                                                              |
+
+### On-Premise
+
+| Example                  | Description                                                                                                                                                                                                                    |
+|--------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| GettingStarted (Console) | How to use the 51Degrees on-premise device detection API to determine details about a device based on its User-Agent and User-Agent Client Hints HTTP header values.                                                           |
+| GettingStarted (Web)     | How to use the 51Degrees on-premise device detection API to determine details about a device as part of a simple Java servlet website.                                                                                         |
+| Metadata                 | How to access the meta-data that relates to things like the properties populated device detection.                                                                                                                             |
+| MatchMetrics             | How to view metrics associated with the properties of processing with a Device Detection engine.                                                                                                                               |
+| OfflineProcessing        | Example showing how to ingest a file containing data from web requests and perform detection against the entries.                                                                                                              |
+| PerformanceBenchmark     | How to configure the various performance options and run some simple performance tests.                                                                                                                                        |
+| UpdateOnStartup          | How to configure the Pipeline to automatically update the device detection data file on startup. Also illustrates 'file watcher'. This will refresh the device detection engine if the specified data file is updated on disk. |
+| ManualDataUpdate         | How to make the device detection engine load a new data file when the application decides to, rather than through an automatic update, with no restart.                                                                     |
+
+## Running built examples from command line
+
+Running
+
+```bash
+mvn package
+```
+
+will produce "fat" JARs inside `target` subfolders. The version in each name is the one in this folder's `pom.xml`, which is not
+the version of the packages the examples use.
+
+Use them with relevant example class entrypoints like:
+
+```bash
+java -cp ./console/target/device-detection-java-examples.console-4.5.127-SNAPSHOT-jar-with-dependencies.jar fiftyone.devicedetection.examples.console.OfflineProcessing
+```
+
+### Web examples
+
+The web examples are run from the root of this repository, because they find their
+web content by a path relative to it. They listen on port 5151 and stop when Enter
+is pressed. Set the `_51DEGREES_EXAMPLE_HTTP_PORTS` environment variable to listen on
+another port, in which case the example runs until the process is stopped:
+
+```bash
+_51DEGREES_EXAMPLE_HTTP_PORTS=8100 java -jar ./web/getting-started.onprem/target/device-detection-java-examples.web.getting-started.onprem-4.5.127-SNAPSHOT-jar-with-dependencies.jar
+```
+
+The on-premise web example takes its data file from the `_51DEGREES_DD_PATH`
+environment variable, and otherwise uses the free Lite file in
+`cxx/data/device-detection`, which it downloads before the server starts if it is
+missing.
+
+The [Human Confidence](web/human-confidence/README.md) web example is a small server
+and page for the cloud's Human Confidence. Its README gives the steps to run it.
+
+### Native library access
+
+The on-premise examples use a native library, and
+[JEP 472](https://openjdk.org/jeps/472) restricts the operations needed to load it.
+Java 24 and 25 warn once per calling module, and a later release will refuse the call.
+
+The fat JARs above bundle everything into a single jar on the classpath, so the
+permission to use is `ALL-UNNAMED`:
+
+```bash
+java -cp ./console/target/device-detection-java-examples.console-4.5.127-SNAPSHOT-jar-with-dependencies.jar --enable-native-access=ALL-UNNAMED fiftyone.devicedetection.examples.console.OfflineProcessing
+```
+
+With the Maven exec plugin, use the `exec:exec` goal. `exec:java` runs in the Maven JVM
+and its `<arguments>` are passed to `main`, so a JVM flag there has no effect:
+
+```xml
+<plugin>
+    <groupId>org.codehaus.mojo</groupId>
+    <artifactId>exec-maven-plugin</artifactId>
+    <configuration>
+        <executable>java</executable>
+        <arguments>
+            <argument>--enable-native-access=ALL-UNNAMED</argument>
+            ...
+        </arguments>
+    </configuration>
+</plugin>
+```
+
+A fat jar cannot narrow this any further, because everything inside it is part of the
+unnamed module. To grant native access to 51Degrees code alone you need the individual
+jars, with `pipeline.engines.fiftyone` and `device-detection.hash.engine.on-premise` on
+the module path - see the
+[device-detection-java README](https://github.com/51Degrees/51degrees-java/blob/main/device-detection/README.md#native-library-access).
+
+## Flow Data and threads
+
+A Flow Data cannot be used by two threads at once. The web examples handle
+each request on one thread, and read the Flow Data there. An application that
+hands work from a request to another thread or task reads the values that
+work needs from the Flow Data on the request's thread, into its own
+variables, and passes those values, not the Flow Data. The Flow Data is
+closed when the request ends, so work that outlives the request must not
+keep it either. The
+[pipeline README](../../pipeline/README.md#flow-data-and-threads)
+shows such a hand-off.

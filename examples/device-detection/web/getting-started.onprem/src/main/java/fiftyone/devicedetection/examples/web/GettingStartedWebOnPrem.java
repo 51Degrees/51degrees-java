@@ -1,0 +1,225 @@
+/* *********************************************************************
+ * This Original Work is copyright of 51 Degrees Mobile Experts Limited.
+ * Copyright 2026 51 Degrees Mobile Experts Limited, Davidson House,
+ * Forbury Square, Reading, Berkshire, United Kingdom RG1 3EU.
+ *
+ * This Original Work is licensed under the European Union Public Licence
+ * (EUPL) v.1.2 and is subject to its terms as set out below.
+ *
+ * If a copy of the EUPL was not distributed with this file, You can obtain
+ * one at https://opensource.org/licenses/EUPL-1.2.
+ *
+ * The 'Compatible Licences' set out in the Appendix to the EUPL (as may be
+ * amended by the European Commission) shall be deemed incompatible for
+ * the purposes of the Work and the provisions of the compatibility
+ * clause in Article 5 of the EUPL shall not apply.
+ *
+ * If using the Work as, or as part of, a network application, by
+ * including the attribution notice(s) required under Article 5 of the EUPL
+ * in the end user terms of the application under an appropriate heading,
+ * such notice(s) shall fulfill the requirements of that article.
+ * ********************************************************************* */
+
+package fiftyone.devicedetection.examples.web;
+
+import fiftyone.devicedetection.examples.shared.DataFileHelper;
+import fiftyone.devicedetection.shared.DeviceData;
+import fiftyone.pipeline.core.configuration.PipelineOptions;
+import fiftyone.pipeline.core.configuration.PipelineOptionsFactory;
+import fiftyone.pipeline.core.data.FlowData;
+import fiftyone.pipeline.web.Constants;
+import fiftyone.pipeline.web.services.FlowDataProviderCore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.File;
+import java.io.PrintWriter;
+
+import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
+import static fiftyone.devicedetection.examples.web.HtmlContentHelper.*;
+import static fiftyone.pipeline.util.FileFinder.getFilePath;
+
+/**
+ * This is the getting started Web/On-Prem example showing use of the 51Degrees
+ * supplied filter which automatically creates and configures a device detection pipeline.
+ * <p>
+ * The configuration file for the pipeline is at src/main/webapp/WEB-INF/51Degrees-OnPrem.xml
+ * <p>
+ * The data file is taken from _51DEGREES_DD_PATH, an environment variable or
+ * system property, and otherwise the free Lite file in
+ * cxx/data/device-detection is used, which is downloaded before the server
+ * starts if it is missing.
+ * <p>
+ * The server listens on port 5151 and stops when Enter is pressed. If the
+ * _51DEGREES_EXAMPLE_HTTP_PORTS environment variable is set, the server listens
+ * on the first port it lists instead and runs until the process is stopped,
+ * which is how automated tests start it.
+ */
+public class GettingStartedWebOnPrem extends HttpServlet {
+    private static final long serialVersionUID = 1734154705981153540L;
+    /**
+     * The port the example listens on when the
+     * _51DEGREES_EXAMPLE_HTTP_PORTS environment variable does not choose
+     * another.
+     */
+    public static final int DEFAULT_PORT = 5151;
+    public static String resourceBase = "examples/device-detection/web/getting-started.onprem/src/main/webapp";
+    public static Logger logger = LoggerFactory.getLogger(GettingStartedWebOnPrem.class);
+
+    public static void main(String[] args) throws Exception {
+        configureLogback(getFilePath("logback.xml"));
+        logger.info("Running Example {}", GettingStartedWebOnPrem.class);
+
+        Integer port = EmbedJetty.portFrom(
+                System.getenv(EmbedJetty.HTTP_PORTS_ENV_VAR));
+        if (port != null) {
+            // An automated run, such as the shared browser tests, sets the
+            // port and has no console input, so keep the server running by
+            // joining it rather than waiting on Enter.
+            start(port).join();
+        } else {
+            // start Jetty with this WebApp
+            findDataFile();
+            EmbedJetty.runWebApp(getFilePath(resourceBase).getAbsolutePath(), DEFAULT_PORT);
+        }
+    }
+
+    /**
+     * Finds the data file and starts the server with this WebApp, as main
+     * does, and returns the server, which runs until it is stopped. A test
+     * starts the example this way, with nothing set, to run it as it runs
+     * from a fresh clone.
+     * @param port the port to listen on
+     * @return the server
+     * @throws Exception if the data file cannot be found or the server
+     * cannot start
+     */
+    public static org.eclipse.jetty.server.Server start(int port) throws Exception {
+        findDataFile();
+        return EmbedJetty.startWebApp(getFilePath(resourceBase).getAbsolutePath(), port);
+    }
+
+    /**
+     * If the data file the configuration names is not at that path, it is
+     * searched for, and the free Lite file is downloaded if missing.
+     */
+    private static void findDataFile() throws Exception {
+        String dataFile = PipelineOptionsFactory.getOptionsFromFile(
+                getFilePath(resourceBase) + "/WEB-INF/51Degrees-OnPrem.xml")
+                .findAndSubstitute("DeviceDetectionHashEngine", "DataFile");
+        if (!new File(dataFile).exists()) {
+            System.setProperty("_51DEGREES_DD_PATH",
+                    DataFileHelper.getDataFileLocation(dataFile));
+        }
+    }
+
+     FlowDataProviderCore flowDataProvider = new FlowDataProviderCore.Default();
+
+    /**
+     *
+     * @param request  servlet request
+     * @param response servlet response
+     * @throws Exception when things go wrong
+     */
+    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
+            throws Exception {
+        // the detection has already been carried out by the Filter
+        // which is responsible to the lifecycle of the flowData - do NOT dispose
+        // A Flow Data cannot be used by two threads at once. Work handed to
+        // another thread or task gets the values it needs, read here on the
+        // request's thread, not the Flow Data.
+        FlowData flowData = flowDataProvider.getFlowData(request);
+        // retrieve the device data from the flowdata
+        DeviceData device = flowData.get(DeviceData.class);
+
+        response.setContentType("text/html;charset=UTF-8");
+        try (PrintWriter out = response.getWriter()) {
+            doHtmlPreamble(out, "Web Integration On-Premise Example");
+
+            // show the data-file-age warning, if applicable, at the top of the page
+            doDataFileAgeWarning(out, flowData);
+
+            // request main 51Degrees Client Side Script - this is automatically
+            // served by inclusion of the PipelineFilter which intercepts the request
+            // and serves dynamically generated JavaScript
+            out.println("<script src=\"" + Constants.CORE_JS_NAME+ "\"></script>");
+
+             // include description of example
+            doStaticText(out, resourceBase + "/WEB-INF/html/example-description.html");
+
+            // include a script to display the results of the client side detection
+            doStaticText(out, resourceBase + "/WEB-INF/html/client-side-js-include.html");
+            // find out where our data file is from the configuration
+            PipelineOptions pipelineOptions =
+                    PipelineOptionsFactory.getOptionsFromFile(getFilePath(resourceBase) +
+                            "/WEB-INF/51Degrees-OnPrem.xml");
+            doDeviceData(out, device, flowData,
+                    pipelineOptions.findAndSubstitute("DeviceDetectionHashEngine", "DataFile"));
+
+            doStaticText(out, resourceBase + "/WEB-INF/html/apple-detection.html");
+            doEvidence(out, request, flowData);
+            doResponseHeaders(out, response);
+            doHtmlPostamble(out, flowData);
+        }
+    }
+
+    /**
+     * Handles the HTTP <code>GET</code> method.
+     *
+     * @param request  servlet request
+     * @param response servlet response
+     */
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) {
+        // any failure causes 500 error
+        try {
+            processRequest(request, response);
+            response.setStatus(200);
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(500);
+        }
+    }
+}
+
+/*!
+ * @example GettingStartedWebOnPrem.java
+ *
+ * @include{doc} example-getting-started-web.txt
+ *
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/device-detection/web/getting-started.onprem/src/main/java/fiftyone/devicedetection/examples/web/GettingStartedWebOnPrem.java).
+ *
+ * @include{doc} example-require-datafile.txt
+ *
+ * ## Overview
+ *
+ * The `PipelineFilter` is used to intercept requests and perform device detection. The results
+ * will be stored in the HttpServletRequest object.
+ * The filter will also handle setting response headers (e.g. Accept-CH for User-Agent
+ * Client Hints) and serving requests for client-side JavaScript and JSON resources.
+ *
+ * The results of detection can be accessed by using a FlowDataProvider which
+ * is responsible for managing the lifecycle of the flowData - do NOT dispose
+ * ```{java}
+ * FlowData flowData = flowDataProvider.getFlowData(request);
+ * DeviceData device = flowData.get(DeviceData.class);
+ * ...
+ * ```
+ *
+ * Results can also be accessed in client-side code by using the `fod` object. Note that the global
+ * object name can be changed by using the setObjectName option on the
+ * [JavaScriptBuilderElementBuilder](/documentation/4.5/apis/pipeline-java/classfiftyone_1_1pipeline_1_1javascriptbuilder_1_1flowelements_1_1_java_script_builder_element_builder.html)
+ *
+ * ```{java}
+ * window.onload = function () {
+ *     fod.complete(function(data) {
+ *         var hardwareName = data.device.hardwarename;
+ *         alert(hardwareName.join(", "));
+ *     }
+ * }
+ * ```
+ *
+ */
