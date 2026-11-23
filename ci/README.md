@@ -144,8 +144,9 @@ organization secrets:
 - `_51DEGREES_RESOURCE_KEY_BASIC`: resource key whose products don't offer
   `HumanConfidenceSource`.
   [cloud-human-confidence.yml](../.github/workflows/cloud-human-confidence.yml)
-  runs the Human Confidence example's live test with it, expecting no
-  source, and with `_51DEGREES_RESOURCE_KEY_BESPOKE`, expecting `Passive`.
+  runs the Human Confidence example's live tests, one of which reads it and
+  expects no source, while the other reads `_51DEGREES_RESOURCE_KEY_BESPOKE`
+  and expects `Passive`.
 - `_51DEGREES_CLOUD_ENDPOINT`: an organization variable naming the cloud
   service the cloud tests and examples call, the API base including
   `/api/v4/`. They call the public service when it is not set.
