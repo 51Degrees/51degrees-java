@@ -14,8 +14,10 @@ name: Cloud 51Did Tests
 # test skips. _51DEGREES_LICENSE_KEY holds the license for the data files, so
 # it is not set here.
 #
-# The secrets are named one by one, so a new resource key needs a line here
-# and in the test as well as the organization secret.
+# The keys are named one by one. The resource keys are organization
+# variables and the license keys are organization secrets, so a new resource
+# key needs a line here and in the test as well as the organization variable,
+# and a new license key a line here as well as the organization secret.
 #
 # The tests call the cloud service that the organization variable
 # _51DEGREES_CLOUD_ENDPOINT names, and the public service when it names none.
@@ -62,21 +64,22 @@ jobs:
       - name: Cloud 51Did tests
         shell: pwsh
         env:
-          _51DEGREES_RESOURCE_KEY_51DID: ${{ secrets._51DEGREES_RESOURCE_KEY_51DID }}
+          _51DEGREES_RESOURCE_KEY_51DID: ${{ vars._51DEGREES_RESOURCE_KEY_51DID }}
           # Without a license key the tests that redeem a sealed verdict skip.
           # The service only redeems with a license key of the resource key's
           # own account, so the tests use this one with the 51Did resource
           # key only.
           _51DEGREES_LICENSE_KEY_51DID: ${{ secrets._51DEGREES_LICENSE_KEY_51DID }}
-          _51DEGREES_RESOURCE_KEY_BESPOKE: ${{ secrets._51DEGREES_RESOURCE_KEY_BESPOKE }}
+          _51DEGREES_RESOURCE_KEY_BESPOKE: ${{ vars._51DEGREES_RESOURCE_KEY_BESPOKE }}
           # The license for the cloud products, for the test on a license key
           # alone.
           _51DEGREES_LICENSE_KEY_BESPOKE: ${{ secrets._51DEGREES_LICENSE_KEY_BESPOKE }}
           _51DEGREES_CLOUD_ENDPOINT: ${{ vars._51DEGREES_CLOUD_ENDPOINT }}
         run: |
           # A license key whose resource key of the same account is empty
-          # means that secret is missing. Its licensed tests would then never
-          # run, and the job would still pass, so it fails here, naming it.
+          # means that organization variable is missing. Its licensed tests
+          # would then never run, and the job would still pass, so it fails
+          # here, naming it.
           $missing = @(
             @{ Resource = '_51DEGREES_RESOURCE_KEY_51DID'; License = '_51DEGREES_LICENSE_KEY_51DID' }
             @{ Resource = '_51DEGREES_RESOURCE_KEY_BESPOKE'; License = '_51DEGREES_LICENSE_KEY_BESPOKE' }
@@ -85,14 +88,14 @@ jobs:
               -not [Environment]::GetEnvironmentVariable($_.Resource)
           } | ForEach-Object { $_.Resource }
           if ($missing) {
-            throw ("The secret $($missing -join ', ') is empty or missing, " +
-              'but the license key of the same account is set. Add the ' +
-              'organization secret, a resource key of the same account as ' +
-              'that license key.')
+            throw ("The organization variable $($missing -join ', ') is " +
+              'empty or missing, but the license key of the same account is ' +
+              'set. Add the organization variable, a resource key of the ' +
+              'same account as that license key.')
           }
           if (-not $env:_51DEGREES_RESOURCE_KEY_51DID -and
               -not $env:_51DEGREES_RESOURCE_KEY_BESPOKE) {
-            throw ('No resource key secret is available, so the live 51Did ' +
+            throw ('No resource key variable is available, so the live 51Did ' +
               'tests cannot call the cloud service. The keys carry the ' +
               'fodid product these tests need. A pull request from a fork ' +
               'gets no secrets, so run this workflow from a branch in this ' +

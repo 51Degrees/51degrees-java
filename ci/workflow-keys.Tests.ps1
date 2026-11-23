@@ -23,6 +23,25 @@ Describe 'the workflows' {
         } | ForEach-Object Text | Should -BeNullOrEmpty
     }
 
+    # The resource keys are organization variables and the license keys
+    # organization secrets, so each comes from the one it is.
+    It 'fill <Name> from the organization <Kind> of the same name' -ForEach @(
+        @{ Name = '_51DEGREES_RESOURCE_KEY_51DID'; Kind = 'variable'; Context = 'vars' }
+        @{ Name = '_51DEGREES_RESOURCE_KEY_BESPOKE'; Kind = 'variable'; Context = 'vars' }
+        @{ Name = '_51DEGREES_RESOURCE_KEY_BASIC'; Kind = 'variable'; Context = 'vars' }
+        @{ Name = '_51DEGREES_LICENSE_KEY_51DID'; Kind = 'secret'; Context = 'secrets' }
+        @{ Name = '_51DEGREES_LICENSE_KEY_BESPOKE'; Kind = 'secret'; Context = 'secrets' }
+    ) {
+        $workflows = Join-Path $PSScriptRoot '../.github/workflows'
+        $lines = @(Get-ChildItem $workflows -Filter *.yml |
+            Select-String -Pattern "^\s*$Name\s*:" |
+            ForEach-Object { "$($_.Filename):$($_.LineNumber): $($_.Line.Trim())" })
+        $lines | Should -Not -BeNullOrEmpty
+        $lines | Where-Object {
+            $_ -notmatch (':\s*\$\{\{\s*' + $Context + '\.' + $Name + '\s*\}\}\s*$')
+        } | Should -BeNullOrEmpty
+    }
+
     # cloud-51did.yml runs the live tests once. The tests read each key
     # under its own name, so the step sets no name of its own. The step's
     # script runs here with mvn replaced by a function that records what it
@@ -77,10 +96,10 @@ Describe 'the workflows' {
                 '_51DEGREES_RESOURCE_KEY_BESPOKE=resource-bespoke')
         }
 
-        # A license key with no resource key of its own account means a
-        # secret is missing. The licensed tests would then never run, and
-        # the job would still pass, so the step fails naming the missing
-        # secret.
+        # A license key with no resource key of its own account means an
+        # organization variable is missing. The licensed tests would then
+        # never run, and the job would still pass, so the step fails naming
+        # the missing variable.
         It 'fails naming <Resource> when <License> has a value and it is empty' -ForEach @(
             @{ Resource = '_51DEGREES_RESOURCE_KEY_51DID'; License = '_51DEGREES_LICENSE_KEY_51DID' }
             @{ Resource = '_51DEGREES_RESOURCE_KEY_BESPOKE'; License = '_51DEGREES_LICENSE_KEY_BESPOKE' }
@@ -96,7 +115,7 @@ Describe 'the workflows' {
             $runs | Should -BeNullOrEmpty
         }
 
-        # A deployment without 51Did has neither secret, and the runner then
+        # A deployment without 51Did has neither key, and the runner then
         # sets both names empty. The tests must still run with the Bespoke
         # key, with no failure.
         It 'runs the tests when both 51Did keys are empty' {

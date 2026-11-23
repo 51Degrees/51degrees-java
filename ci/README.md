@@ -105,7 +105,7 @@ repositories used to do for one package tree each.
   tests are [publish-package.Tests.ps1](publish-package.Tests.ps1), which the
   same workflow runs.
 
-## Secrets
+## Secrets and variables
 
 Required:
 
@@ -114,8 +114,9 @@ Required:
   for cloning repositories and creating pull requests.
 
 The workflows pass the secrets to common-ci with `secrets: inherit`, and
-common-ci exports each under its own name before the scripts here run. The
-tests read only these names.
+common-ci exports each secret and each `_51DEGREES_` organization variable
+under its own name before the scripts here run. The tests read only these
+names.
 
 To run the on-premise tests:
 
@@ -124,7 +125,8 @@ To run the on-premise tests:
   Intelligence Enterprise data files from the Distributor with it, and the
   data file update example uses it.
 
-To run the cloud tests:
+To run the cloud tests, the resource keys are organization variables and
+the license keys are organization secrets:
 
 - `_51DEGREES_RESOURCE_KEY_BESPOKE`: [resource key](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=ci-readme.md&utm_term=secrets)
   with every property, which the cloud tests read. `_51DEGREES_RESOURCE_KEY`
@@ -138,12 +140,16 @@ To run the cloud tests:
 - `_51DEGREES_LICENSE_KEY_51DID`: license key for the 51Did cloud tests,
   which use it only with `_51DEGREES_RESOURCE_KEY_51DID`. They run again
   with `_51DEGREES_RESOURCE_KEY_BESPOKE` and no license key.
+- `_51DEGREES_RESOURCE_KEY_BASIC`: resource key whose products don't offer
+  `HumanConfidenceSource`.
+  [cloud-human-confidence.yml](../.github/workflows/cloud-human-confidence.yml)
+  runs the Human Confidence example's live test with it, expecting no
+  source, and with `_51DEGREES_RESOURCE_KEY_BESPOKE`, expecting `Passive`.
+- `_51DEGREES_CLOUD_ENDPOINT`: an organization variable naming the cloud
+  service the cloud tests and examples call, the API base including
+  `/api/v4/`. They call the public service when it is not set.
 
 A cloud test with no key is skipped, naming the variable it reads.
-
-The cloud tests and examples call the cloud service that
-`_51DEGREES_CLOUD_ENDPOINT` names, an organization variable, and the public
-service when it is not set.
 
 To publish to Maven Central (51Degrees only):
 
