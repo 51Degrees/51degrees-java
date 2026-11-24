@@ -282,17 +282,24 @@ public class IPIntelligenceOnPremiseEngine
 
     @Override
     public java.util.Date getDataFilePublishedDate(String dataFileIdentifier) {
+        return publishedDate(engine.getPublishedTime());
+    }
+
+    /**
+     * The published date as the start of that day in the local time zone,
+     * whatever the time of day it is read, so two dates read from the same
+     * data file are equal.
+     * @param value the published date from the native engine
+     * @return the published date
+     */
+    private static java.util.Date publishedDate(Date value) {
         Calendar calendar = Calendar.getInstance();
-        Date value = engine.getPublishedTime();
+        calendar.clear();
         // java.util.Calendar month is 0 based where January = 0
         calendar.set(
             value.getYear(),
             value.getMonth() - 1,
             value.getDay());
-        calendar.set(Calendar.MILLISECOND, 0);
-        calendar.set(Calendar.SECOND, 0);
-        calendar.set(Calendar.MINUTE, 0);
-        calendar.set(Calendar.HOUR, 0);
         return calendar.getTime();
     }
 

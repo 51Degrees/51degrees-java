@@ -27,6 +27,7 @@ import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectEngineDataFile;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -108,4 +109,21 @@ public interface OnPremiseAspectEngine<
      * @param dataFile the data file to add
      */
     void addDataFile(AspectEngineDataFile dataFile);
+
+    /**
+     * Read the published date from the header of a data file without
+     * loading it, so the data update service loads a new file only when it
+     * is later than the data this engine has loaded. The date compares with
+     * {@link AspectEngineDataFile#getDataPublishedDateTime()}.
+     * @param dataFileIdentifier the identifier of the data file the file is
+     *                           for. Ignored if the engine has one data file
+     * @param filePath the path of the file to read
+     * @return the published date, or null if this engine cannot read it, in
+     * which case the data update service loads the file
+     */
+    default Date getPublishedDateFromFile(
+        String dataFileIdentifier,
+        String filePath) {
+        return null;
+    }
 }
