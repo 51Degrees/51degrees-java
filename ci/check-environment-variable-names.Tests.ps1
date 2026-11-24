@@ -37,6 +37,13 @@ Describe 'Test-AllowedName' {
         Test-AllowedName $Name | Should -BeTrue
     }
 
+    It 'allows the CI name <Name>' -ForEach @(
+        @{ Name = 'CLOUD_STAGING_ENDPOINT' }
+        @{ Name = 'RESOURCE_KEY_BESPOKE_STAGING' }
+    ) {
+        Test-AllowedName $Name | Should -BeTrue
+    }
+
     It 'allows the platform name <Name>' -ForEach @(
         @{ Name = 'PATH' }
         @{ Name = 'JAVA_HOME' }
@@ -55,6 +62,8 @@ Describe 'Test-AllowedName' {
 
     It 'refuses <Name>' -ForEach @(
         @{ Name = 'SAMPLE_NAME' }
+        @{ Name = 'cloud_staging_endpoint' }
+        @{ Name = 'RESOURCE_KEY_BESPOKE' }
         @{ Name = 'SampleName' }
         @{ Name = 'sample.name' }
         @{ Name = '_51DEGREES_' }

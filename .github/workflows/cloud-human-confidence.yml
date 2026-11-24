@@ -2,16 +2,19 @@ name: Cloud Human Confidence Tests
 
 # Runs the Human Confidence web example's live tests
 # (examples/device-detection/web/human-confidence, HumanConfidenceLiveTest)
-# once. Each test reads its own resource key under the key's own name. The
-# Bespoke key's products offer HumanConfidenceSource, so its answer carries
-# Passive and a level. The Basic key's products don't, so its answer carries
-# no source.
+# once, against the staging cloud, because the production cloud does not
+# serve HumanConfidenceSource yet. Each test reads its own resource key under
+# the key's own name. The Bespoke key's products offer HumanConfidenceSource,
+# so its answer carries Passive and a level. The Basic key's products don't,
+# so the cloud answers its source as null, with the reason.
 #
-# The resource keys are organization secrets, and _51DEGREES_CLOUD_ENDPOINT,
-# the service the example calls, is an organization variable. A new key needs
-# a line here and in the test, as well as the organization secret.
+# CLOUD_STAGING_ENDPOINT, the staging cloud's API base, is an organization
+# variable that only CI uses. RESOURCE_KEY_BESPOKE_STAGING is a Bespoke key
+# the staging cloud resolves, and _51DEGREES_RESOURCE_KEY_BASIC resolves on
+# both clouds. Both keys are organization secrets. A new key needs a line
+# here and in the test, as well as the organization secret.
 #
-# The run fails when a key is empty or when a test is skipped. A cloud test
+# The run fails when a name is empty or when a test is skipped. A cloud test
 # that passes without calling the cloud reports success having proved
 # nothing, and that is worse than a red job.
 
@@ -45,19 +48,21 @@ jobs:
         shell: pwsh
         working-directory: examples/device-detection
         env:
-          _51DEGREES_RESOURCE_KEY_BESPOKE: ${{ secrets._51DEGREES_RESOURCE_KEY_BESPOKE }}
+          RESOURCE_KEY_BESPOKE_STAGING: ${{ secrets.RESOURCE_KEY_BESPOKE_STAGING }}
           _51DEGREES_RESOURCE_KEY_BASIC: ${{ secrets._51DEGREES_RESOURCE_KEY_BASIC }}
-          _51DEGREES_CLOUD_ENDPOINT: ${{ vars._51DEGREES_CLOUD_ENDPOINT }}
+          CLOUD_STAGING_ENDPOINT: ${{ vars.CLOUD_STAGING_ENDPOINT }}
         run: |
-          # Each test skips without its key, so a missing key fails here,
-          # naming the organization secret.
+          # Each test skips without its key or the endpoint, so a missing one
+          # fails here, naming every organization secret or variable missing.
           $missing = @(
-            '_51DEGREES_RESOURCE_KEY_BESPOKE'
+            'RESOURCE_KEY_BESPOKE_STAGING'
             '_51DEGREES_RESOURCE_KEY_BASIC'
+            'CLOUD_STAGING_ENDPOINT'
           ) | Where-Object { -not [Environment]::GetEnvironmentVariable($_) }
           if ($missing) {
-            throw ("The organization secret $($missing -join ', ') is " +
-              'empty or missing, so the live tests cannot run with it.')
+            throw ("The organization secret or variable " +
+              "$($missing -join ', ') is empty or missing, so the live " +
+              'tests cannot run.')
           }
           $report = 'web/human-confidence/target/surefire-reports/' +
             'TEST-fiftyone.devicedetection.examples.web.HumanConfidenceLiveTest.xml'

@@ -43,29 +43,40 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 /**
- * Runs the example against the live cloud service and asks its /passive path
- * as the page does. The service is the one _51DEGREES_CLOUD_ENDPOINT names,
- * or production.
+ * Runs the example against the staging cloud service that
+ * CLOUD_STAGING_ENDPOINT names, and asks its /passive path as the page does.
+ * The production cloud does not serve HumanConfidenceSource yet, so the
+ * tests ask the staging cloud.
  * <p>
- * Each test reads its own key. The key in _51DEGREES_RESOURCE_KEY_BESPOKE has
+ * Each test reads its own key. The Bespoke key in
+ * RESOURCE_KEY_BESPOKE_STAGING, which the staging cloud resolves, has
  * products that offer HumanConfidenceSource, so its answer carries the source
  * Passive and a level. The key in _51DEGREES_RESOURCE_KEY_BASIC has products
- * that don't, so its answer carries no source. The example is given the key
- * the test checks, as a person running it would set it in
- * _51DEGREES_RESOURCE_KEY. A test is skipped when its key isn't set, naming
- * the variable, and fails when the answer lacks what it checks. Keys are
- * never printed.
+ * that don't, so the cloud answers the source as null, with the reason, and
+ * the example's answer carries no source. The example is given the key the
+ * test checks, as a person running it would set it in
+ * _51DEGREES_RESOURCE_KEY. A test is skipped when its key or
+ * CLOUD_STAGING_ENDPOINT isn't set, naming the variable, and fails when the
+ * answer lacks what it checks. Keys are never printed.
  */
 public class HumanConfidenceLiveTest {
 
-    /** The key whose products offer HumanConfidenceSource. */
-    private static final String BESPOKE_KEY =
-            "_51DEGREES_RESOURCE_KEY_BESPOKE";
+    /**
+     * A Bespoke key, whose products offer HumanConfidenceSource, that the
+     * staging cloud resolves. Only CI sets it.
+     */
+    private static final String BESPOKE_KEY = "RESOURCE_KEY_BESPOKE_STAGING";
 
     /** The key whose products don't offer HumanConfidenceSource. */
     private static final String BASIC_KEY = "_51DEGREES_RESOURCE_KEY_BASIC";
 
-    private static final String ENDPOINT = "_51DEGREES_CLOUD_ENDPOINT";
+    /** The staging cloud's API base. Only CI sets it. */
+    private static final String ENDPOINT = "CLOUD_STAGING_ENDPOINT";
+
+    private static final String SOURCE = "humanconfidencesource";
+
+    private static final String SOURCE_REASON =
+            "humanconfidencesourcenullreason";
 
     private static final String PASSIVE = "Passive";
 
@@ -114,9 +125,15 @@ public class HumanConfidenceLiveTest {
 
         assertFalse("The example's passive call failed: " + text,
                 answer.has("error"));
+        // A cloud that serves the source answers it for this key as null,
+        // with the reason. A cloud that does not serve it leaves it out.
+        String said = redact(served.toString(), key);
+        assertTrue("The service answers this key's source as null: " + said,
+                served.has(SOURCE) && served.isNull(SOURCE));
+        assertTrue("The service says why the source is null: " + said,
+                served.opt(SOURCE_REASON) instanceof String);
         assertFalse("This key's answer carries no source: " + text
-                        + ". The service says: "
-                        + redact(served.toString(), key),
+                        + ". The service says: " + said,
                 answer.has("source"));
     }
 
@@ -124,7 +141,7 @@ public class HumanConfidenceLiveTest {
     private static String key(String name) {
         String key = System.getenv(name);
         assumeTrue(name + " is not set, so this live cloud test is "
-                        + "skipped. " + ENDPOINT + " names the service.",
+                        + "skipped.",
                 key != null && key.trim().isEmpty() == false);
         return key.trim();
     }
@@ -135,19 +152,22 @@ public class HumanConfidenceLiveTest {
         return passive(example.start(0));
     }
 
-    /** The API base the example calls, ending in one slash. */
+    /**
+     * The API base the example calls, ending in one slash, or a skip that
+     * names the variable. There is no default address.
+     */
     private static String api() {
         String endpoint = System.getenv(ENDPOINT);
-        if (endpoint == null || endpoint.trim().isEmpty()) {
-            endpoint = HumanConfidence.DEFAULT_ENDPOINT;
-        }
+        assumeTrue(ENDPOINT + " is not set, so this live cloud test is "
+                        + "skipped.",
+                endpoint != null && endpoint.trim().isEmpty() == false);
         return endpoint.trim().replaceAll("/+$", "") + "/";
     }
 
     /**
      * Asks the service for HumanConfidenceSource with the key, and returns
-     * the source's value and null reason from the answer, for a failure to
-     * quote.
+     * the source's value and null reason from the answer, as the service
+     * gave them.
      */
     private static JSONObject servedSource(String key) throws IOException {
         String form = "user-agent=" + encode(USER_AGENT)
@@ -172,8 +192,7 @@ public class HumanConfidenceLiveTest {
         JSONObject served = new JSONObject();
         if (derived != null) {
             for (String name : new String[] {
-                    "humanconfidencesource",
-                    "humanconfidencesourcenullreason" }) {
+                    SOURCE, SOURCE_REASON }) {
                 if (derived.has(name)) {
                     served.put(name, derived.get(name));
                 }
