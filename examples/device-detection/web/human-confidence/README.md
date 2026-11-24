@@ -113,8 +113,9 @@ cloud, the API base including `/api/v4/`, and `RESOURCE_KEY_BESPOKE_STAGING`
 holds a Bespoke key that cloud resolves. With that key the answer must have
 `HumanConfidenceSource` set to `Passive` and a plain level. The test first
 asks the cloud which properties the key includes, and fails, naming the
-variable and the property, when `HumanConfidence` or `HumanConfidenceSource`
-is not one of them. With a key whose
+variable and the property, when `HumanConfidence` is not one of them. It
+then asks the cloud for `HumanConfidenceSource` with the key, and fails,
+naming the variable, when the answer is not `Passive`. With a key whose
 products don't offer the source, in `_51DEGREES_RESOURCE_KEY_BASIC`, the
 cloud must answer the source as null, with the reason, and the example's
 answer must have no source.

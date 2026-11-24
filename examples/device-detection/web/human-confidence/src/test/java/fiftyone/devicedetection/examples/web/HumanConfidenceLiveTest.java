@@ -23,6 +23,7 @@
 package fiftyone.devicedetection.examples.web;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Test;
@@ -39,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
@@ -63,8 +65,11 @@ import static org.junit.Assume.assumeTrue;
  * _51DEGREES_RESOURCE_KEY. A test is skipped when its key or
  * CLOUD_STAGING_ENDPOINT isn't set, naming the variable, and fails when the
  * answer lacks what it checks. The Bespoke test first fails, naming the
- * variable and the property, when the key doesn't include HumanConfidence or
- * HumanConfidenceSource. Keys are never printed.
+ * variable and the property, when the service's list of the key's
+ * properties doesn't include HumanConfidence, then when the service, asked
+ * for HumanConfidenceSource with the key, doesn't answer it as Passive. The
+ * list isn't asked about the source, as a key can be served the source when
+ * a request names it without the list holding it. Keys are never printed.
  */
 public class HumanConfidenceLiveTest {
 
@@ -109,9 +114,14 @@ public class HumanConfidenceLiveTest {
     public void bespokeKeysPassiveAnswerCarriesTheSourcePassive()
             throws IOException {
         String key = key(BESPOKE_KEY);
-        requireProperties(BESPOKE_KEY, key,
-                "HumanConfidence", "HumanConfidenceSource");
+        requireProperties(BESPOKE_KEY, key, "HumanConfidence");
         JSONObject served = servedSource(key);
+        assertEquals("The staging cloud didn't answer HumanConfidenceSource "
+                        + "as " + PASSIVE + " for the key in " + BESPOKE_KEY
+                        + ": " + redact(served.toString(), key)
+                        + ". Set the variable to a key whose products "
+                        + "include it.",
+                PASSIVE, served.optString(SOURCE, null));
         JSONObject answer = passive(key);
         String text = redact(answer.toString(), key);
 
@@ -163,6 +173,31 @@ public class HumanConfidenceLiveTest {
                 missingProperties(new JSONObject("{}"), "HumanConfidence"));
     }
 
+    @Test
+    public void missingPropertiesIgnoresTheCaseOfTheNames() {
+        JSONObject accessible = new JSONObject(
+                "{\"Products\":{\"derived\":{\"Properties\":["
+                + "{\"Name\":\"humanconfidence\"}]}}}");
+
+        assertEquals(new ArrayList<String>(),
+                missingProperties(accessible, "HumanConfidence"));
+    }
+
+    @Test
+    public void missingMessageNamesEveryMissingPropertyAndTheVariable() {
+        assertEquals("The key in " + BESPOKE_KEY + " does not include the "
+                        + "HumanConfidence property. Set the variable to a "
+                        + "key that includes it.",
+                missingMessage(BESPOKE_KEY,
+                        Arrays.asList("HumanConfidence")));
+        assertEquals("The key in " + BESPOKE_KEY + " does not include the "
+                        + "HumanConfidence and HumanConfidenceSource "
+                        + "properties. Set the variable to a key that "
+                        + "includes them.",
+                missingMessage(BESPOKE_KEY, Arrays.asList(
+                        "HumanConfidence", "HumanConfidenceSource")));
+    }
+
     /** The key in the variable name, or a skip that names it. */
     private static String key(String name) {
         String key = System.getenv(name);
@@ -173,8 +208,8 @@ public class HumanConfidenceLiveTest {
     }
 
     /**
-     * Fails, naming the variable and the property, when the service's list
-     * of the properties the key can read lacks one of them.
+     * Fails, naming the variable and every property it lacks, when the
+     * service's list of the properties the key can read lacks any of them.
      */
     private static void requireProperties(String name, String key,
             String... properties) throws IOException {
@@ -188,17 +223,43 @@ public class HumanConfidenceLiveTest {
                 ? connection.getErrorStream() : connection.getInputStream());
         assertEquals("The service didn't list the properties of the key in "
                 + name + ": " + redact(body, key), 200, status);
-        for (String property : missingProperties(
-                new JSONObject(body), properties)) {
-            fail("The key in " + name + " does not include the " + property
-                    + " property. Set the variable to a key that includes "
-                    + "it.");
+        JSONObject accessible;
+        try {
+            accessible = new JSONObject(body);
+        } catch (JSONException e) {
+            fail("The service's property list for the key in " + name
+                    + " isn't JSON: " + redact(body, key));
+            return;
+        }
+        List<String> missing = missingProperties(accessible, properties);
+        if (missing.isEmpty() == false) {
+            fail(missingMessage(name, missing));
         }
     }
 
     /**
+     * The failure for a key whose list lacks the properties, naming the
+     * variable and each property.
+     */
+    static String missingMessage(String name, List<String> missing) {
+        boolean one = missing.size() == 1;
+        StringBuilder names = new StringBuilder();
+        for (int i = 0; i < missing.size(); i++) {
+            if (i > 0) {
+                names.append(i == missing.size() - 1
+                        ? (missing.size() > 2 ? ", and " : " and ") : ", ");
+            }
+            names.append(missing.get(i));
+        }
+        return "The key in " + name + " does not include the " + names
+                + (one ? " property" : " properties")
+                + ". Set the variable to a key that includes "
+                + (one ? "it." : "them.");
+    }
+
+    /**
      * The properties, of those given, that no product in the service's list
-     * of accessible properties names.
+     * of accessible properties names, ignoring case.
      */
     static List<String> missingProperties(JSONObject accessible,
             String... properties) {
@@ -212,14 +273,15 @@ public class HumanConfidenceLiveTest {
                 for (int i = 0; list != null && i < list.length(); i++) {
                     JSONObject property = list.optJSONObject(i);
                     if (property != null) {
-                        names.add(property.optString("Name"));
+                        names.add(property.optString("Name")
+                                .toLowerCase(Locale.ROOT));
                     }
                 }
             }
         }
         List<String> missing = new ArrayList<>();
         for (String property : properties) {
-            if (names.contains(property) == false) {
+            if (names.contains(property.toLowerCase(Locale.ROOT)) == false) {
                 missing.add(property);
             }
         }
