@@ -42,29 +42,56 @@ import java.util.*;
 @SuppressWarnings({"UnusedReturnValue", "DefaultAnnotationParam"})
 public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
 
+    /** Creates the loggers the element uses. */
     protected final ILoggerFactory loggerFactory;
 
+    /** Used for logging. */
     protected final Logger logger;
 
+    /** How long the same evidence is not shared again, in minutes. */
     protected int repeatEvidenceInterval = Constants.SHARE_USAGE_DEFAULT_REPEAT_EVIDENCE_MINUTES;
+    /** The proportion of requests shared, where 1.0 is all of them. */
     protected double sharePercentage = Constants.SHARE_USAGE_DEFAULT_SHARE_PERCENTAGE;
+    /** The fewest entries sent in one message. */
     protected int minimumEntriesPerMessage = Constants.SHARE_USAGE_DEFAULT_MIN_ENTRIES_PER_MESSAGE;
-    // This value must be accessed through the corresponding getter/setter.
+    /**
+     * The most entries the queue holds. Read and set it through its getter and
+     * setter.
+     */
     protected int maximumQueueSize = Constants.SHARE_USAGE_DEFAULT_MAX_QUEUE_SIZE;
+    /** Milliseconds to wait when adding to a full queue. */
     protected int addTimeout = Constants.SHARE_USAGE_DEFAULT_ADD_TIMEOUT;
+    /** Milliseconds to wait for another entry before sending. */
     protected int takeTimeout = Constants.SHARE_USAGE_DEFAULT_TAKE_TIMEOUT;
+    /** The address usage data is sent to. */
     protected String shareUsageUrl = Constants.SHARE_USAGE_DEFAULT_URL;
+    /** Name of the cookie that holds the session id. */
     protected String sessionCookieName = fiftyone.pipeline.engines.Constants.DEFAULT_SESSION_COOKIE_NAME;
+    /** The HTTP headers that are never shared. */
     protected List<String> blockedHttpHeaders = new ArrayList<>();
+    /** Not used, as the query string parameters setting has no effect. */
     protected final List<String> includedQueryStringParameters = new ArrayList<>();
+    /** Evidence whose requests are not shared, as pairs of key and value. */
     protected final List<Map.Entry<String, String>> ignoreDataEvidenceFilter = new ArrayList<>();
+    /** Whether the session cookie is used to tell repeated evidence apart. */
     protected boolean trackSession;
+    /**
+     * Failed sends within the window that start the wait before sending again.
+     */
     protected int failuresToEnterRecovery = Constants.SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_DEFAULT;
+    /** The window in which failed sends are counted, in seconds. */
     protected int failuresWindowSeconds = Constants.SHARE_USAGE_FAILURES_WINDOW_SECONDS_DEFAULT;
+    /** The first wait before sending again, in seconds. */
     protected double initialRecoveryDelaySeconds = Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_INITIAL_DELAY_SECONDS_DEFAULT;
+    /** The longest wait before sending again, in seconds. */
     protected double maxRecoveryDelaySeconds = Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT;
+    /** How much each wait grows after another failure. */
     protected double recoveryMultiplier = Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT;
+    /**
+     * Whether all evidence is shared, not only the keys the Pipeline accepts.
+     */
     protected boolean shareAllEvidence;
+    /** Not used, as the setting has no effect. */
     protected boolean shareAllQueryStringParameters =
         Constants.SHARE_USAGE_DEFAULT_SHARE_ALL_QUERY_STRING_PARAMETERS;
 

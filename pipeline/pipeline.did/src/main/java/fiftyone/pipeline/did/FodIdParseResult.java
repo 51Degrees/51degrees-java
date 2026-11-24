@@ -95,6 +95,8 @@ public final class FodIdParseResult {
     }
 
     /**
+     * Returns true when the input was a structurally valid 51Did and {@link
+     * #getValue()} holds it.
      * @return true when the input was a structurally valid 51Did and
      *         {@link #getValue()} holds it
      */
@@ -103,6 +105,7 @@ public final class FodIdParseResult {
     }
 
     /**
+     * Returns the 51Did when {@link #isSuccess()} is true, otherwise null.
      * @return the 51Did when {@link #isSuccess()} is true, otherwise null.
      *         A parsed 51Did has not had its signature checked.
      */
@@ -111,6 +114,8 @@ public final class FodIdParseResult {
     }
 
     /**
+     * Returns {@link FodIdParseStatus#PARSED} on success, otherwise the reason
+     * the input is not a 51Did.
      * @return {@link FodIdParseStatus#PARSED} on success, otherwise the
      *         reason the input is not a 51Did
      */

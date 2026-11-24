@@ -22,26 +22,61 @@
 
 package fiftyone.geolocation.core.data;
 
+/** The position or IP address to look up. */
 public class GeoEvidence {
+    /** Create a new instance. */
+    public GeoEvidence() {
+    }
+
     private String latitude;
     private String longitude;
     private String ipAddress;
 
+    /**
+     * The latitude.
+     *
+     * @return the latitude
+     */
     public String getLatitude() {
         return latitude;
     }
+    /**
+     * The longitude.
+     *
+     * @return the longitude
+     */
     public String getLongitude() {
         return longitude;
     }
+    /**
+     * The IP address.
+     *
+     * @return the IP address
+     */
     public String getIpAddress() {
         return ipAddress;
     }
+    /**
+     * Set the latitude.
+     *
+     * @param latitude the latitude
+     */
     public void setLatitude(String latitude) {
         this.latitude = latitude;
     }
+    /**
+     * Set the longitude.
+     *
+     * @param longitude the longitude
+     */
     public void setLongitude(String longitude) {
         this.longitude = longitude;
     }
+    /**
+     * Set the IP address.
+     *
+     * @param ipAddress the IP address
+     */
     public void setIpAddress(String ipAddress) {
         this.ipAddress = ipAddress;
     }

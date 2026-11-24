@@ -41,6 +41,12 @@ import java.util.*;
 //! [constructor]
 public class SimpleClientSideElement extends FlowElementBase<StarSignData, ElementPropertyMetaData> {
 
+    /**
+     * Create a new instance.
+     *
+     * @param logger used for logging
+     * @param elementDataFactory creates the element data this element returns
+     */
     public SimpleClientSideElement(
         Logger logger,
         ElementDataFactory<StarSignData> elementDataFactory) {

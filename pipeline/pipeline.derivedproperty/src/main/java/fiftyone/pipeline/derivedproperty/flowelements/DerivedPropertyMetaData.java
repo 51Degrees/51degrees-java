@@ -48,6 +48,7 @@ public final class DerivedPropertyMetaData {
     }
 
     /**
+     * Returns the script's name, which is what selects it.
      * @return the script's name, which is what selects it
      */
     public String getName() {
@@ -55,6 +56,8 @@ public final class DerivedPropertyMetaData {
     }
 
     /**
+     * Returns the author's semantic version, which plays no part in selecting
+     * the script.
      * @return the author's semantic version, which plays no part in
      * selecting the script
      */
@@ -63,17 +66,24 @@ public final class DerivedPropertyMetaData {
     }
 
     /**
+     * Returns the version of the script language, which is 1.
      * @return the version of the script language, which is 1
      */
     public int getFormat() {
         return format;
     }
 
+    /**
+     * Whether the script is marked deprecated.
+     *
+     * @return true if it is
+     */
     public boolean isDeprecated() {
         return deprecated;
     }
 
     /**
+     * Returns what to use instead, or empty where the script is not deprecated.
      * @return what to use instead, or empty where the script is not
      * deprecated
      */
@@ -82,6 +92,7 @@ public final class DerivedPropertyMetaData {
     }
 
     /**
+     * Returns the built-in script's name, the file path, or "code".
      * @return the built-in script's name, the file path, or "code"
      */
     public String getSource() {
@@ -89,6 +100,7 @@ public final class DerivedPropertyMetaData {
     }
 
     /**
+     * Returns the definition of the property the script produces.
      * @return the definition of the property the script produces
      */
     public DerivedOutputMetaData getOutput() {

@@ -28,6 +28,9 @@ import fiftyone.pipeline.engines.data.AspectEngineDataFileDefault;
  * Default implementation of the {@link FiftyOneDataFile} interface.
  */
 public class FiftyOneDataFileDefault extends AspectEngineDataFileDefault implements FiftyOneDataFile {
+    /** Create a new instance. */
+    public FiftyOneDataFileDefault() {
+    }
 
     /**
      * The start of a download type and the prefix of the product names of

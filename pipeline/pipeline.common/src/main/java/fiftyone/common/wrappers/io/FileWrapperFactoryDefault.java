@@ -27,6 +27,10 @@ package fiftyone.common.wrappers.io;
  * the OS file system.
  */
 public class FileWrapperFactoryDefault implements FileWrapperFactory {
+    /** Create a new instance. */
+    public FileWrapperFactoryDefault() {
+    }
+
     @Override
     public FileWrapper build(String path) {
         FileWrapper file = null;

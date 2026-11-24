@@ -36,13 +36,17 @@ public abstract class PrePackagedPipelineBuilderBase
     <TBuilder extends PrePackagedPipelineBuilderBase<TBuilder>>
     extends PipelineBuilderBase<TBuilder> {
 
+    /** Whether lazy loading is on, which has no effect. */
     protected boolean lazyLoading = Constants.DEFAULT_LAZY_LOADING;
 
+    /** Whether the engines cache results. */
     protected boolean resultsCache = Constants.DEFAULT_RESULTS_CACHE;
 
+    /** Timeout of the lazy loading option, which has no effect. */
     protected long lazyLoadingTimeoutMillis =
         Constants.DEFAULT_LAZY_LOADING_TIMEOUT_MILLIS;
 
+    /** Number of results each engine's cache holds. */
     protected int resultsCacheSize = Constants.DEFAULT_RESULTS_CACHE_SIZE;
 
     /**

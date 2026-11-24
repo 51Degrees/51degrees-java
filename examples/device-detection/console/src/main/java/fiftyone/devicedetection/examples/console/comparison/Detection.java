@@ -156,5 +156,12 @@ public interface Detection {
          */
         default void writeNote(PrintWriter writer) {
         }
+
+        /**
+         * Frees what the solution holds. It throws no checked exception, so
+         * a try-with-resources block needs no catch for it.
+         */
+        @Override
+        void close();
     }
 }

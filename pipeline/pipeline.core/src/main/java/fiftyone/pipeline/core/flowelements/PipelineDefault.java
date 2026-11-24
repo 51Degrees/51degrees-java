@@ -24,12 +24,12 @@ package fiftyone.pipeline.core.flowelements;
 
 import fiftyone.pipeline.core.data.*;
 import fiftyone.pipeline.core.data.factories.FlowDataFactory;
+import fiftyone.pipeline.core.exceptions.CloseException;
 import fiftyone.pipeline.core.exceptions.PipelineDataException;
 import fiftyone.pipeline.core.services.PipelineService;
 import fiftyone.pipeline.exceptions.AggregateException;
 import org.slf4j.Logger;
 
-import java.io.Closeable;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -406,7 +406,7 @@ class PipelineDefault implements PipelineInternal {
         return true;
     }
 
-    public void close(boolean closing) throws Exception {
+    public void close(boolean closing) {
         if (isClosed == false) {
             synchronized (lock) {
                 if (isClosed == false) {
@@ -425,24 +425,31 @@ class PipelineDefault implements PipelineInternal {
                         // Dispose the services after all elements have been
                         // disposed.
                         for (PipelineService service : services) {
-                        	if (service instanceof Closeable) {
-                        		((Closeable)service).close();
-                        	}
-                        	else if (service instanceof AutoCloseable){
-                        		try {
-                        			((AutoCloseable)service).close();
-                        		}
-                        		catch (Exception e) {
-                        			exceptions.add(e);
-                        		}
-                        	}
+                            if (service instanceof AutoCloseable) {
+                                try {
+                                    ((AutoCloseable) service).close();
+                                } catch (Exception e) {
+                                    exceptions.add(e);
+                                }
+                            }
                         }
-                        
-                        // Throw an exception if an exception occurred
+
+                        // Once everything is closed, throw with the first
+                        // failure as the cause and the others suppressed.
                         if (exceptions.size() > 0) {
-                            throw new Exception(
-                                "One or more exceptions occurred while closing the pipeline",
+                            CloseException failure = new CloseException(
+                                "One or more exceptions occurred while " +
+                                "closing the pipeline",
                                 exceptions.get(0));
+                            for (Exception e : exceptions) {
+                                if (e instanceof InterruptedException) {
+                                    Thread.currentThread().interrupt();
+                                }
+                                if (e != exceptions.get(0)) {
+                                    failure.addSuppressed(e);
+                                }
+                            }
+                            throw failure;
                         }
                     }
                 }
@@ -451,7 +458,7 @@ class PipelineDefault implements PipelineInternal {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         logger.debug("Pipeline '" + hashCode() + "' closed.");
         close(true);
     }

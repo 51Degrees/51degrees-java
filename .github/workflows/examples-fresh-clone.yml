@@ -2,7 +2,8 @@ name: Examples from a fresh clone
 
 # Builds each product's console examples as AGENTS.md says, from a clone
 # with its submodules, against the packages published on Maven Central, with
-# the JDK and Maven the runner has. Then runs the getting started example
+# the Maven the runner has on JDK 17, which compiles for Java 8 with no
+# warning. Then runs the getting started example
 # from the repository root with no settings. A fresh clone holds only a link
 # for each free data file. On Ubuntu the example downloads its file, which
 # tests the download, and the job keeps the file in the cache. The other
@@ -51,6 +52,11 @@ jobs:
         with:
           submodules: recursive
           persist-credentials: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
       - name: The runner's Java and Maven
         shell: pwsh
@@ -125,6 +131,11 @@ jobs:
           key: fresh-clone-${{ matrix.product }}-${{ hashFiles(format('{0}.link', matrix.file)) }}
           enableCrossOsArchive: true
           fail-on-cache-miss: true
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
       - name: The runner's Java and Maven
         shell: pwsh

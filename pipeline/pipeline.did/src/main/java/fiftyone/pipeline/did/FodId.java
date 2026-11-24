@@ -558,6 +558,7 @@ public final class FodId {
     }
 
     /**
+     * Returns the identifier type carried in bits 6-7 of the Flags byte.
      * @return the identifier type carried in bits 6-7 of the Flags byte
      */
     public IdType getType() {
@@ -565,6 +566,8 @@ public final class FodId {
     }
 
     /**
+     * Returns the usage carried in bits 0-2 of the Flags byte, as the highest
+     * usage granted.
      * @return the usage carried in bits 0-2 of the Flags byte, as the
      *         highest usage granted; see {@link Usage} for why it is read
      *         that way
@@ -649,12 +652,18 @@ public final class FodId {
         return Terms.fromIndex(termsIndex).getUrl();
     }
 
-    /** @return the OWID version. */
+    /**
+     * Returns the OWID version.
+     * @return the OWID version.
+     */
     public Version getVersion() {
         return owid.getVersion();
     }
 
-    /** @return the domain of the OWID creator. */
+    /**
+     * Returns the domain of the OWID creator.
+     * @return the domain of the OWID creator.
+     */
     public String getDomain() {
         return owid.getDomain();
     }
@@ -671,12 +680,18 @@ public final class FodId {
         return owid.getDate();
     }
 
-    /** @return a copy of the OWID payload bytes. */
+    /**
+     * Returns a copy of the OWID payload bytes.
+     * @return a copy of the OWID payload bytes.
+     */
     public byte[] getPayload() {
         return owid.getPayload();
     }
 
-    /** @return a copy of the 64-byte OWID signature. */
+    /**
+     * Returns a copy of the 64-byte OWID signature.
+     * @return a copy of the 64-byte OWID signature.
+     */
     public byte[] getSignature() {
         return owid.getSignature();
     }
@@ -684,6 +699,8 @@ public final class FodId {
     // ----- Encoding -----
 
     /**
+     * Returns the OWID as a base64 string in the standard alphabet with
+     * padding, the form the cloud issues.
      * @return the OWID as a base64 string in the standard alphabet with
      *         padding, the form the cloud issues
      * @throws OwidException if a field cannot be encoded
@@ -707,6 +724,7 @@ public final class FodId {
     }
 
     /**
+     * Returns the OWID as a byte array including the signature.
      * @return the OWID as a byte array including the signature
      * @throws OwidException if a field cannot be encoded
      */

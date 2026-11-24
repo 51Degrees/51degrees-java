@@ -45,8 +45,9 @@ public class DeviceDetectionCloudPipelineBuilder
      * Internal Constructor.
      * This builder should only be created through the 
      * DeviceDetectionPipelineBuilder
-     * @param loggerFactory
-     * @param httpClient 
+     * @param loggerFactory creates the loggers for the Pipeline and its
+     * elements
+     * @param httpClient used to make requests to the cloud service
      */
     public DeviceDetectionCloudPipelineBuilder(
         ILoggerFactory loggerFactory,
@@ -60,7 +61,7 @@ public class DeviceDetectionCloudPipelineBuilder
      * @return A new pipeline instance that contains a cloud request engine for 
      * making requests to the 51Degrees cloud service and a 
      * DeviceDetectionCloudEngine to interpret the device detection results.
-     * @throws Exception 
+     * @throws Exception if the Pipeline could not be built
      */
     @Override
     public Pipeline build() throws Exception {

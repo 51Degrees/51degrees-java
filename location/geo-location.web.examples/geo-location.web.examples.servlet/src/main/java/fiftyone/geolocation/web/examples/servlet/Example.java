@@ -38,17 +38,17 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 /**
- * @example servlet/Example.java
+ * \example servlet/Example.java
  * Servlet geo location example
  *
  * This example shows how to:
  *
  * 1. Set up configuration options to add elements to the 51Degrees Pipeline.
  *
- * @include geo-location.web.examples.servlet/src/main/webapp/WEB-INF/51Degrees-Cloud.xml
+ * \include geo-location.web.examples.servlet/src/main/webapp/WEB-INF/51Degrees-Cloud.xml
  *
  * 2. Configure the filter and map it to be run for all URLs.
- * ```{xml}
+ * <pre>{@code
  * <web-app version="3.1" xmlns="http://xmlns.jcp.org/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd">
  *     ...
  *     <filter>
@@ -64,7 +64,7 @@ import java.io.PrintWriter;
  *         <url-pattern>/*</url-pattern>
  *     </filter-mapping>
  *     ...
- * ```
+ * }</pre>
  *
  * 3. Add the `FlowDataProvider` to the servlet.
  *
@@ -74,6 +74,16 @@ import java.io.PrintWriter;
  * ## Servlet
  */
 public class Example extends HttpServlet {
+    /** Create a new instance. */
+    public Example() {
+    }
+
+    /**
+     * Start the example in an embedded Tomcat.
+     *
+     * @param args not used
+     * @throws LifecycleException if Tomcat could not start
+     */
     public static void main(String[] args) throws LifecycleException {
         EmbedTomcat.runWebApp("geo-location.web.examples/geo-location.web.examples.servlet/src/main/webapp",
             "geo-location.web.examples/geo-location.web.examples.servlet/target",
@@ -83,6 +93,7 @@ public class Example extends HttpServlet {
      * Serializable class version number, which is used during deserialization.
      */
     private static final long serialVersionUID = -7420567024186859548L;
+    /** Gives the Flow Data for each request. */
     FlowDataProviderCore flowDataProvider = new FlowDataProviderCore.Default();
 
     /**

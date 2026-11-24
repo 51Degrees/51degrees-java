@@ -27,4 +27,11 @@ package fiftyone.pipeline.engines.fiftyone.data;
  * @param <T> the type being iterated
  */
 public interface CloseableIterable<T> extends Iterable<T>, AutoCloseable {
+
+    /**
+     * Free what the iterable holds. It throws no checked exception, so a
+     * try-with-resources block needs no catch for it.
+     */
+    @Override
+    void close();
 }

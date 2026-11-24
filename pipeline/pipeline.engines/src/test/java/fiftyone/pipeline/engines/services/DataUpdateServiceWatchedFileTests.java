@@ -610,12 +610,18 @@ public class DataUpdateServiceWatchedFileTests {
         }
 
         @Override
-        public void close() throws Exception {
+        public void close() {
             // Lets an update that would not give up end, so the thread stops.
             stop.set(true);
             locked.set(false);
-            if (runner.isAlive()) {
-                runner.join(WAIT_FOR_EVENT_MILLIS);
+            try {
+                if (runner.isAlive()) {
+                    runner.join(WAIT_FOR_EVENT_MILLIS);
+                }
+            } catch (InterruptedException e) {
+                // The files are still removed, and the test thread keeps its
+                // interrupt for the test to see.
+                Thread.currentThread().interrupt();
             }
             cleanUp(file, directory, dataFile);
         }

@@ -56,6 +56,18 @@
                 </executions>
             </plugin>
 
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <!-- The property generator in 51Degrees/tools writes
+                         DeviceData.java and DeviceDataBase.java with no @return
+                         on the property accessors, so the check for missing
+                         comments and tags is off in this module. The other
+                         checks are on. -->
+                    <doclint>all,-missing</doclint>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

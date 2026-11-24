@@ -42,6 +42,9 @@ import java.util.Arrays;
  * is stable. <b>Compare match keys, never envelopes.</b>
  */
 public class Main {
+    /** Create a new instance. */
+    public Main() {
+    }
 
     private static final String DOMAIN = "51degrees.com";
 
@@ -57,8 +60,17 @@ public class Main {
     private static final int PAYLOAD_LENGTH =
             MATCH_KEY_OFFSET + MATCH_KEY_LENGTH;
 
+    /** Runs the example. */
     public static class Example {
+        /** Create a new instance. */
+        public Example() {
+        }
 
+        /**
+         * Run the example.
+         *
+         * @throws Exception if the example fails
+         */
         public void run() throws Exception {
             // Generate a key pair and a signer entirely in process.
             Crypto crypto = Crypto.generate();
@@ -164,6 +176,12 @@ public class Main {
         output.flush();
     }
 
+    /**
+     * Run the example, then print where to find out more.
+     *
+     * @param args not used
+     * @throws Exception if the example fails
+     */
     public static void main(String[] args) throws Exception {
         new Example().run();
         writeFindOutMore(System.out);

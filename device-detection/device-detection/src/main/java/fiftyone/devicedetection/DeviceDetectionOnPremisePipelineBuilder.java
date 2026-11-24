@@ -50,6 +50,7 @@ import java.util.List;
 public class DeviceDetectionOnPremisePipelineBuilder
     extends PrePackagedPipelineBuilderBase<DeviceDetectionOnPremisePipelineBuilder> {
 
+    /** Whether the Pipeline shares usage data with 51Degrees. */
     protected boolean shareUsageEnabled =
         fiftyone.pipeline.engines.fiftyone.flowelements.Constants
             .SHARE_USAGE_DEFAULT_ENABLED;

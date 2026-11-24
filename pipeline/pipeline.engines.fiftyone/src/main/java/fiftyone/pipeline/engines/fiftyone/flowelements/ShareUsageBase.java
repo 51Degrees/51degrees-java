@@ -1179,6 +1179,11 @@ public abstract class ShareUsageBase
         }
     }
 
+    /**
+     * Send the queued usage data.
+     *
+     * @throws HttpException if the data could not be sent
+     */
     protected abstract void sendUsageData() throws HttpException;
 
     /**
@@ -1247,9 +1252,17 @@ public abstract class ShareUsageBase
      * prior to it being sent to 51Degrees.
      */
     protected static class ShareUsageData {
+        /** Create a new instance. */
+        protected ShareUsageData() {
+        }
+
+        /** The session id, when sessions are tracked. */
         public String sessionId;
+        /** The position of this request in the session. */
         public int sequence;
+        /** The IP address of the client. */
         public String clientIP;
+        /** The evidence shared, by category and then by field name. */
         public final Map<String, Map<String, String>> evidenceData = new HashMap<>();
 
         void tryAddToData(String key, Object value) {

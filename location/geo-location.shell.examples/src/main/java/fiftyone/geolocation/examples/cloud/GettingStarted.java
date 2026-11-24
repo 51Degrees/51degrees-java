@@ -39,7 +39,7 @@ import static fiftyone.geolocation.core.Constants.EVIDENCE_GEO_LAT_PARAM_KEY;
 import static fiftyone.geolocation.core.Constants.EVIDENCE_GEO_LON_PARAM_KEY;
 
 /**
- *  @example cloud/GettingStarted.java
+ *  \example cloud/GettingStarted.java
  *
  * Getting started example of using cloud geo-location.
  *
@@ -72,14 +72,23 @@ import static fiftyone.geolocation.core.Constants.EVIDENCE_GEO_LON_PARAM_KEY;
  * ```
  *
  * 4. Extract the value of a property as a string from the results.
- * ```
+ * <pre>{@code
  * AspectPropertyValue<String> country = data.get(GeoData.class).getCoutnry();
- * ```
+ * }</pre>
  */
 public class GettingStarted {
+    /** Create a new instance. */
+    public GettingStarted() {
+    }
 
     private static ILoggerFactory loggerFactory = LoggerFactory.getILoggerFactory();
 
+    /**
+     * Run the example.
+     *
+     * @param args not used
+     * @throws Exception if the example fails
+     */
     public static void main(String[] args) throws Exception {
         // Obtain a resource key for free at https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-src-main-java-fiftyone-geolocation-examples-cloud-gettingstarted.java&utm_term=main
         // Make sure to include the 'Country' property as it is used by this example.

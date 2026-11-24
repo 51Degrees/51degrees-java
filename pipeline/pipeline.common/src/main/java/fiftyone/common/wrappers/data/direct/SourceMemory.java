@@ -27,10 +27,16 @@ import fiftyone.common.wrappers.data.Source;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+/** A source held in memory. */
 public class SourceMemory implements Source {
 
     private final byte[] memory;
 
+    /**
+     * Create a source over the bytes given.
+     *
+     * @param memory the data
+     */
     public SourceMemory(byte[] memory) {
         this.memory = memory;
     }

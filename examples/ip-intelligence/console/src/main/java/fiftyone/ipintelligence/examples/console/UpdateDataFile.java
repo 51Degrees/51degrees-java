@@ -24,6 +24,7 @@ package fiftyone.ipintelligence.examples.console;
 
 import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.IPIntelligencePipelineBuilder;
+import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
 import fiftyone.ipintelligence.shared.testhelpers.KeyUtils;
 import fiftyone.pipeline.core.flowelements.Pipeline;
@@ -412,6 +413,12 @@ public class UpdateDataFile {
                     throw new IllegalStateException("Auto update failed: " +
                             completionListener.args.getStatus());
                 }
+
+                // The engine now uses the data file the update loaded.
+                IPIntelligenceOnPremiseEngine engine =
+                        pipeline.getElement(IPIntelligenceOnPremiseEngine.class);
+                logger.info("The data file in use was published {}",
+                        engine.getDataFilePublishedDate());
 
                 logger.info("Finished Example");
             }

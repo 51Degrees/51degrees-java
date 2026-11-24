@@ -70,6 +70,7 @@ public final class CloudDiscoveryState {
     }
 
     /**
+     * Returns the evidence keys the cloud service accepts.
      * @return the evidence keys the cloud service accepts
      */
     public List<String> getEvidenceKeys() {
@@ -77,6 +78,7 @@ public final class CloudDiscoveryState {
     }
 
     /**
+     * Returns the answer to the accessibleproperties request, as JSON.
      * @return the answer to the accessibleproperties request, as JSON
      */
     public String getAccessibleProperties() {
@@ -84,6 +86,8 @@ public final class CloudDiscoveryState {
     }
 
     /**
+     * Returns this copy as one JSON document, which {@link #fromJson} reads
+     * back.
      * @return this copy as one JSON document, which {@link #fromJson}
      * reads back
      */

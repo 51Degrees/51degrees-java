@@ -106,40 +106,46 @@ public interface DataUpdateService extends Closeable, PipelineService {
      */
     enum AutoUpdateStatus {
 
-        // Update completed successfully.
+        /** Update completed successfully. */
         AUTO_UPDATE_SUCCESS,
-        // HTTPS connection could not be established.
+        /** HTTPS connection could not be established. */
         AUTO_UPDATE_HTTPS_ERR,
-        // No need to perform update.
+        /** No need to perform update. */
         AUTO_UPDATE_NOT_NEEDED,
-        // Update currently under way.
+        /** Update currently under way. */
         AUTO_UPDATE_IN_PROGRESS,
-        // Path to master file is directory not file
+        /** The data file could not be renamed, as when its path is a folder. */
         AUTO_UPDATE_MASTER_FILE_CANT_RENAME,
-        // 51Degrees server responded with 429: too many attempts.
+        /** The server answered 429, too many requests. */
         AUTO_UPDATE_ERR_429_TOO_MANY_ATTEMPTS,
-        // 51Degrees server responded with 403 meaning key is blacklisted.
+        /** The server answered 403, so the license key is refused. */
         AUTO_UPDATE_ERR_403_FORBIDDEN,
-        // Used when IO operations with input or output stream failed.
+        /** Used when IO operations with input or output stream failed. */
         AUTO_UPDATE_ERR_READING_STREAM,
-        // MD5 validation failed
+        /** The MD5 hash of the downloaded file did not match. */
         AUTO_UPDATE_ERR_MD5_VALIDATION_FAILED,
-        // The new data file can't be renamed to replace the previous one.
+        /** The new data file can't be renamed to replace the previous one. */
         AUTO_UPDATE_NEW_FILE_CANT_RENAME,
-        // Refreshing the engine with the new data caused an error to occur.
+        /** Refreshing the engine with the new data caused an error to occur. */
         AUTO_UPDATE_REFRESH_FAILED,
-        // An operation could not be completed within the expected time.
+        /** An operation could not be completed within the expected time. */
         AUTO_UPDATE_TIMEOUT,
-        // The data file checking for updates has no temporary file path.
+        /** The data file checking for updates has no temporary file path. */
         AUTO_UPDATE_TEMP_PATH_NOT_SET,
-        // A check failed with an error that no other status covers.
+        /** A check failed with an error that no other status covers. */
         AUTO_UPDATE_UNKNOWN_ERROR
     }
 
+    /** The result of an update, passed to those told when it completes. */
     class DataUpdateCompleteArgs {
         private AspectEngineDataFile dataFile;
         private AutoUpdateStatus status;
 
+        /**
+         * Create a new instance.
+         * @param status the result of the update
+         * @param dataFile the data file that was updated
+         */
         public DataUpdateCompleteArgs(
             AutoUpdateStatus status,
             AspectEngineDataFile dataFile) {
@@ -147,10 +153,18 @@ public interface DataUpdateService extends Closeable, PipelineService {
             this.dataFile = dataFile;
         }
 
+        /**
+         * The result of the update.
+         * @return the status
+         */
         public AutoUpdateStatus getStatus() {
             return status;
         }
 
+        /**
+         * The data file that was updated.
+         * @return the data file
+         */
         public AspectEngineDataFile getDataFile() {
             return dataFile;
         }

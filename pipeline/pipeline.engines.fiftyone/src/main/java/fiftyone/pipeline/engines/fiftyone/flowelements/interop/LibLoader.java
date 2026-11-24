@@ -36,6 +36,9 @@ import java.util.Optional;
  * {@link AspectEngine}.
  */
 public class LibLoader {
+    /** Create a new instance. */
+    public LibLoader() {
+    }
 
     /**
      * Get the enumeration of the group of Operating Systems to which the system

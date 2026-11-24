@@ -201,7 +201,7 @@ public class DetectionImplFiftyOneDegrees {
         }
 
         @Override
-        public void close() throws Exception {
+        public void close() {
             if (Objects.nonNull(pipeline)) {
                 pipeline.close();
             }

@@ -45,8 +45,10 @@ import java.util.Set;
 public abstract class AspectEngineBuilderBase<
     TBuilder extends AspectEngineBuilderBase<TBuilder, TEngine>,
     TEngine extends AspectEngine> {
+    /** Creates the loggers the engine uses. */
     protected final ILoggerFactory loggerFactory;
     private final List<String> properties = new ArrayList<>();
+    /** The results cache settings, or null for no cache. */
     protected CacheConfiguration cacheConfig = null;
     private LazyLoadingConfiguration lazyLoadingConfig = null;
 

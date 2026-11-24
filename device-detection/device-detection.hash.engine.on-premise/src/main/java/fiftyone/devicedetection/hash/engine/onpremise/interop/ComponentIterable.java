@@ -89,7 +89,7 @@ public class ComponentIterable
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         collection.delete();
     }
 }

@@ -43,6 +43,54 @@ $Accessors = @(
 # Arguments every Maven call in these scripts passes.
 $MavenOptions = '--batch-mode', '--no-transfer-progress'
 
+# Every Maven call that compiles runs on this JDK, which compiles for Java 8
+# through each tree's release-8 profile. The tests still run on each entry's
+# own JDK. javac 21 warns that release 8 is obsolete, which -Werror makes an
+# error, and javac 17 does not.
+$CompileJdkVersion = 17
+
+# The home of the JDK that compiles. The runner names each JDK it has in a
+# variable such as JAVA_HOME_8_X64, so the one that compiles is found from the
+# entry's variable with the version changed, for the same architecture. With
+# no entry variable, as in the publish build, it is the runner's own
+# architecture.
+function Get-CompileJavaHome([string]$JavaSDKEnvVar) {
+    if (-not $JavaSDKEnvVar) {
+        $arm = [Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -eq
+            [Runtime.InteropServices.Architecture]::Arm64
+        $JavaSDKEnvVar = "JAVA_HOME_$($CompileJdkVersion)_$(if ($arm) { 'arm64' } else { 'X64' })"
+    }
+    if ($JavaSDKEnvVar -notmatch '^JAVA_HOME_\d+_([A-Za-z0-9]+)$') {
+        throw "'$JavaSDKEnvVar' is not a runner JDK variable such as JAVA_HOME_8_X64."
+    }
+    $name = "JAVA_HOME_$($CompileJdkVersion)_$($Matches[1])"
+    $javaHome = [Environment]::GetEnvironmentVariable($name)
+    if (-not $javaHome) {
+        throw "$name is not set, so this runner has no JDK $CompileJdkVersion to compile with."
+    }
+    return $javaHome
+}
+
+# Runs the script block with JAVA_HOME and PATH set to the JDK given, so Maven
+# runs on it, and puts both back afterwards.
+function Invoke-WithJavaHome([string]$JavaHome, [scriptblock]$Block) {
+    $saved = $env:JAVA_HOME, $env:PATH
+    $env:JAVA_HOME = $JavaHome
+    $env:PATH = "$(Join-Path $JavaHome 'bin')$([IO.Path]::PathSeparator)$env:PATH"
+    try {
+        & $Block
+    } finally {
+        $env:JAVA_HOME, $env:PATH = $saved
+    }
+}
+
+# The Surefire argument that runs the tests on the entry's JDK, which
+# setup-environment.ps1 made JAVA_HOME, when Maven runs on another to compile.
+function Get-TestJvmArgument {
+    $java = Join-Path $env:JAVA_HOME 'bin' "java$(if ($IsWindows) { '.exe' })"
+    return "-Djvm=$java"
+}
+
 $PomNamespace = 'http://maven.apache.org/POM/4.0.0'
 
 # The packages in packages.json that are published, one per Maven module,

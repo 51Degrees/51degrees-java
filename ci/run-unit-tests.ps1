@@ -9,16 +9,19 @@ param(
 $ErrorActionPreference = "Stop"
 
 # One run of every test in the reactor that build-project.ps1 built, the
-# examples included. common-ci runs Surefire from the root, copies the reports
-# of every module at any depth into test-results/unit, leaving out the example
-# tests the integration tests report, and logs why a forked JVM died when one
-# does. The dev profile points the examples at the reactor. The tests read
-# their keys from the environment, each under its own _51DEGREES_ name. A test
-# that needs every property reads _51DEGREES_RESOURCE_KEY_BESPOKE, and the
-# Device Detection data file update example reads _51DEGREES_LICENSE_KEY. No
-# secret fills _51DEGREES_RESOURCE_KEY, which is the name a person running an
-# example sets. A test that runs an example gives the example its key under
-# that name. A pull request at the standard depth leaves out the tests in
+# examples included. build-project.ps1 compiled them with JDK 17, and Surefire
+# runs them here with Maven on the entry's own JDK, which setup-environment.ps1
+# made JAVA_HOME, without compiling. common-ci runs Surefire from the root,
+# copies the reports of every module at any depth into test-results/unit,
+# leaving out the example tests the integration tests report, and logs why a
+# forked JVM died when one does. The dev profile points the examples at the
+# reactor. The tests read their keys from the environment, each under its own
+# _51DEGREES_ name. A test that needs every property reads
+# _51DEGREES_RESOURCE_KEY_BESPOKE, and the Device Detection data file update
+# example reads _51DEGREES_LICENSE_KEY. No secret fills
+# _51DEGREES_RESOURCE_KEY, which is the name a person running an example
+# sets. A test that runs an example gives the example its key under that
+# name. A pull request at the standard depth leaves out the tests in
 # standard-excludes.txt.
 $extraArgs = @(
     '-Pdev'

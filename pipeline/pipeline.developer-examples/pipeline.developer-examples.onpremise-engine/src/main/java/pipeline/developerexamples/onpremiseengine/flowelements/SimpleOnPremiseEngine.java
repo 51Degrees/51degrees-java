@@ -38,8 +38,21 @@ import java.util.*;
 
 //! [class]
 //! [constructor]
+/**
+ * An on-premise engine that finds the star sign for a date of birth from a data
+ * file.
+ */
 public class SimpleOnPremiseEngine extends OnPremiseAspectEngineBase<StarSignData, AspectPropertyMetaData> {
 
+    /**
+     * Create a new instance and read the data file.
+     *
+     * @param dataFile path of the data file
+     * @param logger used for logging
+     * @param elementDataFactory creates the element data this engine returns
+     * @param tempDir folder for temporary copies of the data file
+     * @throws IOException if the data file could not be read
+     */
     public SimpleOnPremiseEngine(
         String dataFile,
         Logger logger,

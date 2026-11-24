@@ -62,6 +62,12 @@ public abstract class PropertyKeyedCloudEngineBase<
         return evidenceKeyFilter;
     }
 
+    /**
+     * Create a new instance.
+     *
+     * @param logger used for logging
+     * @param aspectDataFactory creates the element data this engine returns
+     */
     public PropertyKeyedCloudEngineBase(
         Logger logger,
         ElementDataFactory<TData> aspectDataFactory) {
@@ -117,5 +123,11 @@ public abstract class PropertyKeyedCloudEngineBase<
         return typedKey;
     }
 
+    /**
+     * Create the element data for one profile in the response.
+     *
+     * @param flowData the Flow Data being processed
+     * @return a new element data
+     */
     protected abstract TProfile createProfileData(FlowData flowData);
 }

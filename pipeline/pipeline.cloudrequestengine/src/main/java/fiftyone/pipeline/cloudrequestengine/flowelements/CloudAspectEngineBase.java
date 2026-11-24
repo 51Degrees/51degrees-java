@@ -57,6 +57,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Base class for 51Degrees Cloud Aspect Engines
+ * @param <TData> the type of element data the engine returns
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/pipeline-elements/cloud-aspect-engine.md">Specification</a>
  */
 public abstract class CloudAspectEngineBase<TData extends AspectData>
@@ -72,6 +73,12 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
         private volatile CloudRequestEngine cloudRequestEngine;
         private FlowElement<?, ?> currentElement;
 
+        /**
+         * Create a new instance.
+         *
+         * @param pipelines the Pipelines the engine has been added to
+         * @param currentElement the engine that needs the Cloud Request Engine
+         */
         public RequestEngineAccessor(List<Pipeline> pipelines, FlowElement<?, ?> currentElement) {
             this.pipelines = pipelines;
             this.currentElement = currentElement;
@@ -143,6 +150,11 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
         return requestEngine;
     }
 
+    /**
+     * Set the accessor that finds the Cloud Request Engine.
+     *
+     * @param requestEngine the accessor
+     */
     protected void setRequestEngine(RequestEngineAccessor requestEngine) {
         this.requestEngine = requestEngine;
     }

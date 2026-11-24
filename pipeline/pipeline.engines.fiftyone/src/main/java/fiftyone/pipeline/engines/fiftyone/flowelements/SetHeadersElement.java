@@ -76,6 +76,12 @@ public class SetHeadersElement
 	private final List<ElementPropertyMetaData> properties;
 	private final Hashtable<Pipeline, PipelineConfig> pipelineConfigs;
 
+	/**
+	 * Create a new instance.
+	 *
+	 * @param logger used for logging
+	 * @param elementDataFactory creates the element data this element returns
+	 */
 	@SuppressWarnings("this-escape")
 	public SetHeadersElement(
 		Logger logger,
@@ -278,6 +284,11 @@ public class SetHeadersElement
 	 * Internal class to hold 'SetHeader' properties available per pipeline.
 	 */
 	protected class PipelineConfig {
+	    /** Create a new instance. */
+	    protected PipelineConfig() {
+	    }
+
+		/** The SetHeader properties, by name. */
 		public Map<String, PropertyDetails> setHeaderProperties =
 			new HashMap<String, PropertyDetails>();
 	}
@@ -287,7 +298,13 @@ public class SetHeadersElement
 	 * header to set.
 	 */
 	protected class PropertyDetails {
+	    /** Create a new instance. */
+	    protected PropertyDetails() {
+	    }
+
+		/** The property that gives the header value. */
 		public ElementPropertyMetaData propertyMetaData;
+		/** The name of the response header to set. */
 		public String responseHeaderName;
 	}
 }

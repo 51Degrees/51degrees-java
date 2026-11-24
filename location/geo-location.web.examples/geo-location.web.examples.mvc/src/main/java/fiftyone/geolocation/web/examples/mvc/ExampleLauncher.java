@@ -26,7 +26,18 @@ import org.apache.catalina.LifecycleException;
 
 import static fiftyone.geolocation.web.examples.shared.EmbedTomcat.runWebApp;
 
+/** Starts the Spring MVC example in an embedded Tomcat. */
 public class ExampleLauncher {
+    /** Create a new instance. */
+    public ExampleLauncher() {
+    }
+
+    /**
+     * Start the example.
+     *
+     * @param args not used
+     * @throws LifecycleException if Tomcat could not start
+     */
     public static void main(String[] args) throws LifecycleException {
         runWebApp(
                 "geo-location.web.examples/geo-location.web.examples.mvc/src/main/webapp",

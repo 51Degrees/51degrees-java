@@ -30,8 +30,10 @@ import java.util.*;
  */
 public class EvidenceKeyFilterWhitelist implements EvidenceKeyFilter {
 
+    /** The keys to include, each with its order of importance. */
     protected final Map<String, Integer> whitelist;
 
+    /** Compares keys, for example ignoring case. */
     protected final Comparator<String> comparator;
 
     /**

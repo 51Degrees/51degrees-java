@@ -61,6 +61,7 @@ public class DeviceDetectionCloudEngineBuilder
     /**
      * Build an engine using the current options.
      * @return new instance
+     * @throws Exception if the engine could not be created
      */
     public DeviceDetectionCloudEngine build() throws Exception {
         return buildEngine();

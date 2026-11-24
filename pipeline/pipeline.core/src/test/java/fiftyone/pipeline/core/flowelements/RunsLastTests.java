@@ -48,7 +48,8 @@ public class RunsLastTests {
         "must be the last Flow Element and outside any parallel group";
 
     private static void assertRefused(PipelineBuilder builder) {
-        try (Pipeline pipeline = builder.build()) {
+        try {
+            builder.build().close();
             fail("A Pipeline with the element anywhere but last was built.");
         } catch (PipelineConfigurationException e) {
             assertTrue(e.getMessage(), e.getMessage().contains(MUST_BE_LAST));
@@ -100,8 +101,8 @@ public class RunsLastTests {
     }
 
     private static void assertRefusedFrom(PipelineOptions options) {
-        try (Pipeline pipeline =
-                 new PipelineBuilder().buildFromConfiguration(options)) {
+        try {
+            new PipelineBuilder().buildFromConfiguration(options).close();
             fail("A Pipeline with the element anywhere but last was built " +
                 "from a configuration.");
         } catch (PipelineConfigurationException e) {

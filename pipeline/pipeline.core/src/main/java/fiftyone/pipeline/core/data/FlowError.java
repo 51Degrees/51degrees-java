@@ -50,6 +50,12 @@ public interface FlowError {
         private final Throwable throwable;
         private final FlowElement flowElement;
 
+        /**
+         * Create a new instance.
+         *
+         * @param throwable the error
+         * @param flowElement the element where it happened
+         */
         public Default(Throwable throwable, FlowElement flowElement) {
             this.throwable = throwable;
             this.flowElement = getNotNull(flowElement, "Flow element can't be null");

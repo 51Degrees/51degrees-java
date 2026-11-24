@@ -50,6 +50,9 @@ public interface UACHServiceCore {
      * Default implementation of the {@link UACHServiceCore} service.
      */
     class Default implements UACHServiceCore {
+        /** Create a new instance. */
+        public Default() {
+        }
         
 		@SuppressWarnings("unchecked")
 		@Override

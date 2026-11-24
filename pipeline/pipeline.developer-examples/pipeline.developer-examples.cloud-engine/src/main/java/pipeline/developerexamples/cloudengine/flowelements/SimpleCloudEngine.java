@@ -41,10 +41,19 @@ import java.util.List;
 
 //! [class]
 //! [constructor]
+/**
+ * A cloud engine that reads the star sign from the cloud service's response.
+ */
 public class SimpleCloudEngine extends CloudAspectEngineBase<StarSignData> {
     private List<AspectPropertyMetaData> aspectProperties;
     private String dataSourceTier;
 
+    /**
+     * Create a new instance.
+     *
+     * @param logger used for logging
+     * @param dataFactory creates the element data this engine returns
+     */
     public SimpleCloudEngine(
         Logger logger,
         ElementDataFactory<StarSignData> dataFactory) {

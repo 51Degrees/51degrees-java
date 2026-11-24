@@ -45,8 +45,9 @@ public class IPIntelligenceCloudPipelineBuilder
      * Internal Constructor.
      * This builder should only be created through the 
      * IPIntelligencePipelineBuilder
-     * @param loggerFactory
-     * @param httpClient 
+     * @param loggerFactory creates the loggers for the Pipeline and its
+     * elements
+     * @param httpClient used to make requests to the cloud service
      */
     public IPIntelligenceCloudPipelineBuilder(
         ILoggerFactory loggerFactory,
@@ -60,7 +61,7 @@ public class IPIntelligenceCloudPipelineBuilder
      * @return A new pipeline instance that contains a cloud request engine for 
      * making requests to the 51Degrees Cloud service and a 
      * IPIntelligenceCloudEngine to interpret the IP Intelligence results.
-     * @throws Exception 
+     * @throws Exception if the Pipeline could not be built
      */
     @Override
     public Pipeline build() throws Exception {

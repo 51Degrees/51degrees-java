@@ -25,12 +25,27 @@ package fiftyone.pipeline.engines.services.update;
 import java.io.Closeable;
 import java.util.concurrent.ScheduledFuture;
 
+/** Schedules the tasks of the data update service. */
 public interface FutureFactory extends Closeable {
 
+    /**
+     * Run a task repeatedly.
+     *
+     * @param runnable the task
+     * @param period milliseconds before the first run and between runs
+     * @return the scheduled task
+     */
     ScheduledFuture<?> scheduleRepeating(
         Runnable runnable,
         long period);
 
+    /**
+     * Run a task once.
+     *
+     * @param runnable the task
+     * @param delay milliseconds before it runs
+     * @return the scheduled task
+     */
     ScheduledFuture<?> schedule(
         Runnable runnable,
         long delay);

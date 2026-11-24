@@ -61,6 +61,7 @@ public class IPIntelligenceCloudEngineBuilder
     /**
      * Build an engine using the current options.
      * @return new instance
+     * @throws Exception if the engine could not be created
      */
     public IPIntelligenceCloudEngine build() throws Exception {
         return buildEngine();

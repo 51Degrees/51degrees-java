@@ -33,8 +33,19 @@ import fiftyone.pipeline.engines.flowelements.AspectEngine;
 import fiftyone.pipeline.engines.services.MissingPropertyService;
 import org.slf4j.Logger;
 
+/**
+ * Default implementation of {@link GeoData}, which holds the values in a map.
+ */
 public class GeoDataDefault extends AspectDataBase implements GeoData {
 
+    /**
+     * Create a new instance.
+     *
+     * @param logger used for logging
+     * @param flowData the Flow Data this element data belongs to
+     * @param engine the engine which created the instance
+     * @param missingPropertyService explains why a property has no value
+     */
     public GeoDataDefault(Logger logger, FlowData flowData, AspectEngine<? extends AspectData,? extends AspectPropertyMetaData> engine, MissingPropertyService missingPropertyService) {
         super(logger, flowData, engine, missingPropertyService);
         setJavaScript(new AspectPropertyValueDefault<JavaScript>(new JavaScript("")));

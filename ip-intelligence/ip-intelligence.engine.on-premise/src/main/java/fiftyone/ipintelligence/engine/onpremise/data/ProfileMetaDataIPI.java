@@ -165,6 +165,12 @@ public class ProfileMetaDataIPI implements ProfileMetaData {
         return super.equals(obj);
     }
 
+    /**
+     * Whether this profile has the same id as another.
+     *
+     * @param other the profile to compare with
+     * @return true if the ids are equal
+     */
     public boolean equals(ProfileMetaData other) {
         return getProfileId() == other.getProfileId();
     }

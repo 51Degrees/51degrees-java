@@ -170,13 +170,13 @@ public class IPIntelligenceOnPremisePipelineBuilderTest {
     @Test
     public void setDataUpdateService_RegisterDataFileTriggered() throws Exception {
         DataUpdateServiceDefault dataUpdateServiceDefault = mock(DataUpdateServiceDefault.class);
-        try (Pipeline ignored = builder
-                .setAutoUpdate(true)
-                .setDataUpdateLicenseKey("licence_key")
-                .setDataUpdateService(dataUpdateServiceDefault)
-                .build()) {
-            verify(dataUpdateServiceDefault).registerDataFile(any());
-        }
+        builder
+            .setAutoUpdate(true)
+            .setDataUpdateLicenseKey("licence_key")
+            .setDataUpdateService(dataUpdateServiceDefault)
+            .build()
+            .close();
+        verify(dataUpdateServiceDefault).registerDataFile(any());
     }
 
     @Test

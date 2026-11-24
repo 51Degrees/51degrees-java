@@ -36,6 +36,11 @@ public class FlowDataFactoryDefault implements FlowDataFactory {
 
     private final ILoggerFactory loggerFactory;
 
+    /**
+     * Create a new instance.
+     *
+     * @param loggerFactory creates the loggers for each Flow Data
+     */
     public FlowDataFactoryDefault(ILoggerFactory loggerFactory) {
         this.loggerFactory = loggerFactory;
     }

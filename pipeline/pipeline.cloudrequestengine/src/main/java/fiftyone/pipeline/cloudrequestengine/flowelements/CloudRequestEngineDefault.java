@@ -162,6 +162,18 @@ public class CloudRequestEngineDefault
             return thread;
         });
 
+    /**
+     * Create a new instance with a resource key.
+     *
+     * @param logger used for logging
+     * @param aspectDataFactory creates the element data this engine returns
+     * @param httpClient used to make requests to the cloud service
+     * @param endPoint the cloud service endpoint
+     * @param resourceKey the resource key, or null
+     * @param propertiesEndpoint the properties endpoint
+     * @param evidenceKeysEndpoint the evidence keys endpoint
+     * @param timeoutMillis the request timeout in milliseconds
+     */
     public CloudRequestEngineDefault(
         Logger logger,
         ElementDataFactory<CloudRequestData> aspectDataFactory,
@@ -183,6 +195,20 @@ public class CloudRequestEngineDefault
             timeoutMillis,
             null);
     }
+    /**
+     * Create a new instance with a resource key and Origin header.
+     *
+     * @param logger used for logging
+     * @param aspectDataFactory creates the element data this engine returns
+     * @param httpClient used to make requests to the cloud service
+     * @param endPoint the cloud service endpoint
+     * @param resourceKey the resource key, or null
+     * @param propertiesEndpoint the properties endpoint
+     * @param evidenceKeysEndpoint the evidence keys endpoint
+     * @param timeoutMillis the request timeout in milliseconds
+     * @param cloudRequestOrigin the value of the Origin header, or null for
+     *    none
+     */
     public CloudRequestEngineDefault(
         Logger logger,
         ElementDataFactory<CloudRequestData> aspectDataFactory,
@@ -206,6 +232,21 @@ public class CloudRequestEngineDefault
             cloudRequestOrigin);
     }
 
+    /**
+     * Create a new instance with a resource key or license key.
+     *
+     * @param logger used for logging
+     * @param aspectDataFactory creates the element data this engine returns
+     * @param httpClient used to make requests to the cloud service
+     * @param endPoint the cloud service endpoint
+     * @param resourceKey the resource key, or null
+     * @param licenseKey the license key, or null
+     * @param propertiesEndpoint the properties endpoint
+     * @param evidenceKeysEndpoint the evidence keys endpoint
+     * @param timeoutMillis the request timeout in milliseconds
+     * @param cloudRequestOrigin the value of the Origin header, or null for
+     *    none
+     */
     public CloudRequestEngineDefault(
         Logger logger,
         ElementDataFactory<CloudRequestData> aspectDataFactory,
@@ -233,6 +274,17 @@ public class CloudRequestEngineDefault
 
     /**
      * Constructor.
+     * @param logger used for logging
+     * @param aspectDataFactory creates the element data this engine returns
+     * @param httpClient used to make requests to the cloud service
+     * @param endPoint the cloud service endpoint
+     * @param resourceKey the resource key, or null
+     * @param licenseKey the license key, or null
+     * @param propertiesEndpoint the properties endpoint
+     * @param evidenceKeysEndpoint the evidence keys endpoint
+     * @param timeoutMillis the request timeout in milliseconds
+     * @param cloudRequestOrigin the value of the Origin header, or null for
+     *                           none
      * @param requestedProperties the fully qualified names of the
      *                            properties to ask for, sent as {@code values}
      *                            when the list is not empty

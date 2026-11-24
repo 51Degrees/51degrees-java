@@ -43,14 +43,14 @@ import static fiftyone.pipeline.web.mvc.components.FiftyOneInterceptor.enableCli
 
 
 /**
- * @example mvc/configuration/ExampleMvcConfig.java
- * Spring MVC device detection example
+ * \example mvc/configuration/ExampleMvcConfig.java
+ * Spring MVC location example
  *
  * This example shows how to:
  *
  * 1. Set up configuration options to add elements to the 51Degrees Pipeline.
  * 
- * @include geo-location.web.examples.mvc/src/main/webapp/WEB-INF/51Degrees-Cloud.xml
+ * \include geo-location.web.examples.mvc/src/main/webapp/WEB-INF/51Degrees-Cloud.xml
  *
  * 2. Set up MVC, enable configuration, and add the Pipeline component.
  *
@@ -61,7 +61,7 @@ import static fiftyone.pipeline.web.mvc.components.FiftyOneInterceptor.enableCli
  * 5. Add the interceptor.
  *
  * 6. Inject the `FlowDataProvider` into a controller.
- * ```{java}
+ * <pre>{@code
  * @Controller
  * @RequestMapping("/")
  * public class ExampleController {
@@ -72,10 +72,11 @@ import static fiftyone.pipeline.web.mvc.components.FiftyOneInterceptor.enableCli
  *         this.flowDataProvider = flowDataProvider;
  *     }
  *     ...
- * ```
+ * }
+ * }</pre>
  *
  * 7. Use the results contained in the flow data to display something on a page view.
- * ```{java}
+ * <pre>{@code
  * @Controller
  * @RequestMapping("/")
  * public class ExampleController {
@@ -95,10 +96,11 @@ import static fiftyone.pipeline.web.mvc.components.FiftyOneInterceptor.enableCli
  *         return "example";
  *     }
  *     ...
- * ```
+ * }
+ * }</pre>
  * ## Controller
  
- * @include mvc/controller/ExampleController.java
+ * \include mvc/controller/ExampleController.java
  *
  * ## Config
  */
@@ -107,6 +109,7 @@ import static fiftyone.pipeline.web.mvc.components.FiftyOneInterceptor.enableCli
 @ComponentScan({"fiftyone.geolocation.web.examples.mvc.controller","fiftyone.pipeline.web.mvc"})
 public class ExampleMvcConfig implements WebMvcConfigurer {
 
+    /** Create a new instance. */
     public ExampleMvcConfig() {
         super();
     }
@@ -119,6 +122,11 @@ public class ExampleMvcConfig implements WebMvcConfigurer {
     @Autowired
     ServletContext servletContext;
 
+    /**
+     * Configure the interceptor from the Pipeline options file.
+     *
+     * @return the interceptor configuration
+     */
     @Bean
     public FiftyOneInterceptorConfig fiftyOneInterceptorConfig() {
         final FiftyOneInterceptorConfigDefault bean = new FiftyOneInterceptorConfigDefault();
@@ -129,6 +137,11 @@ public class ExampleMvcConfig implements WebMvcConfigurer {
         return bean;
     }
 
+    /**
+     * Resolve views to the JSP files in WEB-INF/views.
+     *
+     * @return the view resolver
+     */
     @Bean
     public ViewResolver viewResolver() {
         final InternalResourceViewResolver bean = new InternalResourceViewResolver();

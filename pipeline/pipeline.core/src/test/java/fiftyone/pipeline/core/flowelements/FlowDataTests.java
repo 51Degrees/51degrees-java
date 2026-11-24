@@ -706,7 +706,8 @@ public class FlowDataTests {
     }
 
     private interface CloseableData extends ElementData, AutoCloseable {
-
+        @Override
+        void close();
     }
 
     /**

@@ -32,6 +32,11 @@ import org.springframework.stereotype.Service;
 @Service
 public interface FiftyOneJSService extends FiftyOneJSServiceCore {
 
+    /**
+     * Set whether the JavaScript and JSON are served.
+     *
+     * @param enabled true to serve them
+     */
     void enable(boolean enabled);
 
     /**
@@ -44,9 +49,15 @@ public interface FiftyOneJSService extends FiftyOneJSServiceCore {
     default void setPaths(String javaScriptPath, String jsonPath) {
     }
 
+    /** Default implementation of {@link FiftyOneJSService}. */
     @Service
     class Default extends FiftyOneJSServiceCore.Default implements FiftyOneJSService {
 
+        /**
+         * Create a new instance.
+         *
+         * @param clientsidePropertyService serves the JavaScript and JSON
+         */
         @Autowired
         public Default(ClientsidePropertyService clientsidePropertyService) {
             super(clientsidePropertyService, true);

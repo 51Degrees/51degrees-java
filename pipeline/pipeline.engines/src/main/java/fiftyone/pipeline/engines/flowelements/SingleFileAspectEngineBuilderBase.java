@@ -236,7 +236,7 @@ public abstract class SingleFileAspectEngineBuilderBase<
     /**
      * Set the time between checks for a new data file made by the
      * {@link DataUpdateService} in seconds.
-     * <p>
+     *
      * @deprecated use {@link #setUpdatePollingIntervalSeconds(int)}
      * @param pollingIntervalSeconds the number of seconds between checks
      * @return this builder

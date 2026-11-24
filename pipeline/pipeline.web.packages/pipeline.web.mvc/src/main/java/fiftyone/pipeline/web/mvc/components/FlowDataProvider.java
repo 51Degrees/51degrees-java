@@ -36,7 +36,11 @@ import org.springframework.stereotype.Component;
 @Component
 public interface FlowDataProvider extends FlowDataProviderCore {
 
+    /** Default implementation of {@link FlowDataProvider}. */
     @Component
     class Default extends FlowDataProviderCore.Default implements FlowDataProvider {
+        /** Create a new instance. */
+        public Default() {
+        }
     }
 }

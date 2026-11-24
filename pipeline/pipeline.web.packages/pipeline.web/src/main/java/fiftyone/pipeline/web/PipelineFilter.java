@@ -63,6 +63,10 @@ import static fiftyone.pipeline.web.Constants.INIT_PARAM_SET_HEADERS_ELEMENT_ENA
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/web-integration.md">Specification</a>
  */
 public class PipelineFilter implements Filter {
+    /** Create a new instance. */
+    public PipelineFilter() {
+    }
+
     private static final org.slf4j.Logger logger =
         LoggerFactory.getLogger(PipelineFilter.class);
 

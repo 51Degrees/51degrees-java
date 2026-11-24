@@ -59,11 +59,15 @@ public abstract class OnPremiseAspectEngineBuilderBase<
 
     private final DataUpdateService dataUpdateService;
 
+    /** The data files configured so far. */
     protected final List<DataFileConfiguration> dataFileConfigs = new ArrayList<>();
+    /** The data files created from the configurations. */
     protected final List<AspectEngineDataFile> dataFiles = new ArrayList<>();
+    /** Folder for temporary copies of the data file. */
     protected String tempDir = Paths.get(
             System.getProperty("java.io.tmpdir"),"fiftyone.tempfiles").toString();
 
+    /** Used for logging. */
     protected Logger logger = LoggerFactory.getLogger(OnPremiseAspectEngineBuilderBase.class);
 
     /**
@@ -100,6 +104,14 @@ public abstract class OnPremiseAspectEngineBuilderBase<
         createAndVerifyTempDir(Paths.get(tempDir));
     }
 
+    /**
+     * Create the folder if it does not exist, readable and writable by its
+     * owner only, and check it can be read and written.
+     *
+     * @param pathToCreate the folder
+     * @throws IllegalStateException if the path is not a folder or cannot be
+     *    read and written
+     */
     public final void createAndVerifyTempDir(Path pathToCreate) {
         try {
             File directory = pathToCreate.toFile();

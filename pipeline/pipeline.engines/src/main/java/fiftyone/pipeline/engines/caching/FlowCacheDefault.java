@@ -39,6 +39,11 @@ public class FlowCacheDefault
 
     private FlowElement flowElement;
 
+    /**
+     * Create a new instance.
+     *
+     * @param configuration the cache size and other settings
+     */
     public FlowCacheDefault(CacheConfiguration configuration) {
         super(configuration);
     }

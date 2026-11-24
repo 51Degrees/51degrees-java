@@ -115,6 +115,10 @@ public class JsonBuilderElement
      * simultaneously.
      */
     protected class PipelineConfig {
+        /** Create a new instance. */
+        protected PipelineConfig() {
+        }
+
         /**
          * A collection of the complete string names of any properties
          * with the 'delay execution' flag set to true.

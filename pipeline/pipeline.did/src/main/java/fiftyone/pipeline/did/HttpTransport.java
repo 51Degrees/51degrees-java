@@ -61,6 +61,7 @@ public interface HttpTransport {
         private final byte[] body;
 
         /**
+         * Create a new instance.
          * @param method  the HTTP method, {@code GET} or {@code POST}
          * @param url     the full URL to send to
          * @param headers the headers to send, copied
@@ -78,22 +79,34 @@ public interface HttpTransport {
             this.body = body == null ? null : body.clone();
         }
 
-        /** @return the HTTP method */
+        /**
+         * Returns the HTTP method.
+         * @return the HTTP method
+         */
         public String getMethod() {
             return method;
         }
 
-        /** @return the full URL */
+        /**
+         * Returns the full URL.
+         * @return the full URL
+         */
         public String getUrl() {
             return url;
         }
 
-        /** @return the headers, read only */
+        /**
+         * Returns the headers, read only.
+         * @return the headers, read only
+         */
         public Map<String, String> getHeaders() {
             return headers;
         }
 
-        /** @return a copy of the body, or null when there is none */
+        /**
+         * Returns a copy of the body, or null when there is none.
+         * @return a copy of the body, or null when there is none
+         */
         public byte[] getBody() {
             return body == null ? null : body.clone();
         }
@@ -106,6 +119,7 @@ public interface HttpTransport {
         private final String body;
 
         /**
+         * Create a new instance.
          * @param statusCode the HTTP status code
          * @param body       the body as text, empty when there was none
          */
@@ -114,12 +128,18 @@ public interface HttpTransport {
             this.body = body == null ? "" : body;
         }
 
-        /** @return the HTTP status code */
+        /**
+         * Returns the HTTP status code.
+         * @return the HTTP status code
+         */
         public int getStatusCode() {
             return statusCode;
         }
 
-        /** @return the body as text, never null */
+        /**
+         * Returns the body as text, never null.
+         * @return the body as text, never null
+         */
         public String getBody() {
             return body;
         }

@@ -62,6 +62,7 @@ public abstract class DataFileConfigurationBuilderBase<
         return licenseKeys;
     }
 
+    /** Create a new builder. */
     public DataFileConfigurationBuilderBase() {
     }
 
@@ -298,6 +299,11 @@ public abstract class DataFileConfigurationBuilderBase<
         return (TBuilder)this;
     }
 
+    /**
+     * Create the configuration instance that the build method fills in.
+     *
+     * @return a new configuration
+     */
     protected abstract TConfig createConfig();
 
     /**

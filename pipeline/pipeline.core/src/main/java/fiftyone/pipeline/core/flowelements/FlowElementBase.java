@@ -40,7 +40,7 @@ import java.util.concurrent.BlockingQueue;
  * {@link #process(FlowData)} method deals with {@link FlowData#isStopped()} and
  * any errors that may be thrown, and calls the abstract
  * {@link #processInternal(FlowData)} method to do the actual processing.
- * <p>
+ *
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/conceptual-overview.md#flow-element">Specification</a>
  *
  * @param <TData>     the type of element data that the flow element will write to
@@ -53,7 +53,9 @@ public abstract class FlowElementBase<
         TProperty extends ElementPropertyMetaData>
         implements FlowElement<TData, TProperty> {
 
+    /** Used for logging. */
     protected final Logger logger;
+    /** The key the element's data is stored under in the Flow Data. */
     protected TypedKey<TData> typedKey = null;
     private boolean closed = false;
     private final List<Pipeline> pipelines = new ArrayList<>();
@@ -226,6 +228,12 @@ public abstract class FlowElementBase<
      */
     protected abstract void unmanagedResourcesCleanup();
 
+    /**
+     * Release the element's resources.
+     *
+     * @param closing true to release managed resources as well as unmanaged
+     *    ones
+     */
     protected void close(boolean closing) {
         if (closed) {
             logger.debug("FlowElement '{}'-'{}' already closed.", getClass().getSimpleName(), hashCode());
@@ -261,7 +269,7 @@ public abstract class FlowElementBase<
 */
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         close(true);
     }
 

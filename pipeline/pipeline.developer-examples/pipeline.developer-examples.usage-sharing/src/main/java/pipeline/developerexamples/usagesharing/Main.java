@@ -34,11 +34,12 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.PrintStream;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
- * @example usagesharing/Main.java
+ * \example usagesharing/Main.java
  *
- * @include{doc} example-usage-sharing-intro.txt
+ * \include{doc} example-usage-sharing-intro.txt
  * 
  * Usage sharing is enabled by default if using a pipeline builder 
  * that is derived from FiftyOnePipelineBuilder.
@@ -54,7 +55,7 @@ import java.util.Objects;
  * These are all optional, so each can be omitted if the default 
  * for that option is sufficient:
  * 
- * @include pipeline.developer-examples.usage-sharing/src/main/resources/51d.xml
+ * \include pipeline.developer-examples.usage-sharing/src/main/resources/51d.xml
  * 
  * For details of what each setting does, see the 
  * [Share Usage reference](/documentation/4.5/_pipeline_api__features__usage_sharing.html) 
@@ -72,6 +73,10 @@ import java.util.Objects;
  */
 
 public class Main {
+    /** Create a new instance. */
+    public Main() {
+    }
+
     private static final ILoggerFactory loggerFactory =
         LoggerFactory.getILoggerFactory();
         
@@ -79,7 +84,17 @@ public class Main {
     // data back to 51Degrees.
     private static final HttpClient http = new HttpClientDefault();
 
+    /** Runs the example. */
     public static class Example {
+        /** Create a new instance. */
+        public Example() {
+        }
+
+        /**
+         * Run the example.
+         *
+         * @throws Exception if the example fails
+         */
         public void run() throws Exception {
             System.out.println("Constructing pipeline from configuration file.");
             System.out.println();
@@ -112,6 +127,11 @@ public class Main {
                     "Pipeline created with share usage element. Evidence processed " +
                     "with this pipeline will now be periodically shared with " +
                     "51Degrees using the specified configuration.");
+                System.out.println(
+                    "The Pipeline's elements are " +
+                    pipeline.getFlowElements().stream()
+                        .map(element -> element.getClass().getSimpleName())
+                        .collect(Collectors.joining(", ")) + ".");
             }
         }
     }
@@ -139,6 +159,12 @@ public class Main {
         output.flush();
     }
 
+    /**
+     * Run the example, then print where to find out more.
+     *
+     * @param args not used
+     * @throws Exception if the example fails
+     */
     public static void main(String[] args) throws Exception {
         new Example().run();
         writeFindOutMore(System.out);

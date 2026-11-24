@@ -35,6 +35,9 @@ import java.util.Map;
  * Contains classes which deserialise JSON property definitions.
  */
 public class AccessiblePropertyMetaData {
+    /** Create a new instance. */
+    public AccessiblePropertyMetaData() {
+    }
 
     /**
      * Class containing a list of {@link ProductMetaData}s.
@@ -51,6 +54,7 @@ public class AccessiblePropertyMetaData {
                 products.put(key, new ProductMetaData(json.getJSONObject(key)));
             }
         }
+        /** The products, by name. */
         public final Map<String, ProductMetaData> products;
     }
 

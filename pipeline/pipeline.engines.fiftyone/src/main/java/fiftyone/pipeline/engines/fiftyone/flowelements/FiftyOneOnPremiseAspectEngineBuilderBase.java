@@ -45,6 +45,7 @@ public abstract class FiftyOneOnPremiseAspectEngineBuilderBase<
     TEngine extends FiftyOneAspectEngine> extends
     SingleFileAspectEngineBuilderBase<TBuilder, TEngine> {
 
+    /** The default address new data files are downloaded from. */
     public static final String DATA_UPDATE_URL =
             "https://distributor.51degrees.com/api/v2/download";
     private String dataDownloadType;

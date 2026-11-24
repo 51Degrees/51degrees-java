@@ -37,6 +37,9 @@ import java.util.Map;
  * @param <T> type of object to load
  */
 public class JsonLoader<T> implements DataLoader<T> {
+    /** Create a new instance. */
+    public JsonLoader() {
+    }
 
     private T loadData(Reader reader, Class<T> type) throws IOException, IllegalAccessException, InstantiationException, InvocationTargetException {
         int bufferLength = 1024;

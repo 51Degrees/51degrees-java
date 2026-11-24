@@ -38,6 +38,8 @@ public class KeyUtils {
     /**
      * Obtain a key from the environment variable of the name given, or
      * from the system property of the same name when that is not set.
+     * @param keyName name of the environment variable and system property
+     * @return the key, or null when neither is set
      */
     public static String getNamedKey(String keyName) {
         return getNamedKey(keyName, System::getenv);

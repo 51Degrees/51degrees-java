@@ -36,7 +36,12 @@ import pipeline.developerexamples.cloudengine.flowelements.SimpleCloudEngineBuil
 
 import java.io.PrintStream;
 
+/** Shows how to build and use a custom cloud engine. */
 public class Main {
+    /** Create a new instance. */
+    public Main() {
+    }
+
     private static final ILoggerFactory loggerFactory = LoggerFactory.getILoggerFactory();
     private static final HttpClient httpClient = new HttpClientDefault();
 
@@ -125,7 +130,17 @@ public class Main {
         return value == null || value.trim().isEmpty() ? null : value.trim();
     }
 
+    /** Runs the example. */
     public static class Example {
+        /** Create a new instance. */
+        public Example() {
+        }
+
+        /**
+         * Run the example.
+         *
+         * @throws Exception if the example fails
+         */
         public void run() throws Exception {
 //! [usage]
             // The endpoint comes from _51DEGREES_CLOUD_ENDPOINT when it is
@@ -202,6 +217,12 @@ public class Main {
         output.flush();
     }
 
+    /**
+     * Run the example, then print where to find out more.
+     *
+     * @param args not used
+     * @throws Exception if the example fails
+     */
     public static void main(String[] args) throws Exception {
         new Example().run();
         writeFindOutMore(System.out);

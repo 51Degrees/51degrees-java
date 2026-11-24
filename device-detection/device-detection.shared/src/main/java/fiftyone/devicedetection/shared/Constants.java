@@ -25,6 +25,7 @@ package fiftyone.devicedetection.shared;
 import static fiftyone.pipeline.core.Constants.EVIDENCE_QUERY_PREFIX;
 import static fiftyone.pipeline.core.Constants.EVIDENCE_SEPERATOR;
 
+/** Evidence keys and other constants shared by the device detection engines. */
 public class Constants {
 
     /**

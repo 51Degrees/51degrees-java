@@ -23,6 +23,7 @@
 package fiftyone.pipeline.core.flowelements;
 
 import fiftyone.pipeline.core.data.*;
+import fiftyone.pipeline.core.exceptions.CloseException;
 import fiftyone.pipeline.core.exceptions.PipelineDataException;
 import fiftyone.pipeline.core.typed.TypedKey;
 import fiftyone.pipeline.core.typed.TypedKeyDefault;
@@ -541,13 +542,18 @@ class FlowDataDefault implements FlowData {
      * call the pool may have given an instance to another request.
      */
     @Override
-    public void close() throws Exception {
+    public void close() {
         if (closed.getAndSet(true)) {
             return;
         }
         for (Object elementData : data.asStringKeyMap().values()) {
             if (AutoCloseable.class.isAssignableFrom(elementData.getClass())) {
-                ((AutoCloseable) elementData).close();
+                try {
+                    ((AutoCloseable) elementData).close();
+                } catch (Exception e) {
+                    throw CloseException.of(
+                        "Closing Element Data of the Flow Data failed", e);
+                }
             }
         }
         // Pooled Element Data goes back to its Flow Element's pool. A

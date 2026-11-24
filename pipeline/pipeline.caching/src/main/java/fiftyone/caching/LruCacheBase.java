@@ -107,6 +107,7 @@ public abstract class LruCacheBase<K, V> implements Cache<K,V>, Closeable {
     }
 
     /**
+     * Returns number of cache misses.
      * @return number of cache misses.
      */
     public long getCacheMisses() {
@@ -114,6 +115,7 @@ public abstract class LruCacheBase<K, V> implements Cache<K,V>, Closeable {
     }
 
     /**
+     * Returns number of requests received by the cache.
      * @return number of requests received by the cache.
      */
     public long getCacheRequests() {
@@ -121,6 +123,7 @@ public abstract class LruCacheBase<K, V> implements Cache<K,V>, Closeable {
     }
 
     /**
+     * Returns the percentage of times cache request did not return a result.
      * @return the percentage of times cache request did not return a result.
      */
     public double getPercentageMisses() {
@@ -145,6 +148,14 @@ public abstract class LruCacheBase<K, V> implements Cache<K,V>, Closeable {
         return node.value;
     }
 
+    /**
+     * Add a value, or move the existing item for the key to the head of its
+     * list. The existing value is replaced only when updateExisting is set.
+     *
+     * @param key the key
+     * @param value the value
+     * @return the item now held for the key
+     */
     protected CachedItem add(K key, V value) {
         // Get a randomly selected linked list to add
         // the item to.
@@ -203,6 +214,11 @@ public abstract class LruCacheBase<K, V> implements Cache<K,V>, Closeable {
         close(true);
     }
 
+    /**
+     * Clear the cache once.
+     *
+     * @param closing true when called from {@link #close()}
+     */
     protected void close(boolean closing) {
         // Clear the map and linked lists.
         if (closed == false) {

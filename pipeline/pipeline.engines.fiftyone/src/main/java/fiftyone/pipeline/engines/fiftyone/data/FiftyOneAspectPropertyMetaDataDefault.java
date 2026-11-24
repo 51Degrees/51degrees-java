@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 
+/** Default implementation of {@link FiftyOneAspectPropertyMetaData}. */
 public class FiftyOneAspectPropertyMetaDataDefault
     extends AspectPropertyMetaDataDefault
     implements FiftyOneAspectPropertyMetaData {
@@ -45,6 +46,27 @@ public class FiftyOneAspectPropertyMetaDataDefault
     private final Iterable<ValueMetaDataDefault> values;
     private final ValueMetaDataDefault defaultValue;
 
+    /**
+     * Create a new instance.
+     *
+     * @param name the property name
+     * @param element the element that returns the property
+     * @param category the category of the property
+     * @param type the type of the values
+     * @param dataTiersWherePresent the data tiers that hold the property
+     * @param available whether the engine returns the property
+     * @param url a page that describes the property
+     * @param displayOrder the order in which the property is shown
+     * @param mandatory whether the property is always returned
+     * @param list whether the value is a list
+     * @param obsolete whether the property is obsolete
+     * @param show whether the property is shown
+     * @param showValues whether its values are shown
+     * @param description the description of the property
+     * @param component the component the property belongs to
+     * @param values the values the property can have
+     * @param defaultValue the default value
+     */
     @SuppressWarnings("this-escape")
     public FiftyOneAspectPropertyMetaDataDefault(
         String name,

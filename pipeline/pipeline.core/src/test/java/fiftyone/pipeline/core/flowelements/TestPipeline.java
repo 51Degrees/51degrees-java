@@ -92,7 +92,7 @@ public class TestPipeline {
         }
 
         @Override
-        public void close() throws Exception {
+        public void close() {
             pipeline.close();
         }
 

@@ -308,7 +308,7 @@ public class ElementDataPoolTests {
             first.addEvidence("query.request", "first");
             first.process();
             Object pooled = first.get("counter");
-            first.close();
+            closeAsWebFilter(first);
 
             try (FlowData second = pipeline.createFlowData()) {
                 second.addEvidence("query.request", "second");
@@ -318,7 +318,7 @@ public class ElementDataPoolTests {
                     pooled,
                     second.get("counter"));
 
-                first.close();
+                closeAsWebFilter(first);
 
                 try (FlowData third = pipeline.createFlowData()) {
                     third.addEvidence("query.request", "third");
@@ -339,5 +339,14 @@ public class ElementDataPoolTests {
             "Element Data allocated for three requests, two at once",
             2,
             allocated.get());
+    }
+
+    /**
+     * Closes the Flow Data as a web filter does at the end of a request,
+     * apart from the try-with-resources block that also closes it.
+     * @param data the Flow Data to close
+     */
+    private static void closeAsWebFilter(FlowData data) {
+        data.close();
     }
 }

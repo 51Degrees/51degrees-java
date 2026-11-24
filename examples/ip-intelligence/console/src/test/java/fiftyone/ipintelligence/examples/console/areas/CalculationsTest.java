@@ -179,6 +179,12 @@ public class CalculationsTest {
      * is given the same point, as compiled code can for Math.sin.
      */
     private static class DriftingTransform implements CoordinateTransform {
+        /**
+         * CoordinateTransform is Serializable, so this class gives its
+         * serialized form a version of its own.
+         */
+        private static final long serialVersionUID = 1L;
+
         private final Set<String> seen = new HashSet<>();
 
         @Override

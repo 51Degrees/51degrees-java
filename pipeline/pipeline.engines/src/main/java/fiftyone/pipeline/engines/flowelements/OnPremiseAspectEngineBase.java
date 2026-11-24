@@ -82,6 +82,11 @@ public abstract class OnPremiseAspectEngineBase<
         return tempDataDirPath;
     }
 
+    /**
+     * Set the folder for temporary copies of the data file.
+     *
+     * @param tempDataDirPath path of the folder
+     */
     protected void setTempDataDirPath(String tempDataDirPath) {
         this.tempDataDirPath = tempDataDirPath;
     }

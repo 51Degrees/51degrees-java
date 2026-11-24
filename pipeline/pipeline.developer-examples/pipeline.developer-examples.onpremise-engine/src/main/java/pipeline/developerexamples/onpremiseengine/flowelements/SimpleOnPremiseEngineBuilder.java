@@ -37,11 +37,17 @@ import java.util.List;
 
 
 //! [class]
+/** Builder for the {@link SimpleOnPremiseEngine}. */
 public class SimpleOnPremiseEngineBuilder
     extends SingleFileAspectEngineBuilderBase<
         SimpleOnPremiseEngineBuilder,
         SimpleOnPremiseEngine> {
 
+    /**
+     * Create a new builder.
+     *
+     * @param loggerFactory creates the loggers the element uses
+     */
     public SimpleOnPremiseEngineBuilder(ILoggerFactory loggerFactory) {
         super(loggerFactory);
     }

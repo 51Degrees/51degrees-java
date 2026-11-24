@@ -45,6 +45,8 @@ import java.util.concurrent.ExecutorService;
  * Base class for {@link AspectEngine}s to extend. This implements the data
  * update service and missing property service along with everything
  * already implemented by {@link FlowElementBase}.
+ * @param <TData> the type of element data the engine returns
+ * @param <TProperty> the type of the property metadata
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/conceptual-overview.md#aspect-engine">Specification</a>
  */
 public abstract class AspectEngineBase<
@@ -55,8 +57,10 @@ public abstract class AspectEngineBase<
 
     private LazyLoadingConfiguration lazyLoadingConfiguration = null;
 
+    /** Explains why a property has no value. */
     protected MissingPropertyService missingPropertyService;
 
+    /** Caches results, or null when there is no cache. */
     protected FlowCache cache = null;
 
     /**

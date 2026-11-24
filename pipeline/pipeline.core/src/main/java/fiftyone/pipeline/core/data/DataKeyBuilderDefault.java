@@ -30,6 +30,9 @@ import java.util.Map.Entry;
  * The default implementation of {@link DataKeyBuilder}.
  */
 public class DataKeyBuilderDefault implements DataKeyBuilder {
+    /** Create a new instance. */
+    public DataKeyBuilderDefault() {
+    }
 
     private final List<Entry<Integer, Entry<String, Object>>> keys = new ArrayList<>();
 

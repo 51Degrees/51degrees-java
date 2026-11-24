@@ -302,6 +302,14 @@ public interface ClientsidePropertyServiceCore {
             serveContent(request, response, ContentTypes.Json);
         }
 
+        /**
+         * Serve the JavaScript or JSON for the request.
+         *
+         * @param request the request
+         * @param response the response to write to
+         * @param contentType whether to serve JavaScript or JSON
+         * @throws IOException if the response could not be written
+         */
         public void serveContent(
             HttpServletRequest request,
             HttpServletResponse response,

@@ -40,6 +40,18 @@ import java.util.Map;
 public interface Pipeline extends AutoCloseable {
 
     /**
+     * Close the Pipeline and, if it was built to, its Flow Elements and the
+     * services added to it. It throws no checked exception, so a
+     * try-with-resources block needs no catch for it.
+     * @throws fiftyone.pipeline.core.exceptions.CloseException if closing a
+     * Flow Element or service threw. Every Flow Element and service is
+     * closed first, and the first failure is the cause, with any others
+     * suppressed in it.
+     */
+    @Override
+    void close();
+
+    /**
      * Create a new {@link FlowData} instance linked to this Pipeline. The
      * resulting FlowData's {@link FlowData#process()} method will cause
      * the FlowData to be processed.
@@ -90,7 +102,7 @@ public interface Pipeline extends AutoCloseable {
      * Add a service to be used by this Pipeline. If the service supports 
      * Closeable or AutoCloseable, it will be closed automatically when the
      * pipeline is closed.
-     * @param service
+     * @param service the service to add
      */
     void addService(PipelineService service);
     

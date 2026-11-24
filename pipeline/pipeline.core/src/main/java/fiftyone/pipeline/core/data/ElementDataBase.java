@@ -127,6 +127,9 @@ public abstract class ElementDataBase extends DataBase implements ElementData {
     }
 
     /**
+     * Returns true once a Flow Element that writes this instance has finished,
+     * until one that shares it starts to process or its pool gives it to
+     * another Flow Data.
      * @return true once a Flow Element that writes this instance has
      * finished, until one that shares it starts to process or its pool gives
      * it to another Flow Data
@@ -155,6 +158,7 @@ public abstract class ElementDataBase extends DataBase implements ElementData {
     }
 
     /**
+     * Returns true if this instance can be returned to its Flow Element's pool.
      * @return true if this instance can be returned to its Flow Element's
      * pool
      */

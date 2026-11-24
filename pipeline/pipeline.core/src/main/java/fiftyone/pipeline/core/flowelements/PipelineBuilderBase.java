@@ -71,9 +71,14 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
      */
     protected final List<PipelineService> services = new ArrayList<>();
     
+    /** Whether the Pipeline closes its elements when it is closed. */
     protected boolean autoCloseElements =
         Constants.DEFAULT_AUTO_CLOSE_ELEMENTS;
 
+    /**
+     * Whether the Pipeline records errors from processing instead of throwing
+     * them.
+     */
     protected boolean suppressProcessExceptions =
         Constants.DEFAULT_SUPPRESS_PROCESS_EXCEPTIONS;
 
@@ -97,6 +102,11 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
         this.logger = loggerFactory.getLogger(getClass().getName());
     }
 
+    /**
+     * The elements added so far.
+     *
+     * @return the elements
+     */
     protected List<FlowElement> getFlowElements() {
         return flowElements;
     }

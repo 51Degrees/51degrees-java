@@ -24,6 +24,7 @@ package fiftyone.pipeline.engines.fiftyone.data;
 
 import java.io.IOException;
 
+/** Default implementation of {@link ValueMetaData}. */
 public class ValueMetaDataDefault implements ValueMetaData {
 
     private final String name;
@@ -31,11 +32,23 @@ public class ValueMetaDataDefault implements ValueMetaData {
     private final String url;
     private FiftyOneAspectPropertyMetaData property = null;
 
+    /**
+     * Create a value with a name only.
+     *
+     * @param name the value
+     */
     public ValueMetaDataDefault(
         String name) {
         this(name, "", "");
     }
 
+    /**
+     * Create a new instance.
+     *
+     * @param name the value
+     * @param description the description of the value
+     * @param url a page that describes the value
+     */
     public ValueMetaDataDefault(
         String name,
         String description,
@@ -45,6 +58,11 @@ public class ValueMetaDataDefault implements ValueMetaData {
         this.url = url;
     }
 
+    /**
+     * Set the property the value belongs to.
+     *
+     * @param property the property
+     */
     public void setProperty(FiftyOneAspectPropertyMetaData property) {
         this.property = property;
     }

@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
  */
 public class IPIntelligencePipelineBuilder {
 
+    /** Creates the loggers for the Pipeline and its elements. */
     protected final ILoggerFactory loggerFactory;
     private final DataUpdateService dataUpdateService;
     private final HttpClient httpClient;

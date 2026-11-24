@@ -38,20 +38,33 @@ public abstract class CloudPipelineBuilderBase<
     TBuilder extends CloudPipelineBuilderBase<TBuilder>>
     extends PrePackagedPipelineBuilderBase<TBuilder> {
 
+    /** The cloud service endpoint, or empty for the default. */
     protected String url = "";
 
+    /** The data endpoint, or empty for the default. */
     protected String dataEndpoint = "";
 
+    /** The properties endpoint, or empty for the default. */
     protected String propertiesEndpoint = "";
 
+    /** The evidence keys endpoint, or empty for the default. */
     protected String evidenceKeysEndpoint = "";
 
+    /** The resource key sent with each request. */
     protected String resourceKey = "";
 
+    /** The license key sent with each request. */
     protected String licenseKey = "";
 
+    /**
+     * The properties to ask the cloud service for, or empty for all the key
+     * gives.
+     */
     protected final List<String> requestedProperties = new ArrayList<>();
 
+    /**
+     * The value of the Origin header sent with each request, or empty for none.
+     */
     protected String cloudRequestOrigin = "";
 
     /**

@@ -30,6 +30,10 @@ import java.util.List;
  * Static helper methods for manipulating strings.
  */
 public class StringManipulation {
+    /** Create a new instance. */
+    public StringManipulation() {
+    }
+
     /**
      * Join a list of strings using the delimiter provided.
      * @param strings to join

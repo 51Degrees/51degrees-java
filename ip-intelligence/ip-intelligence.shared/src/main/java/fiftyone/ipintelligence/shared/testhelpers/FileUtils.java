@@ -36,6 +36,7 @@ import java.util.Optional;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
+/** Finds the data and evidence files the tests use. */
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public class FileUtils {
     /**
@@ -45,11 +46,18 @@ public class FileUtils {
      */
     public static final String IPI_PATH_VARIABLE = "_51DEGREES_IPI_PATH";
 
+    /**
+     * Name of an Enterprise data file, searched for when
+     * {@link #ENTERPRISE_IPI_V41_DATA_FILE_NAME} is not found.
+     */
     public static final String ENTERPRISE_IPI_DATA_FILE_NAME = "Enterprise-IpIntelligenceV41.ipi";
 
+    /** Name of the Enterprise data file, searched for first. */
     public static final String ENTERPRISE_IPI_V41_DATA_FILE_NAME = "51Degrees-EnterpriseIpiV41.ipi";
+    /** Name of the free Lite data file. */
     public static final String LITE_IPI_DATA_FILE_NAME = "51Degrees-LiteV41.ipi";
     private static  Optional<File> IPI_DATA_FILE;
+    /** Name of the evidence file the tests use. */
     public static final String EVIDENCE_FILE_NAME = "evidence.yml";
     private static Optional<File> EVIDENCE_FILE;
 
@@ -127,6 +135,12 @@ public class FileUtils {
         return Objects.isNull(value) || value.isEmpty() ? null : value;
     }
 
+    /**
+     * Find the evidence file the tests use, searching once and keeping the
+     * result.
+     *
+     * @return the file, or null if it was not found
+     */
     public static File getEvidenceFile() {
         if (Objects.nonNull(EVIDENCE_FILE)) {
             return EVIDENCE_FILE.orElse(null);

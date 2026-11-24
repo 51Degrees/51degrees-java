@@ -27,6 +27,14 @@ import fiftyone.geolocation.core.data.GeoEvidence;
 import java.net.MalformedURLException;
 import java.net.URL;
 
+/** Creates the URL of a request to a location web service. */
 public interface RequestFormatter {
+    /**
+     * Create the URL for the evidence given.
+     *
+     * @param evidence the position or IP address to look up
+     * @return the URL to request
+     * @throws MalformedURLException if the URL is not valid
+     */
     URL format(GeoEvidence evidence) throws MalformedURLException;
 }

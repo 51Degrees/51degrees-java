@@ -171,6 +171,19 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <!-- SWIG writes the classes in the package named below
+                         from src/main/cxx/hash_java.i with no javadoc, so
+                         javadoc does not check that package. Every other
+                         package of the module is checked. -->
+                    <additionalOptions>
+                        <additionalOption>-Xdoclint/package:-fiftyone.devicedetection.hash.engine.onpremise.interop.swig</additionalOption>
+                    </additionalOptions>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

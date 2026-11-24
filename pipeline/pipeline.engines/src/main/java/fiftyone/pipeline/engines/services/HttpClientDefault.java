@@ -42,6 +42,7 @@ public class HttpClientDefault implements HttpClient {
 
     private final HostLookup hostLookup;
 
+    /** Create a client that finds hosts with the default lookup. */
     public HttpClientDefault() {
         this(HostLookup.DEFAULT);
     }

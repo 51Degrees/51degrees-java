@@ -26,8 +26,8 @@ import java.util.Collection;
 
 /**
  * Aggregation of multiple exceptions. All exceptions which caused an instance
- * of this are added to the {@link #suppressedExceptions} list and can be
- * retrieved via the {@link #getSuppressed()} method.
+ * of this are added as suppressed exceptions and can be retrieved with the
+ * {@link #getSuppressed()} method.
  */
 public class AggregateException extends RuntimeException {
 

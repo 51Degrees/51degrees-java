@@ -49,6 +49,16 @@ import java.util.Map;
 public interface FlowData extends AutoCloseable {
 
     /**
+     * Close the Element Data that needs it and give pooled Element Data back
+     * to its pool. It throws no checked exception, so a try-with-resources
+     * block needs no catch for it.
+     * @throws fiftyone.pipeline.core.exceptions.CloseException if closing
+     * Element Data threw a checked exception, which is the cause
+     */
+    @Override
+    void close();
+
+    /**
      * Process this FlowData via the owning Pipeline. Once this method returns
      * the FlowData will not be changed further and cannot be processed again.
      * It is read only from then on, apart from lazy properties, so adding

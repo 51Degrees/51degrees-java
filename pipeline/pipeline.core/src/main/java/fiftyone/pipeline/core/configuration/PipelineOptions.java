@@ -44,6 +44,9 @@ import java.util.Map;
  */
 @XmlRootElement(name = "PipelineOptions")
 public class PipelineOptions {
+    /** Create a new instance. */
+    public PipelineOptions() {
+    }
 
     /**
      * Configuration information for the {@link FlowElement}s that the Pipeline

@@ -37,6 +37,7 @@ import org.slf4j.ILoggerFactory;
 
 import java.util.List;
 
+/** Builder for the {@link GeoLocationCloudEngine}. */
 @ElementBuilder(alternateName = "CloudGeoLocation")
 public class GeoLocationCloudEngineBuilder extends CloudAspectEngineBuilderBase<
     GeoLocationCloudEngineBuilder,
@@ -45,19 +46,44 @@ public class GeoLocationCloudEngineBuilder extends CloudAspectEngineBuilderBase<
     private CloudRequestEngine requestEngine;
     private Enums.GeoLocationProvider provider;
 
+    /**
+     * Create a new builder.
+     *
+     * @param loggerFactory creates the loggers the engine uses
+     */
     public GeoLocationCloudEngineBuilder(ILoggerFactory loggerFactory) {
         super(loggerFactory);
     }
     
+    /**
+     * Set the location data provider by name.
+     *
+     * @param provider name of a {@link Enums.GeoLocationProvider} value
+     * @return this builder
+     * @throws Exception if the name is not a provider
+     */
     public GeoLocationCloudEngineBuilder setGeoLocationProvider(String provider) throws Exception {
         this.provider = Enums.GeoLocationProvider.valueOf(provider);
         return this;
     }
     
+    /**
+     * Build an engine using the current options.
+     *
+     * @return a new engine
+     * @throws Exception if the engine could not be created
+     */
     public GeoLocationCloudEngine build() throws Exception {
         return buildEngine();
     }
 
+    /**
+     * Build an engine for the provider given.
+     *
+     * @param provider the location data provider
+     * @return a new engine
+     * @throws Exception if the engine could not be created
+     */
     public GeoLocationCloudEngine build(Enums.GeoLocationProvider provider) throws Exception {
         this.provider = provider;
         return buildEngine();

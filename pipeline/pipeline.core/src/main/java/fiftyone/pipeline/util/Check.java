@@ -31,6 +31,10 @@ import static org.apache.commons.lang3.BooleanUtils.isFalse;
  * Helper to guard that an argument fulfills its contract
  */
 public class Check {
+    /** Create a new instance. */
+    public Check() {
+    }
+
     /**
      * Throw an {@link IllegalArgumentException} if a condition is not met.
      * @param condition result of a conditional expression
@@ -57,20 +61,44 @@ public class Check {
         return value;
     }
 
+    /**
+     * Whether a string has a character other than white space.
+     *
+     * @param arg the string
+     * @return true if it is not null and not blank
+     */
     public static boolean notNullOrBlank(String arg){
         return Objects.nonNull(arg) && isFalse(arg.trim().isEmpty());
     }
 
+    /**
+     * Whether a string is null or holds only white space.
+     *
+     * @param arg the string
+     * @return true if it is null or blank
+     */
     public static boolean isNullOrBlank(String arg){
         return Objects.isNull(arg) || arg.trim().isEmpty();
     }
 
+    /**
+     * Whether a file exists at the path given.
+     *
+     * @param pathString the path
+     * @return false if the path is blank or nothing is there
+     */
     public static boolean fileExists(String pathString) {
         if (isNullOrBlank(pathString)) {
             return false;
         }
         return Paths.get(pathString).toFile().exists();
     }
+    /**
+     * Whether no file exists at the path given.
+     *
+     * @param pathString the path
+     * @return true if the path is blank or nothing is there
+     */
     public static boolean notFileExists(String pathString) {
         return !fileExists(pathString);
     }

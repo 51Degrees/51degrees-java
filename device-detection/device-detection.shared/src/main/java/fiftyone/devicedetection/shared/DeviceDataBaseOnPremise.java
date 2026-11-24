@@ -53,6 +53,10 @@ import static fiftyone.pipeline.util.Types.getPrimitiveTypeMap;
 public abstract class DeviceDataBaseOnPremise extends DeviceDataBase
     implements ProvidesValuesAsString {
 
+    /**
+     * Maps each primitive type to its boxed type, used when converting native
+     * values.
+     */
     protected final Map<Class<?>, Class<?>> primitiveTypes;
     private final Object dataLock = new Object();
     private final Object getLock = new Object();

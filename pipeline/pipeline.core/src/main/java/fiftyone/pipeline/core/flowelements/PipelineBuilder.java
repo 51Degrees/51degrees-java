@@ -194,10 +194,10 @@ public class PipelineBuilder
     }
 
     /**
-     * Uses reflection to populate {@link #elementBuilders} with all classes
-     * which are annotated with the {@link ElementBuilder} annotation.
+     * Uses reflection to find all classes which are annotated with the
+     * {@link ElementBuilder} annotation.
      *
-     * @return
+     * @return the classes found
      */
     public static Set<Class<?>> getAvailableElementBuilders() {
 
@@ -1075,6 +1075,8 @@ public class PipelineBuilder
 
     /**
      * Evaluate strings for substitution of system properties etc.
+     * @param value the string to evaluate
+     * @return the string with each variable replaced
      */
     public static String evaluate(String value) {
         StringSubstitutor substitutor = FiftyOneLookup.getSubstitutor();

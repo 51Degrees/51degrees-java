@@ -24,9 +24,10 @@ the native engines from `cxx` and does need them, as the README says.
 ### Prerequisites
 
 - Git.
-- A JDK, 8 or later. CI tests 8, 11, 17 and 21 (`ci/options.json`), and
-  builds and runs the examples on the JDK each runner has (see
-  [What CI tests](#pitfalls)).
+- JDK 17. The examples compile for Java 8 and treat every compiler warning
+  as an error, and javac 21 and later warn that Java 8 is obsolete. CI
+  compiles with JDK 17 and runs the tests on JDK 8, 11, 17 and 21
+  (`ci/options.json`, see [What CI tests](#pitfalls)).
 - Maven 3.8 or later, or the `mvnw` wrapper at the root.
 - Network access to GitHub, to Maven Central for the packages the examples
   use, and to `distributor.51degrees.com` for the data files.
@@ -251,7 +252,7 @@ and for a list of properties that fails once or every time.
   when CI has them. Publish tests them against the packages it has just
   built (`ci/run-integration-tests.ps1`).
   [examples-fresh-clone.yml](.github/workflows/examples-fresh-clone.yml)
-  does what [Run the examples](#run-the-examples) says, with the JDK and
+  does what [Run the examples](#run-the-examples) says, with JDK 17 and the
   Maven each runner has. It
   builds the console examples against the published packages and runs each
   product's `GettingStartedOnPrem` jar from the repository root with no

@@ -22,15 +22,25 @@
 
 package fiftyone.pipeline.javascriptbuilder;
 
+/** Evidence keys and defaults used by the JavaScript Builder Element. */
 public class Constants {
+    /** Create a new instance. */
+    public Constants() {
+    }
+
+    /** Evidence key of the Host header. */
     public static final String EVIDENCE_HOST_KEY = 
             fiftyone.pipeline.core.Constants.EVIDENCE_HTTPHEADER_PREFIX +
             fiftyone.pipeline.core.Constants.EVIDENCE_SEPERATOR +
             "Host";
     
+    /** Suffix of the evidence that names the JavaScript object. */
     public static final String EVIDENCE_OBJECT_NAME_SUFFIX =
             "fod-js-object-name";
     
+    /**
+     * Evidence key, in the query string, of the name of the JavaScript object.
+     */
     public static final String EVIDENCE_OBJECT_NAME = 
              fiftyone.pipeline.core.Constants.EVIDENCE_QUERY_PREFIX +
              fiftyone.pipeline.core.Constants.EVIDENCE_SEPERATOR +
@@ -52,8 +62,11 @@ public class Constants {
             fiftyone.pipeline.core.Constants.EVIDENCE_SEPERATOR +
             EVIDENCE_ENABLE_COOKIES_SUFFIX;
 
+    /** Protocol of the callback URL when none is configured or found. */
     public static final String DEFAULT_PROTOCOL = "https";
     
+    /** Path of the template the JavaScript is made from. */
     public static final String TEMPLATE = "/fiftyone/pipeline/javascriptbuilder/templates/JavaScriptResource.mustache";
+    /** Name of the JavaScript object when none is configured. */
     public static final String DEFAULT_OBJECT_NAME = "fod";
 }

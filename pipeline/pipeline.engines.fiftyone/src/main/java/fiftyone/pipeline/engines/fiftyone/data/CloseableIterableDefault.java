@@ -33,12 +33,17 @@ public class CloseableIterableDefault<T> implements CloseableIterable<T> {
 
     private final Iterable<T> iterable;
 
+    /**
+     * Create a new instance.
+     *
+     * @param iterable the items to iterate over
+     */
     public CloseableIterableDefault(Iterable<T> iterable) {
         this.iterable = iterable;
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
     }
 
     @Override

@@ -32,9 +32,17 @@ import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
+/** A source held in a file. */
 public class SourceFile implements Source {
     private final FileChannel channel;
 
+    /**
+     * Create a source for the file given.
+     *
+     * @param fileName path of the file
+     * @throws IOException if the file could not be opened
+     * @throws FileNotFoundException if the file does not exist
+     */
     public SourceFile(String fileName)
         throws IOException, FileNotFoundException {
         try(FileInputStream fis = new FileInputStream(fileName)){

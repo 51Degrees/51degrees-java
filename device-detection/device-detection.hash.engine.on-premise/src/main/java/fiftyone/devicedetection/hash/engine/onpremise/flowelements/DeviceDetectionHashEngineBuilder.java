@@ -187,7 +187,8 @@ public class DeviceDetectionHashEngineBuilder
     /**
      * Provide a hint as to how many threads will access the pipeline simultaneously
      * <p>
-     * Default is the result of {@link Runtime#getRuntime()#getAvailableProcessors()}
+     * Default is the result of
+     * {@code Runtime.getRuntime().availableProcessors()}
      * @see <a href="https://51degrees.com/documentation/_device_detection__features__concurrent_processing.html?utm_source=code&amp;utm_medium=comment&amp;utm_campaign=51degrees-java&amp;utm_content=device-detection.hash.engine.on-premise-src-main-java-fiftyone-devicedetection-hash-engine-onpremise-flowelements-devicedetectionhashenginebuilder.java&amp;utm_term=setconcurrency">Concurrent processing</a>
      * @param concurrency expected concurrent accesses
      * @return this builder
