@@ -75,8 +75,9 @@ longer includes them, because Git leaves a removed submodule's folder on disk.
 You need JDK 17 and either Maven 3.8 or later or the `mvnw` wrapper in this
 folder. The build compiles for Java 8 and treats every compiler warning as an
 error, and javac 21 and later warn that Java 8 is obsolete, so JDK 17 is the
-one to build with. The packages it makes run on Java 8 or later. The two on-premise engines compile their native
-library during the build, which needs CMake 3.10 or later and a C++ toolchain:
+one to build with. The packages it makes run on Java 8 or later. The two
+on-premise engines compile their native library during the build, which needs
+CMake 3.10 or later and a C++ toolchain:
 Visual Studio with the C++ workload on Windows, GCC or Clang elsewhere.
 
 From this folder:

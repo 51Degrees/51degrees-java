@@ -346,28 +346,33 @@ public class PerformanceBenchmark {
             for (Map<String, String> evidence : testList) {
                 // the benchmark is for detection time only
 
-                // A try-with-resource block MUST be used for the
-                // FlowData instance. This ensures that native resources
+                // The FlowData instance MUST be closed in a finally
+                // block. This ensures that native resources
                 // created by the device detection engine are freed.
-                try (FlowData flowData = pipeline.createFlowData()) {
-                    flowData
-                            .addEvidence(evidence)
-                            .process();
+                try {
+                    FlowData flowData = pipeline.createFlowData();
+                    try {
+                        flowData
+                                .addEvidence(evidence)
+                                .process();
 
-                    // Calculate a checksum to compare different runs on
-                    // the same data.
-                    DeviceData device = flowData.get(DeviceData.class);
-                    if (device != null) {
-                        if (device.getIsMobile().hasValue()) {
-                            Object value = device.getIsMobile().getValue();
-                            if (value != null) {
-                                result.checkSum += value.hashCode();
+                        // Calculate a checksum to compare different runs on
+                        // the same data.
+                        DeviceData device = flowData.get(DeviceData.class);
+                        if (device != null) {
+                            if (device.getIsMobile().hasValue()) {
+                                Object value = device.getIsMobile().getValue();
+                                if (value != null) {
+                                    result.checkSum += value.hashCode();
+                                }
                             }
                         }
-                    }
-                    result.count++;
-                    if (result.count >= TESTS_PER_THREAD) {
-                        break;
+                        result.count++;
+                        if (result.count >= TESTS_PER_THREAD) {
+                            break;
+                        }
+                    } finally {
+                        flowData.close();
                     }
                 } catch (Exception e) {
                     logger.error("Exception getting flow data", e);

@@ -141,7 +141,7 @@ public interface Detection {
     /**
      * The thing that actually does the detection
      */
-    interface Solution extends AutoCloseable {
+    interface Solution {
 
         void initialise(int numberOfThreads) throws Exception;
 
@@ -158,10 +158,9 @@ public interface Detection {
         }
 
         /**
-         * Frees what the solution holds. It throws no checked exception, so
-         * a try-with-resources block needs no catch for it.
+         * Frees what the solution holds.
+         * @throws Exception if what it holds could not be closed
          */
-        @Override
-        void close();
+        void close() throws Exception;
     }
 }

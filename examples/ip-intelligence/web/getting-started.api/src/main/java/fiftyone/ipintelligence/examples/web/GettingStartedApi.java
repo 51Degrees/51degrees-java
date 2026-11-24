@@ -267,7 +267,8 @@ public class GettingStartedApi extends HttpServlet {
         // A Flow Data cannot be used by two threads at once. Work handed to
         // another thread or task gets the values it needs, read here on the
         // request's thread, not the Flow Data.
-        try (FlowData flowData = pipeline.createFlowData()) {
+        FlowData flowData = pipeline.createFlowData();
+        try {
             flowData.addEvidence(evidence);
             flowData.process();
 
@@ -280,6 +281,8 @@ public class GettingStartedApi extends HttpServlet {
             }
             response.setContentType("application/json");
             response.getWriter().write(jsonData.getJson());
+        } finally {
+            flowData.close();
         }
     }
 

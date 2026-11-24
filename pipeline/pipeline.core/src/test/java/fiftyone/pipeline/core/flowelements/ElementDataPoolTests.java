@@ -292,9 +292,9 @@ public class ElementDataPoolTests {
     }
 
     /**
-     * Closing a Flow Data a second time, as a try-with-resources around one
-     * that a web filter also closes does, must not give back an instance
-     * that the pool has since given to another request.
+     * Closing a Flow Data a second time, as happens when the code that used
+     * it and a web filter both close it, must not give back an instance that
+     * the pool has since given to another request.
      */
     @Test
     public void closingTwice_GivesNoInstanceToTwoRequests() throws Exception {
@@ -303,50 +303,45 @@ public class ElementDataPoolTests {
                 LoggerFactory.getILoggerFactory())
                 .addFlowElement(new Counter(allocated))
                 .setAutoCloseElements(true)
-                .build();
-             FlowData first = pipeline.createFlowData()) {
-            first.addEvidence("query.request", "first");
-            first.process();
-            Object pooled = first.get("counter");
-            closeAsWebFilter(first);
+                .build()) {
+            FlowData first = pipeline.createFlowData();
+            try {
+                first.addEvidence("query.request", "first");
+                first.process();
+                Object pooled = first.get("counter");
+                first.close();
 
-            try (FlowData second = pipeline.createFlowData()) {
-                second.addEvidence("query.request", "second");
-                second.process();
-                assertSame(
-                    "The instance was not reused, so this proves nothing",
-                    pooled,
-                    second.get("counter"));
-
-                closeAsWebFilter(first);
-
-                try (FlowData third = pipeline.createFlowData()) {
-                    third.addEvidence("query.request", "third");
-                    third.process();
-                    assertNotSame(
-                        "A second close gave an instance that another " +
-                            "request holds back to its pool",
+                try (FlowData second = pipeline.createFlowData()) {
+                    second.addEvidence("query.request", "second");
+                    second.process();
+                    assertSame(
+                        "The instance was not reused, so this proves nothing",
                         pooled,
-                        third.get("counter"));
+                        second.get("counter"));
+
+                    first.close();
+
+                    try (FlowData third = pipeline.createFlowData()) {
+                        third.addEvidence("query.request", "third");
+                        third.process();
+                        assertNotSame(
+                            "A second close gave an instance that another " +
+                                "request holds back to its pool",
+                            pooled,
+                            third.get("counter"));
+                    }
+                    assertEquals(
+                        "The second request's value was overwritten",
+                        "second",
+                        ((ElementDataBase) second.get("counter")).get("request"));
                 }
-                assertEquals(
-                    "The second request's value was overwritten",
-                    "second",
-                    ((ElementDataBase) second.get("counter")).get("request"));
+            } finally {
+                first.close();
             }
         }
         assertEquals(
             "Element Data allocated for three requests, two at once",
             2,
             allocated.get());
-    }
-
-    /**
-     * Closes the Flow Data as a web filter does at the end of a request,
-     * apart from the try-with-resources block that also closes it.
-     * @param data the Flow Data to close
-     */
-    private static void closeAsWebFilter(FlowData data) {
-        data.close();
     }
 }

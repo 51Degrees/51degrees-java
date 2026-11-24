@@ -276,14 +276,17 @@ public class PerformanceBenchmark {
      */
     static List<String> benchmarkProperties(String dataFileLocation)
             throws Exception {
-        try (IPIntelligenceOnPremiseEngine engine =
-                     new IPIntelligenceOnPremiseEngineBuilder()
-                             .setPerformanceProfile(LowMemory)
-                             .setAutoUpdate(false)
-                             .build(dataFileLocation, false)) {
+        IPIntelligenceOnPremiseEngine engine =
+                new IPIntelligenceOnPremiseEngineBuilder()
+                        .setPerformanceProfile(LowMemory)
+                        .setAutoUpdate(false)
+                        .build(dataFileLocation, false);
+        try {
             return Collections.singletonList(
                     DataFileHelper.hasProperty(engine, "RegisteredName") ?
                             "RegisteredName" : "AsnName");
+        } finally {
+            engine.close();
         }
     }
 
@@ -377,33 +380,38 @@ public class PerformanceBenchmark {
             for (Map<String, String> evidence : testList) {
                 // the benchmark is for processing time only
 
-                // A try-with-resource block MUST be used for the
-                // FlowData instance. This ensures that native resources
+                // The FlowData instance MUST be closed in a finally
+                // block. This ensures that native resources
                 // created by the IP Intelligence engine are freed.
-                try (FlowData flowData = pipeline.createFlowData()) {
-                    flowData
-                            .addEvidence(evidence)
-                            .process();
+                try {
+                    FlowData flowData = pipeline.createFlowData();
+                    try {
+                        flowData
+                                .addEvidence(evidence)
+                                .process();
 
-                    // Calculate a checksum to compare different runs on
-                    // the same data.
-                    IPIntelligenceData ipData = flowData.get(IPIntelligenceData.class);
-                    if (ipData != null) {
-                        AspectPropertyValue<String> name = readRegisteredName ?
-                                ipData.getRegisteredName() : ipData.getAsnName();
-                        if (name.hasValue()) {
-                            String value = name.getValue();
-                            if (value != null) {
-                                result.checkSum += value.hashCode();
+                        // Calculate a checksum to compare different runs on
+                        // the same data.
+                        IPIntelligenceData ipData = flowData.get(IPIntelligenceData.class);
+                        if (ipData != null) {
+                            AspectPropertyValue<String> name = readRegisteredName ?
+                                    ipData.getRegisteredName() : ipData.getAsnName();
+                            if (name.hasValue()) {
+                                String value = name.getValue();
+                                if (value != null) {
+                                    result.checkSum += value.hashCode();
 //                                for (IWeightedValue<?> weightedValue : value) {
 //                                    result.checkSum += weightedValue.getValue().hashCode();
 //                                }
+                                }
                             }
                         }
-                    }
-                    result.count++;
-                    if (result.count >= TESTS_PER_THREAD) {
-                        break;
+                        result.count++;
+                        if (result.count >= TESTS_PER_THREAD) {
+                            break;
+                        }
+                    } finally {
+                        flowData.close();
                     }
                 } catch (Exception e) {
                     logger.error("Exception getting flow data", e);

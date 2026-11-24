@@ -163,8 +163,8 @@ public class SuspiciousOnPrem {
         For more information about builders in general see the documentation at
         https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=configuration-builders
 
-        Note that we wrap the creation of a pipeline in a try/resources to control its lifecycle */
-        try (Pipeline pipeline = new IPIntelligencePipelineBuilder()
+        Note that we close the pipeline in a finally block to control its lifecycle */
+        Pipeline pipeline = new IPIntelligencePipelineBuilder()
                 .useOnPremise(dataFileLocation, false)
                 // We use the low memory profile, because this example needs
                 // properties only the Enterprise data file has, and that file
@@ -183,7 +183,8 @@ public class SuspiciousOnPrem {
                 .setAutoUpdate(false)
                 .setDataUpdateOnStartup(false)
                 .setDataFileSystemWatcher(false)
-                .build()) {
+                .build();
+        try {
 
             // carry out some sample detections
             for (Map<String, String> evidence : evidenceList) {
@@ -195,6 +196,8 @@ public class SuspiciousOnPrem {
             DataFileHelper.logDataFileInfo(engine);
 
             logger.info("All done");
+        } finally {
+            pipeline.close();
         }
     }
 
@@ -209,7 +212,8 @@ public class SuspiciousOnPrem {
                                         Pipeline pipeline,
                                         OutputStream out) throws Exception {
         PrintWriter writer = new PrintWriter(out);
-        try (FlowData data = pipeline.createFlowData()) {
+        FlowData data = pipeline.createFlowData();
+        try {
 
             // Add the evidence values to the flow data and process it
             data.addEvidence(evidence);
@@ -276,6 +280,8 @@ public class SuspiciousOnPrem {
             writer.println("\tRegisteredCountry: " + registeredCountry);
             writer.println("\tHumanProbability: " + human);
             writer.println("\tIsSuspicious: " + isSuspicious);
+        } finally {
+            data.close();
         }
         writer.println();
         writer.flush();

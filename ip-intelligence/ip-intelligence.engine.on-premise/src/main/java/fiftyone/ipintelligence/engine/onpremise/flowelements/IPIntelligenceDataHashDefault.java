@@ -182,24 +182,53 @@ public class IPIntelligenceDataHashDefault
             Function<TWeightedValueSwig, TElement> elementConverter,
             Consumer<TListValueSwig> listValueSwigClose,
             Consumer<TListSwig> listSwigClose) {
-        TListValueSwig listValueSwig = listValueSwigSupplier.get();
-        try {
+        useAndClose(listValueSwigSupplier.get(), listValueSwig -> {
             if (listValueSwigHasValue.test(listValueSwig)) {
-                TListSwig listSwig = listSwigExtractor.apply(listValueSwig);
-                try {
+                useAndClose(listSwigExtractor.apply(listValueSwig), listSwig -> {
                     List<?> convertedWeightedElements = listSwig.stream()
                             .map(elementConverter)
                             .collect(Collectors.toList());
                     result.setValue(Collections.unmodifiableList(convertedWeightedElements));
-                } finally {
-                    listSwigClose.accept(listSwig);
-                }
+                }, listSwigClose);
             }
             else {
                 result.setNoValueMessage(listValueSwigGetNoValueMessage.apply(listValueSwig));
             }
+        }, listValueSwigClose);
+    }
+
+    /**
+     * Passes a native object to the action and then closes it, as a
+     * try-with-resources statement does. A null object is not closed, and
+     * when the action throws, an exception from the close is added to the
+     * action's exception as suppressed rather than replacing it.
+     * @param resource the native object, or null
+     * @param action what to do with the object
+     * @param close how to close the object
+     * @param <T> the type of the native object
+     */
+    static <T> void useAndClose(
+            T resource,
+            Consumer<T> action,
+            Consumer<T> close) {
+        Throwable primary = null;
+        try {
+            action.accept(resource);
+        } catch (Throwable t) {
+            primary = t;
+            throw t;
         } finally {
-            listValueSwigClose.accept(listValueSwig);
+            if (resource != null) {
+                if (primary != null) {
+                    try {
+                        close.accept(resource);
+                    } catch (Throwable suppressed) {
+                        primary.addSuppressed(suppressed);
+                    }
+                } else {
+                    close.accept(resource);
+                }
+            }
         }
     }
 

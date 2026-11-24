@@ -178,9 +178,12 @@ public class DetectionImplFiftyOneDegrees {
 
         @Override
         public Detection.Properties detect(Detection.Request request) throws Exception {
-            try (FlowData flowData = pipeline.createFlowData()){
+            FlowData flowData = pipeline.createFlowData();
+            try {
                 flowData.addEvidence(request.getEvidence()).process();
                 return new FiftyOneProperties(request, flowData, missing);
+            } finally {
+                flowData.close();
             }
         }
 
@@ -201,7 +204,7 @@ public class DetectionImplFiftyOneDegrees {
         }
 
         @Override
-        public void close() {
+        public void close() throws Exception {
             if (Objects.nonNull(pipeline)) {
                 pipeline.close();
             }

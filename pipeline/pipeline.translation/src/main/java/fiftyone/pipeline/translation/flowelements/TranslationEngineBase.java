@@ -122,8 +122,8 @@ public class TranslationEngineBase<T extends ITranslationData>
     /**
      * Create a new translation engine.
      * @param sourceElementDataKey element data key of the source flow element
-     * @param translations the translations to execute (source -> destination
-     *                     property name pairs)
+     * @param translations the translations to execute, as pairs of source
+     *                     and destination property names
      * @param sources the YAML translation sources, keyed on file name
      * @param fixedLanguage fixed language to translate to. If set, the engine
      *                     always translates to this language; otherwise the

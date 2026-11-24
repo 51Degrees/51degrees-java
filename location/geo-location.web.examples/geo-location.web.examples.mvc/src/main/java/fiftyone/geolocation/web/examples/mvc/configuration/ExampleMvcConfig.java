@@ -61,27 +61,27 @@ import static fiftyone.pipeline.web.mvc.components.FiftyOneInterceptor.enableCli
  * 5. Add the interceptor.
  *
  * 6. Inject the `FlowDataProvider` into a controller.
- * <pre>{@code
- * @Controller
- * @RequestMapping("/")
+ * <pre>
+ * {@literal @}Controller
+ * {@literal @}RequestMapping("/")
  * public class ExampleController {
  *     private FlowDataProvider flowDataProvider;
  *
- *     @Autowired
+ *     {@literal @}Autowired
  *     public ExampleController(FlowDataProvider flowDataProvider) {
  *         this.flowDataProvider = flowDataProvider;
  *     }
  *     ...
  * }
- * }</pre>
+ * </pre>
  *
  * 7. Use the results contained in the flow data to display something on a page view.
- * <pre>{@code
- * @Controller
- * @RequestMapping("/")
+ * <pre>
+ * {@literal @}Controller
+ * {@literal @}RequestMapping("/")
  * public class ExampleController {
  *     ...
- *     @RequestMapping(method = RequestMethod.GET)
+ *     {@literal @}RequestMapping(method = RequestMethod.GET)
  *     public String get(ModelMap model, HttpServletRequest request) {
  *         // A Flow Data cannot be used by two threads at once. Work handed to
  *         // another thread or task gets the values it needs, read here on the
@@ -97,7 +97,7 @@ import static fiftyone.pipeline.web.mvc.components.FiftyOneInterceptor.enableCli
  *     }
  *     ...
  * }
- * }</pre>
+ * </pre>
  * ## Controller
  
  * \include mvc/controller/ExampleController.java

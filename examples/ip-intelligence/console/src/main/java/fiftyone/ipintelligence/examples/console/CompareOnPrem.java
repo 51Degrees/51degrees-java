@@ -301,7 +301,8 @@ public class CompareOnPrem {
         for (String property : LOCATION_PROPERTIES) {
             builder.setProperty(property);
         }
-        try (Pipeline pipeline = builder.build()) {
+        Pipeline pipeline = builder.build();
+        try {
 
             // Read the truth records, skipping duplicate IP addresses.
             List<Truth> truths = readTruths(truthFile);
@@ -343,6 +344,8 @@ public class CompareOnPrem {
             IPIntelligenceOnPremiseEngine engine =
                     pipeline.getElement(IPIntelligenceOnPremiseEngine.class);
             DataFileHelper.logDataFileInfo(engine);
+        } finally {
+            pipeline.close();
         }
     }
 
@@ -391,7 +394,8 @@ public class CompareOnPrem {
     private static String processTruth(Pipeline pipeline, Truth truth)
             throws Exception {
         // Get the data for the IP address.
-        try (FlowData flowData = pipeline.createFlowData()) {
+        FlowData flowData = pipeline.createFlowData();
+        try {
             flowData.addEvidence("query.client-ip", truth.ip);
             flowData.process();
             IPIntelligenceData data = flowData.get(IPIntelligenceData.class);
@@ -441,6 +445,8 @@ public class CompareOnPrem {
                     area.getSquareKms() + "," +
                     area.getGeometries() + "," +
                     area.getContains();
+        } finally {
+            flowData.close();
         }
     }
 

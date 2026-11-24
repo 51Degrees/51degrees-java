@@ -60,10 +60,10 @@ public class BinaryWriter implements AutoCloseable {
     }
 
     /**
-     * Create a writer with no output stream. The stream given is not written
-     * to.
+     * Construct a new instance of the binary writer that writes to the byte
+     * array output stream given.
      *
-     * @param outputStream not used
+     * @param outputStream where the data should be written
      */
     public BinaryWriter(ByteArrayOutputStream outputStream) {
         this();

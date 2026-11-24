@@ -365,7 +365,7 @@ public class UpdateDataFile {
 
             // Build the device detection pipeline  and pass in the desired settings to configure
             // automatic updates.
-            try (Pipeline pipeline = new DeviceDetectionPipelineBuilder()
+            Pipeline pipeline = new DeviceDetectionPipelineBuilder()
                     // specify the filename for the data file. When using update on start-up
                     // the file need not exist, but the directory it is in must exist.
                     // Any file that is present is overwritten. Because the file will be
@@ -398,7 +398,8 @@ public class UpdateDataFile {
                     // by default this is 30 mins
                     .setUpdatePollingInterval(1)
                     // build the pipeline
-                    .build()) {
+                    .build();
+            try {
 
                 // thread blocks till update checking is complete - or if there is an
                 // exception we don't get this far
@@ -441,6 +442,8 @@ public class UpdateDataFile {
                         updateNow(dataUpdateService, engine));
 
                 logger.info("Finished Example");
+            } finally {
+                pipeline.close();
             }
         }
     }

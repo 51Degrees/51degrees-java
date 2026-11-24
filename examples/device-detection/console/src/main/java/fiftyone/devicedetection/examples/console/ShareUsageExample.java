@@ -168,10 +168,11 @@ public class ShareUsageExample {
         // Build a pipeline with only the ShareUsageElement. The pipeline is
         // asked to close the element, which sends any data still queued, as
         // it is not closed anywhere else.
-        try (Pipeline pipeline = new PipelineBuilder()
+        Pipeline pipeline = new PipelineBuilder()
                 .addFlowElement(shareUsageElement)
                 .setAutoCloseElements(true)
-                .build()) {
+                .build();
+        try {
 
             logger.info("Pipeline built successfully with ShareUsageElement");
 
@@ -182,7 +183,8 @@ public class ShareUsageExample {
             // Process evidence records
             int count = 0;
             while (evidenceIterator.hasNext() && count < RECORDS_TO_PROCESS) {
-                try (FlowData flowData = pipeline.createFlowData()) {
+                FlowData flowData = pipeline.createFlowData();
+                try {
                     // Get evidence from YAML and filter to only header.* entries
                     Map<String, String> evidence = filterEvidence(
                             (Map<String, String>) evidenceIterator.next(),
@@ -209,11 +211,15 @@ public class ShareUsageExample {
                     if (count % 10 == 0) {
                         logger.info("Processed {} records", count);
                     }
+                } finally {
+                    flowData.close();
                 }
             }
 
             logger.info("Finished processing {} records", count);
             logger.info("Closing pipeline - this will flush any remaining queued data...");
+        } finally {
+            pipeline.close();
         }
 
         // Give the background thread time to send any remaining data

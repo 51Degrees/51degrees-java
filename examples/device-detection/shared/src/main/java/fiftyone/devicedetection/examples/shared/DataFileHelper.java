@@ -110,10 +110,13 @@ public static class DatafileInfo {
         }
     }
     public static DatafileInfo getDatafileMetaData(String dataFileLocation) throws Exception {
-        try(DeviceDetectionHashEngine ddhe = new DeviceDetectionHashEngineBuilder()
+        DeviceDetectionHashEngine ddhe = new DeviceDetectionHashEngineBuilder()
                 .setAutoUpdate(false)
-                .build(dataFileLocation,false)) {
+                .build(dataFileLocation,false);
+        try {
             return new DatafileInfo((FiftyOneDataFile) ddhe.getDataFileMetaData(), ddhe.getDataSourceTier());
+        } finally {
+            ddhe.close();
         }
     }
 

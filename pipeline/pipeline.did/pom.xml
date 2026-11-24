@@ -122,13 +122,14 @@
                     <properties combine.self="override"/>
                 </configuration>
             </plugin>
-            <!-- Enforce the Java 8 API floor. The compiler runs with
-                 -source/-target 8 (inherited), which sets the bytecode level
-                 but still links against the build JDK's library, so a newer
-                 JDK API (e.g. ByteArrayOutputStream.writeBytes, Java 11) could
-                 slip through. Animal Sniffer checks the compiled classes -
-                 including the OWID sources compiled in - against the Java 8
-                 signature and fails the build on any newer API. -->
+            <!-- Checks the compiled classes, including the OWID sources
+                 compiled in, against the Java 8 API signature, and fails the
+                 build on any newer API, such as
+                 ByteArrayOutputStream.writeBytes from Java 11. The compiler
+                 already enforces this on JDK 9 and later, where the parent's
+                 release-8 profile compiles with release 8, and a JDK 8 build
+                 has only the Java 8 API. This check reads the class files,
+                 so it does not depend on the compiler options. -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>animal-sniffer-maven-plugin</artifactId>
