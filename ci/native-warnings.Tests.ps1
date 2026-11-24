@@ -180,17 +180,31 @@ Describe 'the <Engine> engine native build' -ForEach $Engines {
         }
     }
 
+    # SWIG's Java wrapper casts pointers to and from jlong, which is only
+    # safe without strict aliasing, so gcc does not warn about it.
+    It 'builds the wrapper without strict aliasing' {
+        (Get-Code $CMake) -join "`n" | Should -MatchExactly (
+            'target_compile_options\(\S+-java\s+PRIVATE[^)]*"-fno-strict-aliasing"')
+    }
+
     It 'runs SWIG with every warning on, as an error that stops the build' {
         $calls = @(Get-Code $CMake | Where-Object { $_ -match '\$\{SWIG_EXECUTABLE\}' })
         $calls.Count | Should -BeGreaterThan 0
         foreach ($call in $calls) {
             $call | Should -MatchExactly '\$\{SWIG_EXECUTABLE\}\s+-Wall\s+-Werror\s'
             $call | Should -MatchExactly 'COMMAND_ERROR_IS_FATAL\s+ANY'
+            # A failed run removes its output files, so SWIG writes into the
+            # build folder and the committed files are replaced after it.
+            $call | Should -MatchExactly '-outdir\s+\$\{SWIGOUT\}/'
+            $call | Should -MatchExactly '\s-o\s+\$\{SWIGOUT\}/'
         }
-        # The scripts that run SWIG by hand pass the same options.
+        # The scripts that run SWIG by hand pass the same options, and write
+        # into a new folder too.
         foreach ($script in $Files | Where-Object { $_ -like '*.ps1' }) {
-            (Get-Code "$Folder/$script") -join "`n" |
-                Should -MatchExactly '&\s*\$swigExec[\s`]+-Wall\s+-Werror\s'
+            $code = (Get-Code "$Folder/$script") -join "`n"
+            $code | Should -MatchExactly '&\s*\$swigExec[\s`]+-Wall\s+-Werror\s'
+            $code | Should -MatchExactly '-outdir\s+\$TempJava'
+            $code | Should -MatchExactly '-o\s+\(Join-Path\s+\$Temp\s'
         }
     }
 

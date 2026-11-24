@@ -133,11 +133,13 @@ SWIG 4.0 or later, from this folder:
 
 ```
 cd device-detection/device-detection.hash.engine.on-premise/src/main/cxx
-swig -c++ -java -I../../../../.. -package fiftyone.devicedetection.hash.engine.onpremise.interop.swig -outdir ../java/fiftyone/devicedetection/hash/engine/onpremise/interop/swig -o Java_Hash_Engine.cpp hash_java.i
+swig -Wall -Werror -c++ -java -I../../../../.. -package fiftyone.devicedetection.hash.engine.onpremise.interop.swig -outdir ../java/fiftyone/devicedetection/hash/engine/onpremise/interop/swig -o Java_Hash_Engine.cpp hash_java.i
 ```
 
-The IP Intelligence engine has `RegenSwig.ps1` beside its interface file that
-does the same.
+Every SWIG warning is an error. The IP Intelligence engine has `RegenSwig.ps1`
+beside its interface file that does the same, and replaces the committed files
+only when SWIG succeeds. Building either engine with `-DRebuildSwig=ON` runs
+SWIG in the same way.
 
 ## Versions
 

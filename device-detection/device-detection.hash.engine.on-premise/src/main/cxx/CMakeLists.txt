@@ -81,7 +81,18 @@ if (RebuildSwig)
         message(WARNING "SWIG does not include Java support so will not be run")
     else()
         message(STATUS "Rebuilding SWIG interfaces")
-        execute_process(COMMAND ${SWIG_EXECUTABLE} -Wall -Werror -c++ -java -I${FIFTYONE_ROOT} -package fiftyone.devicedetection.hash.engine.onpremise.interop.swig -outdir ${SRCOUT}/interop/swig -o ${CMAKE_CURRENT_LIST_DIR}/Java_Hash_Engine.cpp ${CMAKE_CURRENT_LIST_DIR}/hash_java.i COMMAND_ERROR_IS_FATAL ANY)
+        # SWIG writes into the build folder, and the committed wrapper and Java
+        # proxies are replaced only when it succeeds, as a failed run removes
+        # its output files.
+        set(SWIGOUT ${CMAKE_CURRENT_BINARY_DIR}/swig)
+        file(REMOVE_RECURSE ${SWIGOUT})
+        file(MAKE_DIRECTORY ${SWIGOUT}/java)
+        execute_process(COMMAND ${SWIG_EXECUTABLE} -Wall -Werror -c++ -java -I${FIFTYONE_ROOT} -package fiftyone.devicedetection.hash.engine.onpremise.interop.swig -outdir ${SWIGOUT}/java -o ${SWIGOUT}/Java_Hash_Engine.cpp ${CMAKE_CURRENT_LIST_DIR}/hash_java.i COMMAND_ERROR_IS_FATAL ANY)
+        file(GLOB OLD_PROXIES ${SRCOUT}/interop/swig/*.java)
+        file(REMOVE ${OLD_PROXIES})
+        file(GLOB NEW_PROXIES ${SWIGOUT}/java/*.java)
+        file(COPY ${NEW_PROXIES} DESTINATION ${SRCOUT}/interop/swig)
+        file(COPY_FILE ${SWIGOUT}/Java_Hash_Engine.cpp ${CMAKE_CURRENT_LIST_DIR}/Java_Hash_Engine.cpp)
     endif()
 endif()
 message(STATUS "Done SWIG interfaces")
@@ -120,6 +131,11 @@ if (MSVC)
 	target_link_options(fiftyone-hash-java PRIVATE "/WX")
 else()
 	target_compile_options(fiftyone-hash-java PRIVATE ${COMPILE_OPTION_DEBUG} "-Wall" "-Wextra" "-Werror")
+	# The wrapper SWIG makes for Java passes C++ pointers to Java as jlong
+	# through pointer casts. Section 27.2.4 of the SWIG Java documentation
+	# says to compile it with -fno-strict-aliasing when gcc optimises, as
+	# those casts are not safe under strict aliasing.
+	target_compile_options(fiftyone-hash-java PRIVATE "-fno-strict-aliasing")
 endif()
 
 # The wrapper includes through cxx/, so the folder that holds it is on the path.
