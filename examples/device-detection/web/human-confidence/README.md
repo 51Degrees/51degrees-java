@@ -111,7 +111,10 @@ passive result as the page does. The production cloud does not serve
 cloud, with two names that only CI sets. `CLOUD_STAGING_ENDPOINT` names the
 cloud, the API base including `/api/v4/`, and `RESOURCE_KEY_BESPOKE_STAGING`
 holds a Bespoke key that cloud resolves. With that key the answer must have
-`HumanConfidenceSource` set to `Passive` and a plain level. With a key whose
+`HumanConfidenceSource` set to `Passive` and a plain level. The test first
+asks the cloud which properties the key includes, and fails, naming the
+variable and the property, when `HumanConfidence` or `HumanConfidenceSource`
+is not one of them. With a key whose
 products don't offer the source, in `_51DEGREES_RESOURCE_KEY_BASIC`, the
 cloud must answer the source as null, with the reason, and the example's
 answer must have no source.

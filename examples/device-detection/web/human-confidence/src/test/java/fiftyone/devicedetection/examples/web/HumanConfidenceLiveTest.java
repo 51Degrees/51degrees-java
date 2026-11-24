@@ -22,6 +22,7 @@
 
 package fiftyone.devicedetection.examples.web;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Test;
@@ -34,12 +35,16 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
 /**
@@ -57,7 +62,9 @@ import static org.junit.Assume.assumeTrue;
  * test checks, as a person running it would set it in
  * _51DEGREES_RESOURCE_KEY. A test is skipped when its key or
  * CLOUD_STAGING_ENDPOINT isn't set, naming the variable, and fails when the
- * answer lacks what it checks. Keys are never printed.
+ * answer lacks what it checks. The Bespoke test first fails, naming the
+ * variable and the property, when the key doesn't include HumanConfidence or
+ * HumanConfidenceSource. Keys are never printed.
  */
 public class HumanConfidenceLiveTest {
 
@@ -102,17 +109,21 @@ public class HumanConfidenceLiveTest {
     public void bespokeKeysPassiveAnswerCarriesTheSourcePassive()
             throws IOException {
         String key = key(BESPOKE_KEY);
+        requireProperties(BESPOKE_KEY, key,
+                "HumanConfidence", "HumanConfidenceSource");
         JSONObject served = servedSource(key);
         JSONObject answer = passive(key);
         String text = redact(answer.toString(), key);
 
         assertFalse("The example's passive call failed: " + text,
                 answer.has("error"));
-        assertEquals("This key's answer carries the source " + PASSIVE
-                        + ": " + text + ". The service says: "
+        assertEquals("The answer for the key in " + BESPOKE_KEY
+                        + " carries the source " + PASSIVE + ": " + text
+                        + ". The service says: "
                         + redact(served.toString(), key),
                 PASSIVE, answer.optString("source", null));
-        assertTrue("A passive level is one of the plain levels: " + text,
+        assertTrue("The passive level for the key in " + BESPOKE_KEY
+                        + " is one of the plain levels: " + text,
                 LEVELS.contains(answer.optString("humanConfidence", null)));
     }
 
@@ -137,6 +148,21 @@ public class HumanConfidenceLiveTest {
                 answer.has("source"));
     }
 
+    @Test
+    public void missingPropertiesNamesOnlyThePropertiesNoProductLists() {
+        JSONObject accessible = new JSONObject(
+                "{\"Products\":{"
+                + "\"device\":{\"Properties\":[{\"Name\":\"IsMobile\"}]},"
+                + "\"derived\":{\"Properties\":["
+                + "{\"Name\":\"HumanConfidence\"}]}}}");
+
+        assertEquals(Arrays.asList("HumanConfidenceSource"),
+                missingProperties(accessible,
+                        "HumanConfidence", "HumanConfidenceSource"));
+        assertEquals(Arrays.asList("HumanConfidence"),
+                missingProperties(new JSONObject("{}"), "HumanConfidence"));
+    }
+
     /** The key in the variable name, or a skip that names it. */
     private static String key(String name) {
         String key = System.getenv(name);
@@ -144,6 +170,60 @@ public class HumanConfidenceLiveTest {
                         + "skipped.",
                 key != null && key.trim().isEmpty() == false);
         return key.trim();
+    }
+
+    /**
+     * Fails, naming the variable and the property, when the service's list
+     * of the properties the key can read lacks one of them.
+     */
+    private static void requireProperties(String name, String key,
+            String... properties) throws IOException {
+        HttpURLConnection connection = (HttpURLConnection)
+                new URL(api() + "accessibleproperties?resource=" + key)
+                        .openConnection();
+        connection.setConnectTimeout(TIMEOUT_MS);
+        connection.setReadTimeout(TIMEOUT_MS);
+        int status = connection.getResponseCode();
+        String body = read(status >= 400
+                ? connection.getErrorStream() : connection.getInputStream());
+        assertEquals("The service didn't list the properties of the key in "
+                + name + ": " + redact(body, key), 200, status);
+        for (String property : missingProperties(
+                new JSONObject(body), properties)) {
+            fail("The key in " + name + " does not include the " + property
+                    + " property. Set the variable to a key that includes "
+                    + "it.");
+        }
+    }
+
+    /**
+     * The properties, of those given, that no product in the service's list
+     * of accessible properties names.
+     */
+    static List<String> missingProperties(JSONObject accessible,
+            String... properties) {
+        Set<String> names = new HashSet<>();
+        JSONObject products = accessible.optJSONObject("Products");
+        if (products != null) {
+            for (String product : products.keySet()) {
+                JSONObject entry = products.optJSONObject(product);
+                JSONArray list = entry == null
+                        ? null : entry.optJSONArray("Properties");
+                for (int i = 0; list != null && i < list.length(); i++) {
+                    JSONObject property = list.optJSONObject(i);
+                    if (property != null) {
+                        names.add(property.optString("Name"));
+                    }
+                }
+            }
+        }
+        List<String> missing = new ArrayList<>();
+        for (String property : properties) {
+            if (names.contains(property) == false) {
+                missing.add(property);
+            }
+        }
+        return missing;
     }
 
     /** Starts the example with the key and asks it for /passive. */
