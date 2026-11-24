@@ -4,7 +4,8 @@ name: CI script tests
 # builds run them. The environment variable names workflow runs its own test.
 # The test of run-fresh-clone-example.ps1 also runs the calls in
 # examples-fresh-clone.yml, and workflow-keys.Tests.ps1 reads every workflow,
-# so a change to any workflow runs the tests too.
+# so a change to any workflow runs the tests too. native-warnings.Tests.ps1
+# reads the native build files, so a change to those runs them as well.
 
 on:
   pull_request:
@@ -14,6 +15,7 @@ on:
       # run-fresh-clone-example.Tests.ps1 runs the calls examples-fresh-clone.yml
       # makes, and workflow-keys.Tests.ps1 checks the keys every workflow reads.
       - '.github/workflows/**'
+      - '**/src/main/cxx/**'
   push:
     branches:
       - main
@@ -21,6 +23,7 @@ on:
     paths:
       - 'ci/**'
       - '.github/workflows/**'
+      - '**/src/main/cxx/**'
   workflow_dispatch:
 
 permissions:

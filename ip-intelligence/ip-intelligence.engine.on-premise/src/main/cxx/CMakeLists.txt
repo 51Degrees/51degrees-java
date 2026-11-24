@@ -1,16 +1,19 @@
-cmake_minimum_required(VERSION 3.0...3.10 FATAL_ERROR)
+# 3.24 or later, as cxx needs. From 3.15 CMake puts no warning level in the
+# default MSVC flags, so the level set below is the only one.
+cmake_minimum_required(VERSION 3.24)
 set (CMAKE_C_STANDARD 11)
 set (CMAKE_CXX_STANDARD 11)
 
 # Include the C API
 project(IPIntelligenceOnPremiseEngine VERSION 4.3.0 LANGUAGES CXX C)
 
+# Every target here, the wrapper and the cxx libraries alike, warns at the
+# level cxx builds its own tests with, and every warning is an error.
+set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
 if (MSVC)
-    add_compile_options(/wd5105 /wd4100)
+    add_compile_options(/W4)
 else()
-    add_compile_options(-fPIC)
-#    if (NOT Apple)
-#    endif()
+    add_compile_options(-Wall -fPIC)
 endif()
 
 if (MSVC)
@@ -96,10 +99,16 @@ if (NOT MSVC)
     target_compile_options(fiftyone-ip-intelligence-java INTERFACE "-static-libgcc -static-libstdc++")
 endif()
 
+# The SWIG wrapper turns some MSVC warnings off unless these are defined.
+target_compile_definitions(fiftyone-ip-intelligence-java PRIVATE
+    SWIG_MSC_UNSUPPRESS_4505
+    SWIG_NO_CRT_SECURE_NO_DEPRECATE
+    SWIG_NO_SCL_SECURE_NO_DEPRECATE)
 if (MSVC)
-	target_compile_options(fiftyone-ip-intelligence-java PRIVATE "/D_CRT_SECURE_NO_WARNINGS" "/W4" "/WX")
+	target_compile_options(fiftyone-ip-intelligence-java PRIVATE "/W4" "/WX")
+	target_link_options(fiftyone-ip-intelligence-java PRIVATE "/WX")
 else()
-	target_compile_options(fiftyone-ip-intelligence-java PRIVATE ${COMPILE_OPTION_DEBUG} "-Werror")
+	target_compile_options(fiftyone-ip-intelligence-java PRIVATE ${COMPILE_OPTION_DEBUG} "-Wall" "-Werror")
 endif()
 
 # The wrapper includes through cxx/, so the folder that holds it is on the path.

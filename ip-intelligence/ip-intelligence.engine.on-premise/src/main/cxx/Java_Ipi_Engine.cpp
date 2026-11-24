@@ -913,27 +913,36 @@ SWIGINTERN int ResultsIpi_copyValueAsUTF8String(ResultsIpi *self,int requiredPro
         return required;
     }
 
+  static std::string fiftyoneBytesToString(const char bytes[], size_t length) {
+    size_t used = 0;
+    while (used < length && bytes[used] != '\0') {
+      used++;
+    }
+    return used == 0 ? std::string() : std::string(bytes, used);
+  }
+
+
   void Evidence_AddFromBytes(EvidenceBase *evidence, const char key[], size_t keyLength, const char value[], size_t valueLength) {
-    (*evidence)[key] = value;
+    (*evidence)[fiftyoneBytesToString(key, keyLength)] = fiftyoneBytesToString(value, valueLength);
   }
 
   Value<std::string> Results_GetValueAsString(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->getValueAsString(propertyName);
+    return results->getValueAsString(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
   Value<std::vector<std::string>> Results_GetValues(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->getValues(propertyName);
+    return results->getValues(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
   Value<bool> Results_GetValueAsBool(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->getValueAsBool(propertyName);
+    return results->getValueAsBool(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
   Value<int> Results_GetValueAsInteger(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->getValueAsInteger(propertyName);
+    return results->getValueAsInteger(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
   Value<double> Results_GetValueAsDouble(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->getValueAsDouble(propertyName);
+    return results->getValueAsDouble(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
   bool Results_ContainsProperty(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->containsProperty(propertyName);
+    return results->containsProperty(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
 
 
