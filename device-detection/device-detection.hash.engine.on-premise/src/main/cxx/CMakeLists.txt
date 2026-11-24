@@ -2,18 +2,19 @@
 # default MSVC flags, so the level set below is the only one.
 cmake_minimum_required(VERSION 3.24)
 set (CMAKE_C_STANDARD 11)
-set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD 17)
 
 # Include the C API
 project(DeviceDetectionHashEngine VERSION 4.3.0 LANGUAGES CXX C)
 
-# Every target here, the wrapper and the cxx libraries alike, warns at the
-# level cxx builds its own tests with, and every warning is an error.
+# Every target here, the wrapper and the cxx libraries alike, warns at /W4
+# with MSVC and at -Wall -Wextra with gcc and clang, and every warning is an
+# error.
 set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
 if (MSVC)
     add_compile_options(/W4)
 else()
-    add_compile_options(-Wall -fPIC)
+    add_compile_options(-Wall -Wextra -fPIC)
 endif()
 
 if (MSVC)
@@ -80,7 +81,7 @@ if (RebuildSwig)
         message(WARNING "SWIG does not include Java support so will not be run")
     else()
         message(STATUS "Rebuilding SWIG interfaces")
-        execute_process(COMMAND ${SWIG_EXECUTABLE} -c++ -java -I${FIFTYONE_ROOT} -package fiftyone.devicedetection.hash.engine.onpremise.interop.swig -outdir ${SRCOUT}/interop/swig -o ${CMAKE_CURRENT_LIST_DIR}/Java_Hash_Engine.cpp ${CMAKE_CURRENT_LIST_DIR}/hash_java.i)
+        execute_process(COMMAND ${SWIG_EXECUTABLE} -Wall -Werror -c++ -java -I${FIFTYONE_ROOT} -package fiftyone.devicedetection.hash.engine.onpremise.interop.swig -outdir ${SRCOUT}/interop/swig -o ${CMAKE_CURRENT_LIST_DIR}/Java_Hash_Engine.cpp ${CMAKE_CURRENT_LIST_DIR}/hash_java.i COMMAND_ERROR_IS_FATAL ANY)
     endif()
 endif()
 message(STATUS "Done SWIG interfaces")
@@ -118,7 +119,7 @@ if (MSVC)
 	target_compile_options(fiftyone-hash-java PRIVATE "/W4" "/WX")
 	target_link_options(fiftyone-hash-java PRIVATE "/WX")
 else()
-	target_compile_options(fiftyone-hash-java PRIVATE ${COMPILE_OPTION_DEBUG} "-Wall" "-Werror")
+	target_compile_options(fiftyone-hash-java PRIVATE ${COMPILE_OPTION_DEBUG} "-Wall" "-Wextra" "-Werror")
 endif()
 
 # The wrapper includes through cxx/, so the folder that holds it is on the path.

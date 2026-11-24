@@ -12,7 +12,9 @@ if (Test-Path -Path Java_Ipi_Engine.cpp -PathType Leaf) {
 
 Write-Debug "Invoking SWIG executable..."
 
+# Every SWIG warning is on and is an error, so a warning stops the run.
 & $swigExec `
+    -Wall -Werror `
     -c++ -java `
     "-I../../../../.." `
     -package fiftyone.ipintelligence.engine.onpremise.interop.swig `
