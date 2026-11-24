@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.did;
 
+import org.json.JSONObject;
 import org.junit.Test;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -116,5 +117,62 @@ public class LiveCloudKeysTests {
     public void noLicenseKey_SaysWhenThePassHasNone() {
         String message = LiveCloudKeys.noLicenseKey(null);
         assertTrue(message, message.contains("no license key"));
+    }
+
+    /**
+     * The reason the production cloud service gives a key without the
+     * marketing product, so a failure on such a key says why.
+     */
+    private static final String REFUSED = "Can not form IdProbGlobal. For "
+        + "marketing (personalized or standard) usages a CloudV5FODiD "
+        + "product needs to be a part of the license.";
+
+    @Test
+    public void nullReason_GivesTheGlobalReason() {
+        JSONObject fodid = new JSONObject()
+            .put("idprobglobal", JSONObject.NULL)
+            .put("idprobglobalnullreason", REFUSED);
+        assertEquals(REFUSED, LiveCloudKeys.nullReason(fodid));
+    }
+
+    @Test
+    public void nullReason_GivesTheLicensedReasonWhenTheGlobalHasNone() {
+        JSONObject fodid = new JSONObject()
+            .put("idprobglobalnullreason", " ")
+            .put("idproblicnullreason", REFUSED);
+        assertEquals(REFUSED, LiveCloudKeys.nullReason(fodid));
+    }
+
+    @Test
+    public void nullReason_GivesNullWhenTheServiceGaveNone() {
+        assertNull(LiveCloudKeys.nullReason(new JSONObject()));
+    }
+
+    @Test
+    public void nullReason_GivesNullWithNoFodidSection() {
+        assertNull(LiveCloudKeys.nullReason(null));
+    }
+
+    /**
+     * The reason travels into the message, so a key without the marketing
+     * product reads as that and not as a fault in the service.
+     */
+    @Test
+    public void notEntitled_CarriesTheReasonAndNamesTheProduct() {
+        String message = LiveCloudKeys.notEntitled(
+            "id.usage=standard", REFUSED, LiveCloudKeys.MARKETING);
+        assertTrue(message, message.contains("id.usage=standard"));
+        assertTrue(message, message.contains("(" + REFUSED + ")"));
+        assertTrue(message,
+            message.contains("does not carry the CloudV5FODiD product"));
+    }
+
+    @Test
+    public void notEntitled_SaysWhenTheServiceGaveNoReason() {
+        String message = LiveCloudKeys.notEntitled(
+            "id.usage=non-marketing", null, LiveCloudKeys.FODID);
+        assertTrue(message, message.contains("(no reason given)"));
+        assertTrue(message,
+            message.contains("does not carry the FODid product"));
     }
 }
