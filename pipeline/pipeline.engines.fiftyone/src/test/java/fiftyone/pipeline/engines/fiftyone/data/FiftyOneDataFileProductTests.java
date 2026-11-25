@@ -23,14 +23,22 @@
 
 package fiftyone.pipeline.engines.fiftyone.data;
 
+import fiftyone.pipeline.engines.configuration.DataFileConfigurationDefault;
 import fiftyone.pipeline.engines.data.AspectData;
-import fiftyone.pipeline.engines.data.AspectEngineDataFile;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import fiftyone.pipeline.engines.flowelements.OnPremiseAspectEngine;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -38,7 +46,8 @@ import static org.mockito.Mockito.when;
  * A 51Degrees data file names the product of the data update service that
  * it needs, whichever URL formatter its configuration has. The name is a
  * prefix for the download type followed by the tier of the data the engine
- * has loaded.
+ * has loaded. Until an engine has loaded the data file, the product is read
+ * from the header of the file at the configured location.
  */
 public class FiftyOneDataFileProductTests {
 
@@ -74,8 +83,142 @@ public class FiftyOneDataFileProductTests {
         assertNull(dataFile("Other", "Enterprise").getDataUpdateProduct());
     }
 
+    @Test
+    public void ProductFromFile_ReadFromTheHeaderBeforeAnEngineIsSet(
+        @TempDir Path folder) throws IOException {
+        Path path = file(folder);
+        List<String> read = new ArrayList<>();
+        FiftyOneDataFileDefault file = dataFile("HashV41", null);
+        file.setConfiguration(configuration(path.toString()));
+        file.setProductReader(p -> {
+            read.add(p);
+            return "V4TAC";
+        });
+
+        assertEquals("V4TAC", file.getDataUpdateProduct());
+        assertEquals(1, read.size());
+        assertEquals(path.toString(), read.get(0));
+    }
+
+    @Test
+    public void ProductFromFile_IpIntelligence(@TempDir Path folder)
+        throws IOException {
+        FiftyOneDataFileDefault file = dataFile("IPIV41", null);
+        file.setConfiguration(configuration(file(folder).toString()));
+        file.setProductReader(p -> "IPIV4Enterprise");
+
+        assertEquals("IPIV4Enterprise", file.getDataUpdateProduct());
+    }
+
+    @Test
+    public void ProductFromFile_ATierAloneTakesThePrefix(
+        @TempDir Path folder) throws IOException {
+        FiftyOneDataFileDefault file = dataFile("HashV41", null);
+        file.setConfiguration(configuration(file(folder).toString()));
+        file.setProductReader(p -> "TAC");
+
+        assertEquals("V4TAC", file.getDataUpdateProduct());
+    }
+
+    @Test
+    public void ProductFromFile_LoadedEngineWins(@TempDir Path folder)
+        throws IOException {
+        List<String> read = new ArrayList<>();
+        FiftyOneDataFileDefault file = dataFile("HashV41", "Enterprise");
+        file.setConfiguration(configuration(file(folder).toString()));
+        file.setProductReader(p -> {
+            read.add(p);
+            return "V4TAC";
+        });
+
+        assertEquals("V4Enterprise", file.getDataUpdateProduct());
+        assertTrue(read.isEmpty(),
+            "The header should not be read once an engine has loaded the file");
+    }
+
+    @Test
+    public void ProductFromFile_NoFileGivesNoProduct(@TempDir Path folder) {
+        List<String> read = new ArrayList<>();
+        FiftyOneDataFileDefault file = dataFile("HashV41", null);
+        file.setConfiguration(configuration(
+            folder.resolve("missing.hash").toString()));
+        file.setProductReader(p -> {
+            read.add(p);
+            return "V4TAC";
+        });
+
+        assertNull(file.getDataUpdateProduct());
+        assertTrue(read.isEmpty(), "No file should mean no read");
+    }
+
+    @Test
+    public void ProductFromFile_NoPathGivesNoProduct() {
+        FiftyOneDataFileDefault file = dataFile("HashV41", null);
+        file.setConfiguration(configuration(null));
+        file.setProductReader(p -> "V4TAC");
+
+        assertNull(file.getDataUpdateProduct());
+    }
+
+    @Test
+    public void ProductFromFile_ReadThatFailsGivesNoProduct(
+        @TempDir Path folder) throws IOException {
+        FiftyOneDataFileDefault file = dataFile("HashV41", null);
+        file.setConfiguration(configuration(file(folder).toString()));
+        file.setProductReader(p -> {
+            throw new RuntimeException("The header could not be read");
+        });
+
+        assertNull(file.getDataUpdateProduct());
+    }
+
+    @Test
+    public void ProductFromFile_ReaderThatCannotLoadGivesNoProduct(
+        @TempDir Path folder) throws IOException {
+        FiftyOneDataFileDefault file = dataFile("HashV41", null);
+        file.setConfiguration(configuration(file(folder).toString()));
+        file.setProductReader(p -> {
+            throw new UnsatisfiedLinkError("No native library");
+        });
+
+        assertNull(file.getDataUpdateProduct());
+    }
+
+    @Test
+    public void ProductFromFile_EmptyProductGivesNoProduct(
+        @TempDir Path folder) throws IOException {
+        FiftyOneDataFileDefault file = dataFile("HashV41", null);
+        file.setConfiguration(configuration(file(folder).toString()));
+        file.setProductReader(p -> "");
+
+        assertNull(file.getDataUpdateProduct());
+    }
+
+    @Test
+    public void ProductFromFile_NoReaderGivesNoProduct(@TempDir Path folder)
+        throws IOException {
+        FiftyOneDataFileDefault file = dataFile("HashV41", null);
+        file.setConfiguration(configuration(file(folder).toString()));
+        file.setProductReader(null);
+
+        assertNull(file.getDataUpdateProduct());
+    }
+
+    private static Path file(Path folder) throws IOException {
+        Path path = folder.resolve("data.hash");
+        Files.write(path, new byte[] {1, 2, 3});
+        return path;
+    }
+
+    private static DataFileConfigurationDefault configuration(String path) {
+        DataFileConfigurationDefault configuration =
+            new DataFileConfigurationDefault();
+        configuration.setDataFilePath(path);
+        return configuration;
+    }
+
     @SuppressWarnings("unchecked")
-    private static AspectEngineDataFile dataFile(String type, String tier) {
+    private static FiftyOneDataFileDefault dataFile(String type, String tier) {
         FiftyOneDataFileDefault file = new FiftyOneDataFileDefault();
         file.setDataUpdateDownloadType(type);
         if (tier != null) {
