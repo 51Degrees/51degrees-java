@@ -141,7 +141,10 @@ public class DidClientLiveTests {
         }
 
         assertEquals(200, result.getStatusCode());
-        assertEquals(RedeemResult.Context.UNREADABLE, result.getContext());
+        assertEquals(Outcome.UNREADABLE, result.getOutcome());
+        // The cloud still writes the reason to context, as it did before
+        // status was added.
+        assertEquals("unreadable", result.getContextValue());
     }
 
     /**
@@ -190,6 +193,8 @@ public class DidClientLiveTests {
 
         assertEquals("Redeeming: " + redeemed.getRaw(),
             200, redeemed.getStatusCode());
+        assertEquals("Redeeming: " + redeemed.getRaw(),
+            Outcome.SUCCESS, redeemed.getOutcome());
         assertEquals("The identifier was just created by this client, so "
             + "its signature has to read as genuine: " + redeemed.getRaw(),
             RedeemResult.Signature.VERIFIED, redeemed.getSignature());
@@ -306,7 +311,10 @@ public class DidClientLiveTests {
             ? connection.getErrorStream()
             : connection.getInputStream());
         assertEquals("Verifying in full: " + body, 200, status);
-        String sealed = new JSONObject(body).optString("result", null);
+        // sealedResult, or result from a host before that name.
+        JSONObject verified = new JSONObject(body);
+        String sealed = verified.optString("sealedResult",
+            verified.optString("result", null));
         Assume.assumeTrue(
             "This host answered verify-full in the open, so it holds no "
             + "context secret and there is nothing to redeem: " + body,

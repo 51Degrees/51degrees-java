@@ -65,22 +65,22 @@ import java.util.concurrent.CompletionException;
  * itself is told the page has not finished and is given nothing.</li>
  * <li><b>Verify</b> it with {@code verify-full}, which returns both the
  * signature outcome and the creator context verdict only as an encrypted
- * {@code result} that the caller cannot read or forge. (A deployment
+ * {@code sealedResult} that the caller cannot read or forge. (A deployment
  * holding no context secret answers in the open instead.) The page sends
  * what the snippets collected with this call as well, because the
  * service compares this browser against the creator from those values
  * and gives no verdict without them.</li>
  * <li><b>Redeem</b> the encrypted result with {@code redeem}, presenting
  * the 51Did, the encrypted result and the account's licence key, and
- * receive the true creator context verdict, when the verification
- * happened ({@code verifiedAt}) and how long ago that was
- * ({@code secondsSinceVerified}).</li>
+ * receive the {@code status} of the redemption, the true creator context
+ * verdict, when the verification happened ({@code verifiedAt}) and how
+ * long ago that was ({@code secondsSinceVerified}).</li>
  * </ol>
  * The browser creates the 51Did and calls {@code verify-full}, so the
  * cloud observes the browser's live connection, then the page hands the
  * encrypted result to this server, which redeems it with the licence key.
- * A fresh challenge is issued per page load and bound through both steps
- * by the cloud. A production server would also remember the value it
+ * A fresh transaction value is issued per page load and bound through
+ * both steps by the cloud. A production server would also remember the value it
  * issued and reject a redemption carrying any other, which this demo
  * keeps out of scope. Once the 51Did has validated, the page offers a link
  * carrying the same identifier. Opened in a different browser, the
@@ -207,7 +207,7 @@ public class CreatorContextDemoServer {
             resource("page.html"), StandardCharsets.UTF_8);
         byte[] body = page
             .replace("__RESOURCE__", RESOURCE)
-            .replace("__CHALLENGE__", hex(random))
+            .replace("__TRANSACTION__", hex(random))
             .replace("__API__", client.getEndpoint())
             .getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().set(
@@ -225,8 +225,8 @@ public class CreatorContextDemoServer {
         redeem(
             client,
             decode(valueOr(query, "51did")),
-            decode(valueOr(query, "result")),
-            decode(valueOr(query, "challenge")))
+            decode(valueOr(query, "sealedResult")),
+            decode(valueOr(query, "transaction")))
             .thenAccept(answer -> write(exchange, answer));
     }
 
@@ -261,14 +261,16 @@ public class CreatorContextDemoServer {
      * {@link #failed(Throwable)} as the cause of a
      * {@link CompletionException} and is mapped to a status there.
      * <p>
-     * The page is answered in the cloud's own shape ({@code signature},
-     * {@code context}, {@code factors} when present, {@code verifiedAt},
-     * {@code secondsSinceVerified}) with one field added,
-     * {@code serverSignature}, being this server's own offline check. The
-     * page ignores fields it does not know.
+     * The page is answered in the cloud's own shape ({@code status},
+     * {@code signature}, {@code context}, {@code factors} when present,
+     * {@code humanConfidence} or {@code humanConfidenceNullReason} when
+     * present, {@code verifiedAt}, {@code secondsSinceVerified}) with one
+     * field added, {@code serverSignature}, being this server's own offline
+     * check. The page ignores fields it does not know.
      */
     static CompletableFuture<Answer> redeem(
-            DidClient client, String did, String result, String challenge) {
+            DidClient client, String did, String sealedResult,
+            String transaction) {
         FodId fodId;
         try {
             fodId = FodId.fromBase64(did);
@@ -280,7 +282,8 @@ public class CreatorContextDemoServer {
                 "'" + did + "' is not a valid Base64-encoded 51Did.")));
         }
         return client.verifySignature(fodId)
-            .thenCompose(genuine -> client.redeem(fodId, result, challenge)
+            .thenCompose(genuine -> client
+                .redeem(fodId, sealedResult, transaction)
                 .thenApply(redeemed -> toAnswer(redeemed, genuine)))
             .exceptionally(CreatorContextDemoServer::failed);
     }
@@ -328,6 +331,7 @@ public class CreatorContextDemoServer {
     /** The cloud's own shape, plus {@code serverSignature}. */
     static JSONObject toJson(RedeemResult redeemed, String serverSignature) {
         JSONObject json = new JSONObject();
+        json.put("status", redeemed.getOutcome().getValue());
         if (redeemed.getSignature() != RedeemResult.Signature.UNKNOWN) {
             json.put("signature",
                 redeemed.getSignature() == RedeemResult.Signature.VERIFIED
@@ -344,6 +348,13 @@ public class CreatorContextDemoServer {
                 factors.put(factor.getKey(), factor.getValue().getValue());
             }
             json.put("factors", factors);
+        }
+        if (redeemed.getHumanConfidence() != null) {
+            json.put("humanConfidence",
+                redeemed.getHumanConfidence().getValue());
+        } else if (redeemed.getHumanConfidenceNullReason() != null) {
+            json.put("humanConfidenceNullReason",
+                redeemed.getHumanConfidenceNullReason());
         }
         if (redeemed.getVerifiedAt() != null) {
             json.put("verifiedAt", DateTimeFormatter.ISO_INSTANT

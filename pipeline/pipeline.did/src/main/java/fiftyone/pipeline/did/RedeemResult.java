@@ -33,16 +33,24 @@ import java.util.Map;
 
 /**
  * The typed answer to {@link DidClient#redeem(FodId, String, String)}: the
- * creator context verdict, the signature outcome, the per-factor detail
- * where the cloud gave it, and when the verification behind the sealed
- * result happened.
+ * {@link Outcome} of the redemption, and on success the unsealed result,
+ * being the creator context verdict, the signature outcome, the per-factor
+ * detail where the cloud gave it and the Human Confidence Value the 51Did
+ * carries, together with when the verification behind the sealed result
+ * happened.
+ * <p>
+ * Read {@link #getOutcome()} first. Only {@link Outcome#SUCCESS} carries an
+ * unsealed result. On every other outcome the cloud writes the same word to
+ * {@code context} as to {@code status}, as it did before {@code status}
+ * existed, so {@link #getContext()} still reads those words, through the
+ * obsolete members of {@link Context}.
  * <p>
  * Every cryptographic failure comes back from the cloud as the one word
  * {@code unreadable}, by design, so that a forger probing the endpoint
  * learns nothing about which part of a guess was wrong. This type does not
- * try to distinguish them either, and it maps any context value it does
- * not know to {@link Context#UNREADABLE} for the same reason, keeping the
- * raw value in {@link #getContextValue()}.
+ * try to distinguish them either, and it maps any status or context value
+ * it does not know to unreadable for the same reason, keeping the raw
+ * values in {@link #getStatusValue()} and {@link #getContextValue()}.
  */
 public final class RedeemResult {
 
@@ -65,20 +73,45 @@ public final class RedeemResult {
          * created.
          */
         NOT_CHECKABLE("notcheckable"),
-        /** The sealed result was redeemed outside the freshness window. */
+        /**
+         * The sealed result was redeemed outside the freshness window.
+         *
+         * @deprecated Not a verdict. Read {@link RedeemResult#getOutcome()},
+         *             which is {@link Outcome#EXPIRED}. Still read from
+         *             {@code context}, which the cloud still writes.
+         */
+        @Deprecated
         EXPIRED("expired"),
-        /** The sealed result had already been redeemed. */
+        /**
+         * The sealed result had already been redeemed.
+         *
+         * @deprecated Not a verdict. Read {@link RedeemResult#getOutcome()},
+         *             which is {@link Outcome#REPLAYED}. Still read from
+         *             {@code context}, which the cloud still writes.
+         */
+        @Deprecated
         REPLAYED("replayed"),
         /**
          * The sealed result could not be read: tampered, made for another
-         * identifier, sealed under another challenge or licence key, or an
+         * identifier, sealed under another transaction or licence key, or an
          * answer this client did not recognise.
+         *
+         * @deprecated Not a verdict. Read {@link RedeemResult#getOutcome()},
+         *             which is {@link Outcome#UNREADABLE}. Still read from
+         *             {@code context}, which the cloud still writes, and
+         *             still where an unrecognised {@code context} maps.
          */
+        @Deprecated
         UNREADABLE("unreadable"),
         /**
          * First use could not be confirmed (answered with 503). Not a
          * verdict, and the caller may retry.
+         *
+         * @deprecated Not a verdict. Read {@link RedeemResult#getOutcome()},
+         *             which is {@link Outcome#UNCONFIRMED}. Still read from
+         *             {@code context}, which the cloud still writes.
          */
+        @Deprecated
         UNCONFIRMED("unconfirmed"),
         /**
          * The service that checked the identifier could not complete the
@@ -226,31 +259,45 @@ public final class RedeemResult {
         "platformname", "platformversion", "browsername", "browserversion",
     };
 
+    private final Outcome outcome;
+    private final String statusValue;
     private final Context context;
     private final String contextValue;
     private final Signature signature;
     private final Map<String, Factor> factors;
     private final boolean hasFactors;
+    private final HumanConfidence humanConfidence;
+    private final String humanConfidenceValue;
+    private final String humanConfidenceNullReason;
     private final Instant verifiedAt;
     private final Integer secondsSinceVerified;
     private final int statusCode;
     private final String raw;
 
     private RedeemResult(
+            Outcome outcome,
+            String statusValue,
             Context context,
             String contextValue,
             Signature signature,
             Map<String, Factor> factors,
             boolean hasFactors,
+            String humanConfidenceValue,
+            String humanConfidenceNullReason,
             Instant verifiedAt,
             Integer secondsSinceVerified,
             int statusCode,
             String raw) {
+        this.outcome = outcome;
+        this.statusValue = statusValue;
         this.context = context;
         this.contextValue = contextValue;
         this.signature = signature;
         this.factors = factors;
         this.hasFactors = hasFactors;
+        this.humanConfidence = HumanConfidence.fromValue(humanConfidenceValue);
+        this.humanConfidenceValue = humanConfidenceValue;
+        this.humanConfidenceNullReason = humanConfidenceNullReason;
         this.verifiedAt = verifiedAt;
         this.secondsSinceVerified = secondsSinceVerified;
         this.statusCode = statusCode;
@@ -268,6 +315,10 @@ public final class RedeemResult {
     static RedeemResult parse(int statusCode, JSONObject json, String raw) {
         String contextValue = json.optString("context", null);
         Context context = Context.fromValue(contextValue);
+        String statusValue = json.optString("status", null);
+        Outcome outcome = statusValue == null
+            ? outcomeFromContext(contextValue)
+            : Outcome.fromValue(statusValue);
         Signature signature = Signature.fromValue(
             json.optString("signature", null));
 
@@ -305,18 +356,77 @@ public final class RedeemResult {
         }
 
         return new RedeemResult(
+            outcome,
+            statusValue,
             context,
             contextValue == null ? context.getValue() : contextValue,
             signature,
             Collections.unmodifiableMap(factors),
             hasFactors,
+            json.optString("humanConfidence", null),
+            json.optString("humanConfidenceNullReason", null),
             verifiedAt,
             secondsSinceVerified,
             statusCode,
             raw);
     }
 
-    /** @return the creator context verdict */
+    /**
+     * The outcome a cloud from before {@code status} gave in
+     * {@code context}: one of the four failure words, or a verdict, which
+     * it wrote only on success. Anything else, including no word at all,
+     * is {@link Outcome#UNREADABLE}, so an answer this client does not know
+     * fails closed.
+     */
+    private static Outcome outcomeFromContext(String contextValue) {
+        if (contextValue == null) {
+            return Outcome.UNREADABLE;
+        }
+        for (Outcome failure : Outcome.values()) {
+            if (failure != Outcome.SUCCESS
+                    && failure.getValue().equals(contextValue)) {
+                return failure;
+            }
+        }
+        for (Context verdict : Context.values()) {
+            if (verdict.getValue().equals(contextValue)) {
+                return Outcome.SUCCESS;
+            }
+        }
+        return Outcome.UNREADABLE;
+    }
+
+    /**
+     * What happened at redemption, read from {@code status}. Only
+     * {@link Outcome#SUCCESS} carries an unsealed result. A word this
+     * client does not know is {@link Outcome#UNREADABLE}. A cloud from
+     * before {@code status} sent the outcome in {@code context} instead,
+     * and it is read from there: a failure word gives that failure, a
+     * verdict gives success, and anything else is unreadable.
+     *
+     * @return the outcome
+     */
+    public Outcome getOutcome() {
+        return outcome;
+    }
+
+    /**
+     * @return the {@code status} word exactly as the cloud sent it, so an
+     *         unrecognised word (mapped to {@link Outcome#UNREADABLE}) is
+     *         still visible, or null where the cloud sent none
+     */
+    public String getStatusValue() {
+        return statusValue;
+    }
+
+    /**
+     * The creator context verdict on success. On any other outcome the
+     * cloud writes the outcome's word to {@code context} too, and this is
+     * then one of the obsolete failure members. Read
+     * {@link #getOutcome()} for those.
+     *
+     * @return the creator context verdict
+     */
     public Context getContext() {
         return context;
     }
@@ -371,6 +481,40 @@ public final class RedeemResult {
     }
 
     /**
+     * The Human Confidence Value the 51Did carries, part of the unsealed
+     * result. The cloud returns it only on {@link Outcome#SUCCESS}, to a
+     * call that presents a License Key valid for Human Confidence. A 51Did
+     * made before the Value was added is {@link HumanConfidence#ABSENT}.
+     *
+     * @return the Value, or null where the cloud did not return one, in
+     *         which case {@link #getHumanConfidenceNullReason()} says why on
+     *         success
+     */
+    public HumanConfidence getHumanConfidence() {
+        return humanConfidence;
+    }
+
+    /**
+     * @return the {@code humanConfidence} word exactly as the cloud sent
+     *         it, or null where it sent none
+     */
+    public String getHumanConfidenceValue() {
+        return humanConfidenceValue;
+    }
+
+    /**
+     * Why the cloud did not return the Human Confidence Value on success,
+     * which is that the call did not present a License Key valid for Human
+     * Confidence.
+     *
+     * @return the cloud's {@code humanConfidenceNullReason}, or null where
+     *         it sent none
+     */
+    public String getHumanConfidenceNullReason() {
+        return humanConfidenceNullReason;
+    }
+
+    /**
      * When the verify endpoint checked the context and sealed the result,
      * UTC to the second. Present on the redeemed and expired outcomes.
      *
@@ -404,8 +548,12 @@ public final class RedeemResult {
 
     @Override
     public String toString() {
-        return "RedeemResult " + statusCode + " context=" + contextValue
+        return "RedeemResult " + statusCode + " outcome=" + outcome
+            + " context=" + contextValue
             + " signature=" + signature
-            + (hasFactors ? " factors=" + factors : "");
+            + (hasFactors ? " factors=" + factors : "")
+            + (humanConfidenceValue == null
+                ? ""
+                : " humanConfidence=" + humanConfidenceValue);
     }
 }

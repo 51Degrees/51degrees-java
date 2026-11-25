@@ -112,9 +112,46 @@ public class ExampleTests {
         assertEquals(ENDPOINT + "id/redeem", redeem.getUrl());
         String form = new String(redeem.getBody(), StandardCharsets.UTF_8);
         assertTrue(form.startsWith("resource=resource&51did="));
+        assertTrue(form.contains("&sealedResult=sealed"));
+        assertTrue(form.contains("&transaction=abc"));
         assertTrue(form.contains("&result=sealed"));
         assertTrue(form.contains("&challenge=abc"));
         assertTrue(form.contains("&license=licence"));
+    }
+
+    @Test
+    public void Redeem_Route_Relays_Status_And_Human_Confidence() {
+        transport.queue(200, keyList(crypto));
+        transport.queue(200, "{\"signature\":\"verified\","
+            + "\"context\":\"verified\",\"humanConfidence\":\"High\","
+            + "\"status\":\"success\","
+            + "\"verifiedAt\":\"2026-08-07T09:15:32Z\","
+            + "\"secondsSinceVerified\":2}");
+
+        CreatorContextDemoServer.Answer answer =
+            CreatorContextDemoServer.redeem(client, did, "sealed", "abc")
+                .join();
+
+        JSONObject json = new JSONObject(answer.bodyText());
+        assertEquals("success", json.getString("status"));
+        assertEquals("High", json.getString("humanConfidence"));
+        assertEquals("verified", json.getString("context"));
+    }
+
+    @Test
+    public void Redeem_Route_Relays_A_Failure_Status() {
+        transport.queue(200, keyList(crypto));
+        transport.queue(200,
+            "{\"context\":\"replayed\",\"status\":\"replayed\"}");
+
+        CreatorContextDemoServer.Answer answer =
+            CreatorContextDemoServer.redeem(client, did, "sealed", "abc")
+                .join();
+
+        JSONObject json = new JSONObject(answer.bodyText());
+        assertEquals("replayed", json.getString("status"));
+        assertEquals("replayed", json.getString("context"));
+        assertFalse(json.has("humanConfidence"));
     }
 
     @Test

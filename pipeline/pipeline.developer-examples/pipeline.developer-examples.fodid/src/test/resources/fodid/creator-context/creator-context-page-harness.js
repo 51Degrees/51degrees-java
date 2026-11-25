@@ -34,7 +34,7 @@ if (!match) {
 }
 const source = match[1]
     .replace(/__RESOURCE__/g, 'TEST-RESOURCE-KEY')
-    .replace(/__CHALLENGE__/g, 'test-challenge')
+    .replace(/__TRANSACTION__/g, 'test-transaction')
     .replace(/__API__/g, 'https://cloud.51degrees.com/api/v4/');
 
 // The identifiers the stand in client script reports. Base64 with a plus
@@ -124,7 +124,10 @@ function fetchStub(url) {
     record.fetches.push(url);
     if (url.indexOf('id/verify-full') !== -1
         || url.indexOf('id/verify-context') !== -1) {
-        return response({ result: 'sealed-result' });
+        return response({
+            sealedResult: 'sealed-result',
+            result: 'sealed-result'
+        });
     }
     if (url.indexOf('/redeem') !== -1) {
         return response({

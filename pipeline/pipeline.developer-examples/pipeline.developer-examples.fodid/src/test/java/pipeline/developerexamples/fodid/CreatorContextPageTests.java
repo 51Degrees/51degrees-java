@@ -268,7 +268,9 @@ public class CreatorContextPageTests {
             }
         }
         assertEquals(1, redeem.size());
-        assertTrue(redeem.get(0).contains("result=sealed-result"),
+        assertTrue(redeem.get(0).contains("&sealedResult=sealed-result"),
+            redeem.get(0));
+        assertTrue(redeem.get(0).contains("&transaction=test-transaction"),
             redeem.get(0));
         assertEquals("verified", row(record, "s-signature"));
         assertEquals("verified", row(record, "s-context"));

@@ -1178,6 +1178,7 @@ public class DidClientTests {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void redeem_Expired() throws Exception {
         transport.queue(200, "{\"context\":\"expired\","
             + "\"verifiedAt\":\"2026-08-07T09:15:32Z\","
@@ -1195,6 +1196,7 @@ public class DidClientTests {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void redeem_Replayed() throws Exception {
         transport.queue(200, "{\"context\":\"replayed\"}");
 
@@ -1207,6 +1209,7 @@ public class DidClientTests {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void redeem_Unreadable() throws Exception {
         transport.queue(200, "{\"context\":\"unreadable\"}");
 
@@ -1218,6 +1221,7 @@ public class DidClientTests {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void redeem_503Unconfirmed() throws Exception {
         transport.queue(503, "{\"context\":\"unconfirmed\"}");
 
@@ -1229,6 +1233,7 @@ public class DidClientTests {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void redeem_UnknownContextFailsClosedAndKeepsTheRawValue()
             throws Exception {
         transport.queue(200, "{\"context\":\"something-new\"}");
@@ -1241,6 +1246,7 @@ public class DidClientTests {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void redeem_MissingContextFailsClosed() throws Exception {
         transport.queue(200, "{}");
 
@@ -1410,9 +1416,387 @@ public class DidClientTests {
             transport.last().getBody(), StandardCharsets.UTF_8);
         assertTrue(form.startsWith(
             "resource=resource&51did=" + DidClient.encode(standard) + "&"));
-        assertTrue(form.contains("%3D&result="));
+        assertTrue(form.contains("%3D&sealedResult="));
+        assertTrue(form.contains("&sealedResult=a+b%26c&"));
+        assertTrue(form.contains("&transaction=x%3Dy&"));
         assertTrue(form.contains("&result=a+b%26c&"));
         assertTrue(form.contains("&challenge=x%3Dy&"));
+    }
+
+    // ----- Sealed result, transaction, status and Human Confidence -----
+
+    /**
+     * The words the cloud gives in {@code humanConfidenceNullReason} to a
+     * call that presents no License Key valid for Human Confidence.
+     */
+    private static final String NULL_REASON = "humanConfidence is a paid "
+        + "feature. You need a License Key valid for Human Confidence, "
+        + "presented on this call, to retrieve it. Visit "
+        + "https://51degrees.com/pricing for details";
+
+    /** The message the cloud adds for a call that sends {@code result}. */
+    private static final String OBSOLETE = "[\"result is obsolete. "
+        + "Use sealedResult.\",\"challenge is obsolete. Use transaction.\"]";
+
+    private static final String FACTORS = "{\"transport\":\"verified\","
+        + "\"device\":\"mismatch\",\"browserip\":\"verified\","
+        + "\"connectionip\":\"verified\",\"asn\":\"verified\","
+        + "\"platformname\":\"verified\",\"platformversion\":\"mismatch\","
+        + "\"browsername\":\"verified\",\"browserversion\":\"notrecorded\"}";
+
+    private static final String TIMES =
+        "\"verifiedAt\":\"2026-08-07T09:15:32Z\",\"secondsSinceVerified\":3";
+
+    /**
+     * Each redeem answer today's cloud gives, beside the same answer from a
+     * cloud that adds {@code status}, {@code humanConfidence} or
+     * {@code humanConfidenceNullReason}, and {@code obsolete}, with the
+     * HTTP status of both. The new fields are in the order the cloud writes
+     * them.
+     */
+    private static final Object[][] REDEEM_ANSWERS = {
+        {200,
+            "{\"signature\":\"verified\",\"context\":\"verified\","
+                + TIMES + "}",
+            "{\"signature\":\"verified\",\"context\":\"verified\","
+                + "\"humanConfidence\":\"High\",\"status\":\"success\","
+                + TIMES + ",\"obsolete\":" + OBSOLETE + "}"},
+        {200,
+            "{\"signature\":\"verified\",\"context\":\"mismatch\","
+                + "\"factors\":" + FACTORS + "," + TIMES + "}",
+            "{\"signature\":\"verified\",\"context\":\"mismatch\","
+                + "\"factors\":" + FACTORS + ","
+                + "\"humanConfidenceNullReason\":\"" + NULL_REASON + "\","
+                + "\"status\":\"success\"," + TIMES + "}"},
+        {200,
+            "{\"signature\":\"invalid\",\"context\":\"nocontext\","
+                + TIMES + "}",
+            "{\"signature\":\"invalid\",\"context\":\"nocontext\","
+                + "\"humanConfidence\":\"Absent\",\"status\":\"success\","
+                + TIMES + ",\"obsolete\":" + OBSOLETE + "}"},
+        {200,
+            "{\"context\":\"expired\"," + TIMES + "}",
+            "{\"context\":\"expired\",\"status\":\"expired\"," + TIMES
+                + ",\"obsolete\":" + OBSOLETE + "}"},
+        {200,
+            "{\"context\":\"replayed\"}",
+            "{\"context\":\"replayed\",\"status\":\"replayed\"}"},
+        {200,
+            "{\"context\":\"unreadable\"}",
+            "{\"context\":\"unreadable\",\"status\":\"unreadable\","
+                + "\"obsolete\":" + OBSOLETE + "}"},
+        {503,
+            "{\"context\":\"unconfirmed\"}",
+            "{\"context\":\"unconfirmed\",\"status\":\"unconfirmed\"}"},
+    };
+
+    /**
+     * Every answer from a cloud that adds the new fields reads, through
+     * every member that existed before them, exactly as today's answer
+     * does. A caller that has not changed its code sees no difference.
+     */
+    @Test
+    public void redeem_NewAnswersReadExactlyAsTodays() throws Exception {
+        for (Object[] answer : REDEEM_ANSWERS) {
+            int status = (Integer) answer[0];
+            transport.queue(status, (String) answer[1]);
+            RedeemResult today =
+                client.redeem(validDid, "sealed", "abc").join();
+            transport.queue(status, (String) answer[2]);
+            RedeemResult now =
+                client.redeem(validDid, "sealed", "abc").join();
+
+            String which = (String) answer[2];
+            assertEquals(which, today.getContext(), now.getContext());
+            assertEquals(which, today.getContextValue(),
+                now.getContextValue());
+            assertEquals(which, today.getSignature(), now.getSignature());
+            assertEquals(which, today.hasFactors(), now.hasFactors());
+            assertEquals(which, new ArrayList<String>(
+                today.getFactors().keySet()),
+                new ArrayList<String>(now.getFactors().keySet()));
+            assertEquals(which, today.getFactors(), now.getFactors());
+            assertEquals(which, today.getVerifiedAt(), now.getVerifiedAt());
+            assertEquals(which, today.getSecondsSinceVerified(),
+                now.getSecondsSinceVerified());
+            assertEquals(which, today.getStatusCode(), now.getStatusCode());
+            // And the outcome reads the same from either answer, from
+            // status where the cloud sent it and from context otherwise.
+            assertEquals(which, today.getOutcome(), now.getOutcome());
+        }
+    }
+
+    /**
+     * The sealed result and the transaction go under their current names,
+     * which a cloud that knows them reads, and again under the obsolete
+     * names, which a cloud from before them reads.
+     */
+    @Test
+    public void redeem_SendsSealedResultAndTransaction_AndTheObsoleteNames()
+            throws Exception {
+        transport.queue(200, "{\"signature\":\"verified\","
+            + "\"context\":\"verified\",\"status\":\"success\"}");
+
+        client.redeem(validDid, "sealed+value", "abc").join();
+
+        String form = new String(
+            transport.last().getBody(), StandardCharsets.UTF_8);
+        assertTrue(form, form.contains(
+            "&sealedResult=sealed%2Bvalue&transaction=abc"
+            + "&result=sealed%2Bvalue&challenge=abc"));
+        assertTrue(form, form.endsWith("&license=licence"));
+    }
+
+    @Test
+    public void redeem_NoTransactionSendsBothNamesEmpty() throws Exception {
+        transport.queue(200, "{\"context\":\"unreadable\","
+            + "\"status\":\"unreadable\"}");
+
+        client.redeem(validDid, "sealed", null).join();
+
+        String form = new String(
+            transport.last().getBody(), StandardCharsets.UTF_8);
+        assertTrue(form, form.contains("&transaction=&"));
+        assertTrue(form, form.contains("&challenge=&")
+            || form.endsWith("&challenge="));
+    }
+
+    @Test
+    public void redeem_SuccessReadsEveryHumanConfidenceValue()
+            throws Exception {
+        String[] words = {"High", "Medium", "Low", "Absent"};
+        HumanConfidence[] values = {
+            HumanConfidence.HIGH, HumanConfidence.MEDIUM,
+            HumanConfidence.LOW, HumanConfidence.ABSENT,
+        };
+        for (int i = 0; i < words.length; i++) {
+            transport.queue(200, "{\"signature\":\"verified\","
+                + "\"context\":\"verified\",\"humanConfidence\":\""
+                + words[i] + "\",\"status\":\"success\"," + TIMES + "}");
+
+            RedeemResult result =
+                client.redeem(validDid, "sealed", "abc").join();
+
+            assertEquals(Outcome.SUCCESS, result.getOutcome());
+            assertEquals("success", result.getStatusValue());
+            assertEquals(values[i], result.getHumanConfidence());
+            assertEquals(words[i], result.getHumanConfidenceValue());
+            assertNull(result.getHumanConfidenceNullReason());
+            assertEquals(RedeemResult.Context.VERIFIED, result.getContext());
+        }
+    }
+
+    @Test
+    public void redeem_SuccessWithoutAHumanConfidenceKeyReadsTheReason()
+            throws Exception {
+        transport.queue(200, (String) REDEEM_ANSWERS[1][2]);
+
+        RedeemResult result =
+            client.redeem(validDid, "sealed", "abc").join();
+
+        assertEquals(Outcome.SUCCESS, result.getOutcome());
+        assertNull(result.getHumanConfidence());
+        assertNull(result.getHumanConfidenceValue());
+        assertEquals(NULL_REASON, result.getHumanConfidenceNullReason());
+        assertEquals(RedeemResult.Context.MISMATCH, result.getContext());
+        assertEquals(RedeemResult.Factor.NOT_RECORDED,
+            result.getFactors().get("browserversion"));
+    }
+
+    @Test
+    public void redeem_FailuresReadTheirOutcomeAndNoHumanConfidence()
+            throws Exception {
+        Outcome[] outcomes = {
+            Outcome.EXPIRED, Outcome.REPLAYED, Outcome.UNREADABLE,
+            Outcome.UNCONFIRMED,
+        };
+        for (int i = 0; i < outcomes.length; i++) {
+            Object[] answer = REDEEM_ANSWERS[3 + i];
+            transport.queue((Integer) answer[0], (String) answer[2]);
+
+            RedeemResult result =
+                client.redeem(validDid, "sealed", "abc").join();
+
+            assertEquals(outcomes[i], result.getOutcome());
+            assertEquals(outcomes[i].getValue(), result.getStatusValue());
+            assertEquals(outcomes[i].getValue(), result.getContextValue());
+            assertEquals(RedeemResult.Signature.UNKNOWN,
+                result.getSignature());
+            assertNull(result.getHumanConfidence());
+            assertNull(result.getHumanConfidenceNullReason());
+        }
+    }
+
+    @Test
+    public void redeem_UnknownStatusFailsClosedAndKeepsTheRawValue()
+            throws Exception {
+        transport.queue(200, "{\"context\":\"something-new\","
+            + "\"status\":\"something-new\"}");
+
+        RedeemResult result =
+            client.redeem(validDid, "sealed", "abc").join();
+
+        assertEquals(Outcome.UNREADABLE, result.getOutcome());
+        assertEquals("something-new", result.getStatusValue());
+    }
+
+    @Test
+    public void redeem_StatusInOtherLettersReadsAsItsOutcome()
+            throws Exception {
+        transport.queue(200, "{\"signature\":\"verified\","
+            + "\"context\":\"verified\",\"status\":\"Success\"}");
+
+        RedeemResult result =
+            client.redeem(validDid, "sealed", "abc").join();
+
+        assertEquals(Outcome.SUCCESS, result.getOutcome());
+        assertEquals("Success", result.getStatusValue());
+    }
+
+    /**
+     * A cloud from before {@code status} gave the outcome in
+     * {@code context}, so the outcome is read from there: a failure word is
+     * that failure, a verdict is success, and anything else fails closed.
+     */
+    @Test
+    public void redeem_WithoutStatusReadsTheOutcomeFromContext()
+            throws Exception {
+        String[] contexts = {
+            "verified", "mismatch", "nocontext", "misconfigured",
+            "invaliddate", "notcheckable", "expired", "replayed",
+            "unreadable", "unconfirmed", "something-new",
+        };
+        Outcome[] outcomes = {
+            Outcome.SUCCESS, Outcome.SUCCESS, Outcome.SUCCESS,
+            Outcome.SUCCESS, Outcome.SUCCESS, Outcome.SUCCESS,
+            Outcome.EXPIRED, Outcome.REPLAYED, Outcome.UNREADABLE,
+            Outcome.UNCONFIRMED, Outcome.UNREADABLE,
+        };
+        for (int i = 0; i < contexts.length; i++) {
+            transport.queue(200, "{\"context\":\"" + contexts[i] + "\"}");
+
+            RedeemResult result =
+                client.redeem(validDid, "sealed", "abc").join();
+
+            assertEquals(contexts[i], outcomes[i], result.getOutcome());
+            assertNull(result.getStatusValue());
+            assertNull(result.getHumanConfidence());
+        }
+
+        transport.queue(200, "{}");
+        assertEquals(Outcome.UNREADABLE,
+            client.redeem(validDid, "sealed", "abc").join().getOutcome());
+    }
+
+    @Test
+    public void humanConfidence_UnknownWordIsAbsentAndKeepsTheRawValue()
+            throws Exception {
+        transport.queue(200, "{\"signature\":\"verified\","
+            + "\"context\":\"verified\",\"humanConfidence\":\"Certain\","
+            + "\"status\":\"success\"}");
+
+        RedeemResult result =
+            client.redeem(validDid, "sealed", "abc").join();
+
+        assertEquals(HumanConfidence.ABSENT, result.getHumanConfidence());
+        assertEquals("Certain", result.getHumanConfidenceValue());
+        assertEquals(HumanConfidence.LOW, HumanConfidence.fromValue("low"));
+        assertNull(HumanConfidence.fromValue(null));
+    }
+
+    @Test
+    public void outcomeAndHumanConfidence_GetValue_AreTheCloudsWords() {
+        assertEquals("success", Outcome.SUCCESS.getValue());
+        assertEquals("expired", Outcome.EXPIRED.getValue());
+        assertEquals("replayed", Outcome.REPLAYED.getValue());
+        assertEquals("unconfirmed", Outcome.UNCONFIRMED.getValue());
+        assertEquals("unreadable", Outcome.UNREADABLE.getValue());
+        assertEquals(Outcome.UNREADABLE, Outcome.fromValue(null));
+        assertEquals("High", HumanConfidence.HIGH.getValue());
+        assertEquals("Medium", HumanConfidence.MEDIUM.getValue());
+        assertEquals("Low", HumanConfidence.LOW.getValue());
+        assertEquals("Absent", HumanConfidence.ABSENT.getValue());
+    }
+
+    /**
+     * The verify answers a cloud that adds {@code humanConfidence} or
+     * {@code humanConfidenceNullReason} gives read exactly as today's
+     * through {@link DidClient#verify(String)}.
+     */
+    @Test
+    public void verify_NewAnswersReadExactlyAsTodays() throws Exception {
+        String[] answers = {
+            "{\"valid\":true}",
+            "{\"valid\":true,\"humanConfidence\":\"High\"}",
+            "{\"valid\":true,\"humanConfidence\":\"Absent\"}",
+            "{\"valid\":true,\"humanConfidenceNullReason\":\""
+                + NULL_REASON + "\"}",
+        };
+        for (String answer : answers) {
+            transport.queue(200, answer);
+            assertTrue(answer, client.verify(validDid).join());
+        }
+        transport.queue(400, "{\"valid\":false}");
+        assertFalse(client.verify(validDid).join());
+    }
+
+    @Test
+    public void verifyDetailed_ReadsTheHumanConfidenceValue()
+            throws Exception {
+        transport.queue(200, "{\"valid\":true,\"humanConfidence\":\"Low\"}");
+        FodId fodId = key2.fodIdAt(canonicalPayload(), WEEK2);
+
+        Verification verification = client.verifyDetailed(fodId).join();
+
+        assertTrue(verification.isValid());
+        assertEquals(HumanConfidence.LOW, verification.getHumanConfidence());
+        assertEquals("Low", verification.getHumanConfidenceValue());
+        assertNull(verification.getHumanConfidenceNullReason());
+        assertEquals(200, verification.getStatusCode());
+        // The same request verify makes.
+        assertEquals(ENDPOINT + "id/verify/resource?51did="
+            + fodId.asBase64Url() + "&owid=" + fodId.asBase64Url(),
+            transport.last().getUrl());
+    }
+
+    @Test
+    public void verifyDetailed_ReadsTheReasonWhereThereIsNoValue()
+            throws Exception {
+        transport.queue(200, "{\"valid\":true,\"humanConfidenceNullReason\":\""
+            + NULL_REASON + "\"}");
+
+        Verification verification = client.verifyDetailed(validDid).join();
+
+        assertTrue(verification.isValid());
+        assertNull(verification.getHumanConfidence());
+        assertEquals(NULL_REASON,
+            verification.getHumanConfidenceNullReason());
+    }
+
+    @Test
+    public void verifyDetailed_TodaysAnswersCarryNoValue() throws Exception {
+        transport.queue(200, "{\"valid\":true}");
+        Verification valid = client.verifyDetailed(validDid).join();
+        assertTrue(valid.isValid());
+        assertNull(valid.getHumanConfidence());
+        assertNull(valid.getHumanConfidenceNullReason());
+
+        transport.queue(400, "{\"valid\":false}");
+        Verification invalid = client.verifyDetailed(validDid).join();
+        assertFalse(invalid.isValid());
+        assertNull(invalid.getHumanConfidence());
+        assertEquals(400, invalid.getStatusCode());
+    }
+
+    @Test
+    public void verifyDetailed_FailsAsVerifyDoes() {
+        transport.queue(401, "{\"errors\":[\"bad key\"]}");
+        DidHttpException error = failure(DidHttpException.class,
+            client.verifyDetailed(validDid));
+        assertEquals(401, error.getStatusCode());
+
+        failure(IllegalArgumentException.class,
+            client.verifyDetailed(repeat('A', 8192)));
     }
 
     // ----- Malformed input never reaches the network -----

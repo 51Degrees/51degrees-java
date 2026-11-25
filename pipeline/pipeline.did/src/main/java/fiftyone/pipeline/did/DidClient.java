@@ -72,10 +72,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <li>{@link #verifySignature(FodId)} checks a 51Did's signature offline
  * against that key.</li>
  * <li>{@link #verify(FodId)} checks a 51Did's signature through the cloud's
- * verify endpoint.</li>
+ * verify endpoint, and {@link #verifyDetailed(FodId)} also returns the
+ * Human Confidence Value the 51Did carries.</li>
  * <li>{@link #redeem(FodId, String, String)} redeems a sealed creator
  * context result, with the licence key, and returns a typed
- * {@link RedeemResult}.</li>
+ * {@link RedeemResult} with the {@link Outcome} and, on success, the
+ * unsealed result and the Human Confidence Value.</li>
  * </ol>
  * Every one of those may reach the cloud, so every one of them returns at
  * once with a {@link CompletableFuture} and never blocks the calling
@@ -810,9 +812,25 @@ public final class DidClient {
      *         answers with a status the client does not map
      */
     public CompletableFuture<Boolean> verify(FodId fodId) {
+        return verifyDetailed(fodId).thenApply(Verification::isValid);
+    }
+
+    /**
+     * Checks the identifier's signature through the cloud's verify
+     * endpoint, as {@link #verify(FodId)} does, and also returns the Human
+     * Confidence Value the 51Did carries where the cloud returns it. The
+     * cloud returns the Value for a 51Did whose signature verifies, to a
+     * call that presents a License Key valid for Human Confidence, and the
+     * reason it is not there otherwise. One use against the resource key.
+     *
+     * @param fodId the identifier
+     * @return the typed answer, or a future failed as
+     *         {@link #verify(FodId)} describes
+     */
+    public CompletableFuture<Verification> verifyDetailed(FodId fodId) {
         try {
             Objects.requireNonNull(fodId, "fodId");
-            return verify(base64Url(fodId));
+            return verifyDetailed(base64Url(fodId));
         } catch (RuntimeException refused) {
             return failed(refused);
         }
@@ -836,6 +854,21 @@ public final class DidClient {
      *         invalid
      */
     public CompletableFuture<Boolean> verify(String fodId) {
+        return verifyDetailed(fodId).thenApply(Verification::isValid);
+    }
+
+    /**
+     * Checks the identifier's signature through the cloud's verify
+     * endpoint, and also returns the Human Confidence Value the 51Did
+     * carries where the cloud returns it. The identifier may be in either
+     * base64 alphabet. See {@link #verify(String)} for how the request is
+     * made and how the future fails, and {@link #verifyDetailed(FodId)} for
+     * when the Value is returned.
+     *
+     * @param fodId the identifier as base64
+     * @return the typed answer
+     */
+    public CompletableFuture<Verification> verifyDetailed(String fodId) {
         try {
             Objects.requireNonNull(fodId, "fodId");
             ensureEncodedLength(fodId);
@@ -852,16 +885,16 @@ public final class DidClient {
         }
     }
 
-    /** The verdict a verify endpoint answer carries. */
-    private static boolean readVerify(HttpTransport.Response response) {
+    /** The typed answer a verify endpoint answer carries. */
+    private static Verification readVerify(HttpTransport.Response response) {
         JSONObject json = asObject(response.getBody());
         int status = response.getStatusCode();
         if (status == 200 && json != null && json.has("valid")) {
-            return json.getBoolean("valid");
+            return Verification.parse(status, json, response.getBody());
         }
         if (status == 400 && json != null) {
             if (json.has("valid")) {
-                return json.getBoolean("valid");
+                return Verification.parse(status, json, response.getBody());
             }
             if (json.has("errors")) {
                 throw new IllegalArgumentException(errorsText(json));
@@ -879,6 +912,17 @@ public final class DidClient {
      * given. One use against the resource key, the second of the two a
      * browser-based context check costs.
      * <p>
+     * The sealed result is sent as {@code sealedResult} and the transaction
+     * as {@code transaction}. Each is also sent under its obsolete name,
+     * {@code result} and {@code challenge}, so that a host from before the
+     * new names still reads them. A host that knows both names reads the new
+     * ones.
+     * <p>
+     * {@link RedeemResult#getOutcome()} says what happened. On
+     * {@link Outcome#SUCCESS} the answer carries the unsealed result and,
+     * for a call that presents a License Key valid for Human Confidence, the
+     * Human Confidence Value the 51Did carries.
+     * <p>
      * The future fails with {@link IllegalArgumentException} where the
      * cloud says the identifier is not a 51Did, with the cloud's message,
      * with {@link DidNotSupportedException} where the host does not offer
@@ -886,18 +930,19 @@ public final class DidClient {
      * answers with any other status or a body that is not its own shape,
      * and with {@link IOException} where the cloud cannot be reached.
      *
-     * @param fodId     the identifier the sealed result was made for
-     * @param result    the sealed result exactly as the verify endpoint
-     *                  returned it
-     * @param challenge the single-use challenge given to the verify
-     *                  endpoint, or null where none was
+     * @param fodId        the identifier the sealed result was made for
+     * @param sealedResult the sealed result exactly as the verify endpoint
+     *                     returned it, in {@code sealedResult} or, from a
+     *                     host before that name, {@code result}
+     * @param transaction  the single-use transaction value given to the
+     *                     verify endpoint, or null where none was
      * @return the typed result, for a 200 or a 503 answer
      */
     public CompletableFuture<RedeemResult> redeem(
-            FodId fodId, String result, String challenge) {
+            FodId fodId, String sealedResult, String transaction) {
         try {
             Objects.requireNonNull(fodId, "fodId");
-            return redeem(base64(fodId), result, challenge);
+            return redeem(base64(fodId), sealedResult, transaction);
         } catch (RuntimeException refused) {
             return failed(refused);
         }
@@ -911,24 +956,32 @@ public final class DidClient {
      * 51Did, with the {@link FodIdParseStatus} in the message, and
      * otherwise as {@link #redeem(FodId, String, String)}.
      *
-     * @param fodId     the identifier as base64
-     * @param result    the sealed result
-     * @param challenge the challenge, or null
+     * @param fodId        the identifier as base64
+     * @param sealedResult the sealed result
+     * @param transaction  the transaction value, or null
      * @return the typed result, for a 200 or a 503 answer
      */
     public CompletableFuture<RedeemResult> redeem(
-            String fodId, String result, String challenge) {
+            String fodId, String sealedResult, String transaction) {
         try {
             Objects.requireNonNull(fodId, "fodId");
             ensureEncodedLength(fodId);
             ensureReadsAs51Did(fodId);
             // The POST route has no {resource} segment, so the resource key
-            // goes in the form with everything else.
+            // goes in the form with everything else. The sealed result and
+            // the transaction go under their current names and again under
+            // their obsolete ones, so a host from before the current names
+            // still reads them. A host that knows both reads the current
+            // names.
+            String sealed = encode(nullToEmpty(sealedResult));
+            String bound = encode(nullToEmpty(transaction));
             StringBuilder form = new StringBuilder()
                 .append("resource=").append(encode(resourceKey))
                 .append("&51did=").append(encode(fodId))
-                .append("&result=").append(encode(nullToEmpty(result)))
-                .append("&challenge=").append(encode(nullToEmpty(challenge)));
+                .append("&sealedResult=").append(sealed)
+                .append("&transaction=").append(bound)
+                .append("&result=").append(sealed)
+                .append("&challenge=").append(bound);
             if (licenceKey != null) {
                 form.append("&license=").append(encode(licenceKey));
             }
