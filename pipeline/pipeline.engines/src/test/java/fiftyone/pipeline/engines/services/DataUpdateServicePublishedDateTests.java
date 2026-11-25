@@ -151,23 +151,18 @@ public class DataUpdateServicePublishedDateTests {
     }
 
     @After
-    public void tearDown() {
+    public void tearDown() throws IOException {
         service.unregisterDataFile(file);
         service.close();
-        // Windows keeps a file the watcher has read until the reader's
-        // mapped buffer is collected, so whatever cannot be deleted now is
-        // deleted when the test run ends. Those are deleted in the reverse
-        // order they are registered, so the folder is registered first.
-        directory.toFile().deleteOnExit();
+        // The service holds no file open once a check ends, so a file that
+        // cannot be deleted here fails the test.
         File[] files = directory.toFile().listFiles();
         if (files != null) {
             for (File f : files) {
-                if (f.delete() == false) {
-                    f.deleteOnExit();
-                }
+                Files.deleteIfExists(f.toPath());
             }
         }
-        directory.toFile().delete();
+        Files.deleteIfExists(directory);
     }
 
     @Test

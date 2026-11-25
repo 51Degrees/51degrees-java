@@ -63,6 +63,17 @@ public class FileWrapperDefault implements FileWrapper {
         return new BinaryReader(new FileInputStream(file));
     }
 
+    /**
+     * Open the file with a stream and close it, without mapping it as
+     * {@link #getReader()} does, so the file is free as soon as this returns.
+     *
+     * @throws IOException if the file cannot be opened for reading
+     */
+    @Override
+    public void checkReadable() throws IOException {
+        new FileInputStream(file).close();
+    }
+
     @Override
     public long getLastModified() {
         return file.lastModified();

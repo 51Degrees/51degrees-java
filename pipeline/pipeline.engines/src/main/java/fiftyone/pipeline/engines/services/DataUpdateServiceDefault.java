@@ -547,8 +547,10 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                                         watchedFileOpenTimeoutMillis);
                         while (fileLockable == false &&
                                 System.nanoTime() - deadline < 0) {
-                            try (BinaryReader reader = fileWrapperFactory.build(
-                                    aspectDataFile.getDataFilePath()).getReader()) {
+                            try {
+                                fileWrapperFactory.build(
+                                        aspectDataFile.getDataFilePath())
+                                        .checkReadable();
                                 fileLockable = true;
                             } catch (IOException ignored) {
                                 try {
