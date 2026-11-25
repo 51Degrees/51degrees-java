@@ -67,7 +67,9 @@ import java.util.concurrent.Executors;
  * <li>Redeem. The page hands the sealed value to this server, which sends
  * it with the License Key to hc/redeem and returns the cloud's answer as it
  * came. A sealed value redeems once, within ten seconds. The License Key
- * stays on this server.</li>
+ * stays on this server. The answer's status says what happened, and only
+ * success carries the level. A cloud from before status says why a redeem
+ * failed in result.</li>
  * </ol>
  * Environment variables:
  * <ul>
@@ -327,12 +329,19 @@ public class HumanConfidence {
 
     /**
      * Sends the sealed value and the License Key to hc/redeem, and returns
-     * the cloud's answer unchanged.
+     * the cloud's answer unchanged. The sealed value goes as sealedResult,
+     * which the cloud reads now, and again as value, which a cloud from
+     * before sealedResult reads.
      */
     private void redeem(HttpExchange exchange) throws IOException {
         Map<String, String> fields = new LinkedHashMap<>();
-        String value = parseForm(readAll(exchange.getRequestBody())).get("value");
-        fields.put("value", value == null ? "" : value);
+        Map<String, String> page = parseForm(readAll(exchange.getRequestBody()));
+        String sealed = page.get("sealedResult");
+        if (sealed == null) {
+            sealed = page.get("value");
+        }
+        fields.put("sealedResult", sealed == null ? "" : sealed);
+        fields.put("value", sealed == null ? "" : sealed);
         if (license != null) {
             fields.put("license", license);
         }

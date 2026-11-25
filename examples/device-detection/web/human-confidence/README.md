@@ -27,10 +27,16 @@ The page shows three rows, one for each step.
    `HumanConfidenceSource` is `Active` and `HumanConfidence` holds a sealed
    value. The browser can't read it or change it.
 3. **Redeem.** The page hands the sealed value to the server, which sends it
-   to the cloud's `hc/redeem` with the account's License Key and returns the
-   answer as it came. A sealed value redeems once, within ten seconds of the
-   tests. The page then offers to redeem the same value again, which answers
-   `replayed`.
+   to the cloud's `hc/redeem` as `sealedResult`, with the account's License
+   Key, and returns the answer as it came. A sealed value redeems once,
+   within ten seconds of the tests. The answer's `status` is `success`,
+   `expired`, `replayed`, `unconfirmed` or `unreadable`, and only `success`
+   carries the level. The page then offers to redeem the same value again,
+   which answers `replayed`.
+
+   The server also sends the sealed value as `value`, the name a cloud from
+   before `sealedResult` reads. That cloud answers without `status`, and
+   says why a redeem failed in `result`, which the page reads instead.
 
 ## What you need
 

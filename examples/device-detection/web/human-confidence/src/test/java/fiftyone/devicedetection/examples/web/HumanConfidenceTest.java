@@ -226,11 +226,22 @@ public class HumanConfidenceTest {
     public void redeemPassesTheAnswerOnUnchanged() throws IOException {
         String base = start(true, true);
         HttpURLConnection connection = post(base + "redeem",
-                "value=sealed%2Bvalue");
+                "sealedResult=sealed%2Bvalue");
         assertEquals(200, connection.getResponseCode());
         assertEquals(REDEEMED, read(connection));
+        assertEquals("sealed+value", redeemForm.get("sealedResult"));
         assertEquals("sealed+value", redeemForm.get("value"));
         assertEquals(LICENSE, redeemForm.get("license"));
+    }
+
+    @Test
+    public void redeemSendsTheSealedValueUnderBothNames() throws IOException {
+        String base = start(true, true);
+        HttpURLConnection connection = post(base + "redeem", "value=v");
+        assertEquals(200, connection.getResponseCode());
+        assertEquals("v", redeemForm.get("sealedResult"));
+        assertEquals("v", redeemForm.get("value"));
+        assertFalse(redeemForm.containsKey("challenge"));
     }
 
     @Test

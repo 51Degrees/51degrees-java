@@ -106,19 +106,28 @@ __NOTICE__
   // Step 3. The server redeems the sealed value with its License Key.
   function redeem(value) {
     var body = new URLSearchParams();
-    body.set("value", value);
+    body.set("sealedResult", value);
     return fetch("redeem", { method: "POST", body: body })
       .then(function (r) { return r.json(); });
   }
 
+  // Only a status of success carries the level. A cloud from before status
+  // answers with the level on success and says why not in result.
+  function redeemed(answer) {
+    return answer.status
+      ? answer.status === "success"
+      : Boolean(answer.humanConfidence);
+  }
+
   function showRedeemed(answer) {
-    if (answer.humanConfidence) {
+    if (redeemed(answer)) {
       show("redeem-detail", "redeemed " + answer.secondsSinceVerified
         + " s after the check", PASS);
       show("redeem-level", answer.humanConfidence,
         levelClass(answer.humanConfidence));
     } else {
-      show("redeem-detail", answer.result || answer.error || "no answer", FAIL);
+      show("redeem-detail", answer.status || answer.result || answer.error
+        || "no answer", FAIL);
       show("redeem-level", "no level", NONE);
     }
   }
@@ -162,8 +171,9 @@ __NOTICE__
         again.onclick = function () {
           redeem(value).then(function (second) {
             document.getElementById("again-result").textContent =
-              " Second redeem: " + (second.result || second.humanConfidence
-                || second.error);
+              " Second redeem: " + (redeemed(second)
+                ? second.humanConfidence
+                : second.status || second.result || second.error);
           });
         };
       }).catch(function (error) {
