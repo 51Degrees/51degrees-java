@@ -36,7 +36,9 @@ The page shows three rows, one for each step.
 
    The server also sends the sealed value as `value`, the name a cloud from
    before `sealedResult` reads. That cloud answers without `status`, and
-   says why a redeem failed in `result`, which the page reads instead.
+   says why a redeem failed in `result`, which the page reads instead. It
+   sends a level with `expired` and `replayed` too, so the page shows a
+   success only when `result` is left out or is `success`.
 
 ## What you need
 

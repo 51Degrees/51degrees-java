@@ -417,12 +417,15 @@ In the order a server uses them:
    CompletableFuture<Boolean> genuine = client.verify(fodId);
    ```
 
-   `verifyDetailed` makes the same call and also returns the Human
-   Confidence Value the 51Did carries, `HIGH`, `MEDIUM`, `LOW` or `ABSENT`.
-   The cloud returns the Value for a 51Did whose signature verifies, to a
-   call that presents a License Key valid for Human Confidence. Any other
-   call gets the reason it isn't there. A 51Did made before the Value was
-   added reads as `ABSENT`.
+   `verifyDetailed` also returns the Human Confidence Value the 51Did
+   carries, `HIGH`, `MEDIUM`, `LOW` or `ABSENT`. The cloud returns the
+   Value for a 51Did whose signature verifies, to a call that presents a
+   License Key valid for Human Confidence. Any other call gets the reason
+   it isn't there. A 51Did made before the Value was added reads as
+   `ABSENT`. A client built with a licence key sends this call as a POST to
+   `id/verify`, with the resource key, the 51Did and the licence key in the
+   form body, so the licence key never reaches a URL. A client without one
+   makes the same GET as `verify`.
 
    ```java
    client.verifyDetailed(fodId).thenAccept(verification -> {

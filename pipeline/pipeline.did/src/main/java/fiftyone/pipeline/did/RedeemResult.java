@@ -313,6 +313,9 @@ public final class RedeemResult {
      * @return the typed result
      */
     static RedeemResult parse(int statusCode, JSONObject json, String raw) {
+        if (statusCode == 503) {
+            return unconfirmed(json, raw);
+        }
         String contextValue = json.optString("context", null);
         Context context = Context.fromValue(contextValue);
         String statusValue = json.optString("status", null);
@@ -369,6 +372,41 @@ public final class RedeemResult {
             secondsSinceVerified,
             statusCode,
             raw);
+    }
+
+    /**
+     * The result of a 503 answer, which is always
+     * {@link Outcome#UNCONFIRMED} whatever the body says. Nothing in the
+     * body is read as an unsealed result. The raw {@code status} and
+     * {@code context} words are kept where the body is JSON and has them.
+     *
+     * @param json the body as JSON, or null where it is empty or not JSON
+     * @param raw  the body as received
+     * @return the unconfirmed result
+     */
+    static RedeemResult unconfirmed(JSONObject json, String raw) {
+        String statusValue = json == null
+            ? null
+            : json.optString("status", null);
+        String contextValue = json == null
+            ? null
+            : json.optString("context", null);
+        @SuppressWarnings("deprecation")
+        Context context = Context.UNCONFIRMED;
+        return new RedeemResult(
+            Outcome.UNCONFIRMED,
+            statusValue,
+            context,
+            contextValue == null ? context.getValue() : contextValue,
+            Signature.UNKNOWN,
+            Collections.<String, Factor>emptyMap(),
+            false,
+            null,
+            null,
+            null,
+            null,
+            503,
+            raw == null ? "" : raw);
     }
 
     /**

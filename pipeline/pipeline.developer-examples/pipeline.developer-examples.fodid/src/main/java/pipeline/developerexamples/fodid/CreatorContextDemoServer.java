@@ -225,9 +225,21 @@ public class CreatorContextDemoServer {
         redeem(
             client,
             decode(valueOr(query, "51did")),
-            decode(valueOr(query, "sealedResult")),
-            decode(valueOr(query, "transaction")))
+            decode(named(query, "sealedResult", "result")),
+            decode(named(query, "transaction", "challenge")))
             .thenAccept(answer -> write(exchange, answer));
+    }
+
+    /**
+     * The value under the current name, or under the obsolete name where
+     * the current one is missing or empty. A page cached from before the
+     * current names still sends {@code result} and {@code challenge}, and
+     * an empty value means the name was not sent.
+     */
+    static String named(
+            Map<String, String> query, String current, String obsolete) {
+        String value = valueOr(query, current);
+        return value.isEmpty() ? valueOr(query, obsolete) : value;
     }
 
     /** Writes one answer to the page and closes the exchange. */
@@ -263,10 +275,11 @@ public class CreatorContextDemoServer {
      * <p>
      * The page is answered in the cloud's own shape ({@code status},
      * {@code signature}, {@code context}, {@code factors} when present,
-     * {@code humanConfidence} or {@code humanConfidenceNullReason} when
-     * present, {@code verifiedAt}, {@code secondsSinceVerified}) with one
-     * field added, {@code serverSignature}, being this server's own offline
-     * check. The page ignores fields it does not know.
+     * {@code verifiedAt}, {@code secondsSinceVerified}) with one field
+     * added, {@code serverSignature}, being this server's own offline
+     * check. The page ignores fields it does not know. The Human Confidence
+     * Value the redemption returns is for this server to act on, so it is
+     * never sent to the page.
      */
     static CompletableFuture<Answer> redeem(
             DidClient client, String did, String sealedResult,
@@ -328,7 +341,10 @@ public class CreatorContextDemoServer {
             .put("error", String.valueOf(failure)));
     }
 
-    /** The cloud's own shape, plus {@code serverSignature}. */
+    /**
+     * The cloud's own shape, plus {@code serverSignature}, without the
+     * Human Confidence Value or the reason it is missing.
+     */
     static JSONObject toJson(RedeemResult redeemed, String serverSignature) {
         JSONObject json = new JSONObject();
         json.put("status", redeemed.getOutcome().getValue());
@@ -349,13 +365,9 @@ public class CreatorContextDemoServer {
             }
             json.put("factors", factors);
         }
-        if (redeemed.getHumanConfidence() != null) {
-            json.put("humanConfidence",
-                redeemed.getHumanConfidence().getValue());
-        } else if (redeemed.getHumanConfidenceNullReason() != null) {
-            json.put("humanConfidenceNullReason",
-                redeemed.getHumanConfidenceNullReason());
-        }
+        // The Human Confidence Value, redeemed.getHumanConfidence(), and
+        // the reason it is missing are left out on purpose. They are for
+        // this server to act on, and the browser must never see them.
         if (redeemed.getVerifiedAt() != null) {
             json.put("verifiedAt", DateTimeFormatter.ISO_INSTANT
                 .format(redeemed.getVerifiedAt()));

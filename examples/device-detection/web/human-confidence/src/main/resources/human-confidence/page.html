@@ -112,11 +112,17 @@ __NOTICE__
   }
 
   // Only a status of success carries the level. A cloud from before status
-  // answers with the level on success and says why not in result.
+  // gives a level with expired and replayed too, so there it's success only
+  // when result (or context) names no failure: it's left out, or it's
+  // success. Any other word, expired, replayed, unreadable and unconfirmed
+  // included, is a failure.
   function redeemed(answer) {
-    return answer.status
-      ? answer.status === "success"
-      : Boolean(answer.humanConfidence);
+    if (answer.status) {
+      return answer.status === "success";
+    }
+    var word = answer.result || answer.context;
+    return Boolean(answer.humanConfidence)
+      && (!word || word === "success");
   }
 
   function showRedeemed(answer) {

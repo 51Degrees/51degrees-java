@@ -428,9 +428,13 @@
 
   owidPromise.then(function (owid) {
     // 2. Verify from THIS browser, so the cloud observes this live
-    // connection. The verdict returns only as an encrypted result.
+    // connection. The verdict returns only as an encrypted result. The
+    // transaction value goes under both names, transaction and the
+    // obsolete challenge, so a service that reads only challenge still
+    // binds it.
     return fetch(API + "id/verify-full/" + RESOURCE + "/"
-        + owid + "?transaction=" + TRANSACTION + snippetQuery())
+        + owid + "?transaction=" + TRANSACTION
+        + "&challenge=" + TRANSACTION + snippetQuery())
       .then(asJson)
       .then(function (verified) {
         // sealedResult, or result from a service before that name.

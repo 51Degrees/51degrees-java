@@ -26,6 +26,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import org.json.JSONObject;
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -317,6 +318,76 @@ public class HumanConfidenceTest {
             assertEquals("cloud.51degrees.com", hosts.group());
         }
         assertTrue("README cloud addresses found: " + count, count >= 1);
+    }
+
+    /**
+     * The page shows a redemption as a success only when it was one. A
+     * cloud from before status answers expired and replayed with a level
+     * as well, and names the failure in result, so those must read as
+     * failures. The page's own function is run in Node with each answer.
+     * Where Node is absent the test says so and stops.
+     */
+    @Test
+    public void pageReadsLegacyFailuresAsFailures() throws Exception {
+        String page;
+        try (InputStream in = HumanConfidence.class.getResourceAsStream(
+                "/human-confidence/page.html")) {
+            page = readAll(in);
+        }
+        Matcher function = Pattern.compile(
+                "function redeemed\\(answer\\) \\{.*?\\r?\\n  \\}",
+                Pattern.DOTALL).matcher(page);
+        assertTrue("the page has its redeemed function", function.find());
+        String[][] cases = {
+            // Answers with status.
+            {"{\"status\":\"success\",\"humanConfidence\":\"High\"}", "true"},
+            {"{\"status\":\"replayed\",\"humanConfidence\":\"Low\"}", "false"},
+            // Answers from a cloud before status.
+            {"{\"humanConfidence\":\"High\",\"secondsSinceVerified\":2}",
+                "true"},
+            {"{\"humanConfidence\":\"High\",\"result\":\"success\"}", "true"},
+            {"{\"humanConfidence\":\"Low\",\"result\":\"replayed\"}", "false"},
+            {"{\"humanConfidence\":\"Low\",\"result\":\"expired\"}", "false"},
+            {"{\"humanConfidence\":\"Low\",\"result\":\"unreadable\"}",
+                "false"},
+            {"{\"humanConfidence\":\"Low\",\"result\":\"unconfirmed\"}",
+                "false"},
+            {"{\"humanConfidence\":\"Low\",\"context\":\"replayed\"}",
+                "false"},
+            {"{\"humanConfidence\":\"Low\",\"result\":\"something-new\"}",
+                "false"},
+            {"{\"result\":\"unreadable\"}", "false"},
+            {"{}", "false"},
+        };
+        StringBuilder script = new StringBuilder(function.group())
+                .append("\nvar answers = [");
+        for (String[] answer : cases) {
+            script.append(answer[0]).append(",");
+        }
+        script.append("];\nconsole.log(JSON.stringify("
+                + "answers.map(function (a) { return redeemed(a); })));");
+        Process process;
+        try {
+            // The script goes in on standard input, which Node runs when
+            // it is given no file, so no quoting of it is needed.
+            process = new ProcessBuilder("node")
+                    .redirectErrorStream(true).start();
+        } catch (IOException notThere) {
+            Assume.assumeTrue("node is not on the path, so the page's "
+                    + "function was not run: " + notThere.getMessage(), false);
+            return;
+        }
+        try (OutputStream in = process.getOutputStream()) {
+            in.write(script.toString().getBytes(StandardCharsets.UTF_8));
+        }
+        String printed = readAll(process.getInputStream()).trim();
+        assertEquals(printed, 0, process.waitFor());
+        org.json.JSONArray results = new org.json.JSONArray(printed);
+        assertEquals(cases.length, results.length());
+        for (int i = 0; i < cases.length; i++) {
+            assertEquals(cases[i][0], Boolean.parseBoolean(cases[i][1]),
+                    results.getBoolean(i));
+        }
     }
 
     private static String rawGet(String base, String path, String... headers)

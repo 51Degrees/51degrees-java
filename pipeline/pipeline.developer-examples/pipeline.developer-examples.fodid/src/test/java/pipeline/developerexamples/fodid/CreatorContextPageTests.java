@@ -103,8 +103,16 @@ public class CreatorContextPageTests {
      * checked rather than reporting a pass.
      */
     private static String run(List<String> command) throws Exception {
+        return run(command, false);
+    }
+
+    private static String run(List<String> command, boolean legacyService)
+        throws Exception {
         ProcessBuilder builder = new ProcessBuilder(command);
         builder.redirectErrorStream(true);
+        if (legacyService) {
+            builder.environment().put("HARNESS_LEGACY_SERVICE", "1");
+        }
         Process process;
         try {
             process = builder.start();
@@ -141,12 +149,26 @@ public class CreatorContextPageTests {
      *              transplant path, or null to create one instead
      */
     private static JSONObject runPage(String given) throws Exception {
+        return runPage(given, false);
+    }
+
+    /**
+     * Runs the page's script and returns what the harness recorded.
+     *
+     * @param given         the identifier the page is opened with, or null
+     * @param legacyService whether the verify endpoints answer as a service
+     *                      from before the current names, reading only
+     *                      {@code challenge} and answering only
+     *                      {@code result}
+     */
+    private static JSONObject runPage(String given, boolean legacyService)
+        throws Exception {
         List<String> command = new ArrayList<>(Arrays.asList(
             "node", harness().toString(), page().toString()));
         if (given != null) {
             command.add(given);
         }
-        String[] lines = run(command).trim().split("\\r?\\n");
+        String[] lines = run(command, legacyService).trim().split("\\r?\\n");
         return new JSONObject(lines[lines.length - 1].trim());
     }
 
@@ -273,6 +295,47 @@ public class CreatorContextPageTests {
         assertTrue(redeem.get(0).contains("&transaction=test-transaction"),
             redeem.get(0));
         assertEquals("verified", row(record, "s-signature"));
+        assertEquals("verified", row(record, "s-context"));
+    }
+
+    /**
+     * The verification sends the transaction value under both names, the
+     * current {@code transaction} and the obsolete {@code challenge}, with
+     * the same value, so a service that reads only {@code challenge} still
+     * binds the sealed result to it.
+     */
+    @Test
+    public void The_Verification_Sends_Transaction_And_Challenge()
+        throws Exception {
+        List<String> verify = containing(
+            strings(runPage(null), "fetches"), "id/verify-full");
+        assertEquals(1, verify.size());
+        assertTrue(verify.get(0).contains("?transaction=test-transaction&"),
+            verify.get(0));
+        assertTrue(verify.get(0).contains("&challenge=test-transaction&"),
+            verify.get(0));
+    }
+
+    /**
+     * Against a service that reads only {@code challenge} and answers only
+     * {@code result}, the page still gets a result bound to its transaction
+     * value and hands it to its own server with that value.
+     */
+    @Test
+    public void Verify_And_Redeem_Work_With_A_Service_That_Reads_Only_Old_Names()
+        throws Exception {
+        JSONObject record = runPage(null, true);
+        List<String> redeem = new ArrayList<>();
+        for (String address : strings(record, "fetches")) {
+            if (address.startsWith("/redeem?")) {
+                redeem.add(address);
+            }
+        }
+        assertEquals(1, redeem.size());
+        assertTrue(redeem.get(0).contains(
+            "&sealedResult=sealed-for-test-transaction&"), redeem.get(0));
+        assertTrue(redeem.get(0).contains("&transaction=test-transaction"),
+            redeem.get(0));
         assertEquals("verified", row(record, "s-context"));
     }
 

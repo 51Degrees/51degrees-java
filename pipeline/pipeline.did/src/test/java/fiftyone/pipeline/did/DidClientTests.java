@@ -1232,6 +1232,43 @@ public class DidClientTests {
         assertEquals(503, result.getStatusCode());
     }
 
+    /**
+     * HTTP 503 means first use could not be confirmed, whatever the body
+     * says: an empty body, a body that is not JSON, and a body that names
+     * success all read as unconfirmed, with no unsealed result.
+     */
+    @Test
+    @SuppressWarnings("deprecation")
+    public void redeem_503IsUnconfirmedWhateverTheBodySays()
+            throws Exception {
+        String[] bodies = {
+            "",
+            "Service Unavailable",
+            "{\"signature\":\"verified\",\"context\":\"verified\","
+                + "\"humanConfidence\":\"High\",\"status\":\"success\","
+                + "\"verifiedAt\":\"2026-08-07T09:15:32Z\","
+                + "\"secondsSinceVerified\":3}",
+        };
+        for (String body : bodies) {
+            transport.queue(503, body);
+
+            RedeemResult result =
+                client.redeem(validDid, "sealed", "abc").join();
+
+            assertEquals(body, Outcome.UNCONFIRMED, result.getOutcome());
+            assertEquals(body, RedeemResult.Context.UNCONFIRMED,
+                result.getContext());
+            assertEquals(body, RedeemResult.Signature.UNKNOWN,
+                result.getSignature());
+            assertNull(body, result.getHumanConfidence());
+            assertNull(body, result.getVerifiedAt());
+            assertNull(body, result.getSecondsSinceVerified());
+            assertFalse(body, result.hasFactors());
+            assertEquals(body, 503, result.getStatusCode());
+            assertEquals(body, body, result.getRaw());
+        }
+    }
+
     @Test
     @SuppressWarnings("deprecation")
     public void redeem_UnknownContextFailsClosedAndKeepsTheRawValue()
@@ -1753,10 +1790,85 @@ public class DidClientTests {
         assertEquals("Low", verification.getHumanConfidenceValue());
         assertNull(verification.getHumanConfidenceNullReason());
         assertEquals(200, verification.getStatusCode());
-        // The same request verify makes.
+    }
+
+    /**
+     * A client with a licence key sends it on the detailed call, in the
+     * form body of a POST so it never reaches a URL. The boolean verify
+     * call stays the open GET with no licence key.
+     */
+    @Test
+    public void verifyDetailed_SendsTheLicenceKeyInTheFormBody()
+            throws Exception {
+        DidClient licensed = licensedClient();
+        FodId fodId = key2.fodIdAt(canonicalPayload(), WEEK2);
+        String id = fodId.asBase64Url();
+
+        transport.queue(200, "{\"valid\":true,\"humanConfidence\":\"High\"}");
+        Verification verification = licensed.verifyDetailed(fodId).join();
+        assertEquals(HumanConfidence.HIGH, verification.getHumanConfidence());
+
+        HttpTransport.Request detailed = transport.last();
+        assertEquals("POST", detailed.getMethod());
+        assertEquals(ENDPOINT + "id/verify", detailed.getUrl());
+        assertTrue(detailed.getHeaders().get("Content-Type")
+            .startsWith("application/x-www-form-urlencoded"));
+        assertEquals("resource=resource&51did=" + id + "&owid=" + id
+            + "&license=" + TEST_LICENCE,
+            new String(detailed.getBody(), StandardCharsets.UTF_8));
+
+        transport.queue(200, "{\"valid\":true}");
+        assertTrue(licensed.verify(fodId).join());
+
+        HttpTransport.Request plain = transport.last();
+        assertEquals("GET", plain.getMethod());
+        assertEquals(ENDPOINT + "id/verify/resource?51did=" + id
+            + "&owid=" + id, plain.getUrl());
+        assertNull(plain.getBody());
+        assertFalse(plain.getUrl().contains(TEST_LICENCE));
+    }
+
+    /** A client without a licence key makes the same GET verify makes. */
+    @Test
+    public void verifyDetailed_WithoutLicenceKeySendsTheOpenGet()
+            throws Exception {
+        DidClient noLicence = DidClient.builder("resource")
+            .endpoint(ENDPOINT).transport(transport).build();
+        FodId fodId = key2.fodIdAt(canonicalPayload(), WEEK2);
+        transport.queue(200, "{\"valid\":true,\"humanConfidenceNullReason\":\""
+            + NULL_REASON + "\"}");
+
+        Verification verification = noLicence.verifyDetailed(fodId).join();
+
+        assertEquals(NULL_REASON,
+            verification.getHumanConfidenceNullReason());
+        HttpTransport.Request request = transport.last();
+        assertEquals("GET", request.getMethod());
         assertEquals(ENDPOINT + "id/verify/resource?51did="
             + fodId.asBase64Url() + "&owid=" + fodId.asBase64Url(),
-            transport.last().getUrl());
+            request.getUrl());
+        assertNull(request.getBody());
+    }
+
+    /** The licence key the detailed call sent is masked in its errors. */
+    @Test
+    public void verifyDetailed_MasksTheLicenceKeyInErrors() {
+        DidClient licensed = licensedClient();
+
+        transport.queue(401, "{\"errors\":[\"Key " + TEST_LICENCE
+            + " is not valid.\"]}");
+        DidHttpException error = failure(DidHttpException.class,
+            licensed.verifyDetailed(validDid));
+        assertFalse(error.getMessage().contains(TEST_LICENCE));
+        assertTrue(error.getMessage().contains(TEST_LICENCE_MASKED));
+
+        transport.queue(400, "{\"errors\":[\"Key " + TEST_LICENCE
+            + " is not valid.\"]}");
+        IllegalArgumentException refused = failure(
+            IllegalArgumentException.class,
+            licensed.verifyDetailed(validDid));
+        assertFalse(refused.getMessage().contains(TEST_LICENCE));
+        assertTrue(refused.getMessage().contains(TEST_LICENCE_MASKED));
     }
 
     @Test

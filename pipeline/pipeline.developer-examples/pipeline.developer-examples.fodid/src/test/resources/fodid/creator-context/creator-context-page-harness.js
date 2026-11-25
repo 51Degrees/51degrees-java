@@ -6,6 +6,10 @@
 // The optional second argument is the identifier the page is opened with,
 // which is the transplant path. Without it the page creates one.
 //
+// With HARNESS_LEGACY_SERVICE=1 in the environment, the verify endpoints
+// answer as a service from before the current names: they read only
+// challenge and answer only result, sealed for the challenge they read.
+//
 // The stand in gives the page a document, a window, a location and a
 // fetch. Inserting a script element stands for loading the 51Degrees
 // client script: the harness answers it by putting an object on the
@@ -120,8 +124,17 @@ function response(body) {
     });
 }
 
+const legacyService = process.env.HARNESS_LEGACY_SERVICE === '1';
+
 function fetchStub(url) {
     record.fetches.push(url);
+    if (legacyService && (url.indexOf('id/verify-full') !== -1
+        || url.indexOf('id/verify-context') !== -1)) {
+        const query = new URLSearchParams(url.split('?')[1] || '');
+        return response({
+            result: 'sealed-for-' + (query.get('challenge') || 'nothing')
+        });
+    }
     if (url.indexOf('id/verify-full') !== -1
         || url.indexOf('id/verify-context') !== -1) {
         return response({

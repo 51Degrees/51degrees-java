@@ -43,7 +43,11 @@ the licence key. A single-use `transaction` value issued by the server
 per page load is bound through both steps by the cloud. `transaction`
 replaces the obsolete name `challenge`, and `sealedResult` replaces the
 obsolete name `result`. The cloud still accepts and returns the obsolete
-names.
+names. The page sends the transaction value under both names to
+`verify-full`, so a service that reads only `challenge` still binds it.
+The demo's `/redeem` route reads `sealedResult` and `transaction` first
+and falls back to `result` and `challenge`, so a page cached from before
+the current names still redeems.
 
 The demo server uses the web server that ships with the JDK, the
 `pipeline.did` package from this repository for the 51Did handling, and
@@ -79,15 +83,15 @@ CompletableFuture<Answer> answer = client.verifySignature(fodId)
 ```
 
 The handler answers the page in the cloud's own shape, `status`,
-`signature`, `context`, `factors` when present, `humanConfidence` or
-`humanConfidenceNullReason` when present, `verifiedAt` and
+`signature`, `context`, `factors` when present, `verifiedAt` and
 `secondsSinceVerified`, built from the typed result, with one field
 added, `serverSignature`, being the offline check. `status` is
 `success`, `expired`, `replayed`, `unconfirmed` or `unreadable`, and only
-`success` carries a verdict. `humanConfidence` is the Human Confidence
-Value the 51Did carries, `High`, `Medium`, `Low` or `Absent`, returned
-on success to a call that presents a License Key valid for Human
-Confidence. A failure the client
+`success` carries a verdict. On success to a call that presents a
+License Key valid for Human Confidence, the typed result also carries the
+Human Confidence Value the 51Did carries, `High`, `Medium`, `Low` or
+`Absent`. That Value is for your server to act on, so the handler never
+sends it, or the reason it is missing, to the page. A failure the client
 reports arrives at the demo's `failed` method as the cause of a
 `CompletionException` and is mapped there. A malformed 51Did
 answers 400, a host without the creator context answers 404 with a
