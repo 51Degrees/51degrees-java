@@ -54,6 +54,8 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -1288,10 +1290,12 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     }
 
     /**
-     * True if the published date in the header of the file is later than
-     * the published date of the data the engine has loaded. A file whose
-     * date the engine cannot give, or that has no engine yet, counts as
-     * later, so it is loaded and a file that cannot be used fails there.
+     * True if the published day in the header of the file is later than
+     * the published day of the data the engine has loaded. Only the day
+     * counts, taken in the default time zone, in which the engines give the
+     * start of the published day. A file whose date the engine cannot give,
+     * or that has no engine yet, counts as later, so it is loaded and a file
+     * that cannot be used fails there.
      *
      * @param dataFile the data file the file is for
      * @param path     the path of the file to read
@@ -1318,11 +1322,18 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             return true;
         }
         Date loaded = dataFile.getDataPublishedDateTime();
-        if (loaded != null && published.after(loaded) == false) {
-            logger.debug("'{}' was published {}, which is not later " +
-                    "than the data loaded, published {}",
-                    path, published.toInstant(), loaded.toInstant());
-            return false;
+        if (loaded != null) {
+            ZoneId zone = ZoneId.systemDefault();
+            LocalDate publishedDay =
+                    published.toInstant().atZone(zone).toLocalDate();
+            LocalDate loadedDay =
+                    loaded.toInstant().atZone(zone).toLocalDate();
+            if (publishedDay.isAfter(loadedDay) == false) {
+                logger.debug("'{}' was published on {}, which is not " +
+                        "later than the data loaded, published on {}",
+                        path, publishedDay, loadedDay);
+                return false;
+            }
         }
         return true;
     }

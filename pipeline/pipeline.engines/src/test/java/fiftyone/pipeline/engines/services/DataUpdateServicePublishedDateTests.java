@@ -46,9 +46,11 @@ import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -82,6 +84,22 @@ import static org.mockito.Mockito.when;
 public class DataUpdateServicePublishedDateTests {
 
     private static final LocalDate LOADED = LocalDate.of(2026, 11, 20);
+
+    /**
+     * A time zone 14 hours ahead of UTC.
+     */
+    private static final String EAST = "Pacific/Kiritimati";
+
+    /**
+     * A time zone 11 hours behind UTC.
+     */
+    private static final String WEST = "Pacific/Pago_Pago";
+
+    /**
+     * How long after the start of its day a file is published in the tests
+     * where it is published later on the same day.
+     */
+    private static final int LATER_HOURS = 23;
 
     private static final long WAIT_FOR_EVENT_MILLIS = 10000;
 
@@ -237,6 +255,56 @@ public class DataUpdateServicePublishedDateTests {
     }
 
     /**
+     * Far east of UTC, a file published later on the same day as the data
+     * loaded is not loaded, as only the day counts.
+     */
+    @Test
+    public void ChangedFile_SameDayLaterTimeEast_NotLoaded() throws Exception {
+        assertChangedInZone(EAST, LOADED, LATER_HOURS,
+            AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED);
+    }
+
+    /**
+     * Far west of UTC, a file published later on the same day as the data
+     * loaded is not loaded, as only the day counts.
+     */
+    @Test
+    public void ChangedFile_SameDayLaterTimeWest_NotLoaded() throws Exception {
+        assertChangedInZone(WEST, LOADED, LATER_HOURS,
+            AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED);
+    }
+
+    /**
+     * Far east of UTC, a file whose date is given as the start of the same
+     * day in UTC is not loaded, as that is later on the same local day.
+     */
+    @Test
+    public void ChangedFile_SameDayAtUtcMidnightEast_NotLoaded()
+        throws Exception {
+        assertChangedInZone(EAST, LOADED,
+            Date.from(LOADED.atStartOfDay(ZoneOffset.UTC).toInstant()),
+            AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED);
+    }
+
+    /**
+     * Far east of UTC, a file published on the next day is loaded.
+     */
+    @Test
+    public void ChangedFile_NextDayEast_Loaded() throws Exception {
+        assertChangedInZone(EAST, LOADED.plusDays(1), 0,
+            AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+    }
+
+    /**
+     * Far west of UTC, a file published on the next day is loaded.
+     */
+    @Test
+    public void ChangedFile_NextDayWest_Loaded() throws Exception {
+        assertChangedInZone(WEST, LOADED.plusDays(1), 0,
+            AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+    }
+
+    /**
      * A check that finds no changed file and has no update URL is reported
      * as not needed.
      */
@@ -316,6 +384,43 @@ public class DataUpdateServicePublishedDateTests {
 
         assertLoaded(published, expected);
         assertReported(expected);
+    }
+
+    /**
+     * As {@link #assertChanged}, with the time zone given as the default and
+     * the engine giving the file's published date the hours given after the
+     * start of its day in that zone.
+     */
+    private void assertChangedInZone(
+        String zone,
+        LocalDate published,
+        int hours,
+        AutoUpdateStatus expected) throws Exception {
+        assertChangedInZone(zone, published, Date.from(
+            published.atStartOfDay(ZoneId.of(zone))
+                .plusHours(hours).toInstant()), expected);
+    }
+
+    /**
+     * As {@link #assertChanged}, with the time zone given as the default and
+     * the engine giving the published date given for the file.
+     */
+    private void assertChangedInZone(
+        String zone,
+        LocalDate published,
+        Date fileDate,
+        AutoUpdateStatus expected) throws Exception {
+        TimeZone original = TimeZone.getDefault();
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone(zone));
+            file.setDataPublishedDateTime(date(LOADED));
+            doReturn(fileDate).when(engine)
+                .getPublishedDateFromFile(any(), anyString());
+            assertChanged(published, expected);
+        }
+        finally {
+            TimeZone.setDefault(original);
+        }
     }
 
     private void assertLoaded(LocalDate published, AutoUpdateStatus expected) {

@@ -114,7 +114,9 @@ public interface OnPremiseAspectEngine<
      * Read the published date from the header of a data file without
      * loading it, so the data update service loads a new file only when it
      * is later than the data this engine has loaded. The date compares with
-     * {@link AspectEngineDataFile#getDataPublishedDateTime()}.
+     * {@link AspectEngineDataFile#getDataPublishedDateTime()} by day only,
+     * with both taken in the default time zone, so return the start of the
+     * published day in that zone, as the engines' own published dates are.
      * @param dataFileIdentifier the identifier of the data file the file is
      *                           for. Ignored if the engine has one data file
      * @param filePath the path of the file to read
