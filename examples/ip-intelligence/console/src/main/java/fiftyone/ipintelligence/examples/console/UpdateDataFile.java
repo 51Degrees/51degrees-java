@@ -80,13 +80,14 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * ## Product
  * A license key that holds one product needs nothing more, and the example then names no
  * product. A license key can also hold several products, for example a Device Detection data
- * file and an IP Intelligence data file. Update on start-up runs before any data file is
- * loaded, so with such a key give the name of the product to download, for example IPIV4Enterprise,
- * as the third command line argument. The example then adds it to the URL of each request.
+ * file and an IP Intelligence data file. With such a key, an update asks for the product of
+ * the data file the example starts from. Update on start-up runs before the data file is
+ * loaded, so it reads the product from the header of the file. To download another product,
+ * give its name, for example IPIV4Enterprise, as the third command line argument. The example then adds
+ * it to the URL of each request.
  * ``` {java}
  *      .setDataUpdateUrlFormatter(productFormatter(product))
  * ```
- * Once a data file is loaded, an update asks for the product of that file without being told.
  *
  * ## Update URL
  * The example downloads from the 51Degrees Distributor. To download from another address, such
@@ -376,10 +377,10 @@ public class UpdateDataFile {
                     // none, the engine downloads from the 51Degrees
                     // Distributor.
                     .setDataUpdateUrl(dataUpdateUrl)
-                    // Name the product to download, when one is given. A
-                    // license key can hold several products, and update on
-                    // start-up runs before a data file is loaded that would
-                    // say which is needed.
+                    // Name the product to download, when one is given. With
+                    // none, a license key that holds several products gets
+                    // the product of the data file, which update on start-up
+                    // reads from the header of the file.
                     .setDataUpdateUrlFormatter(productFormatter(product))
                     // Enable update on startup, the auto update system
                     // will be used to check for an update before the

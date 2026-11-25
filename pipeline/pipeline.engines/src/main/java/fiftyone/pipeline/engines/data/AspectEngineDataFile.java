@@ -166,8 +166,9 @@ public interface AspectEngineDataFile extends Closeable {
     /**
      * Get the name of the product this data file needs from the data
      * update service, for example V4TAC, found from the data the engine has
-     * loaded. It is used when a license key holds several products and the
-     * data update URL names none.
+     * loaded, or from the header of the data file before the engine has
+     * loaded it. It is used when a license key holds several products and
+     * the data update URL names none.
      * @return the product name, or null if it is not known
      */
     default String getDataUpdateProduct() {
