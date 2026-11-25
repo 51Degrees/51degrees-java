@@ -53,6 +53,16 @@ public interface FileWrapper {
     BinaryReader getReader() throws IOException;
 
     /**
+     * Open the file for reading and close it again, to check it can be read.
+     * Nothing is left open when this returns.
+     *
+     * @throws IOException if the file cannot be opened for reading
+     */
+    default void checkReadable() throws IOException {
+        getReader().close();
+    }
+
+    /**
      * Get the time the file was last modified.
      *
      * @return last modified date

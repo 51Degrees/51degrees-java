@@ -54,6 +54,8 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -359,12 +361,12 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 long tempFileModified = fileWrapperFactory.getLastModified(
                         dataFile.getTempDataFilePath());
 
-                // If the data file is newer than the temp file currently
-                // being used by the engine then we need to tell the engine
-                // to refresh itself.
+                // A data file changed since the temp file the engine uses is
+                // loaded when its data is later than the data loaded.
                 if (fileModified > tempFileModified) {
                     logger.debug("Specified file is newer than existing temp file");
-                    newDataAvailable = true;
+                    newDataAvailable = isLaterThanLoaded(
+                            dataFile, dataFile.getDataFilePath());
                 }
             }
             if (newDataAvailable == false &&
@@ -374,6 +376,11 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                 newDataAvailable =
                         result == AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS ||
                                 result == AutoUpdateStatus.AUTO_UPDATE_SUCCESS;
+            }
+            if (newDataAvailable == false &&
+                    result == AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS) {
+                // No later file and no update URL to check.
+                result = AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED;
             }
             if (newDataAvailable &&
                     result == AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS) {
@@ -542,8 +549,10 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                                         watchedFileOpenTimeoutMillis);
                         while (fileLockable == false &&
                                 System.nanoTime() - deadline < 0) {
-                            try (BinaryReader reader = fileWrapperFactory.build(
-                                    aspectDataFile.getDataFilePath()).getReader()) {
+                            try {
+                                fileWrapperFactory.build(
+                                        aspectDataFile.getDataFilePath())
+                                        .checkReadable();
                                 fileLockable = true;
                             } catch (IOException ignored) {
                                 try {
@@ -557,7 +566,12 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                                 }
                             }
                         }
-                        if (fileLockable) {
+                        if (fileLockable && isLaterThanLoaded(
+                                dataFile, dataFile.getDataFilePath()) == false) {
+                            // The engine and the polling timer are left as
+                            // they were.
+                            status = AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED;
+                        } else if (fileLockable) {
                             // Complete the update. The refresh cancels the
                             // polling timer first, so the file is registered
                             // again to set a new one however the refresh
@@ -1061,6 +1075,13 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                         if (downloaded == AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS) {
                             logger.info("Downloaded new data from '{}' for Engine '{}'",
                                     loggedUrl, engineType);
+                            // A downloaded file that is not later than the
+                            // data loaded does not replace the data file.
+                            if (tempFile.getPath() != null &&
+                                    isLaterThanLoaded(dataFile,
+                                            tempFile.getPath()) == false) {
+                                return AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED;
+                            }
                         }
                         return downloaded;
 
@@ -1266,6 +1287,55 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             return fileWrapperFactory.getLastModified(path);
         }
         return publishedMillis;
+    }
+
+    /**
+     * True if the published day in the header of the file is later than
+     * the published day of the data the engine has loaded. Only the day
+     * counts, taken in the default time zone, in which the engines give the
+     * start of the published day. A file whose date the engine cannot give,
+     * or that has no engine yet, counts as later, so it is loaded and a file
+     * that cannot be used fails there.
+     *
+     * @param dataFile the data file the file is for
+     * @param path     the path of the file to read
+     * @return true if the file is to be loaded
+     */
+    private boolean isLaterThanLoaded(
+            AspectEngineDataFile dataFile,
+            String path) {
+        OnPremiseAspectEngine<? extends AspectData,
+                ? extends AspectPropertyMetaData> engine = dataFile.getEngine();
+        if (engine == null) {
+            return true;
+        }
+        Date published;
+        try {
+            published = engine.getPublishedDateFromFile(
+                    dataFile.getIdentifier(), path);
+        } catch (RuntimeException e) {
+            logger.debug("Could not read the published date of '{}'",
+                    path, e);
+            return true;
+        }
+        if (published == null) {
+            return true;
+        }
+        Date loaded = dataFile.getDataPublishedDateTime();
+        if (loaded != null) {
+            ZoneId zone = ZoneId.systemDefault();
+            LocalDate publishedDay =
+                    published.toInstant().atZone(zone).toLocalDate();
+            LocalDate loadedDay =
+                    loaded.toInstant().atZone(zone).toLocalDate();
+            if (publishedDay.isAfter(loadedDay) == false) {
+                logger.debug("'{}' was published on {}, which is not " +
+                        "later than the data loaded, published on {}",
+                        path, publishedDay, loadedDay);
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
