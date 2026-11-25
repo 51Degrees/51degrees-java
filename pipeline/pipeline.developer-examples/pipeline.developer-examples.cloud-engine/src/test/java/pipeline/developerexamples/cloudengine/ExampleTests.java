@@ -52,6 +52,7 @@ public class ExampleTests {
                 + "key works here, because the example reports a product "
                 + "the key does not carry rather than failing on it. Create "
                 + "a key at https://51degrees.com/configure.");
-        ExampleKey.runWith(resourceKey, () -> new Main.Example().run());
+        ExampleKey.runWith(resourceKey, () -> new Main.Example().run(
+            new TimedHttpClient(), TimedHttpClient.TIMEOUT_SECONDS));
     }
 }
