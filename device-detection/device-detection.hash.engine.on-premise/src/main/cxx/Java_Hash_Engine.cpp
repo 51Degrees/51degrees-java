@@ -7354,7 +7354,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (&arg1)->assign(arg1_pstr);
   jenv->ReleaseStringUTFChars(jarg1, arg1_pstr); 
   {
-    /*@SWIG:cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
+    /*@SWIG:../../../../../cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
     if (jarg2 != NULL) {
       // Get the number of bytes in the byte array.
       arrSize = jenv->GetArrayLength(jarg2);
@@ -10367,7 +10367,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jarg1_;
   arg1 = *(EngineBase **)&jarg1; 
   {
-    /*@SWIG:cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
+    /*@SWIG:../../../../../cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
     if (jarg2 != NULL) {
       // Get the number of bytes in the byte array.
       arrSize = jenv->GetArrayLength(jarg2);
@@ -17209,7 +17209,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jarg3_;
   (void)jarg4_;
   {
-    /*@SWIG:cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
+    /*@SWIG:../../../../../cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
     if (jarg1 != NULL) {
       // Get the number of bytes in the byte array.
       arrSize = jenv->GetArrayLength(jarg1);
@@ -17427,6 +17427,148 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
     }
   }
   *(Date **)&jresult = new Date(result); 
+  return jresult;
+}
+
+
+SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_EngineHashSwig_1getPublishedTimeFromFile(JNIEnv *jenv, jclass jcls, jstring jarg1) {
+  jlong jresult = 0 ;
+  std::string *arg1 = 0 ;
+  Date result;
+  
+  (void)jenv;
+  (void)jcls;
+  if(!jarg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
+    return 0;
+  }
+  const char *arg1_pstr = jenv->GetStringUTFChars(jarg1, 0); 
+  if (!arg1_pstr) return 0;
+  std::string arg1_str(arg1_pstr);
+  arg1 = &arg1_str;
+  jenv->ReleaseStringUTFChars(jarg1, arg1_pstr); 
+  {
+    try {
+      result = EngineHash::getPublishedTimeFromFile((std::string const &)*arg1);;
+    }
+    catch(FatalException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NotImplementedException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(InvalidPropertyException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(EvidenceException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(TooManyValuesException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NoValuesAvailableException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }	
+    catch(StatusCodeException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(runtime_error& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(invalid_argument& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return 0; 
+      };
+    }
+  }
+  *(Date **)&jresult = new Date(result); 
+  return jresult;
+}
+
+
+SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_interop_swig_DeviceDetectionHashEngineModuleJNI_EngineHashSwig_1getProductFromFile(JNIEnv *jenv, jclass jcls, jstring jarg1) {
+  jstring jresult = 0 ;
+  std::string *arg1 = 0 ;
+  std::string result;
+  
+  (void)jenv;
+  (void)jcls;
+  if(!jarg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
+    return 0;
+  }
+  const char *arg1_pstr = jenv->GetStringUTFChars(jarg1, 0); 
+  if (!arg1_pstr) return 0;
+  std::string arg1_str(arg1_pstr);
+  arg1 = &arg1_str;
+  jenv->ReleaseStringUTFChars(jarg1, arg1_pstr); 
+  {
+    try {
+      result = EngineHash::getProductFromFile((std::string const &)*arg1);;
+    }
+    catch(FatalException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NotImplementedException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(InvalidPropertyException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(EvidenceException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(TooManyValuesException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(NoValuesAvailableException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }	
+    catch(StatusCodeException& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(runtime_error& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_RuntimeError, e.what()); return 0; 
+      };
+    }
+    catch(invalid_argument& e) {
+      {
+        SWIG_JavaException(jenv, SWIG_ValueError, e.what()); return 0; 
+      };
+    }
+  }
+  jresult = jenv->NewStringUTF((&result)->c_str()); 
   return jresult;
 }
 
@@ -17696,7 +17838,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jarg1_;
   arg1 = *(EngineHash **)&jarg1; 
   {
-    /*@SWIG:cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
+    /*@SWIG:../../../../../cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
     if (jarg2 != NULL) {
       // Get the number of bytes in the byte array.
       arrSize = jenv->GetArrayLength(jarg2);

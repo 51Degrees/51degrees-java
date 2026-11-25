@@ -64,6 +64,14 @@ public class EngineIpiSwig extends EngineBaseSwig {
     return new Date(IpIntelligenceOnPremiseEngineModuleJNI.EngineIpiSwig_getUpdateAvailableTime(swigCPtr, this), true);
   }
 
+  public static Date getPublishedTimeFromFile(String fileName) {
+    return new Date(IpIntelligenceOnPremiseEngineModuleJNI.EngineIpiSwig_getPublishedTimeFromFile(fileName), true);
+  }
+
+  public static String getProductFromFile(String fileName) {
+    return IpIntelligenceOnPremiseEngineModuleJNI.EngineIpiSwig_getProductFromFile(fileName);
+  }
+
   public String getDataFilePath() {
     return IpIntelligenceOnPremiseEngineModuleJNI.EngineIpiSwig_getDataFilePath(swigCPtr, this);
   }
