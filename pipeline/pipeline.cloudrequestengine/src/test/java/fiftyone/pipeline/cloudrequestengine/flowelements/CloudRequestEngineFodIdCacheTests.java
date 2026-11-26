@@ -121,6 +121,49 @@ public class CloudRequestEngineFodIdCacheTests
     }
 
     /**
+     * A response holding the browser tests, which carry a run of their own,
+     * or a sealed Human Confidence result is made for one visitor, as a
+     * 51Did is, so it is not stored either.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "'browserderived':{'browsertestsjavascript':'run %s'}",
+        "'BrowserDerived':{'BrowserTestsJavaScript':'run %s'}",
+        "'derived':{'humanconfidence':'sealed %s','humanconfidencesource':'Active'}",
+    })
+    public void process_ResponseMadeForOneVisitorIsNotStored(String part)
+        throws Exception {
+        String first = "{'device':{'value':'1'}," +
+            String.format(part, "first") + "}";
+        String second = "{'device':{'value':'1'}," +
+            String.format(part, "second") + "}";
+
+        List<String> answers = processTwice(first, second);
+
+        assertEquals(Arrays.asList(first, second), answers,
+            "A response made for one visitor was served from the cache.");
+    }
+
+    /**
+     * A response whose browser tests part is empty, or whose Human
+     * Confidence was worked out from the request alone, is cached as
+     * before.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "'browserderived':{'browsertestsjavascript':null}",
+        "'derived':{'humanconfidence':'Low','humanconfidencesource':'Passive'}",
+    })
+    public void process_ResponseForAnyVisitorIsCached(String part)
+        throws Exception {
+        String first = "{'device':{'value':'1'}," + part + "}";
+
+        List<String> answers = processTwice(first);
+
+        assertEquals(Arrays.asList(first, first), answers);
+    }
+
+    /**
      * Every other response is cached as before, including one whose fodid
      * member is not at the top level.
      */

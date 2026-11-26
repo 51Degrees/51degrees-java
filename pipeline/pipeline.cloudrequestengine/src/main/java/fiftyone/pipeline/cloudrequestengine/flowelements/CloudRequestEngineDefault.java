@@ -502,8 +502,9 @@ public class CloudRequestEngineDefault
     /**
      * A result found in the cache is served only once its cloud request has
      * finished, without failing, with a response that has no top-level fodid
-     * member. Otherwise the request goes to the cloud service, so a request
-     * still running for another Flow Data, and one that failed, are never
+     * member and holds nothing else made for the one visitor, as
+     * {@link #madeForOneVisitor(JSONObject)} describes. Otherwise the
+     * request goes to the cloud service, so a request still running for another Flow Data, and one that failed, are never
      * shared through the cache.
      * @param data the result found in the cache
      * @return true if the result may be served
@@ -516,12 +517,13 @@ public class CloudRequestEngineDefault
             return false;
         }
         try {
-            for (String key : new JSONObject(response).keySet()) {
+            JSONObject json = new JSONObject(response);
+            for (String key : json.keySet()) {
                 if (FODID.equalsIgnoreCase(key)) {
                     return false;
                 }
             }
-            return true;
+            return madeForOneVisitor(json) == false;
         } catch (JSONException e) {
             return false;
         }
@@ -531,6 +533,50 @@ public class CloudRequestEngineDefault
      * The top-level member of a cloud response that holds a 51Did.
      */
     private static final String FODID = "fodid";
+
+    /**
+     * Whether a response holds something made for the one visitor, as a
+     * 51Did is: the browser tests, which carry a run of their own in
+     * {@code browserderived.browsertestsjavascript}, or a sealed Human
+     * Confidence result, which {@code derived.humanconfidencesource} marks
+     * as {@code Active}. Names are compared without regard to case.
+     * @param json the response
+     * @return true if the response may not be shared through the cache
+     */
+    private static boolean madeForOneVisitor(JSONObject json) {
+        JSONObject tests = member(json, "browserderived");
+        if (tests != null) {
+            Object script = memberValue(tests, "browsertestsjavascript");
+            if (script != null && script != JSONObject.NULL &&
+                script.toString().isEmpty() == false) {
+                return true;
+            }
+        }
+        JSONObject derived = member(json, "derived");
+        if (derived != null) {
+            Object source = memberValue(derived, "humanconfidencesource");
+            if (source != null && "active".equalsIgnoreCase(source.toString())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** The member object of this name, in any case, or null. */
+    private static JSONObject member(JSONObject json, String name) {
+        Object value = memberValue(json, name);
+        return value instanceof JSONObject ? (JSONObject) value : null;
+    }
+
+    /** The member of this name, in any case, or null. */
+    private static Object memberValue(JSONObject json, String name) {
+        for (String key : json.keySet()) {
+            if (key.equalsIgnoreCase(name)) {
+                return json.opt(key);
+            }
+        }
+        return null;
+    }
 
     @Override
     protected void processEngine(FlowData data, CloudRequestData aspectData) throws IOException {
