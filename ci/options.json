@@ -81,12 +81,14 @@
   {
     "Image": "macos-15-intel",
     "Name": "MacOS_X64_Java_21",
+    "LiveCloudTests": false,
     "JavaSDKEnvVar": "JAVA_HOME_21_X64",
     "RunPerformance": true
   },
   {
     "Image": "macos-15-intel",
     "Name": "MacOS_X64_Java_17",
+    "LiveCloudTests": false,
     "JavaSDKEnvVar": "JAVA_HOME_17_X64",
     "RunPerformance": true,
     "PackageRequirement": true
@@ -94,6 +96,7 @@
   {
     "Image": "macos-15-intel",
     "Name": "MacOS_X64_Java_11",
+    "LiveCloudTests": false,
     "JavaSDKEnvVar": "JAVA_HOME_11_X64",
     "RunPerformance": true
   }
