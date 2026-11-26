@@ -39,7 +39,6 @@ import java.util.*;
  * Abstract base class for ShareUsageElement builders.
  * @param <T> element type
  */
-@SuppressWarnings({"UnusedReturnValue", "DefaultAnnotationParam"})
 public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
 
     /** Creates the loggers the element uses. */

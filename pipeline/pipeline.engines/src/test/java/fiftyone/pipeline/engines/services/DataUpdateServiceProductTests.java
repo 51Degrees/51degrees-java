@@ -718,7 +718,6 @@ public class DataUpdateServiceProductTests {
      * As {@link #configure}, with a data file that names the product it
      * needs itself.
      */
-    @SuppressWarnings("unchecked")
     private void configureFileThatNamesItsProduct(final String product) {
         configure(PATH, null);
         DataFileConfiguration config = file.getConfiguration();

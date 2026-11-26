@@ -63,7 +63,6 @@ public class Comparer {
 
     public static final int DEFAULT_NUMBER_OF_THREADS = 4;
     public static final int DEFAULT_NUMBER_OF_RESULTS = 2500;
-    @SuppressWarnings("resource")
     public static final Solution[] DEFAULT_SOLUTIONS = {
             new DetectionImplFiftyOneDegrees.FiftyOneSolution(),
             new DetectionImplBrowsCap.BrowsCapSolution()};
@@ -75,7 +74,6 @@ public class Comparer {
 
     public static void main(String[] args) throws Exception {
         LogbackHelper.configureLogback(FileFinder.getFilePath("logback.xml"));
-        @SuppressWarnings("resource")
         List<Solution> solutions = args.length > 0 ?
                 Arrays.asList(
                         new DetectionImplFiftyOneDegrees.FiftyOneSolution(args[0]),

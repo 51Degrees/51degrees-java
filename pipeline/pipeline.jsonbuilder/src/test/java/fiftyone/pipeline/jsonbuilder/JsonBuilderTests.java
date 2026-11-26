@@ -64,7 +64,6 @@ import org.mockito.stubbing.Answer;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 
-@SuppressWarnings("unused")
 public class JsonBuilderTests {
     private TestLoggerFactory loggerFactory;
     private EmptyEngine testEngine;

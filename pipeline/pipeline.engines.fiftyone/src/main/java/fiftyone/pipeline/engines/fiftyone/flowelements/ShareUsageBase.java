@@ -1000,7 +1000,6 @@ public abstract class ShareUsageBase
      * @param address the address to check
      * @return true if localhost
      */
-    @SuppressWarnings("unused")
     private boolean isLocalHost(String address) throws UnknownHostException {
         InetAddress other = InetAddress.getByName(address);
         for (InetAddress host : localHosts) {

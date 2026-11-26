@@ -443,7 +443,6 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
         }
     }
 
-    @SuppressWarnings("serial")
     private static Stream<Arguments> getSelectedEvidenceArgs() {
         return Stream.of(
                 Arguments.of(
@@ -488,7 +487,6 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
         assertEquals(expectedValue, result);
     }
 
-    @SuppressWarnings("serial")
     private static Stream<Arguments> getFormDataArgs() {
         return Stream.of(
                 Arguments.of(

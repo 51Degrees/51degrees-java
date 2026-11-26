@@ -239,6 +239,11 @@
                          its own pom. -->
                     <doclint>all</doclint>
                     <failOnWarnings>true</failOnWarnings>
+                    <!-- Maven would link each module's javadoc to the other
+                         modules' under the project URL, which is the repository
+                         and serves no javadoc, and fails to find one for
+                         pipeline.aggregate, which has no sources. -->
+                    <detectOfflineLinks>false</detectOfflineLinks>
                     <detectJavaApiLink>false</detectJavaApiLink>
                 </configuration>
                 <executions>

@@ -393,7 +393,6 @@ public static class DatafileInfo {
      * @throws Exception if the file was not found
      */
 
-    @SuppressWarnings("RedundantThrows")
     public static File getEvidenceFile(String evidenceFilename) throws Exception {
         if (Objects.isNull(evidenceFilename)) {
             evidenceFilename = FileUtils.EVIDENCE_FILE_NAME;
@@ -419,7 +418,6 @@ public static class DatafileInfo {
      * @return a full pathname
      * @throws Exception if the file was not found
      */
-    @SuppressWarnings("RedundantThrows")
     public static String getDataFileLocation(String dataFilename) throws Exception {
         // an explicit path supplied via the aligned environment variable or
         // system property is checked before any search for the filename

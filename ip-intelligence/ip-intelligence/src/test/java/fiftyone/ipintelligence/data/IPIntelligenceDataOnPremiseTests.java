@@ -292,7 +292,6 @@ public class IPIntelligenceDataOnPremiseTests {
             }
         }
 
-        @SuppressWarnings("unchecked")
         @Override
         public AspectPropertyValue<List<?>> getValues(String propertyName,
                                                       Class<?>[] parametrizedTypes) {

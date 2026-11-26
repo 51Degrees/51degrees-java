@@ -300,7 +300,6 @@ public class OfflineProcessing {
      * @param evidence a Map<String, String> of evidence entries
      * @return a filtered Map
      */
-    @SuppressWarnings("SameParameterValue")
     private static Map<String, String> filterEvidence(Map<String, String> evidence, String prefix) {
 
         return evidence.entrySet()
@@ -315,7 +314,6 @@ public class OfflineProcessing {
      * @param prefix the prefix we want for the property name e.g "ip."
      * @return a filtered map
      */
-    @SuppressWarnings({"SameParameterValue", "unused"})
     private static Map<String, Object> getPopulatedProperties(IPIntelligenceData data, String prefix) {
 
         return data.asKeyMap().entrySet()

@@ -40,7 +40,6 @@ public class TypedKeyDefault<T> implements TypedKey<T> {
      *  the type
      * @param name the name of the key
      */
-    @SuppressWarnings("unchecked")
     public TypedKeyDefault(String name) {
         this(name, Object.class);
     }

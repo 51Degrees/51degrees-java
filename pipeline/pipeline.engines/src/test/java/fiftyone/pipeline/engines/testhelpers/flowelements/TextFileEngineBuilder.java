@@ -49,7 +49,6 @@ public class TextFileEngineBuilder extends SingleFileAspectEngineBuilderBase<
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     protected TextFileEngine newEngine(List<String> properties)
         throws Exception {
         DataFileConfiguration config = dataFileConfigs.get(0);

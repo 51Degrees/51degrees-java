@@ -315,7 +315,6 @@ public class PipelineTests {
 
 
     @Test
-    @SuppressWarnings("unused")
     public void Pipeline_GetPropertyMetaData() {
         FlowElement element1 = getMockFlowElement();
         FlowElement element2 = getMockFlowElement();
@@ -342,7 +341,6 @@ public class PipelineTests {
     }
 
 
-    @SuppressWarnings("unused")
     @Test(expected = PipelineDataException.class)
     public void Pipeline_GetPropertyMetaData_None() {
         FlowElement element1 = getMockFlowElement();
@@ -359,7 +357,6 @@ public class PipelineTests {
         ElementPropertyMetaData metadata = pipeline.getMetaDataForProperty("noproperty");
     }
 
-    @SuppressWarnings("unused")
     @Test(expected = PipelineDataException.class)
     public void Pipeline_GetPropertyMetaData_Multiple() {
         FlowElement element1 = getMockFlowElement();

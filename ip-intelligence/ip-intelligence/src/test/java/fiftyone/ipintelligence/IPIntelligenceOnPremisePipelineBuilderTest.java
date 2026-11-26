@@ -49,7 +49,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @Ignore
-@SuppressWarnings({"rawtypes", "deprecation"})
+@SuppressWarnings("rawtypes")
 public class IPIntelligenceOnPremisePipelineBuilderTest {
 
     private static final String IPI_DATA_FILE_NAME = FileUtils.getHashFileName();

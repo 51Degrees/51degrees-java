@@ -91,7 +91,6 @@ public class MissingPropertyHandlingTests {
      *
      * @throws Exception
      */
-    @SuppressWarnings("unused")
     @Test
     public void PropertyNotInResource() throws Exception {
         try (DeviceDetectionCloudEngine engine =

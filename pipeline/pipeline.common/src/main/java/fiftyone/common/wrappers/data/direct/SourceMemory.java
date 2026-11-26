@@ -40,7 +40,6 @@ public class SourceMemory implements Source {
     public SourceMemory(byte[] memory) {
         this.memory = memory;
     }
-    @SuppressWarnings("cast")
     public ByteBuffer createStream() {
         return (ByteBuffer) ByteBuffer.allocate(memory.length)
             .order(ByteOrder.LITTLE_ENDIAN)

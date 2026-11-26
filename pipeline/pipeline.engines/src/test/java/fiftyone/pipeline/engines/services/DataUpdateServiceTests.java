@@ -1963,7 +1963,6 @@ public class DataUpdateServiceTests {
      * registration has finished. Thread.getId() is deprecated from Java 19
      * but is the id that ThreadMXBean reports on every version.
      */
-    @SuppressWarnings("deprecation")
     private static boolean waitForCheck(
         RaceDataFile file,
         ThreadMXBean threads) throws InterruptedException {

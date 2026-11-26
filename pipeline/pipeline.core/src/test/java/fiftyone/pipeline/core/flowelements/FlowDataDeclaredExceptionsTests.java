@@ -159,6 +159,5 @@ public class FlowDataDeclaredExceptionsTests {
     /**
      * Keeps the ElementData import, which documents what get returns.
      */
-    @SuppressWarnings("unused")
     private static ElementData unused;
 }

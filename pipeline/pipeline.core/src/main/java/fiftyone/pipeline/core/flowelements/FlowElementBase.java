@@ -249,7 +249,6 @@ public abstract class FlowElementBase<
     }
 
 /*
-    @SuppressWarnings("deprecation")
     @Override
     protected void finalize() throws Throwable {
         if (closed) {

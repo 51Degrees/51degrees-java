@@ -28,7 +28,6 @@ import java.util.*;
 
 import static org.junit.Assert.*;
 
-@SuppressWarnings("unused")
 public class TypedKeyMapTestBase {
 
     TypedKeyMap map;

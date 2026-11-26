@@ -44,7 +44,6 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
  * device-detection-java-examples.shared module.
  */
 @Deprecated
-@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public class FileUtils {
     /** Name of the Enterprise data file. */
     public static final String ENTERPRISE_HASH_DATA_FILE_NAME = "Enterprise-HashV41.hash";

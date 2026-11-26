@@ -276,7 +276,7 @@ public class SetHeadersElementTests {
 		verify(mockPipeline, times(2)).getElementAvailableProperties();
 	}
 
-	@SuppressWarnings({"rawtypes", "unchecked"})
+	@SuppressWarnings("rawtypes")
 	private static Pipeline mockPipeline(FlowElement source) {
 		Pipeline mockPipeline = mock(Pipeline.class);
 		List<FlowElement> elements = new ArrayList<>();

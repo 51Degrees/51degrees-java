@@ -52,7 +52,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
-@SuppressWarnings({"unused", "unchecked"})
+@SuppressWarnings("unchecked")
 public class AspectEngineLazyLoadTests {
     private EmptyEngine engine;
 

@@ -589,7 +589,6 @@ public class PipelineBuilder
      * @return new builder instance
      * @throws PipelineConfigurationException
      */
-    @SuppressWarnings("deprecation")
     private Object getBuilder(Class<?> builderType)
         throws PipelineConfigurationException {
         // Get the valid constructors. This means either a default

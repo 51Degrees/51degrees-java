@@ -35,7 +35,6 @@ package fiftyone.devicedetection.examples.console.comparison;
  */
 
 
-@SuppressWarnings({"unused", "CommentedOutCode"})
 public class DetectionImplDeviceAtlas {
     public static final String DEVICE_ATLAS = "Device Atlas";
 

@@ -47,7 +47,6 @@ import java.util.concurrent.atomic.AtomicLong;
  * @param <K> key for the cache items
  * @param <V> value for the cache items
  */
-@SuppressWarnings("unused")
 public abstract class LruCacheBase<K, V> implements Cache<K,V>, Closeable {
 
     /**
@@ -202,7 +201,6 @@ public abstract class LruCacheBase<K, V> implements Cache<K,V>, Closeable {
     }
 
 /*
-    @SuppressWarnings("deprecation")
     @Override
     public void finalize() {
         close(false);

@@ -37,7 +37,6 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 /** Finds the data and evidence files the tests use. */
-@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public class FileUtils {
     /**
      * Name of the aligned environment variable or system property which can

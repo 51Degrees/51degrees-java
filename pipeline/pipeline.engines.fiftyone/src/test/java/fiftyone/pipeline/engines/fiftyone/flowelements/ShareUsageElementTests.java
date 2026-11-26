@@ -226,7 +226,7 @@ public class ShareUsageElementTests {
     private void createShareUsage(
             double sharePercentage,
             int minimumEntriesPerMessage,
-            @SuppressWarnings("SameParameterValue") int interval,
+            int interval,
             List<String> blockedHeaders,
             List<String> includedQueryStringParams,
             List<Entry<String, String>> ignoreDataEvidenceFiler) {
@@ -244,7 +244,7 @@ public class ShareUsageElementTests {
             double sharePercentage,
             int minimumEntriesPerMessage,
             int maximumQueueSize,
-            @SuppressWarnings("SameParameterValue") int interval,
+            int interval,
             List<String> blockedHeaders,
             List<String> includedQueryStringParams,
             List<Entry<String, String>> ignoreDataEvidenceFiler) {

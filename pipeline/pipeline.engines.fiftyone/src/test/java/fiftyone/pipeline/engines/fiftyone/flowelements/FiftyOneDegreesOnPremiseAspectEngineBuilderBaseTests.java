@@ -60,12 +60,10 @@ public class FiftyOneDegreesOnPremiseAspectEngineBuilderBaseTests {
     private class ImplementedBuilder extends
         FiftyOneOnPremiseAspectEngineBuilderBase<ImplementedBuilder, FiftyOneAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData>> {
 
-        @SuppressWarnings("unused")
         public ImplementedBuilder() {
             super();
         }
 
-        @SuppressWarnings("unused")
         public ImplementedBuilder(ILoggerFactory loggerFactory) {
             super(loggerFactory);
         }

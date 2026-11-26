@@ -68,7 +68,6 @@ public class PropertyHelper {
      * @param value the raw value from AspectPropertyValue.getValue()
      * @return the unwrapped string representation
      */
-    @SuppressWarnings("unchecked")
     private static String unwrapValue(Object value) {
         if (value instanceof List) {
             List<?> list = (List<?>) value;

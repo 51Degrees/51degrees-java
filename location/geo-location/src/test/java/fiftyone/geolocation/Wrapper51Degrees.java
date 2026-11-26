@@ -89,7 +89,6 @@ public class Wrapper51Degrees implements Wrapper {
         return pipeline;
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
     public GeoLocationCloudEngine getEngine() {
         return engine;

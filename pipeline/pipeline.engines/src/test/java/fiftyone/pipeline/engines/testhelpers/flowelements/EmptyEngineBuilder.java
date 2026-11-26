@@ -51,7 +51,6 @@ public class EmptyEngineBuilder extends AspectEngineBuilderBase<EmptyEngineBuild
         EmptyEngine engine = new EmptyEngine(
             loggerFactory.getLogger(EmptyEngine.class.getName()),
             new ElementDataFactory<EmptyEngineData>() {
-                @SuppressWarnings("unchecked")
                 @Override
                 public EmptyEngineData create(FlowData flowData, FlowElement<EmptyEngineData, ?> flowElement) {
                     return new EmptyEngineData(

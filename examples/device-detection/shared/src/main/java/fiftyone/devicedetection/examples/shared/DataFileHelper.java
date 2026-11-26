@@ -228,7 +228,6 @@ public static class DatafileInfo {
      * @throws Exception if the file was not found
      */
 
-    @SuppressWarnings("RedundantThrows")
     public static File getEvidenceFile(String evidenceFilename) throws Exception {
         if (Objects.isNull(evidenceFilename)) {
             evidenceFilename = EVIDENCE_FILE_PATH;
@@ -251,7 +250,6 @@ public static class DatafileInfo {
      * @return a full pathname
      * @throws Exception if the file was not found
      */
-    @SuppressWarnings("RedundantThrows")
     public static String getDataFileLocation(String dataFilename) throws Exception {
         if (Objects.isNull(dataFilename)) {
             dataFilename = findHashFileName();

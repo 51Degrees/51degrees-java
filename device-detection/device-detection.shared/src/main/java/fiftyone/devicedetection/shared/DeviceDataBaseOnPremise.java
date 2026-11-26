@@ -117,7 +117,6 @@ public abstract class DeviceDataBaseOnPremise extends DeviceDataBase
      * instance is not safe to use from several threads at once. A caller
      * that shares it coordinates its own access.
      */
-    @SuppressWarnings("unchecked")
     @Override
     public AspectPropertyValue<String> getStoredValueAsString(
         String propertyName) {

@@ -167,7 +167,6 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     /**
      * Constructor with default for everything
      */
-    @SuppressWarnings("unused")
     public DataUpdateServiceDefault() {
         this(null, null, null, null);
     }

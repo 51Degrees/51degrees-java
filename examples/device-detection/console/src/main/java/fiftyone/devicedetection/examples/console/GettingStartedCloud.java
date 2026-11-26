@@ -52,7 +52,6 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * <p>
  * The concepts of "pipeline", "flow data", "evidence" and "results" are illustrated.
  */
-@SuppressWarnings("DuplicatedCode")
 public class GettingStartedCloud {
     /**
      * This example's tag in the links of its "Find out more" section.
