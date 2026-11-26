@@ -40,6 +40,7 @@ Describe 'Test-AllowedName' {
     It 'allows the CI name <Name>' -ForEach @(
         @{ Name = 'CLOUD_STAGING_ENDPOINT' }
         @{ Name = 'RESOURCE_KEY_BESPOKE_STAGING' }
+        @{ Name = 'LIVE_CLOUD_TESTS' }
     ) {
         Test-AllowedName $Name | Should -BeTrue
     }

@@ -14,13 +14,22 @@ $PSNativeCommandUseErrorActionPreference = $true
 
 ./java/setup-enviroment.ps1 -RepoName $RepoName -JavaSDKEnvVar $JavaSDKEnvVar
 
-# Every live cloud test skips without a resource key, and the later steps run
-# in this process, so removing the keys here leaves them out of the whole job.
+# Every live cloud test that reads a key skips without its resource key, and
+# the later steps run in this process, so removing the keys here leaves them
+# out of the whole job. The license key of the same account goes too, as the
+# 51Did tests fail when it is set without its resource key. The tests that
+# call the cloud with a fixed key skip when LIVE_CLOUD_TESTS is false.
 if (-not $LiveCloudTests) {
-    foreach ($key in @(Get-ChildItem Env:_51DEGREES_RESOURCE_KEY*)) {
+    $resourceKeys = @(Get-ChildItem Env:_51DEGREES_RESOURCE_KEY*)
+    $licenseKeys = @($resourceKeys | ForEach-Object {
+        $_.Name -replace '^_51DEGREES_RESOURCE_KEY', '_51DEGREES_LICENSE_KEY'
+    } | Where-Object { $_ -ne '_51DEGREES_LICENSE_KEY' })
+    $names = @($resourceKeys.Name) + $licenseKeys + 'RESOURCE_KEY_BESPOKE_STAGING'
+    foreach ($key in @(Get-ChildItem Env: | Where-Object { $names -ccontains $_.Name })) {
         Remove-Item "Env:$($key.Name)"
         Write-Host "Live cloud tests are not run here, so $($key.Name) is removed"
     }
+    $env:LIVE_CLOUD_TESTS = 'false'
 }
 
 # Without WMIC a forked test JVM on Windows can end itself part way through
