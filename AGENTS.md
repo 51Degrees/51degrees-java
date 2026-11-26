@@ -255,9 +255,11 @@ and for a list of properties that fails once or every time.
   Maven each runner has. It
   builds the console examples against the published packages and runs each
   product's `GettingStartedOnPrem` jar from the repository root with no
-  settings. On Ubuntu the free data file is downloaded, as from a fresh
-  clone, and the Windows and macOS jobs take that file from the run's cache,
-  so each file is downloaded once a run. The Ubuntu job then builds every
+  settings. On Ubuntu the example downloads the free data file, as from a
+  fresh clone, from a stand-in on the runner that serves the copy common-ci's
+  fetch-assets step fetched, so the example downloads nothing from the
+  Distributor. The Windows and macOS jobs take that file from the run's
+  cache. The Ubuntu job then builds every
   example module, the web examples too, with its tests compiled against
   the published packages, so a test that uses a class only this
   repository has fails there. It runs on each push to `main` and

@@ -53,10 +53,15 @@ repositories used to do for one package tree each.
   [examples-fresh-clone.yml](../.github/workflows/examples-fresh-clone.yml).
   It fails unless the example exits with 0 and prints results, and unless it
   downloads its free data file exactly when the job expects it to. That
-  workflow's Ubuntu job downloads each product's free data file once a run,
-  as a test of the download, and its other jobs take the file from the cache
-  the Ubuntu job saves. To run it by hand, build the console examples as
-  [AGENTS.md](../AGENTS.md#build) says, then from the repository root give
+  workflow's Ubuntu job has each example download its free data file once a
+  run, as a test of the download. Given `-LinkFile` and `-ServeFile`, the
+  script serves the file common-ci's fetch-assets step fetched from a
+  stand-in on the runner, and points the data file's link at the stand-in
+  while the example runs, so the example downloads nothing from the
+  Distributor. The link is put back afterwards. The other jobs take the file
+  from the cache the Ubuntu job saves. To run it by hand, build the console
+  examples as [AGENTS.md](../AGENTS.md#build) says, then from the repository
+  root give
   `-ExpectDownload` when the free data file is only a link, and leave it out
   when the file is there.
 
@@ -124,8 +129,9 @@ To run the on-premise tests:
 
 - `_51DEGREES_LICENSE_KEY`: [license key](https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=ci-readme.md&utm_term=secrets)
   for the data files. common-ci downloads the Device Detection TAC and the IP
-  Intelligence Enterprise data files from the Distributor with it, and the
-  data file update example uses it.
+  Intelligence Enterprise data files from the Distributor with it. The data
+  file update example tests do not use it: they give the example a made-up
+  key and a stand-in for the Distributor on the runner.
 
 To run the cloud tests, the resource keys and the license keys are
 organization secrets:

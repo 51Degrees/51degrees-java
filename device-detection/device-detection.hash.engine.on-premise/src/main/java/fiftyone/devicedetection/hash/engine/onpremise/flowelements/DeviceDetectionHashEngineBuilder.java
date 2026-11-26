@@ -24,6 +24,7 @@ package fiftyone.devicedetection.hash.engine.onpremise.flowelements;
 
 import fiftyone.devicedetection.hash.engine.onpremise.data.DeviceDataHash;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.ConfigHashSwig;
+import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.EngineHashSwig;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.RequiredPropertiesConfigSwig;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.VectorStringSwig;
 import fiftyone.devicedetection.shared.flowelements.OnPremiseDeviceDetectionEngineBuilderBase;
@@ -44,6 +45,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 import static fiftyone.pipeline.util.StringManipulation.stringJoin;
 
@@ -347,6 +349,16 @@ public class DeviceDetectionHashEngineBuilder
     @Override
     protected String getDefaultDataDownloadType() {
         return dataDownloadType;
+    }
+
+    /**
+     * The product of a data file, read from its header by the native
+     * library without loading the file.
+     * @return {@link EngineHashSwig#getProductFromFile(String)}
+     */
+    @Override
+    protected Function<String, String> getProductReader() {
+        return EngineHashSwig::getProductFromFile;
     }
 
     @Override

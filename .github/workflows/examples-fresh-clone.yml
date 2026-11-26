@@ -5,10 +5,11 @@ name: Examples from a fresh clone
 # the JDK and Maven the runner has. Then runs the getting started example
 # from the repository root with no settings. A fresh clone holds only a link
 # for each free data file. On Ubuntu the example downloads its file, which
-# tests the download, and the job keeps the file in the cache. The other
-# systems take it from there, so each file is downloaded once a run. The
-# Ubuntu job also builds every example module, with its tests compiled,
-# against the published packages.
+# tests the download, from a stand-in on the runner that serves the free file
+# common-ci's fetch-assets step fetched, so no run of an example downloads
+# from the Distributor. The job keeps the file in the cache, and the other
+# systems take it from there. The Ubuntu job also builds every example
+# module, with its tests compiled, against the published packages.
 
 on:
   pull_request:
@@ -38,10 +39,13 @@ jobs:
           - product: device-detection
             example: fiftyone.devicedetection.examples.console.GettingStartedOnPrem
             file: cxx/data/device-detection/51Degrees-LiteV4.1.hash
+            # The name common-ci's fetch-assets step gives the free file.
+            asset: 51Degrees-LiteV4.1.hash
             expect: ''
           - product: ip-intelligence
             example: fiftyone.ipintelligence.examples.console.GettingStartedOnPrem
             file: cxx/data/ip-intelligence/51Degrees-LiteV41.ipi
+            asset: 51Degrees-LiteIpiV41.ipi
             # Each IP Intelligence value is printed with its weighting.
             expect: '(weighting '
     runs-on: ubuntu-latest
@@ -51,6 +55,14 @@ jobs:
         with:
           submodules: recursive
           persist-credentials: false
+
+      # common-ci's fetch-assets step, which the builds use, puts the free
+      # file in the assets folder and keeps it in the cache for the day.
+      - name: Fetch the free data file the stand-in serves
+        uses: 51Degrees/common-ci/actions/fetch-assets@main
+        with:
+          assets: ${{ matrix.asset }}
+          cache: 'true'
 
       - name: The runner's Java and Maven
         shell: pwsh
@@ -63,12 +75,15 @@ jobs:
         shell: pwsh
         run: mvn -B --no-transfer-progress -pl console -am package -DskipTests
 
+      # The example follows the data file's link, which names a stand-in on
+      # the runner while it runs.
       - name: Run the getting started example from the repository root
         shell: pwsh
         run: >-
           ./ci/run-fresh-clone-example.ps1 -Product '${{ matrix.product }}'
           -Example '${{ matrix.example }}' -ExpectDownload
           -Expect '${{ matrix.expect }}'
+          -LinkFile '${{ matrix.file }}.link' -ServeFile 'assets/${{ matrix.asset }}'
 
       # The key follows the link, so a new free file gets a new entry, and
       # the same file is kept once rather than once a run.
