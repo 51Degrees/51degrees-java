@@ -371,7 +371,9 @@ public final class RedeemResult {
             signature,
             Collections.unmodifiableMap(factors),
             hasFactors,
-            HumanConfidence.read(json),
+            outcome == Outcome.SUCCESS
+                ? HumanConfidence.readAnswered(json)
+                : HumanConfidence.read(json),
             verifiedAt,
             secondsSinceVerified,
             statusCode,
@@ -538,10 +540,12 @@ public final class RedeemResult {
     /**
      * Why the cloud did not return the Human Confidence Value on success,
      * which is that the call did not present a License Key valid for Human
-     * Confidence.
+     * Confidence. Where a successful answer holds neither the Value nor a
+     * reason, as from a cloud from before the Value was added, this says
+     * the cloud did not return one.
      *
-     * @return the cloud's {@code humanConfidenceNullReason}, or null where
-     *         it sent none
+     * @return the cloud's {@code humanConfidenceNullReason}, that message,
+     *         or null where there is a Value or the outcome is not success
      */
     public String getHumanConfidenceNullReason() {
         return humanConfidenceNullReason;

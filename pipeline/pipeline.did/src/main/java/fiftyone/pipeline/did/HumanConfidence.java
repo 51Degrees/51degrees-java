@@ -107,6 +107,33 @@ public enum HumanConfidence {
     }
 
     /**
+     * The reason given where an answer that verified or redeemed a 51Did
+     * holds neither {@code humanConfidence} nor
+     * {@code humanConfidenceNullReason}, as from a cloud from before the
+     * Value was added.
+     */
+    static final String NOT_RETURNED =
+        "The cloud did not return a Human Confidence Value. A cloud from "
+        + "before the Value was added returns none.";
+
+    /**
+     * Reads the Human Confidence fields of an answer that verified or
+     * redeemed a 51Did, as {@link #read(JSONObject)} does. Where the answer
+     * holds neither field, the reason is {@link #NOT_RETURNED}, so a caller
+     * always learns why there is no Value.
+     *
+     * @param json the answer body as JSON
+     * @return the fields, with a reason wherever there is no Value
+     */
+    static Fields readAnswered(JSONObject json) {
+        Fields fields = read(json);
+        if (fields.raw == null && fields.nullReason == null) {
+            return new Fields(null, NOT_RETURNED);
+        }
+        return fields;
+    }
+
+    /**
      * The Human Confidence fields of one verify or redeem answer, as
      * {@link #read(JSONObject)} gives them.
      */

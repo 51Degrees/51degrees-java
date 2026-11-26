@@ -1652,6 +1652,29 @@ public class DidClientTests {
             result.getFactors().get("browserversion"));
     }
 
+    /**
+     * A successful redeem in today's shape, with no {@code status} and
+     * neither Human Confidence field, reads as success with no Value and
+     * a reason saying the cloud did not return one.
+     */
+    @Test
+    public void redeem_TodaysSuccessSaysNoValueWasReturned()
+            throws Exception {
+        transport.queue(200, "{\"signature\":\"verified\","
+            + "\"context\":\"verified\"," + TIMES + "}");
+
+        RedeemResult result =
+            client.redeem(validDid, "sealed", "abc").join();
+
+        assertEquals(Outcome.SUCCESS, result.getOutcome());
+        assertNull(result.getStatusValue());
+        assertEquals(RedeemResult.Context.VERIFIED, result.getContext());
+        assertNull(result.getHumanConfidence());
+        assertNull(result.getHumanConfidenceValue());
+        assertEquals(HumanConfidence.NOT_RETURNED,
+            result.getHumanConfidenceNullReason());
+    }
+
     @Test
     public void redeem_FailuresReadTheirOutcomeAndNoHumanConfidence()
             throws Exception {
@@ -1903,7 +1926,8 @@ public class DidClientTests {
         Verification valid = client.verifyDetailed(validDid).join();
         assertTrue(valid.isValid());
         assertNull(valid.getHumanConfidence());
-        assertNull(valid.getHumanConfidenceNullReason());
+        assertEquals(HumanConfidence.NOT_RETURNED,
+            valid.getHumanConfidenceNullReason());
 
         transport.queue(400, "{\"valid\":false}");
         Verification invalid = client.verifyDetailed(validDid).join();

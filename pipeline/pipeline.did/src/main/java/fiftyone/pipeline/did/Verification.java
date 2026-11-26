@@ -63,7 +63,9 @@ public final class Verification {
     static Verification parse(JSONObject json, String raw) {
         return new Verification(
             json.getBoolean("valid"),
-            HumanConfidence.read(json),
+            json.getBoolean("valid")
+                ? HumanConfidence.readAnswered(json)
+                : HumanConfidence.read(json),
             200,
             raw);
     }
@@ -96,8 +98,8 @@ public final class Verification {
      * was added is {@link HumanConfidence#ABSENT}.
      *
      * @return the Value, or null where the cloud did not return one, in
-     *         which case {@link #getHumanConfidenceNullReason()} usually
-     *         says why
+     *         which case {@link #getHumanConfidenceNullReason()} says why
+     *         for a valid 51Did
      */
     public HumanConfidence getHumanConfidence() {
         return humanConfidence;
@@ -114,10 +116,12 @@ public final class Verification {
     /**
      * Why the cloud did not return the Human Confidence Value, which is
      * usually that the call did not present a License Key valid for Human
-     * Confidence.
+     * Confidence. Where a valid answer holds neither the Value nor a reason,
+     * as from a cloud from before the Value was added, this says the cloud
+     * did not return one.
      *
-     * @return the cloud's {@code humanConfidenceNullReason}, or null where
-     *         it sent none
+     * @return the cloud's {@code humanConfidenceNullReason}, that message,
+     *         or null where there is a Value or the 51Did is not valid
      */
     public String getHumanConfidenceNullReason() {
         return humanConfidenceNullReason;
