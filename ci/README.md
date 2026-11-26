@@ -171,6 +171,16 @@ two names that only CI uses and so have no `_51DEGREES_` prefix:
 
 A cloud test with no key is skipped, naming the variable it reads.
 
+Live cloud tests run once for each operating system. The Intel macOS
+entries in [options.json](options.json) set `LiveCloudTests` to false, as
+the arm64 entries run them for macOS. On those entries
+[setup-environment.ps1](setup-environment.ps1) removes every
+`_51DEGREES_RESOURCE_KEY` name, the license key of the same account and
+`RESOURCE_KEY_BESPOKE_STAGING`, so the tests that read a key skip. It also
+sets `LIVE_CLOUD_TESTS`, a name only CI uses, to false, and the tests that
+call the cloud with a fixed key skip when it is. Every other test still runs
+there.
+
 To publish to Maven Central (51Degrees only), these organization secrets,
 which only CI uses and so have no `_51DEGREES_` prefix. common-ci reads them
 and gives them only to the jobs that sign or publish:
