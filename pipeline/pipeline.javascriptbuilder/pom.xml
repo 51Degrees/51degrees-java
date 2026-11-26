@@ -79,6 +79,14 @@
             <version>${graal-js.version}</version>
         </dependency>
 
+        <!-- The server route tests run the Cloud Request Engine in front of
+             the builders. -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>pipeline.cloudrequestengine</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>pipeline.engines</artifactId>

@@ -9,7 +9,7 @@
   {"Name": "pipeline.engines.fiftyone", "Path": "pipeline/pipeline.engines.fiftyone", "DependsOn": ["pipeline", "pipeline.engines", "pipeline.common"], "Publish": true},
   {"Name": "pipeline.translation", "Path": "pipeline/pipeline.translation", "DependsOn": ["pipeline", "pipeline.engines", "pipeline.core"], "Publish": true},
   {"Name": "pipeline.derivedproperty", "Path": "pipeline/pipeline.derivedproperty", "ExtraPaths": ["pipeline/derived-properties"], "DependsOn": ["pipeline", "pipeline.engines", "pipeline.core"], "Publish": true, "FirstVersion": "4.6.2"},
-  {"Name": "pipeline.javascriptbuilder", "Path": "pipeline/pipeline.javascriptbuilder", "DependsOn": ["pipeline", "pipeline.jsonbuilder", "pipeline.engines", "pipeline.common"], "Publish": true},
+  {"Name": "pipeline.javascriptbuilder", "Path": "pipeline/pipeline.javascriptbuilder", "DependsOn": ["pipeline", "pipeline.jsonbuilder", "pipeline.engines", "pipeline.common", "pipeline.cloudrequestengine"], "Publish": true},
   {"Name": "pipeline.jsonbuilder", "Path": "pipeline/pipeline.jsonbuilder", "DependsOn": ["pipeline", "pipeline.engines.fiftyone", "pipeline.common", "pipeline.engines"], "Publish": true},
   {"Name": "pipeline.web.packages", "Path": "pipeline/pipeline.web.packages/pom.xml", "DependsOn": ["pipeline"], "Publish": true},
   {"Name": "pipeline.web.shared", "Path": "pipeline/pipeline.web.packages/pipeline.web.shared", "DependsOn": ["pipeline.web.packages", "pipeline.javascriptbuilder"], "Publish": true},

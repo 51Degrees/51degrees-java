@@ -27,6 +27,7 @@ import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -36,8 +37,30 @@ import java.util.Map;
  * arrive. It derives from {@link EvidenceKeyFilterWhitelist} so that the
  * Pipeline's filter keeps it rather than copying its keys once, and so
  * that the web integration lists its headers in the Vary header.
+ * <p>
+ * It also includes every query and cookie key whose name starts with
+ * {@link #BROWSER_ANSWER_PREFIX}, once the keys are known. The cloud
+ * service names the answers of the scripts it hands to the browser, such
+ * as the browser tests, after that prefix, and each script picks its own
+ * name after it, so the service cannot list them. A server that passes the
+ * page's script on gets the browser's answers back under those names, and
+ * they have to reach the cloud service on the next iteration.
  */
 class CloudEvidenceKeyFilter extends EvidenceKeyFilterWhitelist {
+
+    /**
+     * The start of the name of every answer the cloud service's scripts
+     * send back, compared without regard to case.
+     */
+    static final String BROWSER_ANSWER_PREFIX = "51D_";
+
+    /**
+     * The prefixes the answers of the cloud service's scripts arrive
+     * under.
+     */
+    private static final String[] BROWSER_ANSWER_SOURCES = {
+        "query.", "cookie."
+    };
 
     private volatile EvidenceKeyFilterWhitelist keys = null;
 
@@ -75,13 +98,41 @@ class CloudEvidenceKeyFilter extends EvidenceKeyFilterWhitelist {
     @Override
     public boolean include(String key) {
         EvidenceKeyFilterWhitelist current = keys;
-        return current != null && current.include(key);
+        return current != null &&
+            (current.include(key) || isBrowserAnswer(key));
     }
 
     @Override
     public Integer order(String key) {
         EvidenceKeyFilterWhitelist current = keys;
-        return current == null ? null : current.order(key);
+        if (current == null) {
+            return null;
+        }
+        Integer order = current.order(key);
+        return order == null && isBrowserAnswer(key) ? 0 : order;
+    }
+
+    /**
+     * Whether the key is a query or cookie key whose name starts with
+     * {@link #BROWSER_ANSWER_PREFIX} and has more after it, compared
+     * without regard to case.
+     * @param key the Evidence key
+     * @return true if the key can hold the answer of a cloud script
+     */
+    static boolean isBrowserAnswer(String key) {
+        if (key == null) {
+            return false;
+        }
+        String lower = key.toLowerCase(Locale.ROOT);
+        String prefix = BROWSER_ANSWER_PREFIX.toLowerCase(Locale.ROOT);
+        for (String source : BROWSER_ANSWER_SOURCES) {
+            if (lower.startsWith(source) &&
+                lower.length() > source.length() + prefix.length() &&
+                lower.startsWith(prefix, source.length())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
