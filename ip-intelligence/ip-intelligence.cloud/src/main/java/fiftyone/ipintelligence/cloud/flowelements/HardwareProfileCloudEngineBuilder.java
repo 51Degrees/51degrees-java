@@ -40,6 +40,12 @@ import java.util.List;
 public class HardwareProfileCloudEngineBuilder extends AspectEngineBuilderBase<
     HardwareProfileCloudEngineBuilder,
     HardwareProfileCloudEngine> {
+
+    @Override
+    protected HardwareProfileCloudEngineBuilder self() {
+        return this;
+    }
+
     private final ILoggerFactory loggerFactory;
 
     /**

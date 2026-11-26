@@ -17,11 +17,11 @@ $ErrorActionPreference = "Stop"
 # forked JVM died when one does. The dev profile points the examples at the
 # reactor. The tests read their keys from the environment, each under its own
 # _51DEGREES_ name. A test that needs every property reads
-# _51DEGREES_RESOURCE_KEY_BESPOKE, and the Device Detection data file update
-# example reads _51DEGREES_LICENSE_KEY. No secret fills
-# _51DEGREES_RESOURCE_KEY, which is the name a person running an example
-# sets. A test that runs an example gives the example its key under that
-# name. A pull request at the standard depth leaves out the tests in
+# _51DEGREES_RESOURCE_KEY_BESPOKE. The data file update example tests read no
+# key: they give the example a made-up key and a stand-in for the Distributor
+# on this machine. No secret fills _51DEGREES_RESOURCE_KEY, which is the name
+# a person running an example sets. A test that runs an example gives the
+# example its key under that name. A pull request at the standard depth leaves out the tests in
 # standard-excludes.txt.
 $extraArgs = @(
     '-Pdev'

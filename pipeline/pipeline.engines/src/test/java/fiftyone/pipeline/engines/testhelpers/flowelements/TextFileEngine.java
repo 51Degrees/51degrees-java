@@ -48,11 +48,15 @@ import java.util.List;
 public class TextFileEngine
     extends OnPremiseAspectEngineBase<EmptyEngineData, AspectPropertyMetaData> {
 
+    @Override
+    protected Class<EmptyEngineData> getDataType() {
+        return EmptyEngineData.class;
+    }
+
     private final String dataFilePath;
 
     private volatile String text;
 
-    @SuppressWarnings("this-escape")
     private final TypedKey<EmptyEngineData> typedKey =
         new TypedKeyDefault<>(getElementDataKey(), EmptyEngineData.class);
 

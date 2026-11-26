@@ -674,7 +674,7 @@ public class MetricsOnPrem {
 
             // Increase the total area and number of areas for the metric only
             // where a non zero area is available.
-            Object areas = firstValue(tryGet(data::getAreas));
+            Object areas = firstValue(tryGet(data::getAreas), Object.class);
             if (areas != null) {
                 Result result = wktAreas.computeIfAbsent(
                         areas.toString(),
@@ -702,14 +702,14 @@ public class MetricsOnPrem {
      */
     private static Key createKey(IPIntelligenceData data) {
         return new Key(
-                stringValue(firstValue(tryGet(data::getContinentName))),
-                stringValue(firstValue(tryGet(data::getCountry))),
-                stringValue(firstValue(tryGet(data::getLocationConfidence))),
-                stringValue(firstValue(tryGet(data::getConnectionType))),
-                stringValue(firstValue(tryGet(data::getIsVPN))),
-                stringValue(firstValue(tryGet(data::getIsProxy))),
-                stringValue(firstValue(tryGet(data::getIsTor))),
-                stringValue(firstValue(tryGet(data::getIsPublicRouter))));
+                stringValue(firstValue(tryGet(data::getContinentName), Object.class)),
+                stringValue(firstValue(tryGet(data::getCountry), Object.class)),
+                stringValue(firstValue(tryGet(data::getLocationConfidence), Object.class)),
+                stringValue(firstValue(tryGet(data::getConnectionType), Object.class)),
+                stringValue(firstValue(tryGet(data::getIsVPN), Object.class)),
+                stringValue(firstValue(tryGet(data::getIsProxy), Object.class)),
+                stringValue(firstValue(tryGet(data::getIsTor), Object.class)),
+                stringValue(firstValue(tryGet(data::getIsPublicRouter), Object.class)));
     }
 
     /**

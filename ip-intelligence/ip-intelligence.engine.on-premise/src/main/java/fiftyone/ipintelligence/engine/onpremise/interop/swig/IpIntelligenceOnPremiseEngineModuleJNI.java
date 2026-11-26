@@ -409,6 +409,8 @@ public class IpIntelligenceOnPremiseEngineModuleJNI {
   public final static native long new_EngineIpiSwig__SWIG_1(byte[] jarg1, long jarg3, ConfigIpiSwig jarg3_, long jarg4, RequiredPropertiesConfigSwig jarg4_);
   public final static native long EngineIpiSwig_getPublishedTime(long jarg1, EngineIpiSwig jarg1_);
   public final static native long EngineIpiSwig_getUpdateAvailableTime(long jarg1, EngineIpiSwig jarg1_);
+  public final static native long EngineIpiSwig_getPublishedTimeFromFile(String jarg1);
+  public final static native String EngineIpiSwig_getProductFromFile(String jarg1);
   public final static native String EngineIpiSwig_getDataFilePath(long jarg1, EngineIpiSwig jarg1_);
   public final static native String EngineIpiSwig_getDataFileTempPath(long jarg1, EngineIpiSwig jarg1_);
   public final static native void EngineIpiSwig_refreshData__SWIG_0(long jarg1, EngineIpiSwig jarg1_);

@@ -74,10 +74,9 @@ public abstract class PrePackagedPipelineBuilderBase
      * @return this builder instance
      * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/advanced-features/lazy-loading.md">Specification</a>
      */
-    @SuppressWarnings("unchecked")
     public TBuilder useLazyLoading() {
         lazyLoading = true;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -88,11 +87,10 @@ public abstract class PrePackagedPipelineBuilderBase
      * @return this builder
      * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/advanced-features/lazy-loading.md">Specification</a>
      */
-    @SuppressWarnings("unchecked")
     public TBuilder useLazyLoading(long timeoutMillis) {
         lazyLoading = true;
         this.lazyLoadingTimeoutMillis = timeoutMillis;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -100,10 +98,9 @@ public abstract class PrePackagedPipelineBuilderBase
      * {@link Constants#DEFAULT_RESULTS_CACHE_SIZE}.
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
     public TBuilder useResultsCache() {
         resultsCache = true;
-        return (TBuilder) this;
+        return self();
     }
 
     /**
@@ -112,10 +109,9 @@ public abstract class PrePackagedPipelineBuilderBase
      *             cache
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
     public TBuilder useResultsCache(int size) {
         resultsCache = true;
         resultsCacheSize = size;
-        return (TBuilder) this;
+        return self();
     }
 }

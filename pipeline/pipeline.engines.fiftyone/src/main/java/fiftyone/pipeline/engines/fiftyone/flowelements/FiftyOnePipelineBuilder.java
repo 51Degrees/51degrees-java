@@ -64,13 +64,12 @@ public class FiftyOnePipelineBuilder extends PipelineBuilder {
         return this;
     }
 
-    @SuppressWarnings("rawtypes")
     @Override
     protected void onPreBuild() {
         
         // Add the sequence element if it does not exist
         boolean containsSequence = false;
-        for (FlowElement element : getFlowElements()) {
+        for (FlowElement<?, ?> element : getFlowElements()) {
             if (element instanceof SequenceElement) {
                 containsSequence = true;
                 break;
@@ -88,7 +87,7 @@ public class FiftyOnePipelineBuilder extends PipelineBuilder {
         // Add the share usage element if it does not exist in the list.
         if (shareUsageEnabled) {
             boolean containsShareUsage = false;
-            for (FlowElement element : getFlowElements()) {
+            for (FlowElement<?, ?> element : getFlowElements()) {
                 if (element instanceof ShareUsageElement) {
                     containsShareUsage = true;
                     break;

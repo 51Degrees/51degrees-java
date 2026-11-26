@@ -76,8 +76,7 @@ public class TestPipeline {
 		}
 
         @Override
-        @SuppressWarnings("rawtypes")
-        public List<FlowElement> getFlowElements() {
+        public List<FlowElement<?, ?>> getFlowElements() {
             return pipeline.getFlowElements();
         }
 
@@ -122,8 +121,7 @@ public class TestPipeline {
         }
 
         @Override
-        @SuppressWarnings("rawtypes")
-        public <T extends FlowElement> T getElement(Class<T> type) {
+        public <T extends FlowElement<?, ?>> T getElement(Class<T> type) {
             return pipeline.getElement(type);
         }
     }

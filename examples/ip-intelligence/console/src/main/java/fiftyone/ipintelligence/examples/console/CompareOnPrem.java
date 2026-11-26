@@ -402,9 +402,9 @@ public class CompareOnPrem {
 
             // Check if the required properties have values. If not, skip this
             // record as the IP address was not found in the database.
-            Float latitude = firstValue(tryGet(data::getLatitude));
-            Float longitude = firstValue(tryGet(data::getLongitude));
-            Object areas = firstValue(tryGet(data::getAreas));
+            Float latitude = firstValue(tryGet(data::getLatitude), Float.class);
+            Float longitude = firstValue(tryGet(data::getLongitude), Float.class);
+            Object areas = firstValue(tryGet(data::getAreas), Object.class);
             if (latitude == null || longitude == null || areas == null) {
                 return null;
             }
@@ -417,7 +417,7 @@ public class CompareOnPrem {
                         "InterNetworkV6" : "InterNetwork";
             }
 
-            String confidence = firstValue(tryGet(data::getLocationConfidence));
+            String confidence = firstValue(tryGet(data::getLocationConfidence), String.class);
 
             // Get the distance in kilometers between the result and the truth.
             double distanceKms = haversineKms(

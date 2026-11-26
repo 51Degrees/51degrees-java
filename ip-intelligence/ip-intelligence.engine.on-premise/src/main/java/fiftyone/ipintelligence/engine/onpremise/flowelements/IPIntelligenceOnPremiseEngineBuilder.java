@@ -24,6 +24,7 @@ package fiftyone.ipintelligence.engine.onpremise.flowelements;
 
 import fiftyone.ipintelligence.engine.onpremise.data.IPIntelligenceDataHash;
 import fiftyone.ipintelligence.engine.onpremise.interop.swig.ConfigIpiSwig;
+import fiftyone.ipintelligence.engine.onpremise.interop.swig.EngineIpiSwig;
 import fiftyone.ipintelligence.engine.onpremise.interop.swig.RequiredPropertiesConfigSwig;
 import fiftyone.ipintelligence.engine.onpremise.interop.swig.VectorStringSwig;
 import fiftyone.ipintelligence.shared.flowelements.OnPremiseIPIntelligenceEngineBuilderBase;
@@ -44,6 +45,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 import static fiftyone.pipeline.util.StringManipulation.stringJoin;
 
@@ -58,6 +60,11 @@ public class IPIntelligenceOnPremiseEngineBuilder
     extends OnPremiseIPIntelligenceEngineBuilderBase<
     IPIntelligenceOnPremiseEngineBuilder,
     IPIntelligenceOnPremiseEngine> {
+
+    @Override
+    protected IPIntelligenceOnPremiseEngineBuilder self() {
+        return this;
+    }
 
     private final String dataDownloadType = "IPIV41";
    
@@ -222,6 +229,16 @@ public class IPIntelligenceOnPremiseEngineBuilder
     @Override
     protected String getDefaultDataDownloadType() {
         return dataDownloadType;
+    }
+
+    /**
+     * The product of a data file, read from its header by the native
+     * library without loading the file.
+     * @return {@link EngineIpiSwig#getProductFromFile(String)}
+     */
+    @Override
+    protected Function<String, String> getProductReader() {
+        return EngineIpiSwig::getProductFromFile;
     }
 
     @Override

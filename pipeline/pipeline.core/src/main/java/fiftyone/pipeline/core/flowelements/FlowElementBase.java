@@ -26,7 +26,6 @@ import fiftyone.pipeline.core.data.*;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.typed.TypedKey;
 import fiftyone.pipeline.core.typed.TypedKeyDefault;
-import fiftyone.pipeline.util.Types;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
@@ -68,7 +67,6 @@ public abstract class FlowElementBase<
      * @param elementDataFactory the factory to use when creating a
      *                           {@link ElementDataBase} instance
      */
-    @SuppressWarnings("this-escape")
     public FlowElementBase(
             Logger logger,
             ElementDataFactory<TData> elementDataFactory) {
@@ -122,15 +120,21 @@ public abstract class FlowElementBase<
         return null;
     }
 
+    /**
+     * The type of the element data this element adds to the Flow Data,
+     * which reads through {@link #getTypedDataKey()} are checked against.
+     * Usually the interface the element's data implements, for example
+     * {@code return MyData.class;}.
+     * @return the type of the element data
+     */
+    protected abstract Class<TData> getDataType();
+
     @Override
     public TypedKey<TData> getTypedDataKey() {
         if (typedKey == null) {
             typedKey = new TypedKeyDefault<>(
                     getElementDataKey(),
-                    Types.findSubClassParameterType(
-                            this,
-                            FlowElementBase.class,
-                            0));
+                    getDataType());
         }
         return typedKey;
     }

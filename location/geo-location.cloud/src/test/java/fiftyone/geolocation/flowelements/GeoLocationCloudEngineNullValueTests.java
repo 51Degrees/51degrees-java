@@ -134,13 +134,15 @@ public class GeoLocationCloudEngineNullValueTests {
     }
 
     @Test
-    @SuppressWarnings("deprecation")
     public void SetNoValueReasons_ChangesNothing() throws Exception {
         try (GeoLocationCloudEngine engine = buildEngine()) {
             CloudGeoData data = process(engine, NULL_SUBURB_RESPONSE);
             Map<String, String> reasons = new HashMap<>();
             reasons.put("suburb", "Another reason");
-            data.setNoValueReasons(reasons);
+            // Called by name, as the build treats the use of a deprecated
+            // method as an error.
+            CloudGeoData.class.getMethod("setNoValueReasons", Map.class)
+                .invoke(data, reasons);
 
             assertNoValue(SUBURB_NULL_REASON, data.get("Suburb"));
             assertNoValue(SUBURB_NULL_REASON, data.getSuburb());

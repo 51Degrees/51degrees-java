@@ -54,6 +54,12 @@
     </modules>
 
     <properties>
+        <!-- Warnings fail the build only when the build is ours. CI sets
+             _51DEGREES_WARNINGS_AS_ERRORS to true, which turns on the
+             warnings-as-errors profile below. A build anyone else runs, from
+             a clone or a package, shows its warnings but never fails on one,
+             so a newer JDK cannot stop it. -->
+        <fiftyone.warningsAsErrors>false</fiftyone.warningsAsErrors>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <maven.compiler.target>1.8</maven.compiler.target>
@@ -138,9 +144,9 @@
                         <source>${maven.compiler.source}</source>
                         <target>${maven.compiler.target}</target>
                         <showWarnings>true</showWarnings>
+                        <failOnWarning>${fiftyone.warningsAsErrors}</failOnWarning>
                         <compilerArgs>
                             <arg>-Xlint:all</arg>
-                            <arg>-Werror</arg>
                         </compilerArgs>
                     </configuration>
                 </plugin>
@@ -235,7 +241,7 @@
                          build. A module that leaves a check out says why in
                          its own pom. -->
                     <doclint>all</doclint>
-                    <failOnWarnings>true</failOnWarnings>
+                    <failOnWarnings>${fiftyone.warningsAsErrors}</failOnWarnings>
                     <!-- Maven would link each module's javadoc to the other
                          modules' under the project URL, which is the repository
                          and serves no javadoc, and fails to find one for
@@ -320,7 +326,7 @@
                         <ruleset>${maven.multiModuleProjectDirectory}/ci/pmd-resource-ruleset.xml</ruleset>
                     </rulesets>
                     <includeTests>true</includeTests>
-                    <failOnViolation>true</failOnViolation>
+                    <failOnViolation>${fiftyone.warningsAsErrors}</failOnViolation>
                     <printFailingErrors>true</printFailingErrors>
                     <linkXRef>false</linkXRef>
                     <excludes>
@@ -355,6 +361,30 @@
     </scm>
 
     <profiles>
+
+        <profile>
+
+            <id>warnings-as-errors</id>
+
+            <activation>
+
+                <property>
+
+                    <name>env._51DEGREES_WARNINGS_AS_ERRORS</name>
+
+                    <value>true</value>
+
+                </property>
+
+            </activation>
+
+            <properties>
+
+                <fiftyone.warningsAsErrors>true</fiftyone.warningsAsErrors>
+
+            </properties>
+
+        </profile>
         <!-- javac 9 and later warn that the bootstrap class path is not set
              when they compile for Java 8 with -source and -target. The
              release option compiles against the Java 8 API instead, which

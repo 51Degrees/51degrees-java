@@ -38,6 +38,7 @@ import java.util.List;
 
 import static fiftyone.pipeline.util.StringManipulation.stringJoin;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -55,11 +56,10 @@ public class MissingPropertyServiceTests {
      * available, but in another data tier, which only an on-premise engine
      * has.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void MissingPropertyService_GetReason_Upgrade() {
         // Arrange
-        AspectEngine<? extends AspectData, AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        AspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         when(engine.getDataSourceTier()).thenReturn("lite");
         when(engine.getElementDataKey()).thenReturn("testElement");
         configureProperty(engine);
@@ -91,11 +91,10 @@ public class MissingPropertyServiceTests {
      * property exists in the data tier, but was not included in the list of
      * required properties when configuring the engine.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void MissingPropertyService_GetReason_Excluded() {
         // Arrange
-        AspectEngine<? extends AspectData, AspectPropertyMetaData> engine = mock(AspectEngine.class);
+        AspectEngine<?, ?> engine = mock(AspectEngine.class);
         when(engine.getDataSourceTier()).thenReturn("premium");
         when(engine.getElementDataKey()).thenReturn("testElement");
         configureProperty(engine, false);
@@ -123,11 +122,10 @@ public class MissingPropertyServiceTests {
      * Check that an "unknown" reason is returned when the property does not
      * exist in the engine.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void MissingPropertyService_GetReason_NotInEngine() {
         // Arrange
-        AspectEngine<? extends AspectData, AspectPropertyMetaData> engine = mock(AspectEngine.class);
+        AspectEngine<?, ?> engine = mock(AspectEngine.class);
         when(engine.getDataSourceTier()).thenReturn("premium");
         when(engine.getElementDataKey()).thenReturn("testElement");
         configureProperty(engine, false);
@@ -152,14 +150,14 @@ public class MissingPropertyServiceTests {
      * Check that a "product not in resource" reason is returned when a cloud
      * engine does not contain the product.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void MissingPropertyService_GetReason_ProductNotInResource() {
         // Arrange
-        CloudAspectEngine<? extends AspectData, AspectPropertyMetaData> engine = mock(CloudAspectEngine.class);
+        CloudAspectEngine<?, ?> engine = mock(CloudAspectEngine.class);
         when(engine.getElementDataKey()).thenReturn("testElement");
         when(engine.hasLoadedProperties()).thenReturn(true);
-        when(engine.getProperties()).thenReturn(Collections.emptyList());
+        doReturn(Collections.emptyList())
+            .when(engine).getProperties();
 
         // Act
         MissingPropertyResult result = service.getMissingPropertyReason(
@@ -185,11 +183,10 @@ public class MissingPropertyServiceTests {
      * Check that a "property not in resource" reason is returned when a cloud
      * engine does contain the product, but not the property.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void MissingPropertyService_GetReason_PropertyNotInResource() {
         // Arrange
-        CloudAspectEngine<? extends AspectData, AspectPropertyMetaData> engine = mock(CloudAspectEngine.class);
+        CloudAspectEngine<?, ?> engine = mock(CloudAspectEngine.class);
         when(engine.getElementDataKey()).thenReturn("testElement");
         when(engine.hasLoadedProperties()).thenReturn(true);
         configureProperty(engine);
@@ -219,11 +216,10 @@ public class MissingPropertyServiceTests {
      * Check that an "unknown" reason is returned when none of the above are
      * true.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void MissingPropertyService_GetReason_Unknown() {
         // Arrange
-        AspectEngine<? extends AspectData, AspectPropertyMetaData> engine = mock(AspectEngine.class);
+        AspectEngine<?, ?> engine = mock(AspectEngine.class);
         when(engine.getDataSourceTier()).thenReturn("premium");
         when(engine.getElementDataKey()).thenReturn("testElement");
         configureProperty(engine);
@@ -244,12 +240,12 @@ public class MissingPropertyServiceTests {
             result.getDescription());
     }
 
-    private void configureProperty(AspectEngine<? extends AspectData, AspectPropertyMetaData> engine) {
+    private void configureProperty(AspectEngine<?, ?> engine) {
         configureProperty(engine, true);
     }
 
     private void configureProperty(
-        AspectEngine<? extends AspectData, AspectPropertyMetaData> engine,
+        AspectEngine<?, ?> engine,
         boolean propertyAvailable) {
         List<String> dataFiles = Arrays.asList("premium", "enterprise");
         AspectPropertyMetaData property = new AspectPropertyMetaDataDefault(
@@ -260,6 +256,7 @@ public class MissingPropertyServiceTests {
             dataFiles,
             propertyAvailable);
         List<AspectPropertyMetaData> propertyList = Arrays.asList(property);
-        when(engine.getProperties()).thenReturn(propertyList);
+        doReturn(propertyList)
+            .when(engine).getProperties();
     }
 }

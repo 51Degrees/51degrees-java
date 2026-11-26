@@ -49,7 +49,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @Ignore
-@SuppressWarnings("rawtypes")
 public class IPIntelligenceOnPremisePipelineBuilderTest {
 
     private static final String IPI_DATA_FILE_NAME = FileUtils.getHashFileName();
@@ -125,7 +124,7 @@ public class IPIntelligenceOnPremisePipelineBuilderTest {
                 .setAutoUpdate(false)
                 .setShareUsage(false)
                 .build()) {
-            List<FlowElement> flowElements = pipeline.getFlowElements();
+            List<FlowElement<?, ?>> flowElements = pipeline.getFlowElements();
             assertEquals(1, flowElements.size());
             assertFalse(flowElements.get(0) instanceof ShareUsageElement);
         }
@@ -138,7 +137,7 @@ public class IPIntelligenceOnPremisePipelineBuilderTest {
                 .setAutoUpdate(false)
                 .setShareUsage(true)
                 .build()) {
-            List<FlowElement> flowElements = pipeline.getFlowElements();
+            List<FlowElement<?, ?>> flowElements = pipeline.getFlowElements();
             assertEquals(2, flowElements.size());
             // Usage sharing is the last Flow Element.
             assertTrue(flowElements.get(flowElements.size() - 1)

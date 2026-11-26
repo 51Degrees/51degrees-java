@@ -55,6 +55,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -93,14 +94,13 @@ public class ShareUsageOverheadTests {
         Files.write(Paths.get(path), results.toString(2).getBytes(StandardCharsets.UTF_8));
     }
 
-    @SuppressWarnings("unchecked")
     @BeforeEach
     public void Initialise() throws Exception {
 
         HttpClient httpClient = mock(HttpClient.class);
         HttpURLConnection connection = mock(HttpURLConnection.class);
         when(httpClient.connect(any(URL.class))).thenReturn(connection);
-        when(httpClient.postData(any(HttpURLConnection.class), any(Map.class), any(byte[].class)))
+        when(httpClient.postData(any(HttpURLConnection.class), anyMap(), any(byte[].class)))
             .thenReturn(null);
         when(httpClient.getResponseString(any(HttpURLConnection.class))).thenReturn(null);
         when(connection.getResponseCode()).thenReturn(200);
@@ -158,7 +158,6 @@ public class ShareUsageOverheadTests {
      * together in a finally block rather than one by one with
      * try-with-resources.
      */
-    @SuppressWarnings("PMD.FlowDataInTryWithResources")
     private double measureRound(int iterations, int evidenceCount)
             throws Exception {
         List<FlowData> data = new ArrayList<>();
@@ -166,12 +165,7 @@ public class ShareUsageOverheadTests {
         long end;
         try {
             for (int i = 0; i < iterations; i++) {
-                FlowData flowData = pipeline.createFlowData();
-                data.add(flowData);
-                for (int j = 0; j < evidenceCount; j++) {
-                    flowData.addEvidence("header." + j, j);
-                }
-                flowData.addEvidence("header.user-agent", USER_AGENT);
+                data.add(newFlowData(evidenceCount));
             }
             start = System.nanoTime();
             for (FlowData entry : data) {
@@ -182,6 +176,27 @@ public class ShareUsageOverheadTests {
             closeAll(data);
         }
         return (end - start) / 1_000_000.0 / iterations;
+    }
+
+    /**
+     * Returns a new FlowData with the evidence given, which the caller
+     * closes. It is closed here if adding the evidence fails.
+     */
+    private FlowData newFlowData(int evidenceCount) {
+        FlowData flowData = pipeline.createFlowData();
+        boolean created = false;
+        try {
+            for (int j = 0; j < evidenceCount; j++) {
+                flowData.addEvidence("header." + j, j);
+            }
+            flowData.addEvidence("header.user-agent", USER_AGENT);
+            created = true;
+            return flowData;
+        } finally {
+            if (created == false) {
+                flowData.close();
+            }
+        }
     }
 
     /**

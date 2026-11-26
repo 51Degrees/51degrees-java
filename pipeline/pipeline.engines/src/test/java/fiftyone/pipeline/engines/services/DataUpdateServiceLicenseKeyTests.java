@@ -68,11 +68,9 @@ public class DataUpdateServiceLicenseKeyTests {
     private HttpClient httpClient;
     private HttpURLConnection connection;
     private DataUpdateServiceDefault service;
-    private OnPremiseAspectEngine<? extends AspectData,
-        ? extends AspectPropertyMetaData> engine;
+    private OnPremiseAspectEngine<?, ?> engine;
 
     @Before
-    @SuppressWarnings("unchecked")
     public void init() throws IOException {
         logger = mock(Logger.class);
         when(logger.isDebugEnabled()).thenReturn(true);
@@ -156,7 +154,6 @@ public class DataUpdateServiceLicenseKeyTests {
      * a data update license key, is masked too.
      */
     @Test
-    @SuppressWarnings("unchecked")
     public void KeyTypedIntoTheUrl_LogsMaskedKey() throws IOException {
         DataFileConfiguration config = new DataFileConfigurationDefault();
         config.setDataUpdateUrl(UPDATE_URL + "?LicenseKeys=" + KEY +
@@ -166,8 +163,7 @@ public class DataUpdateServiceLicenseKeyTests {
         config.setAutomaticUpdatesEnabled(false);
         AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
         file.setConfiguration(config);
-        OnPremiseAspectEngine<? extends AspectData,
-            ? extends AspectPropertyMetaData> typed =
+        OnPremiseAspectEngine<?, ?> typed =
             mock(OnPremiseAspectEngine.class);
         when(typed.getDataFileMetaData()).thenReturn(file);
         when(connection.getResponseCode())

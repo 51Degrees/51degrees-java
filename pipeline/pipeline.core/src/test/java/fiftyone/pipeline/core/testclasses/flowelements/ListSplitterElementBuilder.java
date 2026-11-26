@@ -41,8 +41,7 @@ public class ListSplitterElementBuilder {
         this.maxLength = maxLength;
     }
 
-    @SuppressWarnings("rawtypes")
-    public FlowElement build() {
+    public FlowElement<?, ?> build() {
         return new ListSplitterElement(delimiter, maxLength);
     }
 

@@ -42,19 +42,6 @@
                     </execution>
                 </executions>
             </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <configuration>
-                    <!-- The property generator in 51Degrees/tools writes
-                         IPIntelligenceData.java and IPIntelligenceDataBase.java with no @return
-                         on the property accessors, so the check for missing
-                         comments and tags is off in this module. The other
-                         checks are on. -->
-                    <doclint>all,-missing</doclint>
-                </configuration>
-            </plugin>
         </plugins>
     </build>
 </project>

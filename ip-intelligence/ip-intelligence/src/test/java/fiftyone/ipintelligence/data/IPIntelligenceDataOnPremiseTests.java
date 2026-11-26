@@ -53,7 +53,7 @@ public class IPIntelligenceDataOnPremiseTests {
     private static String testPropertyName = "testproperty";
     private Logger logger;
     private FlowData flowData;
-    private AspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine;
+    private AspectEngine<?, ?> engine;
     private Pipeline pipeline;
     private MissingPropertyService missingPropertyService;
 
@@ -74,7 +74,6 @@ public class IPIntelligenceDataOnPremiseTests {
             .thenReturn(elementProperties);
     }
 
-    @SuppressWarnings("unchecked")
     @Before
     public void init() {
         logger = mock(Logger.class);

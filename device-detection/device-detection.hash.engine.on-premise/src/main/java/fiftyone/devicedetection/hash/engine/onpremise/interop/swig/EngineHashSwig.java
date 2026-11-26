@@ -64,6 +64,14 @@ public class EngineHashSwig extends EngineDeviceDetectionSwig {
     return new Date(DeviceDetectionHashEngineModuleJNI.EngineHashSwig_getUpdateAvailableTime(swigCPtr, this), true);
   }
 
+  public static Date getPublishedTimeFromFile(String fileName) {
+    return new Date(DeviceDetectionHashEngineModuleJNI.EngineHashSwig_getPublishedTimeFromFile(fileName), true);
+  }
+
+  public static String getProductFromFile(String fileName) {
+    return DeviceDetectionHashEngineModuleJNI.EngineHashSwig_getProductFromFile(fileName);
+  }
+
   public String getDataFilePath() {
     return DeviceDetectionHashEngineModuleJNI.EngineHashSwig_getDataFilePath(swigCPtr, this);
   }

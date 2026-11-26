@@ -194,8 +194,7 @@ class FlowDataDefault implements FlowData {
     }
 
     @Override
-    @SuppressWarnings("rawtypes")
-    public void addError(Throwable e, FlowElement element) {
+    public void addError(Throwable e, FlowElement<?, ?> element) {
         addError(new FlowError.Default(e, element));
     }
 
@@ -343,10 +342,9 @@ class FlowDataDefault implements FlowData {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public <T extends ElementData> T getOrAdd(
+    public ElementData getOrAdd(
         String elementDataKey,
-        FlowElement.DataFactory<T> dataFactory) {
+        FlowElement.DataFactory<? extends ElementData> dataFactory) {
 
         TypedKey<ElementData> typedKey = new TypedKeyDefault<>(
             elementDataKey,
@@ -358,7 +356,7 @@ class FlowDataDefault implements FlowData {
             checkNotFinished();
             data.putIfAbsent(typedKey, dataFactory.create(this));
         }
-        return (T) data.get(typedKey);
+        return data.get(typedKey);
     }
 
     @Override
@@ -478,14 +476,13 @@ class FlowDataDefault implements FlowData {
     }
 
     @Override
-    @SuppressWarnings("rawtypes")
     public Map<String, String> getWhere(PropertyMatcher matcher) {
         if (processed.get() == false) {
             throw new IllegalStateException(
                 "This instance has not yet been processed.");
         }
         Map<String, String> map = new HashMap<>();
-        for (FlowElement element : pipeline.getFlowElements()) {
+        for (FlowElement<?, ?> element : pipeline.getFlowElements()) {
             // An element that did not run, for example because an earlier
             // one stopped processing, has no data, and a property may have
             // no value. Neither is the caller's mistake, so both are left

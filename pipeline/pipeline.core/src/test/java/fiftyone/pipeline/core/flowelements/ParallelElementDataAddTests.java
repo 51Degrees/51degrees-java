@@ -66,6 +66,11 @@ public class ParallelElementDataAddTests {
      */
     private static class Member
         extends FlowElementBase<MemberData, ElementPropertyMetaData> {
+
+        @Override
+        protected Class<MemberData> getDataType() {
+            return MemberData.class;
+        }
         private final String key;
 
         Member(String key, CountDownLatch beforeAdd, CountDownLatch waitFor,
@@ -130,7 +135,6 @@ public class ParallelElementDataAddTests {
     }
 
     @Test
-    @SuppressWarnings("rawtypes")
     public void parallelMembers_AddWithoutWaitingForEachOther()
         throws Exception {
         CountDownLatch slowMaking = new CountDownLatch(1);
@@ -142,7 +146,7 @@ public class ParallelElementDataAddTests {
             "quick", slowMaking, null, quickAddedLatch, quickAdded);
         try (Pipeline pipeline = new PipelineBuilder(
                 LoggerFactory.getILoggerFactory())
-                .addFlowElementsParallel(new FlowElement[]{slow, quick})
+                .addFlowElementsParallel(new FlowElement<?, ?>[]{slow, quick})
                 .setAutoCloseElements(true)
                 .build();
              FlowData data = pipeline.createFlowData()) {

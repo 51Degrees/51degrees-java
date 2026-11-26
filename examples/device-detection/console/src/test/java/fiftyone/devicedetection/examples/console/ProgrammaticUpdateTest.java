@@ -52,10 +52,9 @@ public class ProgrammaticUpdateTest {
      * A stand-in for an interface that answers Object's methods and records
      * every other call.
      */
-    @SuppressWarnings("unchecked")
     private static <T> T standIn(Class<T> type, List<Object[]> calls,
                                  Object answer) {
-        return (T) Proxy.newProxyInstance(
+        return type.cast(Proxy.newProxyInstance(
             type.getClassLoader(),
             new Class<?>[]{type},
             (proxy, method, args) -> {
@@ -70,7 +69,7 @@ public class ProgrammaticUpdateTest {
                         calls.add(new Object[]{method.getName(), args});
                         return answer;
                 }
-            });
+            }));
     }
 
     @Test

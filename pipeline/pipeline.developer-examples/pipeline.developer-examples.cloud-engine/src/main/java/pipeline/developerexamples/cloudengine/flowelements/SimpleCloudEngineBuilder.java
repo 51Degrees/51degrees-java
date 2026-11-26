@@ -40,6 +40,11 @@ public class SimpleCloudEngineBuilder
             SimpleCloudEngineBuilder,
             SimpleCloudEngine> {
 
+    @Override
+    protected SimpleCloudEngineBuilder self() {
+        return this;
+    }
+
     /**
      * Create a new builder.
      *

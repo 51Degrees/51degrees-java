@@ -45,6 +45,10 @@ on:
       - 'pipeline/owid-java/**'
       - '.github/workflows/cloud-51did.yml'
 
+# This build is ours, so any warning fails it. The poms read this.
+env:
+  _51DEGREES_WARNINGS_AS_ERRORS: 'true'
+
 jobs:
   cloud-51did:
     name: Cloud 51Did

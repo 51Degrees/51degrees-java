@@ -66,6 +66,11 @@ import static fiftyone.pipeline.javascriptbuilder.Constants.EVIDENCE_OBJECT_NAME
 public class JavaScriptBuilderElement
     extends FlowElementBase<JavaScriptBuilderData, ElementPropertyMetaData> {
 
+    @Override
+    protected Class<JavaScriptBuilderData> getDataType() {
+        return JavaScriptBuilderData.class;
+    }
+
     /** Host of the callback URL, or empty to use the Host header. */
     protected String host;
     /** Path of the callback endpoint. */

@@ -12,8 +12,9 @@
         Java never frees the native results by itself.
 
         Where something is closed by its owner elsewhere, such as the FlowData
-        the web integration closes at the end of a request, the code says so
-        with @SuppressWarnings and a comment naming the owner.
+        the web integration closes at the end of a request, the code that
+        makes it closes it in a finally block if it fails before handing it
+        over, and a comment names the owner.
     </description>
 
     <rule name="FlowDataInTryWithResources"

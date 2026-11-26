@@ -28,6 +28,11 @@ package fiftyone.pipeline.engines.configuration;
 public class DataFileConfigurationBuilder extends DataFileConfigurationBuilderBase<
     DataFileConfigurationBuilder,
     DataFileConfiguration> {
+
+    @Override
+    protected DataFileConfigurationBuilder self() {
+        return this;
+    }
     /** Create a new instance. */
     public DataFileConfigurationBuilder() {
     }

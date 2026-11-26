@@ -74,15 +74,21 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * ## Product
  * A license key that holds one product needs nothing more, and the example then names no
  * product. A license key can also hold several products, for example a Device Detection data
- * file and an IP Intelligence data file. Update on start-up runs before any data file is
- * loaded, so with such a key give the name of the product to download, for example V4TAC,
- * as the third command line argument, or in the environment variable or system property
- * {@link UpdateDataFile#UPDATE_EXAMPLE_PRODUCT_NAME}. The example then adds it to the URL of
- * each request.
+ * file and an IP Intelligence data file. With such a key, an update asks for the product of
+ * the data file the example starts from. Update on start-up runs before the data file is
+ * loaded, so it reads the product from the header of the file. To download another product,
+ * give its name, for example V4TAC, as the third command line argument. The example then adds
+ * it to the URL of each request.
  * ``` {java}
  *      .setDataUpdateUrlFormatter(productFormatter(product))
  * ```
- * Once a data file is loaded, an update asks for the product of that file without being told.
+ * ## Update URL
+ * The example downloads from the 51Degrees Distributor. To download from another address, such
+ * as a server of your own that holds a copy of the data file, give its URL as the fourth
+ * command line argument.
+ * ``` {java}
+ *      .setDataUpdateUrl(dataUpdateUrl)
+ * ```
  * # Data Files
  * You can find out more about data files, licenses etc. at our [FAQ page](https://51degrees.com/resources/faqs?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&utm_term=updatedatafile)
  * ## Enterprise Data File
@@ -228,11 +234,6 @@ public class UpdateDataFile {
             "console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java";
 
     public static final String UPDATE_EXAMPLE_LICENSE_KEY_NAME = "_51DEGREES_LICENSE_KEY";
-    /**
-     * The environment variable or system property that names the product to
-     * download, when the command line gives none.
-     */
-    public static final String UPDATE_EXAMPLE_PRODUCT_NAME = "_51DEGREES_DD_PRODUCT";
     public static final String DEFAULT_DATA_FILENAME =
             System.getProperty("user.dir") + File.separator +  ENTERPRISE_HASH_DATA_FILE_NAME;
 
@@ -252,7 +253,8 @@ public class UpdateDataFile {
         String licenseKey = args.length > 0 ? args[0] : null;
         String dataFilename = args.length > 1 ? args[1] : null;
         String product = args.length > 2 ? args[2] : null;
-        run(dataFilename, licenseKey, product, true);
+        String dataUpdateUrl = args.length > 3 ? args[3] : null;
+        run(dataFilename, licenseKey, product, dataUpdateUrl, true);
         FindOutMore.write(System.out, EXAMPLE_TAG,
                 FindOutMore.ON_PREMISE_REPOSITORIES);
     }
@@ -269,28 +271,38 @@ public class UpdateDataFile {
      * @throws Exception in the event of file not found, license key not found etc.
      */
     static void run(String dataFilename, String licenseKey, boolean interactive) throws Exception {
-        run(dataFilename, licenseKey, null, interactive);
+        run(dataFilename, licenseKey, null, null, interactive);
     }
 
     /**
-     * Run the UpdateDataFile example for the product given.
+     * Run the UpdateDataFile example for the product given, from the
+     * 51Degrees Distributor.
      * @param dataFilename the path for a datafile to download, as above
      * @param licenseKey a license key that holds the product, as above
-     * @param product the product of the data update service to download, for
-     *                example V4TAC. If null, the environment variable or system
-     *                property {@link UpdateDataFile#UPDATE_EXAMPLE_PRODUCT_NAME} is
-     *                checked, and with none there the example names no product,
-     *                which suits a license key that holds one product
+     * @param product the product to download, or null, as below
      * @throws Exception in the event of file not found, license key not found etc.
      */
     static void run(String dataFilename, String licenseKey, String product,
                     boolean interactive) throws Exception {
-        logger.info("Starting example");
+        run(dataFilename, licenseKey, product, null, interactive);
+    }
 
-        // the product to download, when one is given
-        if (Objects.isNull(product)) {
-            product = KeyHelper.getNamedKey(UPDATE_EXAMPLE_PRODUCT_NAME);
-        }
+    /**
+     * Run the UpdateDataFile example for the product given, from the address
+     * given.
+     * @param dataFilename the path for a datafile to download, as above
+     * @param licenseKey a license key that holds the product, as above
+     * @param product the product of the data update service to download, for
+     *                example V4TAC. If null, the example names no product,
+     *                and the data update service asks for the product of the
+     *                data file
+     * @param dataUpdateUrl the URL to download from, or null for the
+     *                      51Degrees Distributor
+     * @throws Exception in the event of file not found, license key not found etc.
+     */
+    static void run(String dataFilename, String licenseKey, String product,
+                    String dataUpdateUrl, boolean interactive) throws Exception {
+        logger.info("Starting example");
 
         // try to find a license key
         if (Objects.isNull(licenseKey)) {
@@ -378,10 +390,14 @@ public class UpdateDataFile {
                     // For automatic updates to work you will need to provide a license key.
                     // Contact us for a licence key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&utm_term=run
                     .setDataUpdateLicenseKey(licenseKey)
-                    // Name the product to download, when one is given. A
-                    // license key can hold several products, and update on
-                    // start-up runs before a data file is loaded that would
-                    // say which is needed.
+                    // The address to download from, when one is given. With
+                    // none, the engine downloads from the 51Degrees
+                    // Distributor.
+                    .setDataUpdateUrl(dataUpdateUrl)
+                    // Name the product to download, when one is given. With
+                    // none, a license key that holds several products gets
+                    // the product of the data file, which update on start-up
+                    // reads from the header of the file.
                     .setDataUpdateUrlFormatter(productFormatter(product))
                     // Enable update on startup, the auto update system
                     // will be used to check for an update before the
@@ -403,9 +419,16 @@ public class UpdateDataFile {
 
                 // thread blocks till update checking is complete - or if there is an
                 // exception we don't get this far
-                logger.info("Update on start-up complete - status - {}", completionListener.args.getStatus());
+                DataUpdateService.AutoUpdateStatus status =
+                        completionListener.args.getStatus();
+                logger.info("Update on start-up complete - status - {}", status);
 
-                if (completionListener.args.getStatus().equals(
+                if (status.equals(
+                        DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED)) {
+                    // The data file in use is already the newest, so nothing
+                    // was downloaded and there is nothing to reload.
+                    logger.info("The data file is already the newest available");
+                } else if (status.equals(
                         DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_SUCCESS)) {
 
                     logger.info("Modifying downloaded file to trigger reload ... please wait for that" +
@@ -428,8 +451,7 @@ public class UpdateDataFile {
                             completionListener.args.getStatus(), completionListener.isComplete());
                 } else {
                     logger.error("Auto update was not successful, abandoning example");
-                    throw new IllegalStateException("Auto update failed: " +
-                            completionListener.args.getStatus());
+                    throw new IllegalStateException("Auto update failed: " + status);
                 }
 
                 // Programmatic (non-automatic) update: ask for an update now,

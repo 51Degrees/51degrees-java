@@ -42,7 +42,6 @@ import static org.junit.Assert.*;
 
 public class ValueTests {
 	
-    @SuppressWarnings("unchecked")
     public static void valueTypes(Wrapper wrapper) throws Exception {
         try (FlowData data = wrapper.getPipeline().createFlowData()) {
         	data.addEvidence(fiftyone.geolocation.core.Constants.EVIDENCE_GEO_LAT_COOKIE_KEY, Constants.TEST_LAT)
@@ -51,7 +50,7 @@ public class ValueTests {
                 
             ElementData elementData = data.get(wrapper.getEngine().getElementDataKey());
             for (AspectPropertyMetaData property :
-                (List<AspectPropertyMetaData>) wrapper.getEngine().getProperties()) {
+                wrapper.getEngine().getProperties()) {
 
                 if (Arrays.asList(Constants.ExcludedProperties)
                         .contains(property.getName()) == false &&
@@ -92,7 +91,6 @@ public class ValueTests {
         }
     }
 
-    @SuppressWarnings("unchecked")
     public static void availableProperties(Wrapper wrapper) throws Exception {
         try (FlowData data = wrapper.getPipeline().createFlowData()) {
         	data.addEvidence(fiftyone.geolocation.core.Constants.EVIDENCE_GEO_LAT_COOKIE_KEY, Constants.TEST_LAT)
@@ -100,7 +98,7 @@ public class ValueTests {
             .process();
             ElementData elementData = data.get(wrapper.getEngine().getElementDataKey());
             for (AspectPropertyMetaData property :
-                (List<AspectPropertyMetaData>) wrapper.getEngine().getProperties()) {
+                wrapper.getEngine().getProperties()) {
                 Map<String, Object> map = elementData.asKeyMap();
 
                 assertEquals("Property '" + property.getName() + "' " +
@@ -111,7 +109,6 @@ public class ValueTests {
         }
     }
 
-    @SuppressWarnings("unchecked")
     public static void typedGetters(Wrapper wrapper) throws Exception {
         try (FlowData data = wrapper.getPipeline().createFlowData()) {
         	data.addEvidence(fiftyone.geolocation.core.Constants.EVIDENCE_GEO_LAT_COOKIE_KEY, Constants.TEST_LAT)
@@ -120,7 +117,7 @@ public class ValueTests {
             ElementData elementData = data.get(wrapper.getEngine().getElementDataKey());
             List<String> missingGetters = new ArrayList<>();
             for (AspectPropertyMetaData property :
-                (List<AspectPropertyMetaData>) wrapper.getEngine().getProperties()) {
+                wrapper.getEngine().getProperties()) {
                 if (Arrays.asList(Constants.ExcludedProperties)
                         .contains(property.getName()) == false) {
                     String cleanPropertyName = property.getName()

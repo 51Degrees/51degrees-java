@@ -76,12 +76,20 @@ public class SetHeadersData extends ElementDataBase {
 	}
 
 	/**
-	 * Get the response headers to be set.
+	 * Get the response headers to be set. The map returned is a copy, so
+	 * changing it does not change the headers held by this instance.
 	 * @return table of response headers
 	 */
-	@SuppressWarnings("unchecked")
 	public HashMap<String, String> getResponseHeaderDictionary() {
-		return getAs(RESPONSE_HEADER_PROPERTY_NAME, HashMap.class);
+		Map<?, ?> stored = getAs(RESPONSE_HEADER_PROPERTY_NAME, Map.class);
+		if (stored == null) {
+			return null;
+		}
+		HashMap<String, String> result = new HashMap<>();
+		for (Map.Entry<?, ?> entry : stored.entrySet()) {
+			result.put((String) entry.getKey(), (String) entry.getValue());
+		}
+		return result;
 	}
 	
 	/**

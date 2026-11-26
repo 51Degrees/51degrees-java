@@ -27,6 +27,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import fiftyone.common.wrappers.io.FileWrapperFactory;
+import fiftyone.common.wrappers.io.FileWrapperFactoryDefault;
 import fiftyone.pipeline.engines.configuration.DataFileConfiguration;
 import fiftyone.pipeline.engines.configuration.DataFileConfigurationDefault;
 import fiftyone.pipeline.engines.data.AspectData;
@@ -51,9 +52,14 @@ import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -116,8 +122,7 @@ public class DataUpdateServiceProductTests {
 
     private Logger logger;
     private DataUpdateServiceDefault service;
-    private OnPremiseAspectEngine<? extends AspectData,
-        ? extends AspectPropertyMetaData> engine;
+    private OnPremiseAspectEngine<?, ?> engine;
     private AspectEngineDataFileDefault file;
 
     @Before
@@ -715,6 +720,48 @@ public class DataUpdateServiceProductTests {
     }
 
     /**
+     * The update on start-up runs before the engine exists, so there is no
+     * temporary copy of the data file yet. The check still asks the data
+     * update URL, for the product the data file names, and the data file
+     * then holds the new data.
+     */
+    @Test
+    public void UpdateOnStartup_NoEngineAndNoTemporaryCopy_AsksForTheProductOfTheDataFile()
+        throws IOException {
+        configureFileThatNamesItsProduct("V4TAC");
+        Path folder = Files.createTempDirectory("51Degrees-StartUp-");
+        Path data = folder.resolve("data.hash");
+        Path temp = Files.createDirectory(folder.resolve("temp"));
+        try {
+            Files.write(data, "old data".getBytes(StandardCharsets.UTF_8));
+            file.setEngine(null);
+            file.setTempDataDirPath(temp.toString());
+            file.getConfiguration().setDataFilePath(data.toString());
+            file.getConfiguration().setUpdateOnStartup(true);
+            service = new DataUpdateServiceDefault(
+                logger,
+                new HttpClientDefault(),
+                new FileWrapperFactoryDefault(),
+                mock(FutureFactory.class));
+
+            service.registerDataFile(file);
+
+            String logged = logged();
+            assertEquals(logged, 2, requests.size());
+            assertEquals(logged, FIRST_QUERY, requests.get(0));
+            assertEquals(logged, FIRST_QUERY + "&Product=V4TAC",
+                requests.get(1));
+            assertTrue(logged, Arrays.equals(TAC_DATA,
+                Files.readAllBytes(data)));
+        } finally {
+            try (Stream<Path> paths = Files.walk(folder)) {
+                paths.sorted(Comparator.reverseOrder())
+                    .forEach(path -> path.toFile().delete());
+            }
+        }
+    }
+
+    /**
      * As {@link #configure}, with a data file that names the product it
      * needs itself.
      */
@@ -813,7 +860,6 @@ public class DataUpdateServiceProductTests {
      * A data file held in memory that is updated from the given path of the
      * fake data update service, and that needs the given product.
      */
-    @SuppressWarnings("unchecked")
     private void configure(String path, String product) {
         DataFileConfiguration config = new DataFileConfigurationDefault();
         config.setDataUpdateUrl(address + path);

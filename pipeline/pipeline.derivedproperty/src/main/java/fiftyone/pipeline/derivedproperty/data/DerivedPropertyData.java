@@ -25,6 +25,7 @@ package fiftyone.pipeline.derivedproperty.data;
 import fiftyone.pipeline.core.data.ElementDataBase;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
+import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
 import fiftyone.pipeline.engines.exceptions.PropertyMissingException;
 import fiftyone.pipeline.engines.services.MissingPropertyReason;
 import org.slf4j.Logger;
@@ -60,7 +61,6 @@ public class DerivedPropertyData
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public <T> AspectPropertyValue<T> getAs(
         String propertyName,
         Class<T> valueType) {
@@ -81,6 +81,12 @@ public class DerivedPropertyData
                     result.getValue().getClass().getSimpleName() +
                     ", not a " + valueType.getSimpleName() + ".");
         }
-        return (AspectPropertyValue<T>) result;
+        AspectPropertyValue<T> typed = new AspectPropertyValueDefault<>();
+        if (result.hasValue()) {
+            typed.setValue(valueType.cast(result.getValue()));
+        } else {
+            typed.setNoValueMessage(result.getNoValueMessage());
+        }
+        return typed;
     }
 }

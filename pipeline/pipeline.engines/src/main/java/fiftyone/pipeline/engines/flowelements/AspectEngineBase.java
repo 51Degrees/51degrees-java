@@ -26,15 +26,12 @@ import fiftyone.pipeline.core.data.ElementDataBase;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
-import fiftyone.pipeline.core.typed.TypedKey;
-import fiftyone.pipeline.core.typed.TypedKeyDefault;
 import fiftyone.pipeline.engines.caching.FlowCache;
 import fiftyone.pipeline.engines.configuration.LazyLoadingConfiguration;
 import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectDataBase;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import fiftyone.pipeline.engines.services.MissingPropertyService;
-import fiftyone.pipeline.util.Types;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -73,17 +70,6 @@ public abstract class AspectEngineBase<
         Logger logger,
         ElementDataFactory<TData> aspectDataFactory) {
         super(logger, aspectDataFactory);
-    }
-
-    @Override
-    public TypedKey<TData> getTypedDataKey() {
-        if (typedKey == null) {
-            typedKey = new TypedKeyDefault<>(
-                getElementDataKey(),
-                Types.findSubClassParameterType(this, AspectEngineBase.class, 0));
-        }
-        return typedKey;
-
     }
 
     @Override
@@ -187,19 +173,17 @@ public abstract class AspectEngineBase<
      *                 and holds the result.
      * @throws Exception if there was an exception during processing
      */
-    @SuppressWarnings("unchecked")
     private void processWithCache(final FlowData flowData) throws Exception {
         TData cacheResult = null;
 
         if (cache != null) {
             Object cacheResultsObject = cache.get(flowData);
-            if (cacheResultsObject != null &&
-                getTypedDataKey().getType().isAssignableFrom(
-                    cacheResultsObject.getClass()) &&
-                isServable((TData)cacheResultsObject)) {
-                // This is checked.
-                //noinspection unchecked
-                cacheResult = (TData)cacheResultsObject;
+            Class<TData> type = getTypedDataKey().getType();
+            if (type.isInstance(cacheResultsObject)) {
+                TData cached = type.cast(cacheResultsObject);
+                if (isServable(cached)) {
+                    cacheResult = cached;
+                }
             }
         }
         // If we don't have a result from the cache then

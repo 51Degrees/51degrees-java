@@ -24,12 +24,9 @@ package fiftyone.pipeline.engines.flowelements;
 
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
-import fiftyone.pipeline.core.typed.TypedKey;
-import fiftyone.pipeline.core.typed.TypedKeyDefault;
 import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectEngineDataFile;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
-import fiftyone.pipeline.util.Types;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -192,15 +189,4 @@ public abstract class OnPremiseAspectEngineBase<
         dataFile.setEngine(this);
 
     }
-
-    @Override
-    public TypedKey<TData> getTypedDataKey() {
-        if (typedKey == null) {
-            typedKey = new TypedKeyDefault<>(
-                getElementDataKey(),
-                Types.findSubClassParameterType(this, OnPremiseAspectEngineBase.class, 0));
-        }
-        return typedKey;
-    }
-
 }

@@ -72,6 +72,12 @@ import static fiftyone.pipeline.util.StringManipulation.stringJoin;
 public class CloudRequestEngineDefault
     extends AspectEngineBase<CloudRequestData, AspectPropertyMetaData>
     implements CloudRequestEngine {
+
+    @Override
+    protected Class<CloudRequestData> getDataType() {
+        return CloudRequestData.class;
+    }
+
     /**
      * The Evidence key of the whole web request, which the web integration
      * adds for usage sharing to read. It holds every header and cookie of
@@ -289,7 +295,6 @@ public class CloudRequestEngineDefault
      *                            properties to ask for, sent as {@code values}
      *                            when the list is not empty
      */
-    @SuppressWarnings("this-escape")
     public CloudRequestEngineDefault(
         Logger logger,
         ElementDataFactory<CloudRequestData> aspectDataFactory,

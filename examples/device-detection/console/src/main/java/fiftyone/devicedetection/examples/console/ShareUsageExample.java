@@ -134,7 +134,6 @@ public class ShareUsageExample {
      *                      51Degrees endpoint. A test gives an endpoint of
      *                      its own, so that it shares nothing.
      */
-    @SuppressWarnings("unchecked")
     public static void run(InputStream is, String shareUsageUrl) throws Exception {
         logger.info("Starting ShareUsage example");
         logger.info("Settings: minEntriesPerMessage={}, sharePercentage={}%, recordsToProcess={}",
@@ -187,7 +186,7 @@ public class ShareUsageExample {
                 try {
                     // Get evidence from YAML and filter to only header.* entries
                     Map<String, String> evidence = filterEvidence(
-                            (Map<String, String>) evidenceIterator.next(),
+                            (Map<?, ?>) evidenceIterator.next(),
                             "header.");
 
                     // Add a client IP address to the evidence for deduplication purposes
@@ -236,11 +235,13 @@ public class ShareUsageExample {
      * @param prefix the prefix to filter on (e.g., "header.")
      * @return filtered evidence map
      */
-    private static Map<String, String> filterEvidence(Map<String, String> evidence, String prefix) {
+    private static Map<String, String> filterEvidence(Map<?, ?> evidence, String prefix) {
         return evidence.entrySet()
                 .stream()
-                .filter(e -> e.getKey().startsWith(prefix))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                .filter(e -> String.valueOf(e.getKey()).startsWith(prefix))
+                .collect(Collectors.toMap(
+                        e -> String.valueOf(e.getKey()),
+                        e -> String.valueOf(e.getValue())));
     }
 
     /**

@@ -26,6 +26,7 @@ import fiftyone.pipeline.core.data.ElementDataBase;
 import fiftyone.pipeline.core.data.FlowData;
 import org.slf4j.Logger;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -39,9 +40,12 @@ public class ListSplitterElementData extends ElementDataBase {
         super(logger, flowData, map);
     }
 
-    @SuppressWarnings("unchecked")
     public List<String> getResult() {
-        return (List<String>) get("result");
+        List<String> result = new ArrayList<>();
+        for (Object value : (List<?>) get("result")) {
+            result.add((String) value);
+        }
+        return result;
     }
 
     public void setResult(List<String> value) {

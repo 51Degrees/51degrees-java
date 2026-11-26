@@ -27,6 +27,7 @@ import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
 import fiftyone.pipeline.core.data.AccessiblePropertyMetaData.ProductMetaData;
 import fiftyone.pipeline.core.data.AccessiblePropertyMetaData.PropertyMetaData;
+import fiftyone.pipeline.core.data.ElementData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.core.flowelements.Pipeline;
@@ -35,6 +36,7 @@ import fiftyone.pipeline.engines.services.MissingPropertyServiceDefault;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 
@@ -74,7 +76,6 @@ public class SharedCloudProcessingTests {
     private IPIntelligenceDataCloud data;
 
     @Before
-    @SuppressWarnings("unchecked")
     public void init() throws Exception {
         ILoggerFactory loggerFactory = mock(ILoggerFactory.class);
         when(loggerFactory.getLogger(anyString())).thenReturn(logger);
@@ -100,7 +101,7 @@ public class SharedCloudProcessingTests {
             MissingPropertyServiceDefault.getInstance());
         when(flowData.getFromElement(any(CloudRequestEngine.class)))
             .thenReturn(cloudData);
-        when(flowData.getOrAdd(any(TypedKey.class), any()))
+        when(flowData.getOrAdd(ArgumentMatchers.<TypedKey<ElementData>>any(), any()))
             .thenReturn(data);
     }
 

@@ -54,6 +54,11 @@ import org.json.JSONArray;
  */
 public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> {
 
+    @Override
+    protected Class<CloudGeoData> getDataType() {
+        return CloudGeoData.class;
+    }
+
     private CloudRequestEngine cloudRequestEngine = null;
     private volatile List<AspectPropertyMetaData> properties;
     private final Object metadataLock = new Object();

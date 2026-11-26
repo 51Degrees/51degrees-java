@@ -40,10 +40,9 @@ import org.slf4j.LoggerFactory;
  *                  the fluent builder methods
  * @param <TEngine> the type of the engine that this builder will build
  */
-@SuppressWarnings("rawtypes")
 public abstract class SingleFileAspectEngineBuilderBase<
     TBuilder extends OnPremiseAspectEngineBuilderBase<TBuilder, TEngine>,
-    TEngine extends OnPremiseAspectEngine>
+    TEngine extends OnPremiseAspectEngine<?, ?>>
     extends OnPremiseAspectEngineBuilderBase<TBuilder, TEngine>{
 
     private final DataFileConfigurationBuilder dataFileBuilder =
@@ -141,10 +140,9 @@ public abstract class SingleFileAspectEngineBuilderBase<
      * @return this builder
      */
     @DefaultValue("51Degrees default, set by subclass")
-    @SuppressWarnings("unchecked")
     public TBuilder setDataUpdateUrl(String url) {
         dataFileBuilder.setDataUpdateUrl(url);
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -155,10 +153,9 @@ public abstract class SingleFileAspectEngineBuilderBase<
      * @return this builder
      */
     @DefaultValue("51Degrees default, set by subclass")
-    @SuppressWarnings("unchecked")
     public TBuilder setDataUpdateUrlFormatter(DataUpdateUrlFormatter formatter) {
         dataFileBuilder.setDataUpdateUrlFormatter(formatter);
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -172,10 +169,9 @@ public abstract class SingleFileAspectEngineBuilderBase<
      * @return this builder
      */
     @DefaultValue(booleanValue = fiftyone.pipeline.engines.Constants.DEFAULT_VERIFY_MD5)
-    @SuppressWarnings("unchecked")
     public TBuilder setDataUpdateVerifyMd5(boolean verify) {
         dataFileBuilder.setDataUpdateVerifyMd5(verify);
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -188,10 +184,9 @@ public abstract class SingleFileAspectEngineBuilderBase<
      * @return this builder
      */
     @DefaultValue(booleanValue = Constants.DEFAULT_DECOMPRESS)
-    @SuppressWarnings("unchecked")
     public TBuilder setDataUpdateDecompress(boolean decompress) {
         dataFileBuilder.setDataUpdateDecompress(decompress);
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -205,10 +200,9 @@ public abstract class SingleFileAspectEngineBuilderBase<
      * @return this builder
      */
     @DefaultValue(booleanValue = Constants.DEFAULT_AUTOUPDATE_ENABLED)
-    @SuppressWarnings("unchecked")
     public TBuilder setAutoUpdate(boolean enabled) {
         dataFileBuilder.setAutoUpdate(enabled);
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -227,10 +221,9 @@ public abstract class SingleFileAspectEngineBuilderBase<
      * @return this builder
      */
     @DefaultValue(booleanValue = Constants.DEFAULT_WATCHER_ENABLED)
-    @SuppressWarnings("unchecked")
     public TBuilder setDataFileSystemWatcher(boolean enabled) {
         dataFileBuilder.setDataFileSystemWatcher(enabled);
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -243,10 +236,9 @@ public abstract class SingleFileAspectEngineBuilderBase<
      */
     @Deprecated
     @DefaultValue(intValue = Constants.DATA_UPDATE_POLLING_DEFAULT)
-    @SuppressWarnings("unchecked")
     public TBuilder setUpdatePollingInterval(int pollingIntervalSeconds) {
         dataFileBuilder.setUpdatePollingInterval(pollingIntervalSeconds);
-        return (TBuilder)this;
+        return self();
     }
     /**
      * Set the time between checks for a new data file made by the
@@ -264,10 +256,9 @@ public abstract class SingleFileAspectEngineBuilderBase<
      * @return this builder
      */
     @DefaultValue(intValue=Constants.DATA_UPDATE_POLLING_DEFAULT)
-    @SuppressWarnings("unchecked")
     public TBuilder setUpdatePollingIntervalSeconds(int pollingIntervalSeconds) {
         dataFileBuilder.setUpdatePollingInterval(pollingIntervalSeconds);
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -279,10 +270,9 @@ public abstract class SingleFileAspectEngineBuilderBase<
      */
     @Deprecated
     @DefaultValue(intValue = Constants.DATA_UPDATE_POLLING_DEFAULT * 1000)
-    @SuppressWarnings("unchecked")
     public TBuilder setUpdatePollingInterval(long pollingIntervalMillis) {
         dataFileBuilder.setUpdatePollingInterval(pollingIntervalMillis);
-        return (TBuilder)this;
+        return self();
     }
     /**
      * Set the time between checks for a new data file made by the
@@ -292,11 +282,10 @@ public abstract class SingleFileAspectEngineBuilderBase<
      * @param pollingIntervalMillis the time between checks
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
     @DefaultValue(intValue=Constants.DATA_UPDATE_POLLING_DEFAULT * 1000)
     public TBuilder setUpdatePollingIntervalMillis(long pollingIntervalMillis) {
         dataFileBuilder.setUpdatePollingInterval(pollingIntervalMillis);
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -311,10 +300,9 @@ public abstract class SingleFileAspectEngineBuilderBase<
      */
     @Deprecated
     @DefaultValue(intValue = Constants.DATA_UPDATE_RANDOMISATION_DEFAULT * 1000)
-    @SuppressWarnings("unchecked")
     public TBuilder setUpdateRandomisationMax(long maximumDeviationMillis) {
         dataFileBuilder.setUpdateRandomisationMax(maximumDeviationMillis);
-        return (TBuilder)this;
+        return self();
     }
 
 
@@ -328,10 +316,9 @@ public abstract class SingleFileAspectEngineBuilderBase<
      * @return this builder
      */
     @DefaultValue(intValue = Constants.DATA_UPDATE_RANDOMISATION_DEFAULT * 1000)
-    @SuppressWarnings("unchecked")
     public TBuilder setUpdateRandomisationMaxMillis(long maximumDeviationMillis) {
         dataFileBuilder.setUpdateRandomisationMax(maximumDeviationMillis);
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -343,10 +330,9 @@ public abstract class SingleFileAspectEngineBuilderBase<
      * @return this builder
      */
     @DefaultValue(booleanValue = Constants.DEFAULT_VERIFY_IF_MODIFIED_SINCE)
-    @SuppressWarnings("unchecked")
     public TBuilder setVerifyIfModifiedSince(boolean enabled) {
         dataFileBuilder.setVerifyIfModifiedSince(enabled);
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -361,10 +347,9 @@ public abstract class SingleFileAspectEngineBuilderBase<
      * @return this builder
      */
     @DefaultValue("No licence keys")
-    @SuppressWarnings("unchecked")
     public TBuilder setDataUpdateLicenseKey(String key) {
         dataFileBuilder.setDataUpdateLicenseKey(key);
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -375,10 +360,9 @@ public abstract class SingleFileAspectEngineBuilderBase<
      * @return this builder
      */
     @DefaultValue("No license keys")
-    @SuppressWarnings("unchecked")
     public TBuilder setDataUpdateLicenseKeys(String[] keys) {
         dataFileBuilder.setDataUpdateLicenseKeys(keys);
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -393,9 +377,8 @@ public abstract class SingleFileAspectEngineBuilderBase<
      * @return this builder
      */
     @DefaultValue(booleanValue = Constants.DEFAULT_UPDATE_ON_STARTUP)
-    @SuppressWarnings("unchecked")
     public TBuilder setDataUpdateOnStartup(boolean enabled) {
         dataFileBuilder.setUpdateOnStartup(enabled);
-        return (TBuilder)this;
+        return self();
     }
 }

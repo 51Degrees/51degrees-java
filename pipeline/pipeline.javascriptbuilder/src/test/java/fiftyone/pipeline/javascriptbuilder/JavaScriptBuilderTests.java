@@ -481,7 +481,6 @@ public class JavaScriptBuilderTests {
         return res.toString().equals(value.toString());
     }
 
-    @SuppressWarnings("unchecked")
     private void configureMocks() {
         if (json == null) {
             json = new JSONObject();
@@ -515,7 +514,7 @@ public class JavaScriptBuilderTests {
         Evidence evidenceObj = mock(Evidence.class);
         when(evidenceObj.asKeyMap()).thenReturn(evidence);
         when(flowData.getEvidence()).thenReturn(evidenceObj);
-        when(flowData.tryGetEvidence(anyString(), any(Class.class))).thenAnswer(
+        when(flowData.tryGetEvidence(anyString(), any())).thenAnswer(
                 invocation -> {
                     TryGetResult<Object> getResult = new TryGetResult<>();
                     if (evidence.containsKey((String) invocation.getArgument(0))) {
@@ -540,13 +539,14 @@ public class JavaScriptBuilderTests {
         when(flowData.get(SequenceElement.DEFAULT_ELEMENT_DATA_KEY))
             .thenReturn(sequenceData);
 
-        when(flowData.getAs(anyString(), any(Class.class))).thenReturn(new AspectPropertyValueDefault<>("None"));
+        doReturn(new AspectPropertyValueDefault<>("None"))
+            .when(flowData).getAs(anyString(), any());
 
         doAnswer((Answer<Object>) invocation -> {
             FlowElement.DataFactory<JavaScriptBuilderData> factory =
                     invocation.getArgument(1);
             result = factory.create(flowData);
             return result;
-        }).when(flowData).getOrAdd(anyString(), any(FlowElement.DataFactory.class));
+        }).when(flowData).getOrAdd(anyString(), any());
     }
 }

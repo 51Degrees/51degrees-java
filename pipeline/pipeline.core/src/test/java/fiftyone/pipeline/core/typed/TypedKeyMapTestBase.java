@@ -44,24 +44,24 @@ public class TypedKeyMapTestBase {
     }
 
     protected void TypedMap_ComplexValueType() {
-        Map.Entry<Integer, String> dataToStore =
-            new AbstractMap.SimpleEntry<>(1, "testdata");
-        TypedKey<Map.Entry<Integer, String>> key =
-            new TypedKeyDefault<>("datakey", Map.Entry.class);
+        ComplexValue dataToStore =
+            new ComplexValue(1, "testdata");
+        TypedKey<ComplexValue> key =
+            new TypedKeyDefault<>("datakey", ComplexValue.class);
         map.put(key, dataToStore);
 
-        Map.Entry<Integer, String> result = map.get(key);
+        ComplexValue result = map.get(key);
 
         assertTrue(result.getKey().equals(dataToStore.getKey()) &&
             result.getValue().equals(dataToStore.getValue()));
     }
 
     protected void TypedMap_ComplexReferenceType() {
-        List<String> dataToStore = Arrays.asList("a", "b", "c");
-        TypedKey<List<String>> key = new TypedKeyDefault<>("datakey", List.class);
+        StringList dataToStore = new StringList("a", "b", "c");
+        TypedKey<StringList> key = new TypedKeyDefault<>("datakey", StringList.class);
         map.put(key, dataToStore);
 
-        List<String> result = map.get(key);
+        StringList result = map.get(key);
 
         assertEquals(3, result.size());
         assertTrue(result.contains("a"));
@@ -70,15 +70,15 @@ public class TypedKeyMapTestBase {
     }
 
     protected void TypedMap_MultipleDataObjects() {
-        Map.Entry<Integer, String> dataToStore1 =
-            new AbstractMap.SimpleEntry<>(1, "testdata");
-        TypedKey<Map.Entry<Integer, String>> key1 = new TypedKeyDefault<>("datakey1", Map.Entry.class);
+        ComplexValue dataToStore1 =
+            new ComplexValue(1, "testdata");
+        TypedKey<ComplexValue> key1 = new TypedKeyDefault<>("datakey1", ComplexValue.class);
         map.put(key1, dataToStore1);
         String dataToStore2 = "testdata";
         TypedKey<String> key2 = new TypedKeyDefault<>("datakey2", String.class);
         map.put(key2, dataToStore2);
 
-        Map.Entry<Integer, String> result1 = map.get(key1);
+        ComplexValue result1 = map.get(key1);
         String result2 = map.get(key2);
 
         assertTrue(result1.getKey().equals(dataToStore1.getKey()) &&
@@ -87,9 +87,9 @@ public class TypedKeyMapTestBase {
     }
 
     protected void TypedMap_Overwrite() {
-        Map.Entry<Integer, String> dataToStore1 =
-            new AbstractMap.SimpleEntry<>(1, "testdata");
-        TypedKey<Map.Entry<Integer, String>> key1 = new TypedKeyDefault<>("datakey", Map.Entry.class);
+        ComplexValue dataToStore1 =
+            new ComplexValue(1, "testdata");
+        TypedKey<ComplexValue> key1 = new TypedKeyDefault<>("datakey", ComplexValue.class);
         map.put(key1, dataToStore1);
         String dataToStore2 = "testdata";
         TypedKey<String> key2 = new TypedKeyDefault<>("datakey", String.class);
@@ -108,9 +108,9 @@ public class TypedKeyMapTestBase {
 
 
     protected void TypedMap_WrongKeyType() {
-        Map.Entry<Integer, String> dataToStore1 =
-            new AbstractMap.SimpleEntry<>(1, "testdata");
-        TypedKey<Map.Entry<Integer, String>> key1 = new TypedKeyDefault<>("datakey", Map.Entry.class);
+        ComplexValue dataToStore1 =
+            new ComplexValue(1, "testdata");
+        TypedKey<ComplexValue> key1 = new TypedKeyDefault<>("datakey", ComplexValue.class);
         map.put(key1, dataToStore1);
         TypedKey<String> key2 = new TypedKeyDefault<>("datakey", String.class);
 
@@ -118,11 +118,11 @@ public class TypedKeyMapTestBase {
     }
 
     protected void TypedMap_NullValue() {
-        List<String> dataToStore = null;
-        TypedKey<List<String>> key = new TypedKeyDefault<>("datakey", List.class);
+        StringList dataToStore = null;
+        TypedKey<StringList> key = new TypedKeyDefault<>("datakey", StringList.class);
         map.put(key, dataToStore);
 
-        List<String> result = map.get(key);
+        StringList result = map.get(key);
 
         assertNull(result);
     }
@@ -156,15 +156,15 @@ public class TypedKeyMapTestBase {
         String result = map.get(String.class);
     }
 
-    @SuppressWarnings("unchecked")
     protected void TypedMap_GetByTypeInterface() {
-        ArrayList<String> dataToStore = new ArrayList<>(Arrays.asList("TEST"));
-        TypedKey<List<String>> key = new TypedKeyDefault<>("datakey", List.class);
+        StringBuilder dataToStore = new StringBuilder("TEST");
+        TypedKey<StringBuilder> key =
+            new TypedKeyDefault<>("datakey", StringBuilder.class);
         map.put(key, dataToStore);
 
-        List<String> result = map.get(List.class);
+        CharSequence result = map.get(CharSequence.class);
 
-        assertEquals(1, result.size());
+        assertEquals(4, result.length());
     }
 
 
@@ -205,49 +205,89 @@ public class TypedKeyMapTestBase {
 
 
     protected void TypedMap_TryGetValue_GoodKey_ComplexType() {
-        List<String> dataToStore = Arrays.asList("TEST");
-        TypedKey<List<String>> key1 = new TypedKeyDefault<>("datakey1", List.class);
+        StringList dataToStore = new StringList("TEST");
+        TypedKey<StringList> key1 = new TypedKeyDefault<>("datakey1", StringList.class);
         map.put(key1, dataToStore);
 
-        TryGetResult<List<String>> result = map.tryGet(key1);
+        TryGetResult<StringList> result = map.tryGet(key1);
 
         assertTrue(result.hasValue());
         assertEquals(dataToStore.get(0), result.getValue().get(0));
     }
 
     protected void TypedMap_TryGetValue_GoodKeyInterface_ComplexType() {
-        ArrayList<String> dataToStore = new ArrayList<>(Arrays.asList("TEST"));
-        TypedKey<ArrayList<String>> key1 = new TypedKeyDefault<>("datakey1", ArrayList.class);
-        TypedKey<List<String>> key2 = new TypedKeyDefault<>("datakey1", List.class);
+        StringList dataToStore = new StringList("TEST");
+        TypedKey<StringList> key1 = new TypedKeyDefault<>("datakey1", StringList.class);
+        TypedKey<Strings> key2 = new TypedKeyDefault<>("datakey1", Strings.class);
         map.put(key1, dataToStore);
 
-        TryGetResult<List<String>> result = map.tryGet(key2);
+        TryGetResult<Strings> result = map.tryGet(key2);
 
         assertTrue(result.hasValue());
         assertEquals(dataToStore.get(0), result.getValue().get(0));
     }
 
     protected void TypedMap_TryGetValue_BadKeyName_ComplexType() {
-        List<String> dataToStore = Arrays.asList("TEST");
-        TypedKey<List<String>> key1 = new TypedKeyDefault<>("datakey1", List.class);
-        TypedKey<List<String>> key2 = new TypedKeyDefault<>("datakey2", List.class);
+        StringList dataToStore = new StringList("TEST");
+        TypedKey<StringList> key1 = new TypedKeyDefault<>("datakey1", StringList.class);
+        TypedKey<StringList> key2 = new TypedKeyDefault<>("datakey2", StringList.class);
         map.put(key1, dataToStore);
 
-        TryGetResult<List<String>> result = map.tryGet(key2);
+        TryGetResult<StringList> result = map.tryGet(key2);
 
         assertFalse(result.hasValue());
         assertNull(result.getValue());
     }
 
     protected void TypedMap_TryGetValue_BadKeyType_ComplexType() {
-        List<String> dataToStore = Arrays.asList("TEST");
-        TypedKey<List<String>> key1 = new TypedKeyDefault<>("datakey1", List.class);
-        TypedKey<Map<String, Integer>> key2 = new TypedKeyDefault<>("datakey1", Map.class);
+        StringList dataToStore = new StringList("TEST");
+        TypedKey<StringList> key1 = new TypedKeyDefault<>("datakey1", StringList.class);
+        TypedKey<ComplexValue> key2 = new TypedKeyDefault<>("datakey1", ComplexValue.class);
         map.put(key1, dataToStore);
 
-        TryGetResult<Map<String, Integer>> result = map.tryGet(key2);
+        TryGetResult<ComplexValue> result = map.tryGet(key2);
 
         assertFalse(result.hasValue());
         assertNull(result.getValue());
+    }
+
+    /**
+     * A value of a type with no type parameters, as a typed key can only
+     * name such a type.
+     */
+    protected static class ComplexValue {
+        private final Integer key;
+        private final String value;
+
+        ComplexValue(Integer key, String value) {
+            this.key = key;
+            this.value = value;
+        }
+
+        Integer getKey() {
+            return key;
+        }
+
+        String getValue() {
+            return value;
+        }
+    }
+
+    /**
+     * A list of strings, as an interface with no type parameters.
+     */
+    protected interface Strings extends List<String> {
+    }
+
+    /**
+     * A list of strings with no type parameters.
+     */
+    protected static class StringList extends ArrayList<String>
+        implements Strings {
+        private static final long serialVersionUID = 1L;
+
+        StringList(String... values) {
+            super(Arrays.asList(values));
+        }
     }
 }

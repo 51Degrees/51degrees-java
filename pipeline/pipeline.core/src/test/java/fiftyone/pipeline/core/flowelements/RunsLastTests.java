@@ -41,7 +41,6 @@ import static org.junit.Assert.fail;
  * is built in code or from a configuration.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/pipeline-elements/usage-sharing-element.md#position-in-the-pipeline">Specification</a>
  */
-@SuppressWarnings("rawtypes")
 public class RunsLastTests {
 
     private static final String MUST_BE_LAST =
@@ -71,7 +70,7 @@ public class RunsLastTests {
     public void RunsLast_InAParallelGroup_Refused() {
         assertRefused(new PipelineBuilder()
             .addFlowElement(new MultiplyByElement(2))
-            .addFlowElementsParallel(new FlowElement[]{
+            .addFlowElementsParallel(new FlowElement<?, ?>[]{
                 new MultiplyByElement(3),
                 new RunsLastElement()}));
     }
@@ -83,7 +82,7 @@ public class RunsLastTests {
             .addFlowElement(new MultiplyByElement(2))
             .addFlowElement(last)
             .build()) {
-            List<FlowElement> elements = pipeline.getFlowElements();
+            List<FlowElement<?, ?>> elements = pipeline.getFlowElements();
             assertEquals(last, elements.get(elements.size() - 1));
         }
     }
@@ -138,7 +137,7 @@ public class RunsLastTests {
         options.elements.add(element("RunsLastElement"));
         try (Pipeline pipeline =
                  new PipelineBuilder().buildFromConfiguration(options)) {
-            List<FlowElement> elements = pipeline.getFlowElements();
+            List<FlowElement<?, ?>> elements = pipeline.getFlowElements();
             assertTrue(elements.get(elements.size() - 1)
                 instanceof RunsLastElement);
         }

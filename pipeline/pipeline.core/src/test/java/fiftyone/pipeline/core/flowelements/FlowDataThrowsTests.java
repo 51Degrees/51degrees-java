@@ -110,11 +110,10 @@ public class FlowDataThrowsTests {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void getFromElement_NotProcessed() throws Exception {
-        FlowElement<ElementData, ?> element = mock(FlowElement.class);
-        when(element.getTypedDataKey())
-            .thenReturn(new TypedKeyDefault<>("test", ElementData.class));
+        FlowElement<?, ?> element = mock(FlowElement.class);
+        doReturn(new TypedKeyDefault<>("test", ElementData.class))
+            .when(element).getTypedDataKey();
         assertDeclared(
             method("getFromElement", FlowElement.class),
             () -> flowData.getFromElement(element));

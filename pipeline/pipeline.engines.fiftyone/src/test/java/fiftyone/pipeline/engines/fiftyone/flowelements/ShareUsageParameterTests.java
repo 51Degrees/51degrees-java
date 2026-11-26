@@ -88,6 +88,11 @@ public class ShareUsageParameterTests {
      */
     private static class Acceptor
         extends FlowElementBase<ElementData, ElementPropertyMetaData> {
+
+        @Override
+        protected Class<ElementData> getDataType() {
+            return ElementData.class;
+        }
         Acceptor() {
             super(LoggerFactory.getLogger(Acceptor.class),
                 (flowData, element) -> null);

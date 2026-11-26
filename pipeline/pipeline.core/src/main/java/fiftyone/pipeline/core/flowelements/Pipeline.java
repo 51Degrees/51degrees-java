@@ -131,15 +131,13 @@ public interface Pipeline extends AutoCloseable {
      * contains one. Null is returned if there is no such instance or there are
      * multiple instances of that type.
      */
-    @SuppressWarnings("rawtypes")
-    <T extends FlowElement> T getElement(Class<T> type);
+    <T extends FlowElement<?, ?>> T getElement(Class<T> type);
 
     /**
      * Get list of the flow elements that are part of this pipeline.
      * @return an immutable list of the flow elements
      */
-    @SuppressWarnings("rawtypes")
-    List<FlowElement> getFlowElements();
+    List<FlowElement<?, ?>> getFlowElements();
     /**
      * Get the map of available properties for an
      * {@link FlowElement#getElementDataKey()}. The map returned contains the

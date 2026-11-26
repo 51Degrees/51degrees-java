@@ -131,8 +131,7 @@ public class DataUpdateServiceWatchedFileTests {
             fileWrapperFactory,
             futureFactory(timers, watcher));
 
-        OnPremiseAspectEngine<? extends AspectData,
-            ? extends AspectPropertyMetaData> engine = engine();
+        OnPremiseAspectEngine<?, ?> engine = engine();
         Path directory = Files.createTempDirectory("watched");
         Path dataFile = directory.resolve("data.dat");
         Files.write(dataFile, "Old".getBytes());
@@ -201,8 +200,7 @@ public class DataUpdateServiceWatchedFileTests {
             fileWrapperFactory,
             futureFactory(timers, watcher));
 
-        OnPremiseAspectEngine<? extends AspectData,
-            ? extends AspectPropertyMetaData> engine = engine();
+        OnPremiseAspectEngine<?, ?> engine = engine();
         Path directory = Files.createTempDirectory("watched");
         Path dataFile = directory.resolve("data.dat");
         Files.write(dataFile, "Old".getBytes());
@@ -296,8 +294,7 @@ public class DataUpdateServiceWatchedFileTests {
             fileWrapperFactory(),
             timerFactory(timers));
 
-        OnPremiseAspectEngine<? extends AspectData,
-            ? extends AspectPropertyMetaData> engine = engine();
+        OnPremiseAspectEngine<?, ?> engine = engine();
         Path directory = Files.createTempDirectory("watched");
         Path dataFile = directory.resolve("data.dat");
         Files.write(dataFile, "Old".getBytes());
@@ -515,8 +512,7 @@ public class DataUpdateServiceWatchedFileTests {
             new AtomicReference<>();
         final CountDownLatch done = new CountDownLatch(1);
         final AtomicBoolean stop = new AtomicBoolean(false);
-        final OnPremiseAspectEngine<? extends AspectData,
-            ? extends AspectPropertyMetaData> engine = engine();
+        final OnPremiseAspectEngine<?, ?> engine = engine();
         final DataUpdateServiceDefault service;
         final Path directory;
         final Path dataFile;
@@ -709,9 +705,7 @@ public class DataUpdateServiceWatchedFileTests {
         return started;
     }
 
-    @SuppressWarnings("unchecked")
-    private static OnPremiseAspectEngine<? extends AspectData,
-        ? extends AspectPropertyMetaData> engine() {
+    private static OnPremiseAspectEngine<?, ?> engine() {
         return mock(OnPremiseAspectEngine.class);
     }
 

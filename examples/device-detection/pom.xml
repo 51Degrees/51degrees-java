@@ -43,6 +43,12 @@
     </modules>
 
     <properties>
+        <!-- Warnings fail the build only when the build is ours. CI sets
+             _51DEGREES_WARNINGS_AS_ERRORS to true, which turns on the
+             warnings-as-errors profile below. A build anyone else runs, from
+             a clone or a package, shows its warnings but never fails on one,
+             so a newer JDK cannot stop it. -->
+        <fiftyone.warningsAsErrors>false</fiftyone.warningsAsErrors>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.target>1.8</maven.compiler.target>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -67,6 +73,30 @@
     </properties>
 
     <profiles>
+
+        <profile>
+
+            <id>warnings-as-errors</id>
+
+            <activation>
+
+                <property>
+
+                    <name>env._51DEGREES_WARNINGS_AS_ERRORS</name>
+
+                    <value>true</value>
+
+                </property>
+
+            </activation>
+
+            <properties>
+
+                <fiftyone.warningsAsErrors>true</fiftyone.warningsAsErrors>
+
+            </properties>
+
+        </profile>
         <!-- The examples use the packages published to Maven Central, which is
              how a project of your own uses them. Build with -Pdev to use the
              libraries in this repository instead. -->
@@ -158,9 +188,9 @@
                     <source>${maven.compiler.source}</source>
                     <target>${maven.compiler.target}</target>
                     <showWarnings>true</showWarnings>
+                    <failOnWarning>${fiftyone.warningsAsErrors}</failOnWarning>
                     <compilerArgs>
                         <arg>-Xlint:all</arg>
-                        <arg>-Werror</arg>
                     </compilerArgs>
                 </configuration>
             </plugin>
@@ -206,7 +236,7 @@
                         <ruleset>${maven.multiModuleProjectDirectory}/ci/pmd-resource-ruleset.xml</ruleset>
                     </rulesets>
                     <includeTests>true</includeTests>
-                    <failOnViolation>true</failOnViolation>
+                    <failOnViolation>${fiftyone.warningsAsErrors}</failOnViolation>
                     <printFailingErrors>true</printFailingErrors>
                     <linkXRef>false</linkXRef>
                     <excludes>

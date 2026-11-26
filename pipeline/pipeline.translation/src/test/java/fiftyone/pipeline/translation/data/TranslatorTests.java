@@ -93,13 +93,11 @@ public class TranslatorTests {
     public void translatesPlainStringList() {
         Translator translator =
             new Translator(map(), MissingTranslationBehavior.ORIGINAL);
-        @SuppressWarnings("unchecked")
-        List<String> result = (List<String>) translator.translate(
+        List<?> result = (List<?>) translator.translate(
             Arrays.asList("France", "Germany", "Spain"), new ArrayList<>());
         assertEquals(Arrays.asList("La France", "Allemagne", "Spain"), result);
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void translatesWeightedListPreservingWeights() {
         Translator translator =
@@ -111,19 +109,19 @@ public class TranslatorTests {
         AspectPropertyValue<List<IWeightedValue<String>>> wrapped =
             new AspectPropertyValueDefault<>(input);
 
-        AspectPropertyValue<List<IWeightedValue<String>>> result =
-            (AspectPropertyValue<List<IWeightedValue<String>>>)
-                translator.translate(wrapped, new ArrayList<>());
+        AspectPropertyValue<?> result = (AspectPropertyValue<?>)
+            translator.translate(wrapped, new ArrayList<>());
 
         assertTrue(result.hasValue());
-        List<IWeightedValue<String>> values = result.getValue();
-        assertEquals("La France", values.get(0).getValue());
-        assertEquals(30000, values.get(0).getRawWeighting());
-        assertEquals("Allemagne", values.get(1).getValue());
-        assertEquals(35535, values.get(1).getRawWeighting());
+        List<?> values = (List<?>) result.getValue();
+        IWeightedValue<?> first = (IWeightedValue<?>) values.get(0);
+        IWeightedValue<?> second = (IWeightedValue<?>) values.get(1);
+        assertEquals("La France", first.getValue());
+        assertEquals(30000, first.getRawWeighting());
+        assertEquals("Allemagne", second.getValue());
+        assertEquals(35535, second.getRawWeighting());
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void copiesNoValueMessage() {
         Translator translator =
@@ -132,9 +130,8 @@ public class TranslatorTests {
             new AspectPropertyValueDefault<>();
         empty.setNoValueMessage("nothing here");
 
-        AspectPropertyValue<List<IWeightedValue<String>>> result =
-            (AspectPropertyValue<List<IWeightedValue<String>>>)
-                translator.translate(empty, new ArrayList<>());
+        AspectPropertyValue<?> result = (AspectPropertyValue<?>)
+            translator.translate(empty, new ArrayList<>());
 
         assertEquals(false, result.hasValue());
         assertEquals("nothing here", result.getNoValueMessage());

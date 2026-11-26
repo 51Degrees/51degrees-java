@@ -41,7 +41,6 @@ public class AggregateException extends RuntimeException {
      * @param message the message to give to the exception
      * @param causes multiple causes to be contained in the exception
      */
-    @SuppressWarnings("this-escape")
     public AggregateException(String message, Collection<Throwable> causes) {
         super(message);
         for (Throwable cause : causes) {
@@ -53,7 +52,6 @@ public class AggregateException extends RuntimeException {
      * Construct a new instance with no message.
      * @param causes multiple causes to be contained in the exception
      */
-    @SuppressWarnings("this-escape")
     public AggregateException(Collection<Throwable> causes) {
         super();
         for (Throwable cause : causes) {

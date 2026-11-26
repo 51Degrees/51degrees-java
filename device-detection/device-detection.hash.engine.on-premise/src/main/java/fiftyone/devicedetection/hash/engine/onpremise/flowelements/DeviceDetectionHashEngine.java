@@ -53,6 +53,12 @@ import static org.apache.commons.lang3.BooleanUtils.isFalse;
 public class DeviceDetectionHashEngine
     extends FiftyOneOnPremiseAspectEngineBase<DeviceDataHash,
     FiftyOneAspectPropertyMetaData> {
+
+    @Override
+    protected Class<DeviceDataHash> getDataType() {
+        return DeviceDataHash.class;
+    }
+
     // Volatile, so a thread that processes sees the native engine a
     // refresh on another thread made.
     private volatile EngineHashSwig engine = null;

@@ -295,6 +295,8 @@ public class DeviceDetectionHashEngineModuleJNI {
   public final static native long new_EngineHashSwig__SWIG_1(byte[] jarg1, long jarg3, ConfigHashSwig jarg3_, long jarg4, RequiredPropertiesConfigSwig jarg4_);
   public final static native long EngineHashSwig_getPublishedTime(long jarg1, EngineHashSwig jarg1_);
   public final static native long EngineHashSwig_getUpdateAvailableTime(long jarg1, EngineHashSwig jarg1_);
+  public final static native long EngineHashSwig_getPublishedTimeFromFile(String jarg1);
+  public final static native String EngineHashSwig_getProductFromFile(String jarg1);
   public final static native String EngineHashSwig_getDataFilePath(long jarg1, EngineHashSwig jarg1_);
   public final static native String EngineHashSwig_getDataFileTempPath(long jarg1, EngineHashSwig jarg1_);
   public final static native void EngineHashSwig_refreshData__SWIG_0(long jarg1, EngineHashSwig jarg1_);

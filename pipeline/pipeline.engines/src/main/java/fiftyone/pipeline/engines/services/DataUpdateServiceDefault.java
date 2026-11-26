@@ -346,8 +346,11 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             // Compare the data file with the temporary file the engine uses.
             // A programmatic update always does, whether or not Automatic
             // Update from File is enabled. The timer does only when no file
-            // system watcher exists to notice a new file.
-            if ((manualUpdate ||
+            // system watcher exists to notice a new file. Before an engine
+            // exists, as at the update on start-up, no engine uses a
+            // temporary file, so the check goes on to the data update URL.
+            if (dataFile.getEngine() != null &&
+                    (manualUpdate ||
                     dataFile.getConfiguration().getWatchKey() == null) &&
                     dataFile.getDataFilePath() != null &&
                     dataFile.getDataFilePath().isEmpty() == false &&

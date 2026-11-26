@@ -209,13 +209,12 @@ public interface ClientsidePropertyServiceCore {
         /**
          * Initialise the service.
          */
-        @SuppressWarnings("rawtypes")
         protected final void init() {
             List<String> headers = new ArrayList<>();
             boolean complete = true;
             // Get evidence filters for all elements.
             List<EvidenceKeyFilter> filters = new ArrayList<>();
-            for (FlowElement element : pipeline.getFlowElements()) {
+            for (FlowElement<?, ?> element : pipeline.getFlowElements()) {
                 complete = complete && element.hasLoadedProperties();
                 filters.add(element.getEvidenceKeyFilter());
             }

@@ -403,6 +403,11 @@ public class ShareUsageElementTests {
      */
     private static class GroupMember
         extends FlowElementBase<ElementData, ElementPropertyMetaData> {
+
+        @Override
+        protected Class<ElementData> getDataType() {
+            return ElementData.class;
+        }
         private final String key;
 
         GroupMember(String key) {
@@ -459,11 +464,10 @@ public class ShareUsageElementTests {
      * 51Degrees package those depend on".
      */
     @Test
-    @SuppressWarnings("rawtypes")
     public void ShareUsageElement_Packages_IncludeParallelGroupMembers() throws Exception {
         pipeline.close();
         pipeline = new PipelineBuilder()
-            .addFlowElementsParallel(new FlowElement[] {
+            .addFlowElementsParallel(new FlowElement<?, ?>[] {
                 new FirstGroupMember(),
                 new SecondGroupMember() })
             .build();

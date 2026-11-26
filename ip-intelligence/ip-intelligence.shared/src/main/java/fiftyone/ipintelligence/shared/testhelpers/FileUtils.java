@@ -38,6 +38,13 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 /** Finds the data and evidence files the tests use. */
 public class FileUtils {
+
+    /**
+     * Not needed, as every member is static. Kept so that code which made
+     * an instance still builds.
+     */
+    public FileUtils() {
+    }
     /**
      * Name of the aligned environment variable or system property which can
      * supply an explicit path to the IPI data file. When set and the file

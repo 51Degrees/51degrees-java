@@ -31,8 +31,6 @@ import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
-import fiftyone.pipeline.core.typed.TypedKey;
-import fiftyone.pipeline.core.typed.TypedKeyDefault;
 import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
 import fiftyone.pipeline.translation.data.ITranslationData;
 import fiftyone.pipeline.translation.data.Languages;
@@ -184,11 +182,8 @@ public class TranslationEngineBase<T extends ITranslationData>
     }
 
     @Override
-    public TypedKey<T> getTypedDataKey() {
-        if (typedKey == null) {
-            typedKey = new TypedKeyDefault<>(getElementDataKey(), dataType);
-        }
-        return typedKey;
+    protected Class<T> getDataType() {
+        return dataType;
     }
 
     /**

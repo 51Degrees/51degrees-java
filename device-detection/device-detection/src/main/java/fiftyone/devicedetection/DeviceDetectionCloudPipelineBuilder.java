@@ -39,6 +39,11 @@ import org.slf4j.ILoggerFactory;
 public class DeviceDetectionCloudPipelineBuilder
     extends CloudPipelineBuilderBase<DeviceDetectionCloudPipelineBuilder> {
 
+    @Override
+    protected DeviceDetectionCloudPipelineBuilder self() {
+        return this;
+    }
+
     private final HttpClient httpClient;
 
     /**

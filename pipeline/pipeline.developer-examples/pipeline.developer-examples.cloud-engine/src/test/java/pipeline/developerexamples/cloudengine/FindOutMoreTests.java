@@ -88,7 +88,7 @@ public class FindOutMoreTests {
     }
 
     /**
-     * Runs the example as a person would and returns what it wrote, with
+     * Runs the example as main does and returns what it wrote, with
      * each line ending in a line feed.
      */
     private static String runMain() throws Exception {
@@ -96,7 +96,7 @@ public class FindOutMoreTests {
         ByteArrayOutputStream captured = new ByteArrayOutputStream();
         System.setOut(new PrintStream(captured, true, "UTF-8"));
         try {
-            Main.main(new String[0]);
+            Main.run(new TimedHttpClient(), TimedHttpClient.TIMEOUT_SECONDS);
         } finally {
             System.setOut(original);
         }

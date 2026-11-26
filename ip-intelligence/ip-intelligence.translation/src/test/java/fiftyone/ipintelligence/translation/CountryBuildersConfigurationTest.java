@@ -54,7 +54,6 @@ public class CountryBuildersConfigurationTest {
     public TemporaryFolder folder = new TemporaryFolder();
 
     @Test
-    @SuppressWarnings("rawtypes")
     public void countryBuilders_AreUnaffectedByAPreparedGeneralBuilder()
             throws Exception {
         String xml = "<PipelineOptions><Elements>"
@@ -82,7 +81,7 @@ public class CountryBuildersConfigurationTest {
                 .addElementBuilder(general)
                 .buildFromConfiguration(
                     PipelineOptionsFactory.getOptionsFromFile(file))) {
-            List<FlowElement> elements = pipeline.getFlowElements();
+            List<FlowElement<?, ?>> elements = pipeline.getFlowElements();
             assertEquals(3, elements.size());
             assertTrue(elements.get(0).getClass().getName(),
                 elements.get(0) instanceof CountryCodeTranslationEngine);

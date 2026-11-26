@@ -30,6 +30,13 @@ import java.util.function.Function;
  * Helpers to obtain keys from the environment
  */
 public class KeyUtils {
+
+    /**
+     * Not needed, as every member is static. Kept so that code which made
+     * an instance still builds.
+     */
+    public KeyUtils() {
+    }
     /**
      * Name of the environment variable or system property which supplies
      * the tests with the resource key with every property. It is the only

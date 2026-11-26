@@ -52,10 +52,9 @@ public class GeoDataDefault extends AspectDataBase implements GeoData {
     }
 
 
-    @SuppressWarnings("unchecked")
     @Override
     public AspectPropertyValue<JavaScript> getJavaScript() {
-        return getAs("javascript", AspectPropertyValue.class, JavaScript.class);
+        return getValue("javascript", JavaScript.class);
     }
 
     @Override
@@ -63,10 +62,9 @@ public class GeoDataDefault extends AspectDataBase implements GeoData {
         put("javascript", javaScript);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public AspectPropertyValue<String> getRoad() {
-        return getAs("road", AspectPropertyValue.class);
+        return getValue("road", String.class);
     }
 
     @Override
@@ -74,10 +72,9 @@ public class GeoDataDefault extends AspectDataBase implements GeoData {
         put("road", road);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public AspectPropertyValue<String> getTown() {
-        return getAs("town", AspectPropertyValue.class);
+        return getValue("town", String.class);
     }
 
     @Override
@@ -85,10 +82,9 @@ public class GeoDataDefault extends AspectDataBase implements GeoData {
         put("town", town);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public AspectPropertyValue<String> getSuburb() {
-        return getAs("suburb", AspectPropertyValue.class);
+        return getValue("suburb", String.class);
     }
 
     @Override
@@ -96,10 +92,9 @@ public class GeoDataDefault extends AspectDataBase implements GeoData {
         put("suburb", suburb);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public AspectPropertyValue<String> getCounty() {
-        return getAs("county", AspectPropertyValue.class);
+        return getValue("county", String.class);
     }
 
     @Override
@@ -107,10 +102,9 @@ public class GeoDataDefault extends AspectDataBase implements GeoData {
         put("county", county);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public AspectPropertyValue<String> getRegion() {
-        return getAs("region", AspectPropertyValue.class);
+        return getValue("region", String.class);
     }
 
     @Override
@@ -118,10 +112,9 @@ public class GeoDataDefault extends AspectDataBase implements GeoData {
         put("region", region);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public AspectPropertyValue<String> getState() {
-        return getAs("state", AspectPropertyValue.class);
+        return getValue("state", String.class);
     }
 
     @Override
@@ -129,10 +122,9 @@ public class GeoDataDefault extends AspectDataBase implements GeoData {
         put("state", state);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public AspectPropertyValue<String> getZipCode() {
-        return getAs("zipcode", AspectPropertyValue.class);
+        return getValue("zipcode", String.class);
     }
 
     @Override
@@ -140,10 +132,9 @@ public class GeoDataDefault extends AspectDataBase implements GeoData {
         put("zipcode", zipCode);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public AspectPropertyValue<String> getCountry() {
-        return getAs("country", AspectPropertyValue.class);
+        return getValue("country", String.class);
     }
 
     @Override
@@ -151,10 +142,9 @@ public class GeoDataDefault extends AspectDataBase implements GeoData {
         put("country", country);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public AspectPropertyValue<String> getCountryCode() {
-        return getAs("countrycode", AspectPropertyValue.class);
+        return getValue("countrycode", String.class);
     }
 
     @Override
@@ -162,10 +152,9 @@ public class GeoDataDefault extends AspectDataBase implements GeoData {
         put("countrycode", countryCode);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public AspectPropertyValue<String> getCountryCode3() {
-        return getAs("countrycode3", AspectPropertyValue.class);
+        return getValue("countrycode3", String.class);
     }
 
     @Override
@@ -173,10 +162,9 @@ public class GeoDataDefault extends AspectDataBase implements GeoData {
         put("countrycode3", countryCode3);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public AspectPropertyValue<Integer> getTimeZoneOffset() {
-        return getAs("timezoneoffset", AspectPropertyValue.class);
+        return getValue("timezoneoffset", Integer.class);
     }
 
     @Override
@@ -184,10 +172,9 @@ public class GeoDataDefault extends AspectDataBase implements GeoData {
         put("timezoneoffset", timeZoneOffset);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public AspectPropertyValue<String> getAddress() {
-        return getAs("address", AspectPropertyValue.class);
+        return getValue("address", String.class);
     }
 
     @Override
@@ -195,10 +182,9 @@ public class GeoDataDefault extends AspectDataBase implements GeoData {
         put("address", address);
     }
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public AspectPropertyValue<String> getBuilding() {
-		return getAs("building", AspectPropertyValue.class);
+		return getValue("building", String.class);
 	}
 
 	@Override
@@ -206,10 +192,9 @@ public class GeoDataDefault extends AspectDataBase implements GeoData {
 		put("building", building);		
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
 	public AspectPropertyValue<String> getStreetNumber() {
-		return getAs("streetNumber", AspectPropertyValue.class);
+		return getValue("streetNumber", String.class);
 	}
 
 	@Override

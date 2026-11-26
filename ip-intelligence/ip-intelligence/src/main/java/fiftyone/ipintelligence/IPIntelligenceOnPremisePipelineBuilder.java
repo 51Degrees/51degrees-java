@@ -49,6 +49,11 @@ import java.util.List;
 public class IPIntelligenceOnPremisePipelineBuilder
     extends PrePackagedPipelineBuilderBase<IPIntelligenceOnPremisePipelineBuilder> {
 
+    @Override
+    protected IPIntelligenceOnPremisePipelineBuilder self() {
+        return this;
+    }
+
     /** Whether the Pipeline shares usage data with 51Degrees. */
     protected boolean shareUsageEnabled =
         fiftyone.pipeline.engines.fiftyone.flowelements.Constants

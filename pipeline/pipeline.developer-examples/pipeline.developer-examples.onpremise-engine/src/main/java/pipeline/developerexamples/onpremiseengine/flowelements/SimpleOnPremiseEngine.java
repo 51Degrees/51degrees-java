@@ -44,6 +44,11 @@ import java.util.*;
  */
 public class SimpleOnPremiseEngine extends OnPremiseAspectEngineBase<StarSignData, AspectPropertyMetaData> {
 
+    @Override
+    protected Class<StarSignData> getDataType() {
+        return StarSignData.class;
+    }
+
     /**
      * Create a new instance and read the data file.
      *

@@ -52,6 +52,11 @@ import java.util.function.Function;
 @ElementBuilder
 public class CloudRequestEngineBuilder extends
     AspectEngineBuilderBase<CloudRequestEngineBuilder, CloudRequestEngine> {
+
+    @Override
+    protected CloudRequestEngineBuilder self() {
+        return this;
+    }
 	
     private final HttpClient httpClient;
 

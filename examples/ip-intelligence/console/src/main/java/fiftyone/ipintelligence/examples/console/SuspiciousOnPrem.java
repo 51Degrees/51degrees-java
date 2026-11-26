@@ -222,18 +222,18 @@ public class SuspiciousOnPrem {
 
             /* In this example we use the following properties to make some basic assumptions
             about the likelihood of an IP being a source of suspicious activity. */
-            Boolean isCellularValue = firstValue(tryGet(ipData::getIsCellular));
+            Boolean isCellularValue = firstValue(tryGet(ipData::getIsCellular), Boolean.class);
             boolean isCellular = isCellularValue != null && isCellularValue;
-            Integer hardwareDiversityValue = firstValue(tryGet(ipData::getHardwareDiversity));
+            Integer hardwareDiversityValue = firstValue(tryGet(ipData::getHardwareDiversity), Integer.class);
             int hardwareDiversity = hardwareDiversityValue != null ? hardwareDiversityValue : 0;
-            Integer browserDiversityValue = firstValue(tryGet(ipData::getBrowserDiversity));
+            Integer browserDiversityValue = firstValue(tryGet(ipData::getBrowserDiversity), Integer.class);
             int browserDiversity = browserDiversityValue != null ? browserDiversityValue : 0;
-            String locationConfidence = firstValue(tryGet(ipData::getLocationConfidence));
-            Boolean hostedValue = firstValue(tryGet(ipData::getIsHosted));
+            String locationConfidence = firstValue(tryGet(ipData::getLocationConfidence), String.class);
+            Boolean hostedValue = firstValue(tryGet(ipData::getIsHosted), Boolean.class);
             boolean hosted = hostedValue != null && hostedValue;
-            String country = firstValue(tryGet(ipData::getCountryCode));
-            String registeredCountry = firstValue(tryGet(ipData::getRegisteredCountry));
-            Integer humanValue = firstValue(tryGet(ipData::getHumanProbability));
+            String country = firstValue(tryGet(ipData::getCountryCode), String.class);
+            String registeredCountry = firstValue(tryGet(ipData::getRegisteredCountry), String.class);
+            Integer humanValue = firstValue(tryGet(ipData::getHumanProbability), Integer.class);
             int human = humanValue != null ? humanValue : 0;
 
             /* Calculating a simple "suspicious" score based on the properties above.

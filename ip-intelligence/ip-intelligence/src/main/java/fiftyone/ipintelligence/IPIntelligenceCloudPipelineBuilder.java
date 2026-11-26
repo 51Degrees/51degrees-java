@@ -39,6 +39,11 @@ import org.slf4j.ILoggerFactory;
 public class IPIntelligenceCloudPipelineBuilder
     extends CloudPipelineBuilderBase<IPIntelligenceCloudPipelineBuilder> {
 
+    @Override
+    protected IPIntelligenceCloudPipelineBuilder self() {
+        return this;
+    }
+
     private final HttpClient httpClient;
 
     /**

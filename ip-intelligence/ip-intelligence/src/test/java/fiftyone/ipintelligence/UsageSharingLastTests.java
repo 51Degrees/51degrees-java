@@ -44,7 +44,6 @@ import static org.junit.Assume.assumeTrue;
  * element the caller adds, as the last Flow Element of the Pipeline.
  * @see <a href="https://github.com/51Degrees/specifications/blob/52e9b047743db365592f9bd1c737fc7ddb6a2de4/pipeline-specification/pipeline-elements/usage-sharing-element.md#position-in-the-pipeline">Specification</a>
  */
-@SuppressWarnings("rawtypes")
 public class UsageSharingLastTests {
 
     /**
@@ -75,7 +74,7 @@ public class UsageSharingLastTests {
             .setShareUsage(true);
     }
 
-    private static void assertLast(List<FlowElement> elements) {
+    private static void assertLast(List<FlowElement<?, ?>> elements) {
         assertTrue(elements.toString(),
             elements.get(elements.size() - 1) instanceof ShareUsageElement);
     }
@@ -83,7 +82,7 @@ public class UsageSharingLastTests {
     @Test
     public void ShareUsageOn_UsageSharingIsLast() throws Exception {
         try (Pipeline pipeline = builder().build()) {
-            List<FlowElement> elements = pipeline.getFlowElements();
+            List<FlowElement<?, ?>> elements = pipeline.getFlowElements();
             assertEquals(2, elements.size());
             assertTrue(elements.toString(),
                 elements.get(0) instanceof IPIntelligenceOnPremiseEngine);
@@ -101,7 +100,7 @@ public class UsageSharingLastTests {
         try (Pipeline pipeline = builder()
             .addFlowElement(new SequenceElementBuilder(loggerFactory).build())
             .build()) {
-            List<FlowElement> elements = pipeline.getFlowElements();
+            List<FlowElement<?, ?>> elements = pipeline.getFlowElements();
             assertEquals(3, elements.size());
             assertLast(elements);
         }

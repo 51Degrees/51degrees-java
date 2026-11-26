@@ -84,6 +84,11 @@ public class ElementDataPoolTests {
      */
     private static class Counter
         extends FlowElementBase<PooledData, ElementPropertyMetaData> {
+
+        @Override
+        protected Class<PooledData> getDataType() {
+            return PooledData.class;
+        }
         private final AtomicInteger allocated;
 
         Counter(AtomicInteger allocated) {
@@ -156,6 +161,11 @@ public class ElementDataPoolTests {
      */
     private static class TaskStarter
         extends FlowElementBase<TaskData, ElementPropertyMetaData> {
+
+        @Override
+        protected Class<TaskData> getDataType() {
+            return TaskData.class;
+        }
         private volatile CompletableFuture<Void> next = null;
 
         TaskStarter() {

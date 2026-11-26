@@ -43,6 +43,11 @@ public class SimpleOnPremiseEngineBuilder
         SimpleOnPremiseEngineBuilder,
         SimpleOnPremiseEngine> {
 
+    @Override
+    protected SimpleOnPremiseEngineBuilder self() {
+        return this;
+    }
+
     /**
      * Create a new builder.
      *

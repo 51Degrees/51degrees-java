@@ -24,8 +24,10 @@ package fiftyone.devicedetection.shared.testhelpers;
 
 import org.junit.Test;
 
+import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.Map;
+import java.util.function.Function;
 
 import static org.junit.Assert.*;
 
@@ -58,22 +60,35 @@ public class KeyUtilsTest {
     }
 
     @Test
-    @SuppressWarnings("deprecation")
-    public void publishedGetNamedKey_ReadsTheEnvironmentUnderTheNameGiven() {
-        assertEquals("from-environment", KeyUtils.getNamedKey(
+    public void publishedGetNamedKey_ReadsTheEnvironmentUnderTheNameGiven()
+        throws Exception {
+        assertEquals("from-environment", publishedGetNamedKey(
             "KEY_UTILS_TEST_NAME", UPPER_CASE_ONLY::get));
-        assertNull(KeyUtils.getNamedKey(NAME, UPPER_CASE_ONLY::get));
+        assertNull(publishedGetNamedKey(NAME, UPPER_CASE_ONLY::get));
     }
 
     @Test
-    @SuppressWarnings("deprecation")
-    public void publishedGetNamedKey_NotInTheEnvironment_ReadsTheSystemProperty() {
+    public void publishedGetNamedKey_NotInTheEnvironment_ReadsTheSystemProperty()
+        throws Exception {
         System.setProperty(NAME, "from-property");
         try {
             assertEquals("from-property",
-                KeyUtils.getNamedKey(NAME, UPPER_CASE_ONLY::get));
+                publishedGetNamedKey(NAME, UPPER_CASE_ONLY::get));
         } finally {
             System.clearProperty(NAME);
         }
+    }
+
+    /**
+     * Calls the deprecated KeyUtils.getNamedKey, found by name, as the build
+     * treats the use of a deprecated class as an error.
+     */
+    private static String publishedGetNamedKey(
+        String keyName,
+        Function<String, String> environment) throws Exception {
+        Method method = Class.forName(
+                "fiftyone.devicedetection.shared.testhelpers.KeyUtils")
+            .getDeclaredMethod("getNamedKey", String.class, Function.class);
+        return (String) method.invoke(null, keyName, environment);
     }
 }

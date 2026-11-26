@@ -23,7 +23,6 @@
 package fiftyone.pipeline.core.flowelements;
 
 import fiftyone.pipeline.core.data.*;
-import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.exceptions.PipelineDataException;
 import fiftyone.pipeline.core.testclasses.data.MapElementData;
 import fiftyone.pipeline.core.testclasses.data.TestElementData;
@@ -41,7 +40,6 @@ import java.util.*;
 import static junit.framework.TestCase.*;
 import static org.mockito.Mockito.*;
 
-@SuppressWarnings("rawtypes")
 public class FlowDataTests {
 
     private static final String INT_PROPERTY = "intvalue";
@@ -168,7 +166,7 @@ public class FlowDataTests {
     @Test
     public void FlowData_AddDataString_GetDataTypedKey() {
         String key = "key";
-        TypedKey<TestElementData> typedKey = new TypedKeyDefault<>(key);
+        TypedKey<TestElementData> typedKey = new TypedKeyDefault<>(key, TestElementData.class);
         ElementData data = flowData.getOrAdd(
             key,
             (FlowElement.DataFactory<ElementData>) flowData -> new TestElementData(mock(Logger.class), flowData));
@@ -203,7 +201,7 @@ public class FlowDataTests {
     @Test
     public void FlowData_AddDataTypedKey_GetDataString() {
         String key = "key";
-        TypedKey<TestElementData> typedKey = new TypedKeyDefault<>(key);
+        TypedKey<TestElementData> typedKey = new TypedKeyDefault<>(key, TestElementData.class);
         TestElementData data = flowData.getOrAdd(
             typedKey,
             flowData -> new TestElementData(mock(Logger.class), flowData));
@@ -219,7 +217,7 @@ public class FlowDataTests {
     @Test
     public void FlowData_AddDataTypedKey_GetDataTypedKey() {
         String key = "key";
-        TypedKey<TestElementData> typedKey = new TypedKeyDefault<>(key);
+        TypedKey<TestElementData> typedKey = new TypedKeyDefault<>(key, TestElementData.class);
         TestElementData data = flowData.getOrAdd(
             typedKey,
             flowData -> new TestElementData(mock(Logger.class), flowData));
@@ -240,7 +238,7 @@ public class FlowDataTests {
                 mock(Logger.class),
                 flowData)
         );
-        TypedKey<TestElementData> typedKey = new TypedKeyDefault<>(element.getElementDataKey());
+        TypedKey<TestElementData> typedKey = new TypedKeyDefault<>(element.getElementDataKey(), TestElementData.class);
         TestElementData data = flowData.getOrAdd(
             typedKey,
             element.getDataFactory());
@@ -257,7 +255,7 @@ public class FlowDataTests {
     @Test
     public void FlowData_GetDataAsMap() {
         String key = "key";
-        TestElementData data = flowData.getOrAdd(
+        ElementData data = flowData.getOrAdd(
             key,
             flowData -> new TestElementData(mock(Logger.class), flowData));
 
@@ -270,7 +268,7 @@ public class FlowDataTests {
     @Test
     public void FlowData_GetDataAsEnumerable() {
         String key = "key";
-        TestElementData data = flowData.getOrAdd(
+        ElementData data = flowData.getOrAdd(
             key,
             flowData -> new TestElementData(mock(Logger.class), flowData));
         // Element Data is added before processing finishes, as a Flow Data
@@ -327,14 +325,14 @@ public class FlowDataTests {
 
     @Test(expected = Exception.class)
     public void FlowData_GetBeforeProcess_TypedKey() {
-        flowData.get(new TypedKeyDefault<TestElementData>("key"));
+        flowData.get(new TypedKeyDefault<>("key", TestElementData.class));
     }
 
     @Test(expected = Exception.class)
-    @SuppressWarnings("unchecked")
     public void FlowData_GetBeforeProcess_FlowElement() {
         flowData.getFromElement(
-            new TestElement(mock(Logger.class), mock(ElementDataFactory.class)));
+            new TestElement(mock(Logger.class),
+                (data, element) -> new TestElementData(mock(Logger.class), data)));
     }
 
     @Test(expected = NoSuchElementException.class)
@@ -347,16 +345,16 @@ public class FlowDataTests {
     @Test(expected = NoSuchElementException.class)
     public void FlowData_GetNotPresent_TypedKey() {
         flowData.process();
-        Object result = flowData.get(new TypedKeyDefault<TestElementData>("key"));
+        Object result = flowData.get(new TypedKeyDefault<>("key", TestElementData.class));
         assertNull(result);
     }
 
     @Test(expected = NoSuchElementException.class)
-    @SuppressWarnings("unchecked")
     public void FlowData_GetNotPresent_Element() {
         flowData.process();
         Object result = flowData.getFromElement(
-            new TestElement(mock(Logger.class), mock(ElementDataFactory.class))
+            new TestElement(mock(Logger.class),
+                (data, element) -> new TestElementData(mock(Logger.class), data))
         );
         assertNull(result);
     }
@@ -463,7 +461,6 @@ public class FlowDataTests {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void FlowData_GetAs_List() throws Exception {
         configureMultiElementValues();
         try (FlowData flowData = new FlowDataDefault(
@@ -472,7 +469,7 @@ public class FlowDataTests {
             new EvidenceDefault(mock(Logger.class)))) {
             flowData.process();
     
-            List<String> result = flowData.getAs(LIST_PROPERTY, List.class);
+            List<?> result = flowData.getAs(LIST_PROPERTY, List.class);
             assertEquals(LIST_PROPERTY_VALUE.size(), result.size());
             for (int i = 0; i < result.size(); i++) {
                 assertEquals(LIST_PROPERTY_VALUE.get(i), result.get(i));
@@ -532,7 +529,7 @@ public class FlowDataTests {
     }
 
     private void configureMultiElementValues() {
-        FlowElement element1 = mock(FlowElement.class);
+        FlowElement<?, ?> element1 = mock(FlowElement.class);
         when(element1.getElementDataKey()).thenReturn("element1");
         final List<ElementPropertyMetaData> metaData1 = Arrays.asList(
             new ElementPropertyMetaData[]{
@@ -543,9 +540,10 @@ public class FlowDataTests {
 
             }
         );
-        when(element1.getProperties()).thenReturn(metaData1);
+        doReturn(metaData1)
+            .when(element1).getProperties();
 
-        FlowElement element2 = mock(FlowElement.class);
+        FlowElement<?, ?> element2 = mock(FlowElement.class);
         when(element2.getElementDataKey()).thenReturn("element2");
         final List<ElementPropertyMetaData> metaData2 = Arrays.asList(
             new ElementPropertyMetaData[]{
@@ -553,7 +551,8 @@ public class FlowDataTests {
                 new ElementPropertyMetaDataDefault(DUPLICATE_PROPERTY, element2, DUPLICATE_PROPERTY, String.class, true),
             }
         );
-        when(element2.getProperties()).thenReturn(metaData2);
+        doReturn(metaData2)
+            .when(element2).getProperties();
 
 
         final MapElementData elementData1 = new MapElementData(mock(Logger.class), flowData);
@@ -563,8 +562,9 @@ public class FlowDataTests {
         final MapElementData elementData2 = new MapElementData(mock(Logger.class), flowData);
         elementData2.put(STRING_PROPERTY, STRING_PROPERTY_VALUE);
 
-        List<FlowElement> elements = Arrays.asList(element1, element2);
-        when(pipeline.getFlowElements()).thenReturn(elements);
+        List<FlowElement<?, ?>> elements = Arrays.asList(element1, element2);
+        doReturn(elements)
+            .when(pipeline).getFlowElements();
 
         doAnswer(invocationOnMock -> {
             ((FlowData) invocationOnMock.getArgument(0)).getOrAdd("element1",
@@ -600,15 +600,16 @@ public class FlowDataTests {
      */
     private void configureGetWhere() {
         // Mock the element
-        FlowElement element1 = mock(FlowElement.class);
+        FlowElement<?, ?> element1 = mock(FlowElement.class);
         when(element1.getElementDataKey()).thenReturn("element1");
         // Set up the properties
-        when(element1.getProperties()).thenReturn(Arrays.asList(
+        doReturn(Arrays.asList(
             new ElementPropertyMetaDataDefault("available", element1, "category", String.class, true),
             new ElementPropertyMetaDataDefault("anotheravailable", element1, "category", String.class, true),
             new ElementPropertyMetaDataDefault("unavaiable", element1, "category", String.class, false),
             new ElementPropertyMetaDataDefault("differentcategory", element1, "another category", String.class, true),
-            new ElementPropertyMetaDataDefault("nocategory", element1, "", String.class, true)));
+            new ElementPropertyMetaDataDefault("nocategory", element1, "", String.class, true)))
+            .when(element1).getProperties();
         // Set up the values for the available properties
         final MapElementData elementData1 = new MapElementData(mock(Logger.class), flowData);
         elementData1.put("available", "a value");
@@ -622,7 +623,8 @@ public class FlowDataTests {
             return null;
         }).when(pipeline).process(any(FlowData.class));
         // Set up the element in the pipeline
-        when(pipeline.getFlowElements()).thenReturn(Arrays.asList(element1));
+        doReturn(Arrays.asList(element1))
+            .when(pipeline).getFlowElements();
     }
 
     /**

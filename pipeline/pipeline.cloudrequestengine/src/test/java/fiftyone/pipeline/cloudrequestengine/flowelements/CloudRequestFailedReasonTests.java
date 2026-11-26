@@ -80,6 +80,12 @@ public class CloudRequestFailedReasonTests {
     }
 
     private class TestAspectEngine extends CloudAspectEngineBase<TestData> {
+
+        @Override
+        protected Class<TestData> getDataType() {
+            return TestData.class;
+        }
+
         TestAspectEngine() {
             super(
                 loggerFactory.getLogger("TestAspectEngine"),
@@ -125,6 +131,12 @@ public class CloudRequestFailedReasonTests {
     private class TestRequestEngine
         extends AspectEngineBase<CloudRequestData, AspectPropertyMetaData>
         implements CloudRequestEngine {
+
+        @Override
+        protected Class<CloudRequestData> getDataType() {
+            return CloudRequestData.class;
+        }
+
         private final boolean fail;
         private final Map<String, AccessiblePropertyMetaData.ProductMetaData>
             products;

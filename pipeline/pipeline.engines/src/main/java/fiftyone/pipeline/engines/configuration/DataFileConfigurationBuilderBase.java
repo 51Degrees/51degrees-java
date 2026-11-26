@@ -41,6 +41,14 @@ public abstract class DataFileConfigurationBuilderBase<
     TBuilder extends DataFileConfigurationBuilderBase<TBuilder, TConfig>,
     TConfig extends DataFileConfiguration> {
 
+    /**
+     * This builder as its own type, returned by the fluent setters so that a
+     * chain of calls keeps the type of the builder in use.
+     * @return this builder
+     */
+    protected abstract TBuilder self();
+
+
     private String identifier;
     private String dataUpdateUrlOverride = null;
     private Boolean autoUpdateEnabled = null;
@@ -75,10 +83,9 @@ public abstract class DataFileConfigurationBuilderBase<
      * @return this builder instance
      */
     @DefaultValue("Default")
-    @SuppressWarnings("unchecked")
     public TBuilder setDataFileIdentifier(String identifier) {
         this.identifier = identifier;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -88,10 +95,9 @@ public abstract class DataFileConfigurationBuilderBase<
      * @return this builder instance.
      */
     @DefaultValue("51Degrees default, set by the engine's builder")
-    @SuppressWarnings("unchecked")
     public TBuilder setDataUpdateUrl(String url) {
         dataUpdateUrlOverride = url;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -101,10 +107,9 @@ public abstract class DataFileConfigurationBuilderBase<
      * @return  this builder instance
      */
     @DefaultValue("51Degrees default, set by the engine's builder")
-    @SuppressWarnings("unchecked")
     public TBuilder setDataUpdateUrlFormatter( DataUpdateUrlFormatter formatter) {
         dataUpdateUrlFormatter = formatter;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -117,10 +122,9 @@ public abstract class DataFileConfigurationBuilderBase<
      * @return this builder instance
      */
     @DefaultValue(booleanValue = Constants.DEFAULT_VERIFY_MD5)
-    @SuppressWarnings("unchecked")
     public TBuilder setDataUpdateVerifyMd5(boolean verify) {
         dataUpdateVerifyMd5 = verify;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -131,10 +135,9 @@ public abstract class DataFileConfigurationBuilderBase<
      * @return this builder instance
      */
     @DefaultValue(booleanValue = Constants.DEFAULT_DECOMPRESS)
-    @SuppressWarnings("unchecked")
     public TBuilder setDataUpdateDecompress(boolean decompress) {
         dataUpdateDecompress = decompress;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -146,10 +149,9 @@ public abstract class DataFileConfigurationBuilderBase<
      * @return this builder instance
      */
     @DefaultValue(booleanValue = Constants.DEFAULT_AUTOUPDATE_ENABLED)
-    @SuppressWarnings("unchecked")
     public TBuilder setAutoUpdate(boolean enabled) {
         autoUpdateEnabled = enabled;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -165,10 +167,9 @@ public abstract class DataFileConfigurationBuilderBase<
      * @return this builder instance
      */
     @DefaultValue(booleanValue = Constants.DEFAULT_WATCHER_ENABLED)
-    @SuppressWarnings("unchecked")
     public TBuilder setDataFileSystemWatcher(boolean enabled) {
         dataFileSystemWatcherEnabled = enabled;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -186,10 +187,9 @@ public abstract class DataFileConfigurationBuilderBase<
      * @return this builder instance
      */
     @DefaultValue(intValue = Constants.DATA_UPDATE_POLLING_DEFAULT)
-    @SuppressWarnings("unchecked")
     public TBuilder setUpdatePollingInterval(int pollingIntervalSeconds) {
         updatePollingIntervalSeconds = pollingIntervalSeconds;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -206,13 +206,12 @@ public abstract class DataFileConfigurationBuilderBase<
      * @return this builder instance
      */
     @DefaultValue(intValue = Constants.DATA_UPDATE_POLLING_DEFAULT * 1000)
-    @SuppressWarnings("unchecked")
     public TBuilder setUpdatePollingInterval(long pollingIntervalMillis) {
         if (pollingIntervalMillis / 1000 > Integer.MAX_VALUE) {
             throw new IllegalArgumentException("Polling interval timespan too large.");
         }
         updatePollingIntervalSeconds = (int)pollingIntervalMillis / 1000;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -225,14 +224,13 @@ public abstract class DataFileConfigurationBuilderBase<
      * @return this builder instance
      */
     @DefaultValue(intValue = Constants.DATA_UPDATE_RANDOMISATION_DEFAULT * 1000)
-    @SuppressWarnings("unchecked")
     public TBuilder setUpdateRandomisationMax(long maximumDeviationMillis){
         if (maximumDeviationMillis / 1000 > Integer.MAX_VALUE) {
             throw new IllegalArgumentException(
                 "Update randomisation timespan too large.");
         }
         updateMaxRandomisationSeconds = (int)maximumDeviationMillis / 1000;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -242,10 +240,9 @@ public abstract class DataFileConfigurationBuilderBase<
      * @return this builder instance
      */
     @DefaultValue(booleanValue = Constants.DEFAULT_VERIFY_IF_MODIFIED_SINCE)
-    @SuppressWarnings("unchecked")
     public TBuilder setVerifyIfModifiedSince(boolean enabled) {
         dataUpdateVerifyModifiedSince = enabled;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -256,7 +253,6 @@ public abstract class DataFileConfigurationBuilderBase<
      * @return this builder
      * */
     @DefaultValue("No license keys")
-    @SuppressWarnings("unchecked")
     public TBuilder setDataUpdateLicenseKey(String key) {
         if (key == null) {
             // Clear any configured license keys and disable
@@ -268,7 +264,7 @@ public abstract class DataFileConfigurationBuilderBase<
         else {
             licenseKeys.add(key);
         }
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -281,10 +277,9 @@ public abstract class DataFileConfigurationBuilderBase<
      * @return this builder
      */
     @DefaultValue(booleanValue = Constants.DEFAULT_UPDATE_ON_STARTUP)
-    @SuppressWarnings("unchecked")
     public TBuilder setUpdateOnStartup(boolean enabled) {
         updateOnStartup = enabled;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -293,10 +288,9 @@ public abstract class DataFileConfigurationBuilderBase<
      * @return this builder
      * */
     @DefaultValue("No license keys")
-    @SuppressWarnings("unchecked")
     public TBuilder setDataUpdateLicenseKeys(String[] keys) {
         Collections.addAll(licenseKeys, keys);
-        return (TBuilder)this;
+        return self();
     }
 
     /**

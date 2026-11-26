@@ -39,7 +39,11 @@ public class PipelineBuilderBaseTests {
 	// functionalities in PipelineBuilderBase
 	private static class TestPipelineBuilder extends 
 		PipelineBuilderBase<TestPipelineBuilder> {
-		
+
+		@Override
+		protected TestPipelineBuilder self() {
+			return this;
+		}
 	}
 	
 	@Test

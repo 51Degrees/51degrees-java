@@ -35,6 +35,13 @@ import java.util.function.Function;
  */
 @Deprecated
 public class KeyUtils {
+
+    /**
+     * Not needed, as every member is static. Kept so that code which made
+     * an instance still builds.
+     */
+    public KeyUtils() {
+    }
     /**
      * Obtain a key from the environment variable of the name given, or
      * from the system property of the same name when that is not set.

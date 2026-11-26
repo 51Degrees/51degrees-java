@@ -32,4 +32,9 @@ import fiftyone.pipeline.core.flowelements.PipelineBuilderBase;
  */
 final class TestPipelineBuilder
     extends PipelineBuilderBase<TestPipelineBuilder> {
+
+    @Override
+    protected TestPipelineBuilder self() {
+        return this;
+    }
 }

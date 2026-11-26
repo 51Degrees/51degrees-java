@@ -449,7 +449,6 @@ public class JavaScriptObjectNameTests {
      * and the evidence, and returns the script. No host or endpoint is set,
      * so the script makes no requests when it runs.
      */
-    @SuppressWarnings("unchecked")
     private String render(JavaScriptBuilderElement element) {
         FlowData flowData = mock(FlowData.class);
 
@@ -460,7 +459,7 @@ public class JavaScriptObjectNameTests {
         Evidence evidenceObj = mock(Evidence.class);
         when(evidenceObj.asKeyMap()).thenReturn(evidence);
         when(flowData.getEvidence()).thenReturn(evidenceObj);
-        when(flowData.tryGetEvidence(anyString(), any(Class.class)))
+        when(flowData.tryGetEvidence(anyString(), any()))
             .thenAnswer(invocation -> {
                 TryGetResult<Object> getResult = new TryGetResult<>();
                 String key = invocation.getArgument(0);
@@ -478,7 +477,7 @@ public class JavaScriptObjectNameTests {
             return result;
         }).when(flowData).getOrAdd(
             anyString(),
-            any(FlowElement.DataFactory.class));
+            any());
 
         try {
             element.process(flowData);

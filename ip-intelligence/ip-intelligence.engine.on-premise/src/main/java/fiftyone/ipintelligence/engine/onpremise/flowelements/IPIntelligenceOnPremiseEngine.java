@@ -53,6 +53,12 @@ import static org.apache.commons.lang3.BooleanUtils.isFalse;
 public class IPIntelligenceOnPremiseEngine
     extends FiftyOneOnPremiseAspectEngineBase<IPIntelligenceDataHash,
     FiftyOneAspectPropertyMetaData> {
+
+    @Override
+    protected Class<IPIntelligenceDataHash> getDataType() {
+        return IPIntelligenceDataHash.class;
+    }
+
     // Volatile, so a thread that processes sees the native engine a
     // refresh on another thread made.
     private volatile EngineIpiSwig engine = null;

@@ -107,7 +107,6 @@ public class FiftyOneLookup {
          *
          * @param variableResolver resolves each variable
          */
-        @SuppressWarnings("this-escape")
         public FiftyOneStringSubstitutor(StringLookup variableResolver) {
             super(variableResolver);
             setEnableSubstitutionInVariables(true);

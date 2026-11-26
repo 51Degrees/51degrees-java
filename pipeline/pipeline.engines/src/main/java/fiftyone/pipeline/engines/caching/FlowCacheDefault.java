@@ -32,12 +32,11 @@ import fiftyone.pipeline.engines.configuration.CacheConfiguration;
  * {@link DataKeyedCacheBase}.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/caching.md">Specification</a>
  */
-@SuppressWarnings("rawtypes")
 public class FlowCacheDefault
     extends DataKeyedCacheBase<ElementData>
     implements FlowCache {
 
-    private FlowElement flowElement;
+    private FlowElement<?, ?> flowElement;
 
     /**
      * Create a new instance.
@@ -49,12 +48,12 @@ public class FlowCacheDefault
     }
 
     @Override
-    public FlowElement getFlowElement() {
+    public FlowElement<?, ?> getFlowElement() {
         return flowElement;
     }
 
     @Override
-    public void setFlowElement(FlowElement flowElement) {
+    public void setFlowElement(FlowElement<?, ?> flowElement) {
         this.flowElement = flowElement;
     }
 

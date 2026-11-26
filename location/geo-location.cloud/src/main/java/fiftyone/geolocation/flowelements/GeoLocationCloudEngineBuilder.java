@@ -43,6 +43,11 @@ public class GeoLocationCloudEngineBuilder extends CloudAspectEngineBuilderBase<
     GeoLocationCloudEngineBuilder,
     GeoLocationCloudEngine> {
 
+    @Override
+    protected GeoLocationCloudEngineBuilder self() {
+        return this;
+    }
+
     private CloudRequestEngine requestEngine;
     private Enums.GeoLocationProvider provider;
 

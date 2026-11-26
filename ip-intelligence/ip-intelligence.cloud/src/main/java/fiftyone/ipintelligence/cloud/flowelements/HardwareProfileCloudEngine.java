@@ -41,6 +41,11 @@ import org.slf4j.Logger;
 public class HardwareProfileCloudEngine
     extends PropertyKeyedCloudEngineBase<MultiIPIDataCloud, IPIntelligenceData> {
 
+    @Override
+    protected Class<MultiIPIDataCloud> getDataType() {
+        return MultiIPIDataCloud.class;
+    }
+
     /**
      * Create a new instance.
      *

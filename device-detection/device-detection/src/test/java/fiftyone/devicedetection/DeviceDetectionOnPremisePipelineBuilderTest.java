@@ -49,7 +49,6 @@ import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
-@SuppressWarnings({"rawtypes", "deprecation"})
 public class DeviceDetectionOnPremisePipelineBuilderTest {
 
     private static final String HASH_DATA_FILE_NAME = TestFileUtils.getHashFileName();
@@ -122,7 +121,7 @@ public class DeviceDetectionOnPremisePipelineBuilderTest {
     public void setEngineData_PropertyPropagatedToDataFileConfiguration() throws Exception {
         byte[] data = Files.readAllBytes(datafile.toPath());
         try (Pipeline pipeline = new DeviceDetectionPipelineBuilder(loggerFactory)
-                .useOnPremise(new byte[]{}, Enums.DeviceDetectionAlgorithm.Hash)
+                .useOnPremise(new byte[]{})
                 .setEngineData(data)
                 .setAutoUpdate(false)
                 .setShareUsage(false)
@@ -150,7 +149,7 @@ public class DeviceDetectionOnPremisePipelineBuilderTest {
                 .setAutoUpdate(false)
                 .setShareUsage(false)
                 .build()) {
-            List<FlowElement> flowElements = pipeline.getFlowElements();
+            List<FlowElement<?, ?>> flowElements = pipeline.getFlowElements();
             assertEquals(1, flowElements.size());
             assertFalse(flowElements.get(0) instanceof ShareUsageElement);
         }
@@ -163,7 +162,7 @@ public class DeviceDetectionOnPremisePipelineBuilderTest {
                 .setAutoUpdate(false)
                 .setShareUsage(true)
                 .build()) {
-            List<FlowElement> flowElements = pipeline.getFlowElements();
+            List<FlowElement<?, ?>> flowElements = pipeline.getFlowElements();
             assertEquals(2, flowElements.size());
             // Usage sharing is the last Flow Element.
             assertTrue(flowElements.get(flowElements.size() - 1)
@@ -184,7 +183,7 @@ public class DeviceDetectionOnPremisePipelineBuilderTest {
                 .setShareUsage(true)
                 .addFlowElement(new SequenceElementBuilder(loggerFactory).build())
                 .build()) {
-            List<FlowElement> flowElements = pipeline.getFlowElements();
+            List<FlowElement<?, ?>> flowElements = pipeline.getFlowElements();
             assertEquals(3, flowElements.size());
             assertTrue(flowElements.toString(),
                 flowElements.get(flowElements.size() - 1)

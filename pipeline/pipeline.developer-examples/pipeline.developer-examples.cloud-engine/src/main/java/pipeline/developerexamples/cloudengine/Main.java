@@ -24,6 +24,7 @@ package pipeline.developerexamples.cloudengine;
 
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngineBuilder;
+import fiftyone.pipeline.cloudrequestengine.flowelements.Constants;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
@@ -142,15 +143,28 @@ public class Main {
          * @throws Exception if the example fails
          */
         public void run() throws Exception {
+            run(httpClient, Constants.DEFAULT_TIMEOUT_MILLIS / 1000);
+        }
+
+        /**
+         * Runs the example with the given HTTP client and the given time
+         * allowed for each request to the cloud service.
+         * @param client sends the requests to the cloud service
+         * @param timeoutSeconds seconds allowed for each request
+         * @throws Exception if the example fails
+         */
+        public void run(HttpClient client, int timeoutSeconds)
+            throws Exception {
 //! [usage]
             // The endpoint comes from _51DEGREES_CLOUD_ENDPOINT when it is
             // set, so the example can be pointed at an on premise web
             // server or a privately hosted version of the 51Degrees cloud,
             // and otherwise at the star sign service it was written for.
             CloudRequestEngine cloudRequestEngine =
-                new CloudRequestEngineBuilder(loggerFactory, httpClient)
+                new CloudRequestEngineBuilder(loggerFactory, client)
                     .setEndpoint(endpoint())
                     .setResourceKey(resourceKey())
+                    .setTimeOutSeconds(timeoutSeconds)
                     .build();
 
             SimpleCloudEngine ageElement =
@@ -224,7 +238,18 @@ public class Main {
      * @throws Exception if the example fails
      */
     public static void main(String[] args) throws Exception {
-        new Example().run();
+        run(httpClient, Constants.DEFAULT_TIMEOUT_MILLIS / 1000);
+    }
+
+    /**
+     * Runs the example as main does, with the given HTTP client and the
+     * given time allowed for each request to the cloud service.
+     * @param client sends the requests to the cloud service
+     * @param timeoutSeconds seconds allowed for each request
+     * @throws Exception if the example fails
+     */
+    static void run(HttpClient client, int timeoutSeconds) throws Exception {
+        new Example().run(client, timeoutSeconds);
         writeFindOutMore(System.out);
     }
 }

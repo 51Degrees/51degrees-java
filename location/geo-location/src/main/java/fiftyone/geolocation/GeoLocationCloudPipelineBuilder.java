@@ -39,6 +39,12 @@ import org.slf4j.ILoggerFactory;
 /** Builds a Pipeline that finds locations with the cloud service. */
 public class GeoLocationCloudPipelineBuilder
     extends CloudPipelineBuilderBase<GeoLocationCloudPipelineBuilder> {
+
+    @Override
+    protected GeoLocationCloudPipelineBuilder self() {
+        return this;
+    }
+
     private final HttpClient httpClient;
     private final Enums.GeoLocationProvider geoLocationProvider;
 

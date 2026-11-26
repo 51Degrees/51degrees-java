@@ -67,6 +67,11 @@ public class FinishedFlowDataTests {
      */
     private static class Writer
         extends FlowElementBase<TestElementData, ElementPropertyMetaData> {
+
+        @Override
+        protected Class<TestElementData> getDataType() {
+            return TestElementData.class;
+        }
         private final boolean fail;
 
         Writer(boolean fail) {

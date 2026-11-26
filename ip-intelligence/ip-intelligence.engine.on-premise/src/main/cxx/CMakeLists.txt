@@ -97,9 +97,20 @@ if (NOT MSVC)
 endif()
 
 if (MSVC)
-	target_compile_options(fiftyone-ip-intelligence-java PRIVATE "/D_CRT_SECURE_NO_WARNINGS" "/W4" "/WX")
+	target_compile_options(fiftyone-ip-intelligence-java PRIVATE "/D_CRT_SECURE_NO_WARNINGS" "/W4")
 else()
-	target_compile_options(fiftyone-ip-intelligence-java PRIVATE ${COMPILE_OPTION_DEBUG} "-Werror")
+	target_compile_options(fiftyone-ip-intelligence-java PRIVATE ${COMPILE_OPTION_DEBUG})
+endif()
+
+# Warnings fail the build only when the build is ours: CI sets
+# _51DEGREES_WARNINGS_AS_ERRORS to true. Anyone else building from source
+# sees the warnings, but a newer compiler cannot stop the build.
+if ("$ENV{_51DEGREES_WARNINGS_AS_ERRORS}" STREQUAL "true")
+	if (MSVC)
+		target_compile_options(fiftyone-ip-intelligence-java PRIVATE "/WX")
+	else()
+		target_compile_options(fiftyone-ip-intelligence-java PRIVATE "-Werror")
+	endif()
 endif()
 
 # The wrapper includes through cxx/, so the folder that holds it is on the path.

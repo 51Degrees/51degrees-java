@@ -43,6 +43,11 @@ public class IPIntelligenceCloudEngineBuilder
             IPIntelligenceCloudEngineBuilder,
             IPIntelligenceCloudEngine> {
 
+    @Override
+    protected IPIntelligenceCloudEngineBuilder self() {
+        return this;
+    }
+
     /**
      * Construct a new instance using the {@link ILoggerFactory} supplied.
      * @param loggerFactory the logger factory to use

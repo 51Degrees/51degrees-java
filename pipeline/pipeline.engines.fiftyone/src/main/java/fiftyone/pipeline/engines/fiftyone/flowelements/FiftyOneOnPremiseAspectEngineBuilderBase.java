@@ -24,13 +24,14 @@ package fiftyone.pipeline.engines.fiftyone.flowelements;
 
 import fiftyone.pipeline.engines.configuration.DataFileConfiguration;
 import fiftyone.pipeline.engines.data.AspectEngineDataFile;
-import fiftyone.pipeline.engines.fiftyone.data.FiftyOneDataFile;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneDataFileDefault;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneUrlFormatter;
 import fiftyone.pipeline.engines.flowelements.SingleFileAspectEngineBuilderBase;
 import fiftyone.pipeline.engines.services.DataUpdateService;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
+
+import java.util.function.Function;
 
 /**
  * Abstract base class that exposes the common options that all 51Degrees
@@ -39,10 +40,9 @@ import org.slf4j.LoggerFactory;
  *                  the fluent builder methods
  * @param <TEngine> the type of the engine that this builder will build
  */
-@SuppressWarnings("rawtypes")
 public abstract class FiftyOneOnPremiseAspectEngineBuilderBase<
     TBuilder extends FiftyOneOnPremiseAspectEngineBuilderBase<TBuilder, TEngine>,
-    TEngine extends FiftyOneAspectEngine> extends
+    TEngine extends FiftyOneAspectEngine<?, ?>> extends
     SingleFileAspectEngineBuilderBase<TBuilder, TEngine> {
 
     /** The default address new data files are downloaded from. */
@@ -73,7 +73,6 @@ public abstract class FiftyOneOnPremiseAspectEngineBuilderBase<
      * @param dataUpdateService the {@link DataUpdateService} to use when
      *                          automatic updates happen on the data file
      */
-    @SuppressWarnings("this-escape")
     public FiftyOneOnPremiseAspectEngineBuilderBase(
         ILoggerFactory loggerFactory,
         DataUpdateService dataUpdateService) {
@@ -100,9 +99,23 @@ public abstract class FiftyOneOnPremiseAspectEngineBuilderBase<
      */
     @Override
     protected AspectEngineDataFile newAspectEngineDataFile() {
-        FiftyOneDataFile dataFile = new FiftyOneDataFileDefault();
+        FiftyOneDataFileDefault dataFile = new FiftyOneDataFileDefault();
         dataFile.setDataUpdateDownloadType(dataDownloadType != null ? dataDownloadType : getDefaultDataDownloadType());
+        dataFile.setProductReader(getProductReader());
         return dataFile; 
+    }
+
+    /**
+     * The function that reads the product of a data file from its header
+     * without loading it, given the path of the file. The data file uses it
+     * to find the product to ask the data update service for until the
+     * engine has loaded the file, as the update on start-up needs. Engines
+     * whose native library can read the header override this.
+     * @return the function, or null if the product cannot be read from the
+     * file
+     */
+    protected Function<String, String> getProductReader() {
+        return null;
     }
 
     /**
@@ -132,9 +145,8 @@ public abstract class FiftyOneOnPremiseAspectEngineBuilderBase<
      * @param typeName The download type to use. For example 'HashV4'.
      * @return This builder.
      */
-    @SuppressWarnings("unchecked")
     protected TBuilder setDefaultDataDownloadType(String typeName){
         dataDownloadType = typeName;
-        return (TBuilder)this;
+        return self();
     }
 }

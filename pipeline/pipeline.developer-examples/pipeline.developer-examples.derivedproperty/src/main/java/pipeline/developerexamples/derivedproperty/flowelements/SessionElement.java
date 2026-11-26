@@ -54,6 +54,11 @@ import java.util.List;
 public final class SessionElement
     extends FlowElementBase<ElementData, ElementPropertyMetaData> {
 
+    @Override
+    protected Class<ElementData> getDataType() {
+        return ElementData.class;
+    }
+
     /**
      * The Element Data key, being the part of session.PagesViewed before
      * the dot.

@@ -101,7 +101,6 @@ public class ValueTests {
         }
     }
 
-    @SuppressWarnings("unchecked")
     public static void valueTypes(Wrapper wrapper) throws Exception {
         try (FlowData data = wrapper.getPipeline().createFlowData()) {
             data.addEvidence("header.user-agent",
@@ -109,7 +108,7 @@ public class ValueTests {
                 .process();
             ElementData elementData = data.get(wrapper.getEngine().getElementDataKey());
             for (FiftyOneAspectPropertyMetaData property :
-                (List<FiftyOneAspectPropertyMetaData>) wrapper.getEngine().getProperties()) {
+                wrapper.getEngine().getProperties()) {
                 // Skip properties that don't have values for all device types (e.g., hardware properties for desktop UA)
                 if (property.isAvailable() &&
                     !Arrays.asList(Constants.PropertiesWithoutValuesForAllDeviceTypes).contains(property.getName())) {
@@ -144,14 +143,13 @@ public class ValueTests {
         }
     }
 
-    @SuppressWarnings("unchecked")
     public static void availableProperties(Wrapper wrapper) throws Exception {
         try (FlowData data = wrapper.getPipeline().createFlowData()) {
             data.addEvidence("header.user-agent", Constants.MobileUserAgent)
                 .process();
             ElementData elementData = data.get(wrapper.getEngine().getElementDataKey());
             for (FiftyOneAspectPropertyMetaData property :
-                (List<FiftyOneAspectPropertyMetaData>) wrapper.getEngine().getProperties()) {
+                wrapper.getEngine().getProperties()) {
                 Map<String, Object> map = elementData.asKeyMap();
 
                 assertEquals("Property '" + property.getName() + "' " +
@@ -162,7 +160,6 @@ public class ValueTests {
         }
     }
 
-    @SuppressWarnings("unchecked")
     public static void typedGetters(Wrapper wrapper) throws Exception {
         try (FlowData data = wrapper.getPipeline().createFlowData()) {
             data.addEvidence("header.user-agent", Constants.MobileUserAgent)
@@ -170,7 +167,7 @@ public class ValueTests {
             ElementData elementData = data.get(wrapper.getEngine().getElementDataKey());
             List<String> missingGetters = new ArrayList<>();
             for (FiftyOneAspectPropertyMetaData property :
-                (List<FiftyOneAspectPropertyMetaData>) wrapper.getEngine().getProperties()) {
+                wrapper.getEngine().getProperties()) {
 
                 if (Arrays.asList(Constants.ExcludedProperties)
                     .contains(property.getName()) == false) {

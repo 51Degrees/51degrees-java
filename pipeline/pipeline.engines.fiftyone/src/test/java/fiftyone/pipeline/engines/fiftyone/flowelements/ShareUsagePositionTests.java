@@ -47,7 +47,6 @@ import static org.mockito.Mockito.mock;
  * group, is refused when it is built, in code or from a configuration.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/pipeline-elements/usage-sharing-element.md#position-in-the-pipeline">Specification</a>
  */
-@SuppressWarnings("rawtypes")
 public class ShareUsagePositionTests {
 
     private static final String MUST_BE_LAST =
@@ -80,7 +79,7 @@ public class ShareUsagePositionTests {
     }
 
     private static void assertLast(Pipeline pipeline) {
-        List<FlowElement> elements = pipeline.getFlowElements();
+        List<FlowElement<?, ?>> elements = pipeline.getFlowElements();
         assertTrue(
             elements.get(elements.size() - 1) instanceof ShareUsageElement,
             "Usage sharing is not the last Flow Element.");
@@ -109,7 +108,7 @@ public class ShareUsagePositionTests {
         try {
             assertRefused(() -> new PipelineBuilder(loggerFactory)
                 .addFlowElementsParallel(
-                    new FlowElement[]{engine, shareUsage})
+                    new FlowElement<?, ?>[]{engine, shareUsage})
                 .build()
                 .close());
         } finally {

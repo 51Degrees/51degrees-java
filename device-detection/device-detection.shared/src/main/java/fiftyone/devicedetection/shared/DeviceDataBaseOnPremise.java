@@ -201,7 +201,6 @@ public abstract class DeviceDataBaseOnPremise extends DeviceDataBase
      * @param propertyName name of the property
      * @return value type, or {@link Object} if unknown
      */
-    @SuppressWarnings("unchecked")
     protected Class<?> getPropertyType(String propertyName) {
         Class<?> type = Object.class;
         Map<String, ElementPropertyMetaData> properties =
@@ -210,13 +209,12 @@ public abstract class DeviceDataBaseOnPremise extends DeviceDataBase
         if (properties != null) {
             ElementPropertyMetaData property = properties.get(propertyName);
             if (property != null) {
-                type = (Class<Object>)property.getType();
+                type = property.getType();
             }
         }
         return type;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     protected <T> TryGetResult<T> tryGetValue(
         String key,
@@ -233,13 +231,14 @@ public abstract class DeviceDataBaseOnPremise extends DeviceDataBase
             // then we don't want to retrieve values for all
             // properties so just get the one we want.
             if (propertyIsAvailable(key)) {
+                Class<?> valueType = type;
                 if (type.equals(Object.class)) {
-                    type = (Class<T>)AspectPropertyValue.class;
+                    valueType = AspectPropertyValue.class;
                     parameterisedTypes = new Class<?>[]{ getPropertyType(key) };
                 }
                 synchronized (getLock) {
                     Object obj = null;
-                    if (type.equals(AspectPropertyValue.class)){
+                    if (valueType.equals(AspectPropertyValue.class)){
                         if (parameterisedTypes.length > 0) {
                             Class<?> innerType = parameterisedTypes[0];
                             if (innerType.equals(String.class)) {
@@ -263,13 +262,9 @@ public abstract class DeviceDataBaseOnPremise extends DeviceDataBase
                         }
                     }
                     try {
-                        T value;
-                        if (type.isPrimitive()) {
-                            value = (T) primitiveTypes.get(type).cast(obj);
-                        } else {
-                            value = type.cast(obj);
-                        }
-                        result.setValue(value);
+                        // A primitive type's cast accepts only null, as
+                        // the value is always an AspectPropertyValue.
+                        result.setValue(type.cast(obj));
                     } catch (ClassCastException e) {
                         throw new ClassCastException(
                             "Expected property '" + key + "' to be of " +

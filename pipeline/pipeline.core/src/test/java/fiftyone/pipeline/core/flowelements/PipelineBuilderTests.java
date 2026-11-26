@@ -49,11 +49,10 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 
-@SuppressWarnings("rawtypes")
 public class PipelineBuilderTests {
     private PipelineBuilder builder;
 
-    private FlowElement element = mock(FlowElement.class);
+    private FlowElement<?, ?> element = mock(FlowElement.class);
 
     private TestLoggerFactory loggerFactory;
 
@@ -85,8 +84,8 @@ public class PipelineBuilderTests {
     @Test(expected = IllegalStateException.class)
     public void PipelineBuilder_AddFlowElementsParallel_Disposed() {
         when(element.isClosed()).thenReturn(true);
-        FlowElement element2 = mock(FlowElement.class);
-        builder.addFlowElementsParallel(new FlowElement[]{element2, element});
+        FlowElement<?, ?> element2 = mock(FlowElement.class);
+        builder.addFlowElementsParallel(new FlowElement<?, ?>[]{element2, element});
     }
 
     @Test(expected = IllegalArgumentException.class)

@@ -57,10 +57,15 @@ repositories used to do for one package tree each.
   [examples-fresh-clone.yml](../.github/workflows/examples-fresh-clone.yml).
   It fails unless the example exits with 0 and prints results, and unless it
   downloads its free data file exactly when the job expects it to. That
-  workflow's Ubuntu job downloads each product's free data file once a run,
-  as a test of the download, and its other jobs take the file from the cache
-  the Ubuntu job saves. To run it by hand, build the console examples as
-  [AGENTS.md](../AGENTS.md#build) says, then from the repository root give
+  workflow's Ubuntu job has each example download its free data file once a
+  run, as a test of the download. Given `-LinkFile` and `-ServeFile`, the
+  script serves the file common-ci's fetch-assets step fetched from a
+  stand-in on the runner, and points the data file's link at the stand-in
+  while the example runs, so the example downloads nothing from the
+  Distributor. The link is put back afterwards. The other jobs take the file
+  from the cache the Ubuntu job saves. To run it by hand, build the console
+  examples as [AGENTS.md](../AGENTS.md#build) says, then from the repository
+  root give
   `-ExpectDownload` when the free data file is only a link, and leave it out
   when the file is there.
 
@@ -128,8 +133,9 @@ To run the on-premise tests:
 
 - `_51DEGREES_LICENSE_KEY`: [license key](https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=ci-readme.md&utm_term=secrets)
   for the data files. common-ci downloads the Device Detection TAC and the IP
-  Intelligence Enterprise data files from the Distributor with it, and the
-  data file update example uses it.
+  Intelligence Enterprise data files from the Distributor with it. The data
+  file update example tests do not use it: they give the example a made-up
+  key and a stand-in for the Distributor on the runner.
 
 To run the cloud tests, the resource keys and the license keys are
 organization secrets:
@@ -168,6 +174,16 @@ two names that only CI uses and so have no `_51DEGREES_` prefix:
   runs the live test of the Bespoke key with it, expecting `Passive`.
 
 A cloud test with no key is skipped, naming the variable it reads.
+
+Live cloud tests run once for each operating system. The Intel macOS
+entries in [options.json](options.json) set `LiveCloudTests` to false, as
+the arm64 entries run them for macOS. On those entries
+[setup-environment.ps1](setup-environment.ps1) removes every
+`_51DEGREES_RESOURCE_KEY` name, the license key of the same account and
+`RESOURCE_KEY_BESPOKE_STAGING`, so the tests that read a key skip. It also
+sets `LIVE_CLOUD_TESTS`, a name only CI uses, to false, and the tests that
+call the cloud with a fixed key skip when it is. Every other test still runs
+there.
 
 To publish to Maven Central (51Degrees only), these organization secrets,
 which only CI uses and so have no `_51DEGREES_` prefix. common-ci reads them

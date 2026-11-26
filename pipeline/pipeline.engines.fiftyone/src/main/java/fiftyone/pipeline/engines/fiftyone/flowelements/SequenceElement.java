@@ -47,6 +47,11 @@ import org.slf4j.Logger;
 public class SequenceElement 
     extends FlowElementBase<ElementData, ElementPropertyMetaData> {
 
+    @Override
+    protected Class<ElementData> getDataType() {
+        return ElementData.class;
+    }
+
     private static final Pattern DIGITS = Pattern.compile("[0-9]+");
 
     private final List<ElementPropertyMetaData> properties;
@@ -67,7 +72,6 @@ public class SequenceElement
      * Construct a new instance of the {@link FlowElement}.
      * @param logger logger instance to use for logging
      */
-    @SuppressWarnings("this-escape")
     public SequenceElement(final Logger logger) {
         super(logger, new ElementDataFactory<ElementData>() {
             @Override

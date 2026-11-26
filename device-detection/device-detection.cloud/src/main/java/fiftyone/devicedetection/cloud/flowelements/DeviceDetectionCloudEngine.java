@@ -64,6 +64,12 @@ import org.json.JSONArray;
  */
 public class DeviceDetectionCloudEngine
     extends CloudAspectEngineBase<DeviceDataCloud> {
+
+    @Override
+    protected Class<DeviceDataCloud> getDataType() {
+        return DeviceDataCloud.class;
+    }
+
     /**
      * The type of value each typed accessor of the device data gives, keyed
      * by the property name in lower case, so that a value the metadata does

@@ -41,6 +41,11 @@ import java.util.*;
 //! [constructor]
 public class SimpleClientSideElement extends FlowElementBase<StarSignData, ElementPropertyMetaData> {
 
+    @Override
+    protected Class<StarSignData> getDataType() {
+        return StarSignData.class;
+    }
+
     /**
      * Create a new instance.
      *

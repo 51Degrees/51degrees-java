@@ -63,6 +63,12 @@ import static fiftyone.pipeline.core.Constants.EVIDENCE_SEPERATOR;
 public class JsonBuilderElement
     extends FlowElementBase<JsonBuilderData, ElementPropertyMetaData>
     implements JsonBuilder {
+
+    @Override
+    protected Class<JsonBuilderData> getDataType() {
+        return JsonBuilderData.class;
+    }
+
     private static final String JAVASCRIPT_PROPERTIES_NAME = "javascriptProperties";
     private static final String RAW_WEIGHTING_KEY = "rawweighting";
     private static final String VALUE_KEY = "value";
@@ -76,7 +82,6 @@ public class JsonBuilderElement
      * @param logger The logger.
      * @param elementDataFactory The element data factory.
      */
-    @SuppressWarnings("this-escape")
     public JsonBuilderElement(
             Logger logger,
             ElementDataFactory<JsonBuilderData> elementDataFactory) {
@@ -316,8 +321,7 @@ public class JsonBuilderElement
                 if (propertyValue instanceof List &&
                     ((List<?>) propertyValue).size() > 0 &&
                     ElementData.class.isAssignableFrom(((List<?>) propertyValue).get(0).getClass())) {
-                    @SuppressWarnings("unchecked")
-                    List<Object> elementDatas = (List<Object>) propertyValue;
+                    List<?> elementDatas = (List<?>) propertyValue;
                     List<Object> results = new ArrayList<>();
                     for (Object elementData : elementDatas) {
                         results.add(getValues(
@@ -474,16 +478,15 @@ public class JsonBuilderElement
         for (Map.Entry<String, Object> entry : allProperties.entrySet()) {
             if (entry.getValue() instanceof Map) {
                 JSONObject element = new JSONObject();
-                @SuppressWarnings("unchecked")
-                Map<String, Object> properties = (Map<String, Object>)entry.getValue();
+                Map<?, ?> properties = (Map<?, ?>)entry.getValue();
 
-                for (Map.Entry<String, Object> ent : properties.entrySet()) {
+                for (Map.Entry<?, ?> ent : properties.entrySet()) {
                     Object value = ent.getValue();
                     
                     if(value instanceof JavaScript)
                         value = value.toString();
 
-                    element.put(resolveName(ent.getKey()), toJsonValue(value));
+                    element.put(resolveName((String) ent.getKey()), toJsonValue(value));
                 }
                 json.put(resolveName(entry.getKey()), element);
             } else {

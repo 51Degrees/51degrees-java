@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.engines.flowelements;
 
+import org.mockito.ArgumentMatchers;
 import fiftyone.common.testhelpers.TestLogger;
 import fiftyone.common.testhelpers.TestLoggerFactory;
 import fiftyone.pipeline.core.data.FlowData;
@@ -52,7 +53,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
-@SuppressWarnings("unchecked")
 public class AspectEngineLazyLoadTests {
     private EmptyEngine engine;
 
@@ -113,8 +113,8 @@ public class AspectEngineLazyLoadTests {
                 return engineData[0];
             }
         }).when(mockData).getOrAdd(
-            any(TypedKey.class),
-            any(FlowElement.DataFactory.class));
+            ArgumentMatchers.<TypedKey<EmptyEngineData>>any(),
+            any());
 
         // Process the data.
         engine.process(mockData);
@@ -151,8 +151,8 @@ public class AspectEngineLazyLoadTests {
                 return engineData[0];
             }
         }).when(mockData).getOrAdd(
-            any(TypedKey.class),
-            any(FlowElement.DataFactory.class));
+            ArgumentMatchers.<TypedKey<EmptyEngineData>>any(),
+            any());
 
         // Process the data
         engine.process(mockData);
@@ -185,8 +185,8 @@ public class AspectEngineLazyLoadTests {
                 return engineData[0];
             }
         }).when(mockData).getOrAdd(
-            any(TypedKey.class),
-            any(FlowElement.DataFactory.class));
+            ArgumentMatchers.<TypedKey<EmptyEngineData>>any(),
+            any());
 
         // Process the data
         engine.process(mockData);
@@ -221,8 +221,8 @@ public class AspectEngineLazyLoadTests {
                 return engineData[0];
             }
         }).when(mockData).getOrAdd(
-            any(TypedKey.class),
-            any(FlowElement.DataFactory.class));
+            ArgumentMatchers.<TypedKey<EmptyEngineData>>any(),
+            any());
 
         // Process the data. Lazy loading has no effect, so the Engine's
         // exception comes from process.
@@ -272,8 +272,8 @@ public class AspectEngineLazyLoadTests {
                 return engineData[0];
             }
         }).when(mockData).getOrAdd(
-            any(TypedKey.class),
-            any(FlowElement.DataFactory.class));
+            ArgumentMatchers.<TypedKey<EmptyEngineData>>any(),
+            any());
 
         // Process the data twice. Lazy loading has no effect, so each
         // Engine's exception comes from its own process call.

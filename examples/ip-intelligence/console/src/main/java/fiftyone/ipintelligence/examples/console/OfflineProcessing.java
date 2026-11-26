@@ -140,7 +140,6 @@ public class OfflineProcessing {
      * @param is       an InputStream containing YAML documents - one per IP address
      * @param os       an OutputStream for the processed data
      */
-    @SuppressWarnings("unchecked")
     public static void run(String dataFile, InputStream is, OutputStream os) throws Exception {
 
         String dataFileLocation;
@@ -224,7 +223,7 @@ public class OfflineProcessing {
                         // as a Map<String, String> - add the evidence to the
                         // flowData
                         flowData.addEvidence(
-                                filterEvidence((Map<String, String>) evidenceIterator.next(),
+                                filterEvidence((Map<?, ?>) evidenceIterator.next(),
                                         "server."));
 
                         /*
@@ -300,12 +299,14 @@ public class OfflineProcessing {
      * @param evidence a Map<String, String> of evidence entries
      * @return a filtered Map
      */
-    private static Map<String, String> filterEvidence(Map<String, String> evidence, String prefix) {
+    private static Map<String, String> filterEvidence(Map<?, ?> evidence, String prefix) {
 
         return evidence.entrySet()
                 .stream()
-                .filter(e -> e.getKey().startsWith(prefix))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                .filter(e -> String.valueOf(e.getKey()).startsWith(prefix))
+                .collect(Collectors.toMap(
+                        e -> String.valueOf(e.getKey()),
+                        e -> String.valueOf(e.getValue())));
     }
 
     /**

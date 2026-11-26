@@ -62,6 +62,12 @@ import org.json.JSONArray;
  */
 public class IPIntelligenceCloudEngine
     extends CloudAspectEngineBase<IPIntelligenceDataCloud> {
+
+    @Override
+    protected Class<IPIntelligenceDataCloud> getDataType() {
+        return IPIntelligenceDataCloud.class;
+    }
+
     volatile List<AspectPropertyMetaData> aspectProperties;
     private String dataSourceTier;
     private final Object metadataLock = new Object();

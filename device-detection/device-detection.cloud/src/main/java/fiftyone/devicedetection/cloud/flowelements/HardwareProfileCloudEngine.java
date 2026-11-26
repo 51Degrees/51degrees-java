@@ -40,6 +40,11 @@ import org.slf4j.Logger;
 public class HardwareProfileCloudEngine
     extends PropertyKeyedCloudEngineBase<MultiDeviceDataCloud, DeviceData> {
 
+    @Override
+    protected Class<MultiDeviceDataCloud> getDataType() {
+        return MultiDeviceDataCloud.class;
+    }
+
     /**
      * Create a new instance.
      *

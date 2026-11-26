@@ -52,6 +52,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -74,9 +75,8 @@ public class StoredValueAsStringTests {
     private TestData data;
 
     @Before
-    @SuppressWarnings("unchecked")
     public void init() {
-        AspectEngine<? extends AspectData, ? extends AspectPropertyMetaData>
+        AspectEngine<?, ?>
             engine = mock(AspectEngine.class);
         when(engine.getElementDataKey()).thenReturn("device");
         Map<String, ElementPropertyMetaData> properties =
@@ -93,7 +93,7 @@ public class StoredValueAsStringTests {
         FlowData flowData = mock(FlowData.class);
         when(flowData.getPipeline()).thenReturn(pipeline);
         MissingPropertyService missing = mock(MissingPropertyService.class);
-        when(missing.getMissingPropertyReason(anyString(), any(List.class)))
+        when(missing.getMissingPropertyReason(anyString(), anyList()))
             .thenReturn(new MissingPropertyResult(
                 MissingPropertyReason.DataFileUpgradeRequired,
                 MISSING_DESCRIPTION));

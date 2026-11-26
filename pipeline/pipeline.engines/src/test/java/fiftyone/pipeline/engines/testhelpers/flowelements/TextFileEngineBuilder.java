@@ -42,6 +42,11 @@ public class TextFileEngineBuilder extends SingleFileAspectEngineBuilderBase<
     TextFileEngineBuilder,
     TextFileEngine> {
 
+    @Override
+    protected TextFileEngineBuilder self() {
+        return this;
+    }
+
     public TextFileEngineBuilder(
         ILoggerFactory loggerFactory,
         DataUpdateService dataUpdateService) {

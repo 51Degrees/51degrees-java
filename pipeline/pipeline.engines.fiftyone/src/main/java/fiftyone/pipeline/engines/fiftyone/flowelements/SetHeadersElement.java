@@ -57,6 +57,11 @@ import static fiftyone.pipeline.engines.fiftyone.data.SetHeadersData.*;
  */
 public class SetHeadersElement
 	extends FlowElementBase<SetHeadersData, ElementPropertyMetaData> {
+
+    @Override
+    protected Class<SetHeadersData> getDataType() {
+        return SetHeadersData.class;
+    }
 	/**
 	 * The element data key.
 	 */
@@ -82,7 +87,6 @@ public class SetHeadersElement
 	 * @param logger used for logging
 	 * @param elementDataFactory creates the element data this element returns
 	 */
-	@SuppressWarnings("this-escape")
 	public SetHeadersElement(
 		Logger logger,
 		ElementDataFactory<SetHeadersData> elementDataFactory) {
@@ -126,7 +130,7 @@ public class SetHeadersElement
 		}
 		
 		SetHeadersData elementData = data.getOrAdd(
-			getElementDataKey(),
+			getTypedDataKey(),
 			getDataFactory());
 		
 		HashMap<String, String> responseHeaders =
@@ -164,9 +168,8 @@ public class SetHeadersElement
 	 * @return true if every element of the Pipeline has loaded its
 	 * properties
 	 */
-	@SuppressWarnings("rawtypes")
 	private static boolean allPropertiesLoaded(Pipeline pipeline) {
-		for (FlowElement element : pipeline.getFlowElements()) {
+		for (FlowElement<?, ?> element : pipeline.getFlowElements()) {
 			if (element.hasLoadedProperties() == false) {
 				return false;
 			}

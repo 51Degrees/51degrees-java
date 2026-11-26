@@ -29,6 +29,12 @@ import static fiftyone.pipeline.core.Constants.EVIDENCE_SEPERATOR;
 public class Constants {
 
     /**
+     * Not used, as every member is static.
+     */
+    private Constants() {
+    }
+
+    /**
      * The suffix that is used to identify a TAC in evidence.
      * https://en.wikipedia.org/wiki/Type_Allocation_Code
      */

@@ -46,12 +46,11 @@ public class DataKeyBuilderDefault implements DataKeyBuilder {
 
     @Override
     public DataKey build() {
-        @SuppressWarnings({"unchecked", "rawtypes"})
-        Entry<Integer, Entry<String, Object>> keyArray[] = new Entry[0];
-        keyArray = keys.toArray(keyArray);
-        Arrays.sort(keyArray, new KeyComparator());
-        List<Object> keyList = new ArrayList<>(keyArray.length);
-        for (Entry<Integer, Entry<String, Object>> key : keyArray) {
+        List<Entry<Integer, Entry<String, Object>>> sorted =
+            new ArrayList<>(keys);
+        sorted.sort(new KeyComparator());
+        List<Object> keyList = new ArrayList<>(sorted.size());
+        for (Entry<Integer, Entry<String, Object>> key : sorted) {
             keyList.add(key.getValue().getValue());
         }
         return new DataKey(keyList);

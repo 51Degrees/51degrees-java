@@ -66,6 +66,11 @@ public abstract class ShareUsageBase
     extends FlowElementBase<ElementData, ElementPropertyMetaData>
     implements RunsLast {
 
+    @Override
+    protected Class<ElementData> getDataType() {
+        return ElementData.class;
+    }
+
     /**
      * IP Addresses of local host device.
      */
@@ -714,14 +719,13 @@ public abstract class ShareUsageBase
      * If there are multiple or no pipelines then log an error.
      * @return list of flow elements
      */
-    @SuppressWarnings("rawtypes")
     protected List<String> getFlowElements() {
         if (flowElements == null) {
             Pipeline pipeline;
             if (getPipelines().size() == 1) {
                 pipeline = getPipelines().get(0);
                 List<String> list = new ArrayList<>();
-                for ( FlowElement element : pipeline.getFlowElements()) {
+                for ( FlowElement<?, ?> element : pipeline.getFlowElements()) {
                     list.add(element.getClass().getName());
                 }
                 flowElements = list;
@@ -769,11 +773,10 @@ public abstract class ShareUsageBase
      * @param classes the classes in use
      * @param elements the flow elements to add
      */
-    @SuppressWarnings("rawtypes")
     private static void addElementClasses(
             List<Class<?>> classes,
-            List<FlowElement> elements) {
-        for (FlowElement element : elements) {
+            List<FlowElement<?, ?>> elements) {
+        for (FlowElement<?, ?> element : elements) {
             classes.add(element.getClass());
             if (element instanceof ParallelElements) {
                 addElementClasses(

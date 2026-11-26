@@ -45,6 +45,12 @@ import java.util.List;
  * A cloud engine that reads the star sign from the cloud service's response.
  */
 public class SimpleCloudEngine extends CloudAspectEngineBase<StarSignData> {
+
+    @Override
+    protected Class<StarSignData> getDataType() {
+        return StarSignData.class;
+    }
+
     private List<AspectPropertyMetaData> aspectProperties;
     private String dataSourceTier;
 

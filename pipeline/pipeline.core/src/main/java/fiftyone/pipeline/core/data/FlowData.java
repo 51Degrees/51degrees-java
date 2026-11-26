@@ -108,8 +108,7 @@ public interface FlowData extends AutoCloseable {
      * @param e error which was thrown
      * @param element the {@link FlowElement} which threw the error
      */
-    @SuppressWarnings("rawtypes")
-    void addError(Throwable e, FlowElement element);
+    void addError(Throwable e, FlowElement<?, ?> element);
 
     /**
      * Get an {@link Evidence} collection. Evidence should only be added via the
@@ -293,16 +292,19 @@ public interface FlowData extends AutoCloseable {
 
     /**
      * Get or add the specified element data to the internal map.
-     * @param <T> the type of the data being stored
+     * <p>
+     * As the key has no type, the data is returned as {@link ElementData}.
+     * Use {@link #getOrAdd(TypedKey, FlowElement.DataFactory)} to get the
+     * data as its own type.
      * @param elementDataKey the name of the element to store the data under
      * @param dataFactory the {@link fiftyone.pipeline.core.flowelements.FlowElement.DataFactory}
      *                    to use to create a new data to store if one does not
      *                    already exist
      * @return existing data matching the key, or newly added data
      */
-    <T extends ElementData> T getOrAdd(
+    ElementData getOrAdd(
         String elementDataKey,
-        FlowElement.DataFactory<T> dataFactory);
+        FlowElement.DataFactory<? extends ElementData> dataFactory);
 
     /**
      * Get or add the specified element data to the internal map.

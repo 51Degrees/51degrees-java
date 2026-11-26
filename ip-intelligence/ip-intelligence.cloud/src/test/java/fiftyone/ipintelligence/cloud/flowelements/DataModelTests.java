@@ -28,12 +28,14 @@ import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
 import fiftyone.pipeline.core.data.AccessiblePropertyMetaData.ProductMetaData;
 import fiftyone.pipeline.core.data.AccessiblePropertyMetaData.PropertyMetaData;
+import fiftyone.pipeline.core.data.ElementData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.typed.TypedKey;
 import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.services.MissingPropertyServiceDefault;
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 
@@ -55,7 +57,6 @@ import static org.mockito.Mockito.when;
 public class DataModelTests {
 
     @Test
-    @SuppressWarnings("unchecked")
     public void Engine_PopulatesAspectData() throws Exception {
         Logger logger = mock(Logger.class);
         ILoggerFactory loggerFactory = mock(ILoggerFactory.class);
@@ -89,7 +90,7 @@ public class DataModelTests {
                 flowData,
                 engine,
                 MissingPropertyServiceDefault.getInstance());
-            when(flowData.getOrAdd(any(TypedKey.class), any()))
+            when(flowData.getOrAdd(ArgumentMatchers.<TypedKey<ElementData>>any(), any()))
                 .thenReturn(data);
             engine.process(flowData);
 

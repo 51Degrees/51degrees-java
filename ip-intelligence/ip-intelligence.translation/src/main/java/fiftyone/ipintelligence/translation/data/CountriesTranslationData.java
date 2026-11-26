@@ -46,52 +46,38 @@ public class CountriesTranslationData
         super(logger, flowData);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public AspectPropertyValue<List<IWeightedValue<String>>>
         getCountryNamesGeographicalTranslated() {
-        return getAs("CountryNamesGeographicalTranslated",
-            AspectPropertyValue.class, List.class, IWeightedValue.class,
-            String.class);
+        return getWeightedList("CountryNamesGeographicalTranslated", String.class);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public AspectPropertyValue<List<IWeightedValue<String>>>
         getCountryNamesPopulationTranslated() {
-        return getAs("CountryNamesPopulationTranslated",
-            AspectPropertyValue.class, List.class, IWeightedValue.class,
-            String.class);
+        return getWeightedList("CountryNamesPopulationTranslated", String.class);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public AspectPropertyValue<List<String>>
         getCountryNamesGeographicalAllTranslated() {
-        return getAs("CountryNamesGeographicalAllTranslated",
-            AspectPropertyValue.class, List.class, String.class);
+        return getList("CountryNamesGeographicalAllTranslated", String.class);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public AspectPropertyValue<List<String>>
         getCountryNamesPopulationAllTranslated() {
-        return getAs("CountryNamesPopulationAllTranslated",
-            AspectPropertyValue.class, List.class, String.class);
+        return getList("CountryNamesPopulationAllTranslated", String.class);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public AspectPropertyValue<List<String>> getCountryCodesGeographicalAll() {
-        return getAs("CountryCodesGeographicalAll",
-            AspectPropertyValue.class, List.class, String.class);
+        return getList("CountryCodesGeographicalAll", String.class);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public AspectPropertyValue<List<String>> getCountryCodesPopulationAll() {
-        return getAs("CountryCodesPopulationAll",
-            AspectPropertyValue.class, List.class, String.class);
+        return getList("CountryCodesPopulationAll", String.class);
     }
 
     @Override

@@ -51,10 +51,9 @@ import static org.apache.commons.lang3.BooleanUtils.isFalse;
  *                  the fluent builder methods
  * @param <TEngine> the type of the engine that this builder will build
  */
-@SuppressWarnings("rawtypes")
 public abstract class OnPremiseAspectEngineBuilderBase<
     TBuilder extends OnPremiseAspectEngineBuilderBase<TBuilder, TEngine>,
-    TEngine extends OnPremiseAspectEngine>
+    TEngine extends OnPremiseAspectEngine<?, ?>>
     extends AspectEngineBuilderBase<TBuilder, TEngine> {
 
     private final DataUpdateService dataUpdateService;
@@ -160,10 +159,9 @@ public abstract class OnPremiseAspectEngineBuilderBase<
      * @param configuration  the data file configuration to add to this engine
      * @return this engine builder instance
      */
-    @SuppressWarnings("unchecked")
     public TBuilder addDataFile(DataFileConfiguration configuration) {
         dataFileConfigs.add(configuration);
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -175,10 +173,9 @@ public abstract class OnPremiseAspectEngineBuilderBase<
      * @return this engine builder instance
      */
     @DefaultValue("System.getProperty(java.io.tmpdir)+\"/fiftyone.tempfiles\"")
-    @SuppressWarnings("unchecked")
     public TBuilder setTempDirPath(String dirPath) {
         tempDir = dirPath;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -299,7 +296,6 @@ public abstract class OnPremiseAspectEngineBuilderBase<
         return false;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     protected void configureEngine(TEngine engine) throws Exception {
         super.configureEngine(engine);

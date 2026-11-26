@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.did;
 
+import org.json.JSONObject;
 
 /**
  * Where the tests that call the live 51Degrees cloud service read their
@@ -77,7 +78,8 @@ final class LiveCloudKeys {
             + "need a resource key, and they are skipped because "
             + name + " is not set as an "
             + "environment variable or as a system property. "
-            + "The key has to carry the fodid product, because "
+            + "The key has to carry the " + FODID + " product, and the "
+            + MARKETING + " product for the marketing usages, because "
             + "these tests ask the cloud for FODiD.IdProbGlobal and "
             + "FODiD.IdProbLic. Create a key at "
             + "https://51degrees.com/configure.";
@@ -109,15 +111,53 @@ final class LiveCloudKeys {
     }
 
     /**
-     * What to fail with when the cloud answered but returned no 51Did,
-     * which is the resource key not carrying the product rather than the
-     * service being broken.
+     * The product a key needs for a non-marketing 51Did.
      */
-    static String notEntitled(String detail) {
-        return "The live 51Degrees cloud service answered, but returned no "
-            + "51Did for " + detail + ". That is the resource key not "
-            + "carrying the fodid product rather than a fault in the "
-            + "service or in this package. Use a key entitled to fodid, "
-            + "from https://51degrees.com/configure.";
+    static final String FODID = "FODid";
+
+    /**
+     * The product a key needs, as well as {@link #FODID}, for a marketing
+     * 51Did, being the standard and personalized usages.
+     */
+    static final String MARKETING = "CloudV5FODiD";
+
+    /**
+     * The reason the cloud gave for answering without a 51Did, taken from
+     * the nullreason of the global identifier and then of the licensed
+     * one, or null when the answer has no fodid section or gives no
+     * reason.
+     */
+    static String nullReason(JSONObject fodid) {
+        if (fodid == null) {
+            return null;
+        }
+        for (String field : new String[] {
+                "idprobglobalnullreason", "idproblicnullreason" }) {
+            String reason = fodid.optString(field, "").trim();
+            if (reason.isEmpty() == false) {
+                return reason;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * What to fail with when the cloud answered but returned no 51Did,
+     * carrying the reason the cloud gave and naming the product a key
+     * needs for that 51Did.
+     *
+     * @param detail what was asked for
+     * @param reason the cloud's nullreason, or null when it gave none
+     * @param product {@link #FODID} or {@link #MARKETING}
+     */
+    static String notEntitled(String detail, String reason, String product) {
+        return "The live 51Degrees cloud service answered without a 51Did "
+            + "for " + detail + " ("
+            + (reason == null ? "no reason given" : reason)
+            + "), which is what a key that does not carry the " + product
+            + " product gets. To see the products a key carries, open "
+            + "https://cloud.51degrees.com/api/v4/accessibleproperties"
+            + "?resource=<key>. Create a key at "
+            + "https://51degrees.com/configure.";
     }
 }

@@ -45,6 +45,13 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
  */
 @Deprecated
 public class FileUtils {
+
+    /**
+     * Not needed, as every member is static. Kept so that code which made
+     * an instance still builds.
+     */
+    public FileUtils() {
+    }
     /** Name of the Enterprise data file. */
     public static final String ENTERPRISE_HASH_DATA_FILE_NAME = "Enterprise-HashV41.hash";
 

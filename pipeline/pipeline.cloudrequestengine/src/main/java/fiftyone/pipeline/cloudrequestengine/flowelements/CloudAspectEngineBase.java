@@ -37,13 +37,10 @@ import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.data.types.JavaScript;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.Pipeline;
-import fiftyone.pipeline.core.typed.TypedKey;
-import fiftyone.pipeline.core.typed.TypedKeyDefault;
 import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.engines.data.*;
 import fiftyone.pipeline.engines.flowelements.AspectEngineBase;
 import fiftyone.pipeline.engines.flowelements.CloudAspectEngine;
-import fiftyone.pipeline.util.Types;
 
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -129,7 +126,6 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
      * @param aspectDataFactory the factory to use when creating a TData
      *                          instance
      */
-    @SuppressWarnings("this-escape")
     public CloudAspectEngineBase(
         Logger logger,
         ElementDataFactory<TData> aspectDataFactory) {
@@ -192,16 +188,6 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
     public boolean hasLoadedProperties() {
         getProperties();
         return aspectProperties != null;
-    }
-
-    @Override
-    public TypedKey<TData> getTypedDataKey() {
-        if (typedKey == null) {
-            typedKey = new TypedKeyDefault<>(
-                getElementDataKey(),
-                Types.findSubClassParameterType(this, CloudAspectEngineBase.class, 0));
-        }
-        return typedKey;
     }
 
     /**

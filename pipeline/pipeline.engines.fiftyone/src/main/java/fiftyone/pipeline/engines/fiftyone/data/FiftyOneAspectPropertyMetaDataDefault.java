@@ -67,7 +67,6 @@ public class FiftyOneAspectPropertyMetaDataDefault
      * @param values the values the property can have
      * @param defaultValue the default value
      */
-    @SuppressWarnings("this-escape")
     public FiftyOneAspectPropertyMetaDataDefault(
         String name,
         FlowElement<?,?> element,

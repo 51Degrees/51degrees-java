@@ -23,7 +23,9 @@
 package fiftyone.caching;
 
 import java.io.Closeable;
-import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -53,7 +55,7 @@ public abstract class LruCacheBase<K, V> implements Cache<K,V>, Closeable {
      * A array of doubly linked lists. Not marked private so that the unit
      * test can guard the elements.
      */
-    final CacheLinkedList[] linkedLists;
+    final List<CacheLinkedList> linkedLists;
     /**
      * Random number generator used to select the linked list to use with
      * the new item being added to the cache.
@@ -85,15 +87,11 @@ public abstract class LruCacheBase<K, V> implements Cache<K,V>, Closeable {
         this.cacheSize = cacheSize;
         this.updateExisting = updateExisting;
         this.hashMap = new ConcurrentHashMap<>(cacheSize);
-        @SuppressWarnings("unchecked")
-        CacheLinkedList[] linkedListsUnchecked =
-            (CacheLinkedList[]) Array.newInstance(
-                CacheLinkedList.class,
-                concurrency);
-        linkedLists = linkedListsUnchecked;
-        for (int i = 0; i < linkedLists.length; i++) {
-            linkedLists[i] = new CacheLinkedList(this);
+        List<CacheLinkedList> lists = new ArrayList<>(concurrency);
+        for (int i = 0; i < concurrency; i++) {
+            lists.add(new CacheLinkedList(this));
         }
+        linkedLists = Collections.unmodifiableList(lists);
     }
 
     /**
@@ -236,7 +234,7 @@ public abstract class LruCacheBase<K, V> implements Cache<K,V>, Closeable {
      * Returns a random linked list.
      */
     private CacheLinkedList getRandomLinkedList() {
-        return linkedLists[random.nextInt(linkedLists.length)];
+        return linkedLists.get(random.nextInt(linkedLists.size()));
     }
 
     /**
