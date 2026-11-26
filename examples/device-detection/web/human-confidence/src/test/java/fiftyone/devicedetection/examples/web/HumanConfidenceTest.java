@@ -245,6 +245,30 @@ public class HumanConfidenceTest {
         assertFalse(redeemForm.containsKey("challenge"));
     }
 
+    /**
+     * An empty sealedResult counts as not sent, so value is used, and
+     * sealedResult wins when both are sent with a value.
+     */
+    @Test
+    public void redeemTreatsAnEmptySealedResultAsNotSent()
+            throws IOException {
+        String base = start(true, true);
+        assertEquals(200, post(base + "redeem", "sealedResult=&value=v")
+                .getResponseCode());
+        assertEquals("v", redeemForm.get("sealedResult"));
+        assertEquals("v", redeemForm.get("value"));
+
+        assertEquals(200, post(base + "redeem", "sealedResult=s&value=v")
+                .getResponseCode());
+        assertEquals("s", redeemForm.get("sealedResult"));
+        assertEquals("s", redeemForm.get("value"));
+
+        assertEquals(200, post(base + "redeem", "sealedResult=")
+                .getResponseCode());
+        assertEquals("", redeemForm.get("sealedResult"));
+        assertEquals("", redeemForm.get("value"));
+    }
+
     @Test
     public void redeemNotFoundSaysTheServiceDoesNotRedeem()
             throws IOException {

@@ -23,6 +23,8 @@
 
 package fiftyone.pipeline.did;
 
+import org.json.JSONObject;
+
 import java.util.Locale;
 
 /**
@@ -84,5 +86,48 @@ public enum HumanConfidence {
             }
         }
         return ABSENT;
+    }
+
+    /**
+     * Reads the Human Confidence fields of a verify or redeem answer: the
+     * Value, the word exactly as sent and the reason the Value is missing.
+     * Both answers read them here, so they always read the same way.
+     *
+     * @param json the answer body as JSON, or null where nothing should be
+     *             read from it
+     * @return the fields, each null where the answer did not send it
+     */
+    static Fields read(JSONObject json) {
+        if (json == null) {
+            return Fields.NONE;
+        }
+        return new Fields(
+            json.optString("humanConfidence", null),
+            json.optString("humanConfidenceNullReason", null));
+    }
+
+    /**
+     * The Human Confidence fields of one verify or redeem answer, as
+     * {@link #read(JSONObject)} gives them.
+     */
+    static final class Fields {
+
+        /** No fields at all, for an answer nothing is read from. */
+        static final Fields NONE = new Fields(null, null);
+
+        /** The Value, or null where the answer sent none. */
+        final HumanConfidence value;
+
+        /** The {@code humanConfidence} word as sent, or null. */
+        final String raw;
+
+        /** The {@code humanConfidenceNullReason} as sent, or null. */
+        final String nullReason;
+
+        private Fields(String raw, String nullReason) {
+            this.value = fromValue(raw);
+            this.raw = raw;
+            this.nullReason = nullReason;
+        }
     }
 }

@@ -282,8 +282,7 @@ public final class RedeemResult {
             Signature signature,
             Map<String, Factor> factors,
             boolean hasFactors,
-            String humanConfidenceValue,
-            String humanConfidenceNullReason,
+            HumanConfidence.Fields humanConfidenceFields,
             Instant verifiedAt,
             Integer secondsSinceVerified,
             int statusCode,
@@ -295,9 +294,9 @@ public final class RedeemResult {
         this.signature = signature;
         this.factors = factors;
         this.hasFactors = hasFactors;
-        this.humanConfidence = HumanConfidence.fromValue(humanConfidenceValue);
-        this.humanConfidenceValue = humanConfidenceValue;
-        this.humanConfidenceNullReason = humanConfidenceNullReason;
+        this.humanConfidence = humanConfidenceFields.value;
+        this.humanConfidenceValue = humanConfidenceFields.raw;
+        this.humanConfidenceNullReason = humanConfidenceFields.nullReason;
         this.verifiedAt = verifiedAt;
         this.secondsSinceVerified = secondsSinceVerified;
         this.statusCode = statusCode;
@@ -305,16 +304,22 @@ public final class RedeemResult {
     }
 
     /**
-     * Builds a result from the cloud's answer.
+     * Builds a result from the cloud's 200 or 503 answer. This is the one
+     * place a 503 is handled. A 503 means first use could not be confirmed,
+     * whatever the body says, so it is {@link Outcome#UNCONFIRMED} in both
+     * the outcome and the context, and nothing is read from the body, which
+     * may be empty, not JSON, or claim another outcome.
      *
      * @param statusCode the HTTP status, 200 or 503
-     * @param json       the body parsed as a JSON object
+     * @param json       the body parsed as a JSON object, which a 200 must
+     *                   have, or null where it is empty or not JSON
      * @param raw        the body as received
      * @return the typed result
      */
-    static RedeemResult parse(int statusCode, JSONObject json, String raw) {
+    static RedeemResult fromResponse(
+            int statusCode, JSONObject json, String raw) {
         if (statusCode == 503) {
-            return unconfirmed(json, raw);
+            return unconfirmed(raw);
         }
         String contextValue = json.optString("context", null);
         Context context = Context.fromValue(contextValue);
@@ -366,8 +371,7 @@ public final class RedeemResult {
             signature,
             Collections.unmodifiableMap(factors),
             hasFactors,
-            json.optString("humanConfidence", null),
-            json.optString("humanConfidenceNullReason", null),
+            HumanConfidence.read(json),
             verifiedAt,
             secondsSinceVerified,
             statusCode,
@@ -375,34 +379,22 @@ public final class RedeemResult {
     }
 
     /**
-     * The result of a 503 answer, which is always
-     * {@link Outcome#UNCONFIRMED} whatever the body says. Nothing in the
-     * body is read as an unsealed result. The raw {@code status} and
-     * {@code context} words are kept where the body is JSON and has them.
-     *
-     * @param json the body as JSON, or null where it is empty or not JSON
-     * @param raw  the body as received
-     * @return the unconfirmed result
+     * The result of a 503 answer: {@link Outcome#UNCONFIRMED}, with the
+     * status and context words both {@code unconfirmed}, and nothing read
+     * from the body. Only {@link #fromResponse} calls it.
      */
-    static RedeemResult unconfirmed(JSONObject json, String raw) {
-        String statusValue = json == null
-            ? null
-            : json.optString("status", null);
-        String contextValue = json == null
-            ? null
-            : json.optString("context", null);
+    private static RedeemResult unconfirmed(String raw) {
         @SuppressWarnings("deprecation")
         Context context = Context.UNCONFIRMED;
         return new RedeemResult(
             Outcome.UNCONFIRMED,
-            statusValue,
+            Outcome.UNCONFIRMED.getValue(),
             context,
-            contextValue == null ? context.getValue() : contextValue,
+            context.getValue(),
             Signature.UNKNOWN,
             Collections.<String, Factor>emptyMap(),
             false,
-            null,
-            null,
+            HumanConfidence.Fields.NONE,
             null,
             null,
             503,
@@ -451,7 +443,8 @@ public final class RedeemResult {
     /**
      * @return the {@code status} word exactly as the cloud sent it, so an
      *         unrecognised word (mapped to {@link Outcome#UNREADABLE}) is
-     *         still visible, or null where the cloud sent none
+     *         still visible, or null where the cloud sent none. On a 503
+     *         it is {@code unconfirmed}, whatever the body says.
      */
     public String getStatusValue() {
         return statusValue;
@@ -472,7 +465,9 @@ public final class RedeemResult {
     /**
      * @return the {@code context} word exactly as the cloud sent it, so an
      *         unrecognised word (mapped to {@link Context#UNREADABLE}) is
-     *         still visible; the verdict's own word when the cloud sent none
+     *         still visible, or the verdict's own word when the cloud sent
+     *         none. On a 503 it is {@code unconfirmed}, whatever the body
+     *         says.
      */
     public String getContextValue() {
         return contextValue;

@@ -41,33 +41,46 @@ public final class Verification {
 
     private Verification(
             boolean valid,
-            String humanConfidenceValue,
-            String humanConfidenceNullReason,
+            HumanConfidence.Fields fields,
             int statusCode,
             String raw) {
         this.valid = valid;
-        this.humanConfidence = HumanConfidence.fromValue(humanConfidenceValue);
-        this.humanConfidenceValue = humanConfidenceValue;
-        this.humanConfidenceNullReason = humanConfidenceNullReason;
+        this.humanConfidence = fields.value;
+        this.humanConfidenceValue = fields.raw;
+        this.humanConfidenceNullReason = fields.nullReason;
         this.statusCode = statusCode;
         this.raw = raw;
     }
 
     /**
-     * Builds an answer from the cloud's verify endpoint answer, which
-     * carries {@code valid}.
+     * Builds an answer from a 200 answer of the cloud's verify endpoint,
+     * which carries {@code valid}. Only a 200 can say valid.
      *
-     * @param statusCode the HTTP status, 200 or 400
-     * @param json       the body parsed as a JSON object
-     * @param raw        the body as received
+     * @param json the body parsed as a JSON object
+     * @param raw  the body as received
      * @return the typed answer
      */
-    static Verification parse(int statusCode, JSONObject json, String raw) {
+    static Verification parse(JSONObject json, String raw) {
         return new Verification(
             json.getBoolean("valid"),
-            json.optString("humanConfidence", null),
-            json.optString("humanConfidenceNullReason", null),
-            statusCode,
+            HumanConfidence.read(json),
+            200,
+            raw);
+    }
+
+    /**
+     * The answer to a 400 that carries {@code valid}, which is how the
+     * cloud answers a signature that fails. It is invalid whatever
+     * {@code valid} says, and nothing else is read from the body.
+     *
+     * @param raw the body as received
+     * @return the invalid answer
+     */
+    static Verification invalid(String raw) {
+        return new Verification(
+            false,
+            HumanConfidence.Fields.NONE,
+            400,
             raw);
     }
 

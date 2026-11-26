@@ -1248,6 +1248,13 @@ public class DidClientTests {
                 + "\"humanConfidence\":\"High\",\"status\":\"success\","
                 + "\"verifiedAt\":\"2026-08-07T09:15:32Z\","
                 + "\"secondsSinceVerified\":3}",
+            "{\"signature\":\"verified\",\"context\":\"mismatch\","
+                + "\"status\":\"success\",\"factors\":{\"transport\":"
+                + "\"verified\",\"device\":\"mismatch\"},"
+                + "\"humanConfidence\":\"Medium\","
+                + "\"humanConfidenceNullReason\":\"" + NULL_REASON + "\","
+                + "\"verifiedAt\":\"2026-08-07T09:15:32Z\","
+                + "\"secondsSinceVerified\":3}",
         };
         for (String body : bodies) {
             transport.queue(503, body);
@@ -1256,14 +1263,19 @@ public class DidClientTests {
                 client.redeem(validDid, "sealed", "abc").join();
 
             assertEquals(body, Outcome.UNCONFIRMED, result.getOutcome());
+            assertEquals(body, "unconfirmed", result.getStatusValue());
             assertEquals(body, RedeemResult.Context.UNCONFIRMED,
                 result.getContext());
+            assertEquals(body, "unconfirmed", result.getContextValue());
             assertEquals(body, RedeemResult.Signature.UNKNOWN,
                 result.getSignature());
             assertNull(body, result.getHumanConfidence());
+            assertNull(body, result.getHumanConfidenceValue());
+            assertNull(body, result.getHumanConfidenceNullReason());
             assertNull(body, result.getVerifiedAt());
             assertNull(body, result.getSecondsSinceVerified());
             assertFalse(body, result.hasFactors());
+            assertTrue(body, result.getFactors().isEmpty());
             assertEquals(body, 503, result.getStatusCode());
             assertEquals(body, body, result.getRaw());
         }
@@ -1898,6 +1910,62 @@ public class DidClientTests {
         assertFalse(invalid.isValid());
         assertNull(invalid.getHumanConfidence());
         assertEquals(400, invalid.getStatusCode());
+    }
+
+    /**
+     * Only a 200 can say valid. A 400 holding valid true, with a Value and
+     * a reason, is still invalid, and nothing else is read from it.
+     */
+    @Test
+    public void verifyDetailed_400IsInvalidWhateverValidSays()
+            throws Exception {
+        String body = "{\"valid\":true,\"humanConfidence\":\"High\","
+            + "\"humanConfidenceNullReason\":\"" + NULL_REASON + "\"}";
+        transport.queue(400, body);
+
+        Verification verification = client.verifyDetailed(validDid).join();
+
+        assertFalse(verification.isValid());
+        assertNull(verification.getHumanConfidence());
+        assertNull(verification.getHumanConfidenceValue());
+        assertNull(verification.getHumanConfidenceNullReason());
+        assertEquals(400, verification.getStatusCode());
+        assertEquals(body, verification.getRaw());
+
+        transport.queue(400, body);
+        assertFalse(client.verify(validDid).join());
+    }
+
+    /**
+     * The verify and redeem answers read the Human Confidence fields the
+     * same way.
+     */
+    @Test
+    public void verifyAndRedeem_ReadTheHumanConfidenceFieldsAlike()
+            throws Exception {
+        String[] fields = {
+            "\"humanConfidence\":\"High\"",
+            "\"humanConfidence\":\"something-new\"",
+            "\"humanConfidenceNullReason\":\"" + NULL_REASON + "\"",
+            "\"humanConfidence\":null",
+        };
+        for (String field : fields) {
+            transport.queue(200, "{\"valid\":true," + field + "}");
+            Verification verification =
+                client.verifyDetailed(validDid).join();
+            transport.queue(200, "{\"signature\":\"verified\","
+                + "\"context\":\"verified\",\"status\":\"success\","
+                + field + "}");
+            RedeemResult redeemed =
+                client.redeem(validDid, "sealed", "abc").join();
+
+            assertEquals(field, verification.getHumanConfidence(),
+                redeemed.getHumanConfidence());
+            assertEquals(field, verification.getHumanConfidenceValue(),
+                redeemed.getHumanConfidenceValue());
+            assertEquals(field, verification.getHumanConfidenceNullReason(),
+                redeemed.getHumanConfidenceNullReason());
+        }
     }
 
     @Test

@@ -336,12 +336,9 @@ public class HumanConfidence {
     private void redeem(HttpExchange exchange) throws IOException {
         Map<String, String> fields = new LinkedHashMap<>();
         Map<String, String> page = parseForm(readAll(exchange.getRequestBody()));
-        String sealed = page.get("sealedResult");
-        if (sealed == null) {
-            sealed = page.get("value");
-        }
-        fields.put("sealedResult", sealed == null ? "" : sealed);
-        fields.put("value", sealed == null ? "" : sealed);
+        String sealed = named(page, "sealedResult", "value");
+        fields.put("sealedResult", sealed);
+        fields.put("value", sealed);
         if (license != null) {
             fields.put("license", license);
         }
@@ -360,6 +357,21 @@ public class HumanConfidence {
             reply(exchange, 502, "application/json", bytes(new JSONObject()
                     .put("error", String.valueOf(e.getMessage())).toString()));
         }
+    }
+
+    /**
+     * The value under the current name, or under the obsolete name where
+     * the current one is missing or empty. A page cached from before the
+     * current name still sends {@code value}, and an empty value means the
+     * name was not sent. Never null.
+     */
+    static String named(
+            Map<String, String> form, String current, String obsolete) {
+        String value = form.get(current);
+        if (value == null || value.isEmpty()) {
+            value = form.get(obsolete);
+        }
+        return value == null ? "" : value;
     }
 
     /**

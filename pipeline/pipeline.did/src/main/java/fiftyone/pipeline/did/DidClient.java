@@ -927,12 +927,15 @@ public final class DidClient {
             HttpTransport.Response response, String licence) {
         JSONObject json = asObject(response.getBody());
         int status = response.getStatusCode();
+        // Only a 200 can say valid. The cloud answers a signature that
+        // fails with a 400 holding valid false, so a 400 holding valid is
+        // invalid whatever valid says, and nothing else is read from it.
         if (status == 200 && json != null && json.has("valid")) {
-            return Verification.parse(status, json, response.getBody());
+            return Verification.parse(json, response.getBody());
         }
         if (status == 400 && json != null) {
             if (json.has("valid")) {
-                return Verification.parse(status, json, response.getBody());
+                return Verification.invalid(response.getBody());
             }
             if (json.has("errors")) {
                 throw new IllegalArgumentException(
@@ -1044,17 +1047,18 @@ public final class DidClient {
         int status = response.getStatusCode();
         JSONObject json = asObject(response.getBody());
         switch (status) {
-            case 503:
-                // A 503 means first use could not be confirmed, whatever the
-                // body says, so it is read as unconfirmed even where the
-                // body is empty, is not JSON or names another outcome.
-                return RedeemResult.unconfirmed(json, response.getBody());
             case 200:
                 if (json == null) {
                     throw new CompletionException(
                         httpError("Redemption", response, licenceKey));
                 }
-                return RedeemResult.parse(status, json, response.getBody());
+                return RedeemResult.fromResponse(
+                    status, json, response.getBody());
+            case 503:
+                // RedeemResult.fromResponse reads nothing from a 503 body,
+                // which may be empty or not JSON.
+                return RedeemResult.fromResponse(
+                    status, json, response.getBody());
             case 400:
                 if (json != null && json.has("errors")) {
                     throw new IllegalArgumentException(
