@@ -71,8 +71,8 @@ public abstract class FlowElementBase<
             Logger logger,
             ElementDataFactory<TData> elementDataFactory) {
         this.logger = logger;
-        logger.debug("FlowElement '" + getClass().getSimpleName() + "'-'" +
-                hashCode() + "' created.");
+        logger.debug("FlowElement '" + getClass().getSimpleName() +
+                "' created.");
         this.dataFactory = new DataFactoryInternal<>(elementDataFactory, this);
     }
 

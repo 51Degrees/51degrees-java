@@ -32,8 +32,8 @@ import java.util.function.Function;
 public class KeyUtils {
 
     /**
-     * Not needed, as every member is static. Kept so that code which made
-     * an instance still builds.
+     * Makes an instance. Every member is static, so an instance is not
+     * needed, and the constructor is public for code that makes one.
      */
     public KeyUtils() {
     }

@@ -29,7 +29,7 @@ import java.util.Collection;
  * of this are added as suppressed exceptions and can be retrieved with the
  * {@link #getSuppressed()} method.
  */
-public class AggregateException extends RuntimeException {
+public final class AggregateException extends RuntimeException {
 
     /**
      * Serializable class version number, which is used during deserialization.

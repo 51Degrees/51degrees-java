@@ -78,7 +78,8 @@ public class SetHeadersElement
 	public static final String SET_HEADER_PREFIX_LOWER_CASE = "setheader";
 	
 	private final EvidenceKeyFilter evidenceKeyFilter;
-	private final List<ElementPropertyMetaData> properties;
+	private final Object propertiesLock = new Object();
+	private volatile List<ElementPropertyMetaData> properties = null;
 	private final Hashtable<Pipeline, PipelineConfig> pipelineConfigs;
 
 	/**
@@ -93,13 +94,6 @@ public class SetHeadersElement
 		super(logger, elementDataFactory);
 		evidenceKeyFilter =
 			new EvidenceKeyFilterWhitelist(new ArrayList<String>());
-		properties = Collections.singletonList(
-			(ElementPropertyMetaData)new ElementPropertyMetaDataDefault(
-				RESPONSE_HEADER_PROPERTY_NAME,
-				this,
-				"",
-				HashMap.class,
-				true));
 		pipelineConfigs = new Hashtable<Pipeline, PipelineConfig>();
 	}
 //! [constructor]
@@ -148,9 +142,30 @@ public class SetHeadersElement
 		return evidenceKeyFilter;
 	}
 
+	/**
+	 * The properties are created on first use rather than in the
+	 * constructor, as each refers to this element.
+	 */
 	@Override
 	public List<ElementPropertyMetaData> getProperties() {
-		return properties;
+		List<ElementPropertyMetaData> result = properties;
+		if (result == null) {
+			synchronized (propertiesLock) {
+				result = properties;
+				if (result == null) {
+					result = Collections.singletonList(
+						(ElementPropertyMetaData)
+							new ElementPropertyMetaDataDefault(
+								RESPONSE_HEADER_PROPERTY_NAME,
+								this,
+								"",
+								HashMap.class,
+								true));
+					properties = result;
+				}
+			}
+		}
+		return result;
 	}
 	
 	@Override

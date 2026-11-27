@@ -68,7 +68,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  *     <li>Programmatic update</li>
  * </ol>
  * ## License Key
- * Updating the data file needs a 51Degrees licence key for the Enterprise data file. Without
+ * Updating the data file needs a 51Degrees license key for the Enterprise data file. Without
  * one, the example shows the free Lite data file and says where to ask for a key. Contact us for
  * a key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&utm_term=updatedatafile
  * ## Product
@@ -220,7 +220,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  *     <li>Programmatic update</li>
  * </ol>
  * <p>
- * To update the data file you need a licence key, which you can ask for on our
+ * To update the data file you need a license key, which you can ask for on our
  * <a href="https://51degrees.com/contact-us?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&amp;utm_term=updatedatafile-2">contact page</a>.
  * The key must be supplied as a command line argument or by setting
  * an environment variable or system property called {@link UpdateDataFile#UPDATE_EXAMPLE_LICENSE_KEY_NAME}
@@ -240,7 +240,7 @@ public class UpdateDataFile {
     private static final Logger logger = LoggerFactory.getLogger(UpdateDataFile.class);
 
     /**
-     * Where to ask for a licence key and a copy of the Enterprise data file,
+     * Where to ask for a license key and a copy of the Enterprise data file,
      * tagged with this example.
      */
     private static final String CONTACT_US = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&utm_term=licence-key";
@@ -388,7 +388,7 @@ public class UpdateDataFile {
                     // to notify when update complete
                     .setDataUpdateService(dataUpdateService)
                     // For automatic updates to work you will need to provide a license key.
-                    // Contact us for a licence key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&utm_term=run
+                    // Contact us for a license key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&utm_term=run
                     .setDataUpdateLicenseKey(licenseKey)
                     // The address to download from, when one is given. With
                     // none, the engine downloads from the 51Degrees
@@ -491,7 +491,7 @@ public class UpdateDataFile {
     }
 
     /**
-     * Without a licence key the example cannot download a data file, so it
+     * Without a license key the example cannot download a data file, so it
      * shows the data file it would start from, the free Lite file unless
      * another is given, and says what an update needs.
      * @param dataFilename the data file given, or null
@@ -517,7 +517,7 @@ public class UpdateDataFile {
         }
         output.println();
         output.println("Updating the data file downloads the Enterprise data " +
-                "file, which needs a licence key. Give the key as the first " +
+                "file, which needs a license key. Give the key as the first " +
                 "command line argument, or in the environment variable or " +
                 "system property '" + UPDATE_EXAMPLE_LICENSE_KEY_NAME + "'. " +
                 "Contact us for a key and a copy at " + CONTACT_US);

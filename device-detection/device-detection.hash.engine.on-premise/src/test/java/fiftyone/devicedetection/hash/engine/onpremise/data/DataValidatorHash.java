@@ -83,14 +83,12 @@ public class DataValidatorHash implements DataValidator {
         if (validEvidence == false) {
             assertEquals("0-0-0-0", elementData.getDeviceId().getValue());
         }
-        // Since the detection result shape was unified in device-detection-cxx
-        // (issue #362), the number of results - and therefore the number of
-        // matched User-Agents - is determined by the components the engine can
-        // populate, not by how many evidence keys were supplied. Supplying
-        // redundant evidence no longer changes it. The exact number depends on
-        // which components the data file makes available, so assert the bound
-        // rather than a fixed value, and that valid evidence produces at least
-        // one result.
+        // The number of results, and so of matched User-Agents, is set by
+        // the components the engine can populate, not by how many evidence
+        // keys were supplied, so redundant evidence does not change it. The
+        // exact number depends on which components the data file makes
+        // available, so assert the bound rather than a fixed value, and that
+        // valid evidence produces at least one result.
         int componentCount = 0;
         // The collection holds the engine's data set until it is closed.
         try (CloseableIterable<ComponentMetaData> components =

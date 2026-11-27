@@ -30,7 +30,7 @@ import java.util.Iterator;
 import java.util.List;
 
 /** Default implementation of {@link FiftyOneAspectPropertyMetaData}. */
-public class FiftyOneAspectPropertyMetaDataDefault
+public final class FiftyOneAspectPropertyMetaDataDefault
     extends AspectPropertyMetaDataDefault
     implements FiftyOneAspectPropertyMetaData {
 

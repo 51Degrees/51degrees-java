@@ -40,11 +40,18 @@ $Accessors = @(
     }
 )
 
+# Every compiler, linker and tool warning is an error in the builds 51Degrees
+# runs, and only there, so a build from a clone anywhere else shows its
+# warnings and does not stop on one. The native CMake files and the Maven
+# poms read this variable. Every script here that runs Maven or CMake
+# dot-sources this file, so the builds CI runs set it.
+$env:_51DEGREES_WARNINGS_AS_ERRORS = 'true'
+
 # Arguments every Maven call in these scripts passes.
 $MavenOptions = '--batch-mode', '--no-transfer-progress'
 
 # Every Maven call that compiles runs on this JDK, which compiles for Java 8
-# through each tree's release-8 profile. The tests still run on each entry's
+# through each tree's java-8-api profile. The tests still run on each entry's
 # own JDK. javac 21 warns that release 8 is obsolete, which -Werror makes an
 # error, and javac 17 does not.
 $CompileJdkVersion = 17

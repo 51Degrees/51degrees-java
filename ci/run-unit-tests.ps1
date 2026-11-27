@@ -8,6 +8,10 @@ param(
 )
 $ErrorActionPreference = "Stop"
 
+# Sets _51DEGREES_WARNINGS_AS_ERRORS, so the test build makes every warning an
+# error.
+. $PSScriptRoot/packages.ps1
+
 # One run of every test in the reactor that build-project.ps1 built, the
 # examples included. build-project.ps1 compiled them with JDK 17, and Surefire
 # runs them here with Maven on the entry's own JDK, which setup-environment.ps1

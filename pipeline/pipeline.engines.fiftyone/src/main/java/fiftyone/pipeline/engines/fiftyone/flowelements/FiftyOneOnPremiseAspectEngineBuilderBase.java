@@ -22,8 +22,11 @@
 
 package fiftyone.pipeline.engines.fiftyone.flowelements;
 
+import fiftyone.pipeline.annotations.BuildArg;
+import fiftyone.pipeline.annotations.DefaultValue;
 import fiftyone.pipeline.engines.configuration.DataFileConfiguration;
 import fiftyone.pipeline.engines.data.AspectEngineDataFile;
+import fiftyone.pipeline.engines.data.DataUpdateUrlFormatter;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneDataFileDefault;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneUrlFormatter;
 import fiftyone.pipeline.engines.flowelements.SingleFileAspectEngineBuilderBase;
@@ -49,6 +52,12 @@ public abstract class FiftyOneOnPremiseAspectEngineBuilderBase<
     public static final String DATA_UPDATE_URL =
             "https://distributor.51degrees.com/api/v2/download";
     private String dataDownloadType;
+
+    /** Whether the data update URL has been set on this builder. */
+    private boolean dataUpdateUrlSet = false;
+
+    /** Whether the data update URL formatter has been set on this builder. */
+    private boolean dataUpdateUrlFormatterSet = false;
     
     /**
      * Default constructor which uses the {@link ILoggerFactory} implementation
@@ -77,8 +86,50 @@ public abstract class FiftyOneOnPremiseAspectEngineBuilderBase<
         ILoggerFactory loggerFactory,
         DataUpdateService dataUpdateService) {
         super(loggerFactory, dataUpdateService);
-        setDataUpdateUrl(DATA_UPDATE_URL);
-        setDataUpdateUrlFormatter(new FiftyOneUrlFormatter());
+    }
+
+    @DefaultValue("51Degrees default, set by subclass")
+    @Override
+    public TBuilder setDataUpdateUrl(String url) {
+        dataUpdateUrlSet = true;
+        return super.setDataUpdateUrl(url);
+    }
+
+    @DefaultValue("51Degrees default, set by subclass")
+    @Override
+    public TBuilder setDataUpdateUrlFormatter(DataUpdateUrlFormatter formatter) {
+        dataUpdateUrlFormatterSet = true;
+        return super.setDataUpdateUrlFormatter(formatter);
+    }
+
+    @Override
+    public TEngine build(
+        @BuildArg("dataFile") String dataFile,
+        @BuildArg("createTempDataCopy") boolean createTempDataCopy)
+        throws Exception {
+        setDataUpdateDefaults();
+        return super.build(dataFile, createTempDataCopy);
+    }
+
+    @Override
+    public TEngine build(byte[] data) throws Exception {
+        setDataUpdateDefaults();
+        return super.build(data);
+    }
+
+    /**
+     * Use the Distributor's URL and formatter for any of them not set on
+     * this builder. This is done when the engine is built rather than in the
+     * constructor, so the constructor does not call methods a subclass can
+     * override.
+     */
+    private void setDataUpdateDefaults() {
+        if (dataUpdateUrlSet == false) {
+            super.setDataUpdateUrl(DATA_UPDATE_URL);
+        }
+        if (dataUpdateUrlFormatterSet == false) {
+            super.setDataUpdateUrlFormatter(new FiftyOneUrlFormatter());
+        }
     }
 
     /**

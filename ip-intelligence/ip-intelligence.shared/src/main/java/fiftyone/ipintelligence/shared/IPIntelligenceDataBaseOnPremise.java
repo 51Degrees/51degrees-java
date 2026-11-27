@@ -61,9 +61,12 @@ public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceData
     implements ProvidesValuesAsString {
 
     /**
-     * Maps each primitive type to its boxed type, used when converting native
-     * values.
+     * Maps each primitive type to its boxed type.
+     * @deprecated no longer used, as native values are converted without
+     * it. Use {@link fiftyone.pipeline.util.Types#getPrimitiveTypeMap()}
+     * for the same map.
      */
+    @Deprecated
     protected final Map<Class<?>, Class<?>> primitiveTypes;
     private final Object dataLock = new Object();
     private final Object getLock = new Object();
@@ -246,21 +249,23 @@ public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceData
     /**
      * Whether the map {@link #asKeyMap()} fills holds the value in the form
      * asked for. The map holds every property as a list of weighted values,
-     * so a property asked for as a single value, or as a plain list, is read
-     * from the results instead.
+     * so a property asked for as a single value is read from the results
+     * instead. A property asked for as a plain list, not weighted, is not
+     * held in the map either, and reading it from the results gives null,
+     * as the results give lists only as weighted values.
      * @param key name of the property
      * @param type the type asked for
-     * @param parameterisedTypes the parameterised types asked for
+     * @param parameterizedTypes the parameterized types asked for
      * @return true if the value in the map is in the form asked for
      */
     private boolean isHeldInMap(
         String key,
         Class<?> type,
-        Class<?>[] parameterisedTypes) {
+        Class<?>[] parameterizedTypes) {
         return type.equals(AspectPropertyValue.class) == false ||
-            parameterisedTypes.length == 0 ||
+            parameterizedTypes.length == 0 ||
             Arrays.equals(
-                parameterisedTypes,
+                parameterizedTypes,
                 toWeightedListType(getPropertyType(key), false));
     }
 
@@ -321,10 +326,10 @@ public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceData
     protected <T> TryGetResult<T> tryGetValue(
         String key,
         Class<T> type,
-        Class<?>... parameterisedTypes) {
+        Class<?>... parameterizedTypes) {
         TryGetResult<T> result = new TryGetResult<>();
         if (mapPopulated == true &&
-            isHeldInMap(key, type, parameterisedTypes)) {
+            isHeldInMap(key, type, parameterizedTypes)) {
             // If the complete set of values has been populated, and the
             // value is wanted in the form the map holds it, then we can
             // use the base implementation to get the value from the
@@ -338,13 +343,13 @@ public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceData
                 Class<?> valueType = type;
                 if (type.equals(Object.class)) {
                     valueType = AspectPropertyValue.class;
-                    parameterisedTypes = toWeightedListType(getPropertyType(key), false);
+                    parameterizedTypes = toWeightedListType(getPropertyType(key), false);
                 }
                 synchronized (getLock) {
                     Object obj = null;
                     if (valueType.equals(AspectPropertyValue.class)){
-                        if (parameterisedTypes.length > 0) {
-                            Class<?> innerType = parameterisedTypes[0];
+                        if (parameterizedTypes.length > 0) {
+                            Class<?> innerType = parameterizedTypes[0];
                             if (innerType.equals(String.class)) {
                                 obj = getValueAsString(key);
                             } else if (innerType.equals(Boolean.class)) {
@@ -360,7 +365,7 @@ public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceData
                             } else if (innerType.equals(WktString.class)) {
                                 obj = getValueAsWktString(key);
                             } else if (innerType.equals(List.class)) {
-                                obj = getValues(key, parameterisedTypes);
+                                obj = getValues(key, parameterizedTypes);
                             } else if (innerType.equals(JavaScript.class)) {
                                 obj = getValueAsJavaScript(key);
                             } else {

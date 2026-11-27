@@ -329,7 +329,7 @@ public class PerformanceBenchmark {
 
         BenchmarkRunnable(Pipeline pipeline, List<Map<String, String>> evidence) {
             this.testList = evidence;
-            // initialise the benchmark variables
+            // initialize the benchmark variables
             this.pipeline = pipeline;
             this.result = new BenchmarkResult();
 
@@ -392,7 +392,7 @@ public class PerformanceBenchmark {
         // processing time in millis this thread
         private long elapsedMillis;
 
-        // used to ensure compiler optimiser doesn't optimise out the very
+        // used to ensure compiler optimizer doesn't optimize out the very
         // method that the benchmark is testing.
         private int checkSum;
 

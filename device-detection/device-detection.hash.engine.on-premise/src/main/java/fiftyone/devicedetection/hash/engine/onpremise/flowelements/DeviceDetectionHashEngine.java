@@ -107,7 +107,7 @@ public class DeviceDetectionHashEngine
      * @param dataFile data file to read the data set from
      * @param config native configuration which was configured by the builder
      * @param properties native required properties configuration which define
-     *                   the properties which the engine should be initialised
+     *                   the properties which the engine should be initialized
      *                   with
      * @param propertyNames the property names {@code properties} was made
      *                      from, in the same order

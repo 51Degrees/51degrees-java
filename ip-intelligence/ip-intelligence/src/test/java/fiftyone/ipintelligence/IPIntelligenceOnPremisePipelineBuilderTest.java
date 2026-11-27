@@ -103,7 +103,7 @@ public class IPIntelligenceOnPremisePipelineBuilderTest {
             builder.setFilename(IPI_DATA_FILE_NAME.replace(".ipi", ".dat"), true);
             fail();
         } catch (Exception e) {
-            assertTrue(e.getMessage().contains("Unrecognised filename."));
+            assertTrue(e.getMessage().contains("Unrecognized filename."));
         }
     }
 
@@ -113,7 +113,7 @@ public class IPIntelligenceOnPremisePipelineBuilderTest {
             builder.setFilename(IPI_DATA_FILE_NAME.replace(".ipi", ".any"), true);
             fail();
         } catch (Exception e) {
-            assertTrue(e.getMessage().contains("Unrecognised filename."));
+            assertTrue(e.getMessage().contains("Unrecognized filename."));
         }
     }
 

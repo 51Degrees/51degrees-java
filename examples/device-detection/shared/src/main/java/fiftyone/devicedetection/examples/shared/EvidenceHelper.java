@@ -158,10 +158,15 @@ public class EvidenceHelper {
             @Override
             public Map<String, String> next() {
                 // Each YAML document is a map of evidence names to values,
-                // copied here with each name and value as a string.
+                // copied here with each name and value as a string. An
+                // entry with no name or no value is not evidence, so it is
+                // skipped.
                 Map<String, String> evidence = new HashMap<>();
                 for (Map.Entry<?, ?> entry :
                         ((Map<?, ?>) objectIterator.next()).entrySet()) {
+                    if (entry.getKey() == null || entry.getValue() == null) {
+                        continue;
+                    }
                     evidence.put(
                             String.valueOf(entry.getKey()),
                             String.valueOf(entry.getValue()));

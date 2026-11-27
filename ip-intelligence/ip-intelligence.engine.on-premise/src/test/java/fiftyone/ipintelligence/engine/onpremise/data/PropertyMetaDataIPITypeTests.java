@@ -50,9 +50,10 @@ public class PropertyMetaDataIPITypeTests {
         PropertyMetaDataSwig source = mock(PropertyMetaDataSwig.class);
         when(source.getType()).thenReturn(nativeType);
         when(source.getName()).thenReturn("Property");
-        when(source.getDataFilesWherePresent())
-            .thenReturn(mock(VectorStringSwig.class));
-        return new PropertyMetaDataIPI(null, source).getType();
+        try (VectorStringSwig files = new VectorStringSwig()) {
+            when(source.getDataFilesWherePresent()).thenReturn(files);
+            return new PropertyMetaDataIPI(null, source).getType();
+        }
     }
 
     @Test

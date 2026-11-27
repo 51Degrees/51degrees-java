@@ -117,7 +117,7 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
 
     private volatile List<AspectPropertyMetaData> aspectProperties;
     private String dataSourceTier;
-    private RequestEngineAccessor requestEngine;
+    private volatile RequestEngineAccessor requestEngine;
     private final AtomicBoolean productMissingLogged = new AtomicBoolean(false);
 
     /**
@@ -130,7 +130,6 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
         Logger logger,
         ElementDataFactory<TData> aspectDataFactory) {
         super(logger, aspectDataFactory);
-        this.setRequestEngine(new RequestEngineAccessor(this.getPipelines(), this));
     }
 
     @Override
@@ -139,11 +138,22 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
     }
     /**
      * Used to access the CloudRequestEngine that will be making HTTP
-     * requests on behalf of this engine. 
+     * requests on behalf of this engine. Created on first use, unless set
+     * with {@link #setRequestEngine(RequestEngineAccessor)}.
      * @return A RequestEngineAccessor.
      */
     protected RequestEngineAccessor getRequestEngine() {
-        return requestEngine;
+        RequestEngineAccessor localRef = requestEngine;
+        if (localRef == null) {
+            synchronized (this) {
+                localRef = requestEngine;
+                if (localRef == null) {
+                    localRef = new RequestEngineAccessor(getPipelines(), this);
+                    requestEngine = localRef;
+                }
+            }
+        }
+        return localRef;
     }
 
     /**

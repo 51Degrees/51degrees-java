@@ -11,9 +11,8 @@ package fiftyone.ipintelligence.engine.onpremise.interop.swig;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
 import fiftyone.ipintelligence.engine.onpremise.interop.Constants;
 import fiftyone.pipeline.engines.fiftyone.flowelements.interop.LibLoader;
-import java.nio.ByteBuffer;
 
-public class IpIntelligenceOnPremiseEngineModuleJNI {
+final class IpIntelligenceOnPremiseEngineModuleJNI {
   public final static native long new_MapStringStringSwig__SWIG_0();
   public final static native long new_MapStringStringSwig__SWIG_1(long jarg1, MapStringStringSwig jarg1_);
   public final static native long MapStringStringSwig_Iterator_getNextUnchecked(long jarg1, MapStringStringSwig.Iterator jarg1_);
@@ -136,7 +135,7 @@ public class IpIntelligenceOnPremiseEngineModuleJNI {
   public final static native short UTF8StringSwig_doGet(long jarg1, UTF8StringSwig jarg1_, int jarg2);
   public final static native short UTF8StringSwig_doSet(long jarg1, UTF8StringSwig jarg1_, int jarg2, short jarg3);
   public final static native void UTF8StringSwig_doRemoveRange(long jarg1, UTF8StringSwig jarg1_, int jarg2, int jarg3);
-  public final static native int UTF8StringSwig_copyToArray(long jarg1, UTF8StringSwig jarg1_, long jarg2, int jarg3);
+  public final static native int UTF8StringSwig_copyToArray(long jarg1, UTF8StringSwig jarg1_, byte[] jarg2);
   public final static native void delete_UTF8StringSwig(long jarg1);
   public final static native long new_ValueMetaDataKeySwig__SWIG_0(String jarg1, String jarg2);
   public final static native long new_ValueMetaDataKeySwig__SWIG_1(String jarg1, byte[] jarg2);
@@ -362,7 +361,7 @@ public class IpIntelligenceOnPremiseEngineModuleJNI {
   public final static native long ResultsIpiSwig_getValueAsIpAddress__SWIG_0(long jarg1, ResultsIpiSwig jarg1_, String jarg2);
   public final static native long ResultsIpiSwig_getValueAsIpAddress__SWIG_1(long jarg1, ResultsIpiSwig jarg1_, int jarg2);
   public final static native long ResultsIpiSwig_getTargetIpAddress(long jarg1, ResultsIpiSwig jarg1_);
-  public final static native int ResultsIpiSwig_copyValueAsUTF8String(long jarg1, ResultsIpiSwig jarg1_, int jarg2, long jarg3, int jarg4);
+  public final static native int ResultsIpiSwig_copyValueAsUTF8String(long jarg1, ResultsIpiSwig jarg1_, int jarg2, byte[] jarg3);
   public final static native void delete_ConfigBaseSwig(long jarg1);
   public final static native void ConfigBaseSwig_setUseUpperPrefixHeaders(long jarg1, ConfigBaseSwig jarg1_, boolean jarg2);
   public final static native void ConfigBaseSwig_setUseTempFile(long jarg1, ConfigBaseSwig jarg1_, boolean jarg2);

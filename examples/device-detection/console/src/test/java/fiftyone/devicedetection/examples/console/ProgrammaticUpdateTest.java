@@ -41,7 +41,7 @@ import static org.junit.Assert.assertSame;
  * illustrate:", the last of which is "programmatic (non-automatic)
  * update").
  *
- * An update needs a licence key and the Enterprise data file, so the test
+ * An update needs a license key and the Enterprise data file, so the test
  * gives the example's update step a stand-in service and engine, and checks
  * that the step asks the service to check for an update of that engine now
  * and gives back the status the service answers.

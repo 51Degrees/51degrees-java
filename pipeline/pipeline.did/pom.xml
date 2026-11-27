@@ -122,35 +122,6 @@
                     <properties combine.self="override"/>
                 </configuration>
             </plugin>
-            <!-- Checks the compiled classes, including the OWID sources
-                 compiled in, against the Java 8 API signature, and fails the
-                 build on any newer API, such as
-                 ByteArrayOutputStream.writeBytes from Java 11. The compiler
-                 already enforces this on JDK 9 and later, where the parent's
-                 release-8 profile compiles with release 8, and a JDK 8 build
-                 has only the Java 8 API. This check reads the class files,
-                 so it does not depend on the compiler options. -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>animal-sniffer-maven-plugin</artifactId>
-                <version>1.24</version>
-                <configuration>
-                    <signature>
-                        <groupId>org.codehaus.mojo.signature</groupId>
-                        <artifactId>java18</artifactId>
-                        <version>1.0</version>
-                    </signature>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>check-java8-api</id>
-                        <phase>process-classes</phase>
-                        <goals>
-                            <goal>check</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>

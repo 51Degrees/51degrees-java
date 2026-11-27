@@ -322,6 +322,19 @@ using namespace FiftyoneDegrees::DeviceDetection::Hash;
 #include <map>
 #include <stdexcept>
 
+
+#include <cstring>
+  template <typename P> static P fiftyoneFromJlong(jlong value) {
+    P pointer = 0;
+    memcpy(&pointer, &value, sizeof(pointer));
+    return pointer;
+  }
+  template <typename P> static jlong fiftyoneToJlong(P pointer) {
+    jlong value = 0;
+    memcpy(&value, &pointer, sizeof(pointer));
+    return value;
+  }
+
 SWIGINTERN std::map< std::string,std::string,std::less< std::string > >::iterator std_map_Sl_std_string_Sc_std_string_Sg__iterator_getNextUnchecked(std::map< std::string,std::string >::iterator *self){
           std::map< std::string, std::string, std::less< std::string > >::iterator copy = (*self);
           return ++copy;
@@ -610,27 +623,36 @@ SWIGINTERN void std_vector_Sl_uint32_t_Sg__doRemoveRange(std::vector< uint32_t >
         }
       }
 
+  static std::string fiftyoneBytesToString(const char bytes[], size_t length) {
+    size_t used = 0;
+    while (used < length && bytes[used] != '\0') {
+      used++;
+    }
+    return used == 0 ? std::string() : std::string(bytes, used);
+  }
+
+
   void Evidence_AddFromBytes(EvidenceBase *evidence, const char key[], size_t keyLength, const char value[], size_t valueLength) {
-    (*evidence)[key] = value;
+    (*evidence)[fiftyoneBytesToString(key, keyLength)] = fiftyoneBytesToString(value, valueLength);
   }
 
   Value<std::string> Results_GetValueAsString(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->getValueAsString(propertyName);
+    return results->getValueAsString(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
   Value<std::vector<std::string>> Results_GetValues(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->getValues(propertyName);
+    return results->getValues(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
   Value<bool> Results_GetValueAsBool(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->getValueAsBool(propertyName);
+    return results->getValueAsBool(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
   Value<int> Results_GetValueAsInteger(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->getValueAsInteger(propertyName);
+    return results->getValueAsInteger(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
   Value<double> Results_GetValueAsDouble(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->getValueAsDouble(propertyName);
+    return results->getValueAsDouble(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
   bool Results_ContainsProperty(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->containsProperty(propertyName);
+    return results->containsProperty(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
 
 
@@ -645,7 +667,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   result = (std::map< std::string,std::string > *)new std::map< std::string,std::string >();
-  *(std::map< std::string,std::string > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -658,13 +680,13 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string > **)&jarg1;
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string > * >(jarg1);
   if (!arg1) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::map< std::string,std::string > const & is null");
     return 0;
   } 
   result = (std::map< std::string,std::string > *)new std::map< std::string,std::string >((std::map< std::string,std::string > const &)*arg1);
-  *(std::map< std::string,std::string > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -677,9 +699,9 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string >::iterator **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string >::iterator * >(jarg1); 
   result = std_map_Sl_std_string_Sc_std_string_Sg__iterator_getNextUnchecked(arg1);
-  *(std::map< std::string,std::string,std::less< std::string > >::iterator **)&jresult = new std::map< std::string,std::string,std::less< std::string > >::iterator(result); 
+  jresult = fiftyoneToJlong< std::map< std::string,std::string,std::less< std::string > >::iterator * >(new std::map< std::string,std::string,std::less< std::string > >::iterator(result)); 
   return jresult;
 }
 
@@ -695,8 +717,8 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(std::map< std::string,std::string >::iterator **)&jarg1; 
-  argp2 = *(std::map< std::string,std::string >::iterator **)&jarg2; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string >::iterator * >(jarg1); 
+  argp2 = fiftyoneFromJlong< std::map< std::string,std::string >::iterator * >(jarg2);
   if (!argp2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Attempt to dereference null std::map< std::string,std::string >::iterator");
     return 0;
@@ -716,7 +738,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string >::iterator **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string >::iterator * >(jarg1); 
   result = std_map_Sl_std_string_Sc_std_string_Sg__iterator_getKey((std::map< std::string,std::string >::iterator const *)arg1);
   jresult = jenv->NewStringUTF((&result)->c_str()); 
   return jresult;
@@ -731,7 +753,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string >::iterator **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string >::iterator * >(jarg1); 
   result = std_map_Sl_std_string_Sc_std_string_Sg__iterator_getValue((std::map< std::string,std::string >::iterator const *)arg1);
   jresult = jenv->NewStringUTF((&result)->c_str()); 
   return jresult;
@@ -745,7 +767,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string >::iterator **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string >::iterator * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return ;
@@ -764,7 +786,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(std::map< std::string,std::string >::iterator **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string >::iterator * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -826,7 +848,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string > * >(jarg1); 
   result = (bool)((std::map< std::string,std::string > const *)arg1)->empty();
   jresult = (jboolean)result; 
   return jresult;
@@ -839,7 +861,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string > * >(jarg1); 
   (arg1)->clear();
 }
 
@@ -853,7 +875,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string > * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -864,7 +886,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
   result = (arg1)->find((std::string const &)*arg2);
-  *(std::map< std::string,std::string >::iterator **)&jresult = new std::map< std::string,std::string >::iterator(result); 
+  jresult = fiftyoneToJlong< std::map< std::string,std::string >::iterator * >(new std::map< std::string,std::string >::iterator(result)); 
   return jresult;
 }
 
@@ -877,9 +899,9 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string > * >(jarg1); 
   result = (arg1)->begin();
-  *(std::map< std::string,std::string >::iterator **)&jresult = new std::map< std::string,std::string >::iterator(result); 
+  jresult = fiftyoneToJlong< std::map< std::string,std::string >::iterator * >(new std::map< std::string,std::string >::iterator(result)); 
   return jresult;
 }
 
@@ -892,9 +914,9 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string > * >(jarg1); 
   result = (arg1)->end();
-  *(std::map< std::string,std::string >::iterator **)&jresult = new std::map< std::string,std::string >::iterator(result); 
+  jresult = fiftyoneToJlong< std::map< std::string,std::string >::iterator * >(new std::map< std::string,std::string >::iterator(result)); 
   return jresult;
 }
 
@@ -907,7 +929,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string > * >(jarg1); 
   try {
     result = std_map_Sl_std_string_Sc_std_string_Sg__sizeImpl((std::map< std::string,std::string > const *)arg1);
   } catch(std::out_of_range &_e) {
@@ -928,7 +950,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string > * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -952,7 +974,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string > * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return ;
@@ -984,8 +1006,8 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(std::map< std::string,std::string > **)&jarg1; 
-  argp2 = *(std::map< std::string,std::string,std::less< std::string > >::iterator **)&jarg2; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string > * >(jarg1); 
+  argp2 = fiftyoneFromJlong< std::map< std::string,std::string,std::less< std::string > >::iterator * >(jarg2);
   if (!argp2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Attempt to dereference null std::map< std::string,std::string,std::less< std::string > >::iterator const");
     return ;
@@ -1000,7 +1022,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(std::map< std::string,std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -1061,7 +1083,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   result = (std::vector< std::string > *)new std::vector< std::string >();
-  *(std::vector< std::string > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -1074,13 +1096,13 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1;
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1);
   if (!arg1) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< std::string > const & is null");
     return 0;
   } 
   result = (std::vector< std::string > *)new std::vector< std::string >((std::vector< std::string > const &)*arg1);
-  *(std::vector< std::string > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -1093,7 +1115,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   result = (bool)((std::vector< std::string > const *)arg1)->empty();
   jresult = (jboolean)result; 
   return jresult;
@@ -1106,7 +1128,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   (arg1)->clear();
 }
 
@@ -1135,7 +1157,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
     SWIG_JavaThrowException(jenv, SWIG_JavaIndexOutOfBoundsException, (&_e)->what());
     return 0;
   }
-  *(std::vector< std::string > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -1148,7 +1170,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   try {
     result = std_vector_Sl_std_string_Sg__doCapacity(arg1);
   } catch(std::out_of_range &_e) {
@@ -1167,7 +1189,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   arg2 = jarg2; 
   try {
     std_vector_Sl_std_string_Sg__doReserve(arg1,SWIG_STD_MOVE(*(&arg2)));
@@ -1189,7 +1211,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   try {
     result = std_vector_Sl_std_string_Sg__doSize((std::vector< std::string > const *)arg1);
   } catch(std::out_of_range &_e) {
@@ -1208,7 +1230,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return ;
@@ -1230,7 +1252,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   arg2 = jarg2; 
   if(!jarg3) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
@@ -1259,7 +1281,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   arg2 = jarg2; 
   try {
     result = std_vector_Sl_std_string_Sg__doRemove(arg1,SWIG_STD_MOVE(*(&arg2)));
@@ -1281,7 +1303,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   arg2 = jarg2; 
   try {
     result = (std::vector< std::string >::value_type *) &std_vector_Sl_std_string_Sg__doGet(arg1,SWIG_STD_MOVE(*(&arg2)));
@@ -1304,7 +1326,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   arg2 = jarg2; 
   if(!jarg3) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
@@ -1334,7 +1356,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   arg2 = jarg2; 
   arg3 = jarg3; 
   try {
@@ -1351,7 +1373,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -1461,7 +1483,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(RequiredPropertiesConfig **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -1474,7 +1496,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   {
     try {
       result = (RequiredPropertiesConfig *)new RequiredPropertiesConfig((std::vector< std::string > const *)arg1);;
@@ -1525,7 +1547,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(RequiredPropertiesConfig **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -1592,7 +1614,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(RequiredPropertiesConfig **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   if (arg1) jenv->ReleaseStringUTFChars(jarg1, (const char *)arg1);
   return jresult;
 }
@@ -1603,7 +1625,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(RequiredPropertiesConfig **)&jarg1; 
+  arg1 = fiftyoneFromJlong< RequiredPropertiesConfig * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -1665,7 +1687,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(RequiredPropertiesConfig **)&jarg1; 
+  arg1 = fiftyoneFromJlong< RequiredPropertiesConfig * >(jarg1); 
   {
     try {
       result = (arg1)->getProperties();;
@@ -1716,7 +1738,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(std::vector< std::string > **)&jresult = new std::vector< std::string >(result); 
+  jresult = fiftyoneToJlong< std::vector< std::string > * >(new std::vector< std::string >(result)); 
   return jresult;
 }
 
@@ -1777,7 +1799,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< std::string > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -1790,7 +1812,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::string > * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->hasValue();;
@@ -1854,7 +1876,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::string > * >(jarg1); 
   {
     try {
       result = (char *)(arg1)->getNoValueMessage();;
@@ -1918,7 +1940,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::string > * >(jarg1); 
   {
     try {
       result = (arg1)->getValue();;
@@ -1979,7 +2001,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Value< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::string > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -2089,7 +2111,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< bool > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -2102,7 +2124,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< bool > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< bool > * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->hasValue();;
@@ -2166,7 +2188,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< bool > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< bool > * >(jarg1); 
   {
     try {
       result = (char *)(arg1)->getNoValueMessage();;
@@ -2230,7 +2252,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< bool > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< bool > * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getValue();;
@@ -2291,7 +2313,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Value< bool > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< bool > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -2401,7 +2423,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< int > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -2414,7 +2436,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< int > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< int > * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->hasValue();;
@@ -2478,7 +2500,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< int > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< int > * >(jarg1); 
   {
     try {
       result = (char *)(arg1)->getNoValueMessage();;
@@ -2542,7 +2564,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< int > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< int > * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getValue();;
@@ -2603,7 +2625,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Value< int > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< int > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -2713,7 +2735,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< std::vector< std::string > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -2726,7 +2748,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< std::string > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< std::string > > * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->hasValue();;
@@ -2790,7 +2812,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< std::string > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< std::string > > * >(jarg1); 
   {
     try {
       result = (char *)(arg1)->getNoValueMessage();;
@@ -2854,7 +2876,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< std::string > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< std::string > > * >(jarg1); 
   {
     try {
       result = (arg1)->getValue();;
@@ -2905,7 +2927,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(std::vector< std::string > **)&jresult = new std::vector< std::string >(result); 
+  jresult = fiftyoneToJlong< std::vector< std::string > * >(new std::vector< std::string >(result)); 
   return jresult;
 }
 
@@ -2915,7 +2937,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Value< std::vector< std::string > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< std::string > > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -3025,7 +3047,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< double > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -3038,7 +3060,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< double > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< double > * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->hasValue();;
@@ -3102,7 +3124,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< double > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< double > * >(jarg1); 
   {
     try {
       result = (char *)(arg1)->getNoValueMessage();;
@@ -3166,7 +3188,7 @@ SWIGEXPORT jdouble JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< double > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< double > * >(jarg1); 
   {
     try {
       result = (double)(arg1)->getValue();;
@@ -3227,7 +3249,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Value< double > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< double > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -3286,7 +3308,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -3348,7 +3370,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getAvailableProperties();;
@@ -3413,7 +3435,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -3486,7 +3508,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   {
     try {
       result = (arg1)->getProperties();;
@@ -3537,7 +3559,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(std::vector< std::string > **)&jresult = new std::vector< std::string >(result); 
+  jresult = fiftyoneToJlong< std::vector< std::string > * >(new std::vector< std::string >(result)); 
   return jresult;
 }
 
@@ -3551,7 +3573,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -3617,7 +3639,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -3677,7 +3699,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< std::vector< std::string > > **)&jresult = new Value< std::vector< std::string > >(result); 
+  jresult = fiftyoneToJlong< Value< std::vector< std::string > > * >(new Value< std::vector< std::string > >(result)); 
   return jresult;
 }
 
@@ -3691,7 +3713,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -3743,7 +3765,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< std::vector< std::string > > **)&jresult = new Value< std::vector< std::string > >(result); 
+  jresult = fiftyoneToJlong< Value< std::vector< std::string > > * >(new Value< std::vector< std::string > >(result)); 
   return jresult;
 }
 
@@ -3757,7 +3779,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -3817,7 +3839,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< std::string > **)&jresult = new Value< std::string >(result); 
+  jresult = fiftyoneToJlong< Value< std::string > * >(new Value< std::string >(result)); 
   return jresult;
 }
 
@@ -3831,7 +3853,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -3883,7 +3905,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< std::string > **)&jresult = new Value< std::string >(result); 
+  jresult = fiftyoneToJlong< Value< std::string > * >(new Value< std::string >(result)); 
   return jresult;
 }
 
@@ -3897,7 +3919,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -3957,7 +3979,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< bool > **)&jresult = new Value< bool >(result); 
+  jresult = fiftyoneToJlong< Value< bool > * >(new Value< bool >(result)); 
   return jresult;
 }
 
@@ -3971,7 +3993,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -4023,7 +4045,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< bool > **)&jresult = new Value< bool >(result); 
+  jresult = fiftyoneToJlong< Value< bool > * >(new Value< bool >(result)); 
   return jresult;
 }
 
@@ -4037,7 +4059,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -4097,7 +4119,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< int > **)&jresult = new Value< int >(result); 
+  jresult = fiftyoneToJlong< Value< int > * >(new Value< int >(result)); 
   return jresult;
 }
 
@@ -4111,7 +4133,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -4163,7 +4185,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< int > **)&jresult = new Value< int >(result); 
+  jresult = fiftyoneToJlong< Value< int > * >(new Value< int >(result)); 
   return jresult;
 }
 
@@ -4177,7 +4199,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -4237,7 +4259,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< double > **)&jresult = new Value< double >(result); 
+  jresult = fiftyoneToJlong< Value< double > * >(new Value< double >(result)); 
   return jresult;
 }
 
@@ -4251,7 +4273,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -4303,7 +4325,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< double > **)&jresult = new Value< double >(result); 
+  jresult = fiftyoneToJlong< Value< double > * >(new Value< double >(result)); 
   return jresult;
 }
 
@@ -4317,7 +4339,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -4377,7 +4399,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< bool > **)&jresult = new Value< bool >(result); 
+  jresult = fiftyoneToJlong< Value< bool > * >(new Value< bool >(result)); 
   return jresult;
 }
 
@@ -4391,7 +4413,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -4443,7 +4465,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< bool > **)&jresult = new Value< bool >(result); 
+  jresult = fiftyoneToJlong< Value< bool > * >(new Value< bool >(result)); 
   return jresult;
 }
 
@@ -4457,7 +4479,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -4517,7 +4539,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< int > **)&jresult = new Value< int >(result); 
+  jresult = fiftyoneToJlong< Value< int > * >(new Value< int >(result)); 
   return jresult;
 }
 
@@ -4531,7 +4553,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -4583,7 +4605,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< int > **)&jresult = new Value< int >(result); 
+  jresult = fiftyoneToJlong< Value< int > * >(new Value< int >(result)); 
   return jresult;
 }
 
@@ -4597,7 +4619,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -4657,7 +4679,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< double > **)&jresult = new Value< double >(result); 
+  jresult = fiftyoneToJlong< Value< double > * >(new Value< double >(result)); 
   return jresult;
 }
 
@@ -4671,7 +4693,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -4723,7 +4745,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< double > **)&jresult = new Value< double >(result); 
+  jresult = fiftyoneToJlong< Value< double > * >(new Value< double >(result)); 
   return jresult;
 }
 
@@ -4736,7 +4758,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Date **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Date * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getYear();;
@@ -4800,7 +4822,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Date **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Date * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getMonth();;
@@ -4864,7 +4886,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Date **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Date * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getDay();;
@@ -4925,7 +4947,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Date **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Date * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -4987,7 +5009,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getName();;
@@ -5051,7 +5073,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getDataFilesWherePresent();;
@@ -5102,7 +5124,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(std::vector< std::string > **)&jresult = new std::vector< std::string >(result); 
+  jresult = fiftyoneToJlong< std::vector< std::string > * >(new std::vector< std::string >(result)); 
   return jresult;
 }
 
@@ -5115,7 +5137,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getType();;
@@ -5179,7 +5201,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getCategory();;
@@ -5243,7 +5265,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getUrl();;
@@ -5307,7 +5329,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getAvailable();;
@@ -5371,7 +5393,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getDisplayOrder();;
@@ -5435,7 +5457,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getIsMandatory();;
@@ -5499,7 +5521,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getIsList();;
@@ -5563,7 +5585,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getIsObsolete();;
@@ -5627,7 +5649,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getShow();;
@@ -5691,7 +5713,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getShowValues();;
@@ -5755,7 +5777,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getDescription();;
@@ -5816,7 +5838,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -5878,7 +5900,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ComponentMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ComponentMetaData * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getComponentIdAsInt();;
@@ -5942,7 +5964,7 @@ SWIGEXPORT int JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inter
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ComponentMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ComponentMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getComponentId();;
@@ -6006,7 +6028,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ComponentMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ComponentMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getName();;
@@ -6067,7 +6089,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(ComponentMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ComponentMetaData * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -6129,7 +6151,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ProfileMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ProfileMetaData * >(jarg1); 
   {
     try {
       result = (uint32_t)(arg1)->getProfileId();;
@@ -6190,7 +6212,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(ProfileMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ProfileMetaData * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -6300,7 +6322,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(std::vector< uint8_t > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -6313,7 +6335,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1;
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1);
   if (!arg1) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< uint8_t > const & is null");
     return 0;
@@ -6368,7 +6390,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(std::vector< uint8_t > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -6381,7 +6403,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   {
     try {
       result = (bool)((std::vector< uint8_t > const *)arg1)->empty();;
@@ -6443,7 +6465,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   {
     try {
       (arg1)->clear();;
@@ -6564,7 +6586,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(std::vector< uint8_t > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -6577,7 +6599,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   {
     try {
       try {
@@ -6645,7 +6667,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -6716,7 +6738,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   {
     try {
       try {
@@ -6785,7 +6807,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   temp2 = (std::vector< unsigned char >::value_type)jarg2; 
   arg2 = &temp2; 
   {
@@ -6850,7 +6872,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   arg2 = jarg2; 
   temp3 = (std::vector< unsigned char >::value_type)jarg3; 
   arg3 = &temp3; 
@@ -6921,7 +6943,7 @@ SWIGEXPORT jshort JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_in
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -6992,7 +7014,7 @@ SWIGEXPORT jshort JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_in
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -7065,7 +7087,7 @@ SWIGEXPORT jshort JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_in
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   arg2 = jarg2; 
   temp3 = (std::vector< unsigned char >::value_type)jarg3; 
   arg3 = &temp3; 
@@ -7137,7 +7159,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   arg2 = jarg2; 
   arg3 = jarg3; 
   {
@@ -7203,7 +7225,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -7331,7 +7353,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ValueMetaDataKey **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -7440,7 +7462,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ValueMetaDataKey **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   
   return jresult;
 }
@@ -7454,7 +7476,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ValueMetaDataKey **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ValueMetaDataKey * >(jarg1); 
   {
     try {
       result = (arg1)->getPropertyName();;
@@ -7518,7 +7540,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ValueMetaDataKey **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ValueMetaDataKey * >(jarg1); 
   {
     try {
       result = (arg1)->getValueName();;
@@ -7579,7 +7601,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(ValueMetaDataKey **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ValueMetaDataKey * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -7641,7 +7663,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ValueMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ValueMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getName();;
@@ -7705,7 +7727,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ValueMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ValueMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getDescription();;
@@ -7769,7 +7791,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ValueMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ValueMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getUrl();;
@@ -7833,7 +7855,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ValueMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ValueMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getUtf8ValueName();;
@@ -7884,7 +7906,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(std::vector< uint8_t > **)&jresult = new std::vector< uint8_t >(result); 
+  jresult = fiftyoneToJlong< std::vector< uint8_t > * >(new std::vector< uint8_t >(result)); 
   return jresult;
 }
 
@@ -7894,7 +7916,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(ValueMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ValueMetaData * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -7953,7 +7975,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Collection< byte,ComponentMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< byte,ComponentMetaData > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -8016,7 +8038,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Collection< byte,ComponentMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< byte,ComponentMetaData > * >(jarg1); 
   {
     arg2 = (byte)jarg2;
   }
@@ -8070,7 +8092,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ComponentMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   
   return jresult;
 }
@@ -8085,7 +8107,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Collection< byte,ComponentMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< byte,ComponentMetaData > * >(jarg1); 
   arg2 = (uint32_t)jarg2; 
   {
     try {
@@ -8137,7 +8159,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ComponentMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -8150,7 +8172,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Collection< byte,ComponentMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< byte,ComponentMetaData > * >(jarg1); 
   {
     try {
       result = (uint32_t)(arg1)->getSize();;
@@ -8211,7 +8233,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Collection< std::string,PropertyMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< std::string,PropertyMetaData > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -8274,7 +8296,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Collection< std::string,PropertyMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< std::string,PropertyMetaData > * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -8333,7 +8355,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(PropertyMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -8347,7 +8369,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Collection< std::string,PropertyMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< std::string,PropertyMetaData > * >(jarg1); 
   arg2 = (uint32_t)jarg2; 
   {
     try {
@@ -8399,7 +8421,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(PropertyMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -8412,7 +8434,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Collection< std::string,PropertyMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< std::string,PropertyMetaData > * >(jarg1); 
   {
     try {
       result = (uint32_t)(arg1)->getSize();;
@@ -8473,7 +8495,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Collection< uint32_t,ProfileMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< uint32_t,ProfileMetaData > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -8536,7 +8558,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Collection< uint32_t,ProfileMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< uint32_t,ProfileMetaData > * >(jarg1); 
   arg2 = (unsigned int)jarg2; 
   {
     try {
@@ -8588,7 +8610,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ProfileMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -8602,7 +8624,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Collection< uint32_t,ProfileMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< uint32_t,ProfileMetaData > * >(jarg1); 
   arg2 = (uint32_t)jarg2; 
   {
     try {
@@ -8654,7 +8676,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ProfileMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -8667,7 +8689,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Collection< uint32_t,ProfileMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< uint32_t,ProfileMetaData > * >(jarg1); 
   {
     try {
       result = (uint32_t)(arg1)->getSize();;
@@ -8728,7 +8750,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Collection< ValueMetaDataKey,ValueMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< ValueMetaDataKey,ValueMetaData > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -8793,8 +8815,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(Collection< ValueMetaDataKey,ValueMetaData > **)&jarg1; 
-  argp2 = *(ValueMetaDataKey **)&jarg2; 
+  arg1 = fiftyoneFromJlong< Collection< ValueMetaDataKey,ValueMetaData > * >(jarg1); 
+  argp2 = fiftyoneFromJlong< ValueMetaDataKey * >(jarg2);
   if (!argp2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Attempt to dereference null ValueMetaDataKey");
     return 0;
@@ -8850,7 +8872,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ValueMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -8864,7 +8886,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Collection< ValueMetaDataKey,ValueMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< ValueMetaDataKey,ValueMetaData > * >(jarg1); 
   arg2 = (uint32_t)jarg2; 
   {
     try {
@@ -8916,7 +8938,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ValueMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -8929,7 +8951,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Collection< ValueMetaDataKey,ValueMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< ValueMetaDataKey,ValueMetaData > * >(jarg1); 
   {
     try {
       result = (uint32_t)(arg1)->getSize();;
@@ -8990,7 +9012,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(MetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -9052,7 +9074,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(MetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
   {
     try {
       result = (Collection< byte,ComponentMetaData > *)(arg1)->getComponents();;
@@ -9103,7 +9125,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Collection< byte,ComponentMetaData > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9116,7 +9138,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(MetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
   {
     try {
       result = (Collection< std::string,PropertyMetaData > *)(arg1)->getProperties();;
@@ -9167,7 +9189,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Collection< std::string,PropertyMetaData > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9180,7 +9202,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(MetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
   {
     try {
       result = (Collection< uint32_t,ProfileMetaData > *)(arg1)->getProfiles();;
@@ -9231,7 +9253,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Collection< uint32_t,ProfileMetaData > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9244,7 +9266,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(MetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
   {
     try {
       result = (Collection< ValueMetaDataKey,ValueMetaData > *)(arg1)->getValues();;
@@ -9295,7 +9317,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Collection< ValueMetaDataKey,ValueMetaData > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9310,8 +9332,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(MetaData **)&jarg1; 
-  arg2 = *(PropertyMetaData **)&jarg2; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
+  arg2 = fiftyoneFromJlong< PropertyMetaData * >(jarg2); 
   {
     try {
       result = (Collection< ValueMetaDataKey,ValueMetaData > *)(arg1)->getValuesForProperty(arg2);;
@@ -9362,7 +9384,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Collection< ValueMetaDataKey,ValueMetaData > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9377,8 +9399,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(MetaData **)&jarg1; 
-  arg2 = *(ProfileMetaData **)&jarg2; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
+  arg2 = fiftyoneFromJlong< ProfileMetaData * >(jarg2); 
   {
     try {
       result = (Collection< ValueMetaDataKey,ValueMetaData > *)(arg1)->getValuesForProfile(arg2);;
@@ -9429,7 +9451,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Collection< ValueMetaDataKey,ValueMetaData > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9444,8 +9466,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(MetaData **)&jarg1; 
-  arg2 = *(ProfileMetaData **)&jarg2; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
+  arg2 = fiftyoneFromJlong< ProfileMetaData * >(jarg2); 
   {
     try {
       result = (ComponentMetaData *)(arg1)->getComponentForProfile(arg2);;
@@ -9496,7 +9518,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ComponentMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9511,8 +9533,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(MetaData **)&jarg1; 
-  arg2 = *(PropertyMetaData **)&jarg2; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
+  arg2 = fiftyoneFromJlong< PropertyMetaData * >(jarg2); 
   {
     try {
       result = (ComponentMetaData *)(arg1)->getComponentForProperty(arg2);;
@@ -9563,7 +9585,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ComponentMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9578,8 +9600,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(MetaData **)&jarg1; 
-  arg2 = *(ComponentMetaData **)&jarg2; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
+  arg2 = fiftyoneFromJlong< ComponentMetaData * >(jarg2); 
   {
     try {
       result = (ProfileMetaData *)(arg1)->getDefaultProfileForComponent(arg2);;
@@ -9630,7 +9652,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ProfileMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9645,8 +9667,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(MetaData **)&jarg1; 
-  arg2 = *(PropertyMetaData **)&jarg2; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
+  arg2 = fiftyoneFromJlong< PropertyMetaData * >(jarg2); 
   {
     try {
       result = (ValueMetaData *)(arg1)->getDefaultValueForProperty(arg2);;
@@ -9697,7 +9719,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ValueMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9712,8 +9734,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(MetaData **)&jarg1; 
-  arg2 = *(ComponentMetaData **)&jarg2; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
+  arg2 = fiftyoneFromJlong< ComponentMetaData * >(jarg2); 
   {
     try {
       result = (Collection< std::string,PropertyMetaData > *)(arg1)->getPropertiesForComponent(arg2);;
@@ -9764,7 +9786,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Collection< std::string,PropertyMetaData > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9779,8 +9801,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(MetaData **)&jarg1; 
-  arg2 = *(ValueMetaData **)&jarg2; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
+  arg2 = fiftyoneFromJlong< ValueMetaData * >(jarg2); 
   {
     try {
       result = (PropertyMetaData *)(arg1)->getPropertyForValue(arg2);;
@@ -9831,7 +9853,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(PropertyMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9841,7 +9863,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -9902,7 +9924,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return ;
@@ -9972,7 +9994,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return ;
@@ -10043,7 +10065,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (MetaData *)(arg1)->getMetaData();;
@@ -10094,7 +10116,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(MetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -10107,7 +10129,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getAutomaticUpdatesEnabled();;
@@ -10173,8 +10195,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(EngineBase **)&jarg1; 
-  arg2 = *(EvidenceBase **)&jarg2; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
+  arg2 = fiftyoneFromJlong< EvidenceBase * >(jarg2); 
   {
     try {
       result = (ResultsBase *)(arg1)->processBase(arg2);;
@@ -10225,7 +10247,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ResultsBase **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -10236,7 +10258,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       (arg1)->refreshData();;
@@ -10297,7 +10319,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   arg2 = 0;
   if (jarg2) {
     arg2 = (char *)jenv->GetStringUTFChars(jarg2, 0);
@@ -10365,7 +10387,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     /*@SWIG:../../../../../cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
     if (jarg2 != NULL) {
@@ -10465,7 +10487,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (arg1)->getDataUpdateUrl();;
@@ -10529,7 +10551,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (arg1)->getPublishedTime();;
@@ -10580,7 +10602,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Date **)&jresult = new Date(result); 
+  jresult = fiftyoneToJlong< Date * >(new Date(result)); 
   return jresult;
 }
 
@@ -10593,7 +10615,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (arg1)->getUpdateAvailableTime();;
@@ -10644,7 +10666,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Date **)&jresult = new Date(result); 
+  jresult = fiftyoneToJlong< Date * >(new Date(result)); 
   return jresult;
 }
 
@@ -10657,7 +10679,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (arg1)->getDataFilePath();;
@@ -10721,7 +10743,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (arg1)->getDataFileTempPath();;
@@ -10785,7 +10807,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (arg1)->getProduct();;
@@ -10849,7 +10871,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (arg1)->getType();;
@@ -10913,7 +10935,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (std::vector< std::string > *)(arg1)->getKeys();;
@@ -10964,7 +10986,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(std::vector< std::string > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -10977,7 +10999,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (arg1)->getRequiredProperties();;
@@ -11028,7 +11050,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(std::vector< std::string > **)&jresult = new std::vector< std::string >(result); 
+  jresult = fiftyoneToJlong< std::vector< std::string > * >(new std::vector< std::string >(result)); 
   return jresult;
 }
 
@@ -11041,7 +11063,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getIsThreadSafe();;
@@ -11102,7 +11124,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(ConfigBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigBase * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -11163,7 +11185,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigBase * >(jarg1); 
   arg2 = jarg2 ? true : false; 
   {
     try {
@@ -11225,7 +11247,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigBase * >(jarg1); 
   arg2 = jarg2 ? true : false; 
   {
     try {
@@ -11287,7 +11309,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigBase * >(jarg1); 
   arg2 = jarg2 ? true : false; 
   {
     try {
@@ -11351,8 +11373,8 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(ConfigBase **)&jarg1; 
-  argp2 = *(std::vector< std::string > **)&jarg2; 
+  arg1 = fiftyoneFromJlong< ConfigBase * >(jarg1); 
+  argp2 = fiftyoneFromJlong< std::vector< std::string > * >(jarg2);
   if (!argp2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Attempt to dereference null std::vector< std::string >");
     return ;
@@ -11419,7 +11441,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigBase * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getUseUpperPrefixHeaders();;
@@ -11483,7 +11505,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigBase * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getUseTempFile();;
@@ -11547,7 +11569,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigBase * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getReuseTempFile();;
@@ -11611,7 +11633,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigBase * >(jarg1); 
   {
     try {
       result = (arg1)->getTempDirectories();;
@@ -11662,7 +11684,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(std::vector< std::string > **)&jresult = new std::vector< std::string >(result); 
+  jresult = fiftyoneToJlong< std::vector< std::string > * >(new std::vector< std::string >(result)); 
   return jresult;
 }
 
@@ -11675,7 +11697,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigBase * >(jarg1); 
   {
     try {
       result = (uint16_t)(arg1)->getConcurrency();;
@@ -11738,7 +11760,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigDeviceDetection **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigDeviceDetection * >(jarg1); 
   arg2 = jarg2 ? true : false; 
   {
     try {
@@ -11800,7 +11822,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigDeviceDetection **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigDeviceDetection * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -11862,7 +11884,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigDeviceDetection **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigDeviceDetection * >(jarg1); 
   arg2 = jarg2 ? true : false; 
   {
     try {
@@ -11925,7 +11947,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigDeviceDetection **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigDeviceDetection * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getUpdateMatchedUserAgent();;
@@ -11989,7 +12011,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigDeviceDetection **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigDeviceDetection * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getMaxMatchedUserAgentLength();;
@@ -12053,7 +12075,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigDeviceDetection **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigDeviceDetection * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getAllowUnmatched();;
@@ -12114,7 +12136,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(ConfigDeviceDetection **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigDeviceDetection * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -12224,7 +12246,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(EvidenceBase **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -12234,7 +12256,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(EvidenceBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EvidenceBase * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -12344,7 +12366,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(EvidenceDeviceDetection **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -12354,7 +12376,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(EvidenceDeviceDetection **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EvidenceDeviceDetection * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -12448,8 +12470,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(EngineDeviceDetection **)&jarg1; 
-  arg2 = *(EvidenceDeviceDetection **)&jarg2; 
+  arg1 = fiftyoneFromJlong< EngineDeviceDetection * >(jarg1); 
+  arg2 = fiftyoneFromJlong< EvidenceDeviceDetection * >(jarg2); 
   {
     try {
       result = (ResultsDeviceDetection *)(arg1)->processDeviceDetection(arg2);;
@@ -12500,7 +12522,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ResultsDeviceDetection **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -12514,7 +12536,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineDeviceDetection **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineDeviceDetection * >(jarg1); 
   arg2 = 0;
   if (jarg2) {
     arg2 = (char *)jenv->GetStringUTFChars(jarg2, 0);
@@ -12570,7 +12592,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ResultsDeviceDetection **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   if (arg2) jenv->ReleaseStringUTFChars(jarg2, (const char *)arg2);
   return jresult;
 }
@@ -12581,7 +12603,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(EngineDeviceDetection **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineDeviceDetection * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -12643,7 +12665,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsDeviceDetection **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsDeviceDetection * >(jarg1); 
   {
     try {
       result = (arg1)->getDeviceId();;
@@ -12708,7 +12730,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsDeviceDetection **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsDeviceDetection * >(jarg1); 
   arg2 = (uint32_t)jarg2; 
   {
     try {
@@ -12773,7 +12795,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsDeviceDetection **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsDeviceDetection * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getUserAgents();;
@@ -12834,7 +12856,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(ResultsDeviceDetection **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsDeviceDetection * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -12893,7 +12915,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(ResultsHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsHash * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -12955,7 +12977,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsHash * >(jarg1); 
   {
     try {
       result = (arg1)->getDeviceId();;
@@ -13020,7 +13042,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsHash * >(jarg1); 
   arg2 = (uint32_t)jarg2; 
   {
     try {
@@ -13085,7 +13107,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsHash * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getDifference();;
@@ -13150,7 +13172,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsHash * >(jarg1); 
   arg2 = (uint32_t)jarg2; 
   {
     try {
@@ -13215,7 +13237,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsHash * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getMethod();;
@@ -13280,7 +13302,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsHash * >(jarg1); 
   arg2 = (uint32_t)jarg2; 
   {
     try {
@@ -13345,7 +13367,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsHash * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getDrift();;
@@ -13410,7 +13432,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsHash * >(jarg1); 
   arg2 = (uint32_t)jarg2; 
   {
     try {
@@ -13475,7 +13497,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsHash * >(jarg1); 
   {
     try {
       result = (arg1)->getTrace();;
@@ -13539,7 +13561,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsHash * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getMatchedNodes();;
@@ -13603,7 +13625,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsHash * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getIterations();;
@@ -13668,7 +13690,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsHash * >(jarg1); 
   arg2 = (uint32_t)jarg2; 
   {
     try {
@@ -13733,7 +13755,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsHash * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getUserAgents();;
@@ -13845,7 +13867,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(CollectionConfig **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -13857,7 +13879,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(CollectionConfig **)&jarg1; 
+  arg1 = fiftyoneFromJlong< CollectionConfig * >(jarg1); 
   arg2 = (uint32_t)jarg2; 
   {
     try {
@@ -13919,7 +13941,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(CollectionConfig **)&jarg1; 
+  arg1 = fiftyoneFromJlong< CollectionConfig * >(jarg1); 
   arg2 = (uint16_t)jarg2; 
   {
     try {
@@ -13981,7 +14003,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(CollectionConfig **)&jarg1; 
+  arg1 = fiftyoneFromJlong< CollectionConfig * >(jarg1); 
   arg2 = (uint32_t)jarg2; 
   {
     try {
@@ -14044,7 +14066,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(CollectionConfig **)&jarg1; 
+  arg1 = fiftyoneFromJlong< CollectionConfig * >(jarg1); 
   {
     try {
       result = (uint32_t)(arg1)->getCapacity();;
@@ -14108,7 +14130,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(CollectionConfig **)&jarg1; 
+  arg1 = fiftyoneFromJlong< CollectionConfig * >(jarg1); 
   {
     try {
       result = (uint16_t)(arg1)->getConcurrency();;
@@ -14172,7 +14194,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(CollectionConfig **)&jarg1; 
+  arg1 = fiftyoneFromJlong< CollectionConfig * >(jarg1); 
   {
     try {
       result = (uint32_t)(arg1)->getLoaded();;
@@ -14233,7 +14255,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(CollectionConfig **)&jarg1; 
+  arg1 = fiftyoneFromJlong< CollectionConfig * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -14343,7 +14365,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ConfigHash **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -14354,7 +14376,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   {
     try {
       (arg1)->setHighPerformance();;
@@ -14414,7 +14436,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   {
     try {
       (arg1)->setBalanced();;
@@ -14474,7 +14496,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   {
     try {
       (arg1)->setBalancedTemp();;
@@ -14534,7 +14556,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   {
     try {
       (arg1)->setLowMemory();;
@@ -14594,7 +14616,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   {
     try {
       (arg1)->setMaxPerformance();;
@@ -14655,7 +14677,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   arg2 = (int32_t)jarg2; 
   {
     try {
@@ -14717,7 +14739,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   arg2 = (int32_t)jarg2; 
   {
     try {
@@ -14779,7 +14801,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   arg2 = (uint16_t)jarg2; 
   {
     try {
@@ -14841,7 +14863,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   arg2 = jarg2 ? true : false; 
   {
     try {
@@ -14903,7 +14925,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   arg2 = jarg2 ? true : false; 
   {
     try {
@@ -14965,7 +14987,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   arg2 = jarg2 ? true : false; 
   {
     try {
@@ -15027,7 +15049,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   arg2 = jarg2 ? true : false; 
   {
     try {
@@ -15091,8 +15113,8 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(ConfigHash **)&jarg1; 
-  argp2 = *(std::vector< std::string > **)&jarg2; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
+  argp2 = fiftyoneFromJlong< std::vector< std::string > * >(jarg2);
   if (!argp2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Attempt to dereference null std::vector< std::string >");
     return ;
@@ -15159,7 +15181,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   {
     try {
       result = (arg1)->getStrings();;
@@ -15210,7 +15232,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(CollectionConfig **)&jresult = new CollectionConfig(result); 
+  jresult = fiftyoneToJlong< CollectionConfig * >(new CollectionConfig(result)); 
   return jresult;
 }
 
@@ -15223,7 +15245,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   {
     try {
       result = (arg1)->getProperties();;
@@ -15274,7 +15296,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(CollectionConfig **)&jresult = new CollectionConfig(result); 
+  jresult = fiftyoneToJlong< CollectionConfig * >(new CollectionConfig(result)); 
   return jresult;
 }
 
@@ -15287,7 +15309,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   {
     try {
       result = (arg1)->getValues();;
@@ -15338,7 +15360,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(CollectionConfig **)&jresult = new CollectionConfig(result); 
+  jresult = fiftyoneToJlong< CollectionConfig * >(new CollectionConfig(result)); 
   return jresult;
 }
 
@@ -15351,7 +15373,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   {
     try {
       result = (arg1)->getProfiles();;
@@ -15402,7 +15424,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(CollectionConfig **)&jresult = new CollectionConfig(result); 
+  jresult = fiftyoneToJlong< CollectionConfig * >(new CollectionConfig(result)); 
   return jresult;
 }
 
@@ -15415,7 +15437,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   {
     try {
       result = (arg1)->getNodes();;
@@ -15466,7 +15488,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(CollectionConfig **)&jresult = new CollectionConfig(result); 
+  jresult = fiftyoneToJlong< CollectionConfig * >(new CollectionConfig(result)); 
   return jresult;
 }
 
@@ -15479,7 +15501,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   {
     try {
       result = (arg1)->getProfileOffsets();;
@@ -15530,7 +15552,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(CollectionConfig **)&jresult = new CollectionConfig(result); 
+  jresult = fiftyoneToJlong< CollectionConfig * >(new CollectionConfig(result)); 
   return jresult;
 }
 
@@ -15543,7 +15565,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getDrift();;
@@ -15607,7 +15629,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getDifference();;
@@ -15671,7 +15693,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getUsePerformanceGraph();;
@@ -15735,7 +15757,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getUsePredictiveGraph();;
@@ -15799,7 +15821,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   {
     try {
       result = (uint16_t)(arg1)->getConcurrency();;
@@ -15863,7 +15885,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getTraceRoute();;
@@ -15927,7 +15949,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getPropertyValueIndex();;
@@ -15991,7 +16013,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   {
     try {
       result = (arg1)->getIndexedProperties();;
@@ -16042,7 +16064,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(std::vector< std::string > **)&jresult = new std::vector< std::string >(result); 
+  jresult = fiftyoneToJlong< std::vector< std::string > * >(new std::vector< std::string >(result)); 
   return jresult;
 }
 
@@ -16052,7 +16074,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(ConfigHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigHash * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -16162,7 +16184,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(std::vector< uint32_t > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -16175,7 +16197,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint32_t > **)&jarg1;
+  arg1 = fiftyoneFromJlong< std::vector< uint32_t > * >(jarg1);
   if (!arg1) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< uint32_t > const & is null");
     return 0;
@@ -16230,7 +16252,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(std::vector< uint32_t > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -16243,7 +16265,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint32_t > * >(jarg1); 
   {
     try {
       result = (bool)((std::vector< uint32_t > const *)arg1)->empty();;
@@ -16305,7 +16327,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint32_t > * >(jarg1); 
   {
     try {
       (arg1)->clear();;
@@ -16426,7 +16448,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(std::vector< uint32_t > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -16439,7 +16461,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint32_t > * >(jarg1); 
   {
     try {
       try {
@@ -16507,7 +16529,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint32_t > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -16578,7 +16600,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint32_t > * >(jarg1); 
   {
     try {
       try {
@@ -16647,7 +16669,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint32_t > * >(jarg1); 
   temp2 = (std::vector< unsigned int >::value_type)jarg2; 
   arg2 = &temp2; 
   {
@@ -16712,7 +16734,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint32_t > * >(jarg1); 
   arg2 = jarg2; 
   temp3 = (std::vector< unsigned int >::value_type)jarg3; 
   arg3 = &temp3; 
@@ -16783,7 +16805,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint32_t > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -16854,7 +16876,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint32_t > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -16927,7 +16949,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint32_t > * >(jarg1); 
   arg2 = jarg2; 
   temp3 = (std::vector< unsigned int >::value_type)jarg3; 
   arg3 = &temp3; 
@@ -16999,7 +17021,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint32_t > * >(jarg1); 
   arg2 = jarg2; 
   arg3 = jarg3; 
   {
@@ -17065,7 +17087,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(std::vector< uint32_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint32_t > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -17139,8 +17161,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   std::string arg1_str(arg1_pstr);
   arg1 = &arg1_str;
   jenv->ReleaseStringUTFChars(jarg1, arg1_pstr); 
-  arg2 = *(ConfigHash **)&jarg2; 
-  arg3 = *(RequiredPropertiesConfig **)&jarg3; 
+  arg2 = fiftyoneFromJlong< ConfigHash * >(jarg2); 
+  arg3 = fiftyoneFromJlong< RequiredPropertiesConfig * >(jarg3); 
   {
     try {
       result = (EngineHash *)new EngineHash((std::string const &)*arg1,arg2,arg3);;
@@ -17191,7 +17213,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(EngineHash **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -17245,8 +17267,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
     /*@SWIG@*/
     arg2 = arrSize;
   }
-  arg3 = *(ConfigHash **)&jarg3; 
-  arg4 = *(RequiredPropertiesConfig **)&jarg4; 
+  arg3 = fiftyoneFromJlong< ConfigHash * >(jarg3); 
+  arg4 = fiftyoneFromJlong< RequiredPropertiesConfig * >(jarg4); 
   {
     try {
       result = (EngineHash *)new EngineHash(arg1,arg2,arg3,arg4);;
@@ -17297,7 +17319,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(EngineHash **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   
   return jresult;
 }
@@ -17311,7 +17333,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineHash * >(jarg1); 
   {
     try {
       result = (arg1)->getPublishedTime();;
@@ -17362,7 +17384,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Date **)&jresult = new Date(result); 
+  jresult = fiftyoneToJlong< Date * >(new Date(result)); 
   return jresult;
 }
 
@@ -17375,7 +17397,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineHash * >(jarg1); 
   {
     try {
       result = (arg1)->getUpdateAvailableTime();;
@@ -17426,7 +17448,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Date **)&jresult = new Date(result); 
+  jresult = fiftyoneToJlong< Date * >(new Date(result)); 
   return jresult;
 }
 
@@ -17497,7 +17519,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Date **)&jresult = new Date(result); 
+  jresult = fiftyoneToJlong< Date * >(new Date(result)); 
   return jresult;
 }
 
@@ -17581,7 +17603,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineHash * >(jarg1); 
   {
     try {
       result = (arg1)->getDataFilePath();;
@@ -17645,7 +17667,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineHash * >(jarg1); 
   {
     try {
       result = (arg1)->getDataFileTempPath();;
@@ -17707,7 +17729,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineHash * >(jarg1); 
   {
     try {
       (arg1)->refreshData();;
@@ -17768,7 +17790,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineHash * >(jarg1); 
   arg2 = 0;
   if (jarg2) {
     arg2 = (char *)jenv->GetStringUTFChars(jarg2, 0);
@@ -17836,7 +17858,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineHash * >(jarg1); 
   {
     /*@SWIG:../../../../../cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
     if (jarg2 != NULL) {
@@ -17938,8 +17960,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(EngineHash **)&jarg1; 
-  arg2 = *(EvidenceDeviceDetection **)&jarg2; 
+  arg1 = fiftyoneFromJlong< EngineHash * >(jarg1); 
+  arg2 = fiftyoneFromJlong< EvidenceDeviceDetection * >(jarg2); 
   {
     try {
       result = (ResultsHash *)(arg1)->process(arg2);;
@@ -17990,7 +18012,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ResultsHash **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -18004,7 +18026,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineHash * >(jarg1); 
   arg2 = 0;
   if (jarg2) {
     arg2 = (char *)jenv->GetStringUTFChars(jarg2, 0);
@@ -18060,7 +18082,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ResultsHash **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   if (arg2) jenv->ReleaseStringUTFChars(jarg2, (const char *)arg2);
   return jresult;
 }
@@ -18076,7 +18098,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineHash * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -18145,7 +18167,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(std::vector< uint32_t > **)&jresult = new std::vector< uint32_t >(result); 
+  jresult = fiftyoneToJlong< std::vector< uint32_t > * >(new std::vector< uint32_t >(result)); 
   return jresult;
 }
 
@@ -18160,8 +18182,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(EngineHash **)&jarg1; 
-  arg2 = *(EvidenceBase **)&jarg2; 
+  arg1 = fiftyoneFromJlong< EngineHash * >(jarg1); 
+  arg2 = fiftyoneFromJlong< EvidenceBase * >(jarg2); 
   {
     try {
       result = (ResultsBase *)(arg1)->processBase(arg2);;
@@ -18212,7 +18234,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ResultsBase **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -18227,8 +18249,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(EngineHash **)&jarg1; 
-  arg2 = *(EvidenceDeviceDetection **)&jarg2; 
+  arg1 = fiftyoneFromJlong< EngineHash * >(jarg1); 
+  arg2 = fiftyoneFromJlong< EvidenceDeviceDetection * >(jarg2); 
   {
     try {
       result = (ResultsDeviceDetection *)(arg1)->processDeviceDetection(arg2);;
@@ -18279,7 +18301,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ResultsDeviceDetection **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -18293,7 +18315,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineHash * >(jarg1); 
   arg2 = 0;
   if (jarg2) {
     arg2 = (char *)jenv->GetStringUTFChars(jarg2, 0);
@@ -18349,7 +18371,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ResultsDeviceDetection **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   if (arg2) jenv->ReleaseStringUTFChars(jarg2, (const char *)arg2);
   return jresult;
 }
@@ -18360,7 +18382,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(EngineHash **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineHash * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -18470,7 +18492,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ResultsHashSerializer **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -18533,7 +18555,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(ResultsHashSerializer **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -18548,8 +18570,8 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_i
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(ResultsHashSerializer **)&jarg1; 
-  arg2 = *(ResultsHash **)&jarg2; 
+  arg1 = fiftyoneFromJlong< ResultsHashSerializer * >(jarg1); 
+  arg2 = fiftyoneFromJlong< ResultsHash * >(jarg2); 
   {
     try {
       result = (arg1)->allValuesJson(arg2);;
@@ -18610,7 +18632,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(ResultsHashSerializer **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsHashSerializer * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -18720,7 +18742,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Transform **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -18783,7 +18805,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Transform **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -18797,7 +18819,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Transform **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Transform * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -18857,7 +18879,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(std::map< std::string,std::string,std::less< std::string > > **)&jresult = new std::map< std::string,std::string,std::less< std::string > >(result); 
+  jresult = fiftyoneToJlong< std::map< std::string,std::string,std::less< std::string > > * >(new std::map< std::string,std::string,std::less< std::string > >(result)); 
   return jresult;
 }
 
@@ -18871,7 +18893,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Transform **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Transform * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -18931,7 +18953,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(std::map< std::string,std::string,std::less< std::string > > **)&jresult = new std::map< std::string,std::string,std::less< std::string > >(result); 
+  jresult = fiftyoneToJlong< std::map< std::string,std::string,std::less< std::string > > * >(new std::map< std::string,std::string,std::less< std::string > >(result)); 
   return jresult;
 }
 
@@ -18945,7 +18967,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Transform **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Transform * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -19005,7 +19027,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(std::map< std::string,std::string,std::less< std::string > > **)&jresult = new std::map< std::string,std::string,std::less< std::string > >(result); 
+  jresult = fiftyoneToJlong< std::map< std::string,std::string,std::less< std::string > > * >(new std::map< std::string,std::string,std::less< std::string > >(result)); 
   return jresult;
 }
 
@@ -19015,7 +19037,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Transform **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Transform * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -19079,7 +19101,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_inte
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EvidenceBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EvidenceBase * >(jarg1); 
   {
     if (jarg2) {
       arg2 = (char *) jenv->GetByteArrayElements(jarg2, 0);
@@ -19169,7 +19191,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   {
     if (jarg2) {
       arg2 = (char *) jenv->GetByteArrayElements(jarg2, 0);
@@ -19229,7 +19251,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< std::string > **)&jresult = new Value< std::string >(result); 
+  jresult = fiftyoneToJlong< Value< std::string > * >(new Value< std::string >(result)); 
   {
     if (jarg2) jenv->ReleaseByteArrayElements(jarg2, (jbyte *)arg2, JNI_ABORT);
   }
@@ -19248,7 +19270,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   {
     if (jarg2) {
       arg2 = (char *) jenv->GetByteArrayElements(jarg2, 0);
@@ -19308,7 +19330,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< std::vector< std::string > > **)&jresult = new Value< std::vector< std::string > >(result); 
+  jresult = fiftyoneToJlong< Value< std::vector< std::string > > * >(new Value< std::vector< std::string > >(result)); 
   {
     if (jarg2) jenv->ReleaseByteArrayElements(jarg2, (jbyte *)arg2, JNI_ABORT);
   }
@@ -19327,7 +19349,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   {
     if (jarg2) {
       arg2 = (char *) jenv->GetByteArrayElements(jarg2, 0);
@@ -19387,7 +19409,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< bool > **)&jresult = new Value< bool >(result); 
+  jresult = fiftyoneToJlong< Value< bool > * >(new Value< bool >(result)); 
   {
     if (jarg2) jenv->ReleaseByteArrayElements(jarg2, (jbyte *)arg2, JNI_ABORT);
   }
@@ -19406,7 +19428,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   {
     if (jarg2) {
       arg2 = (char *) jenv->GetByteArrayElements(jarg2, 0);
@@ -19466,7 +19488,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< int > **)&jresult = new Value< int >(result); 
+  jresult = fiftyoneToJlong< Value< int > * >(new Value< int >(result)); 
   {
     if (jarg2) jenv->ReleaseByteArrayElements(jarg2, (jbyte *)arg2, JNI_ABORT);
   }
@@ -19485,7 +19507,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   {
     if (jarg2) {
       arg2 = (char *) jenv->GetByteArrayElements(jarg2, 0);
@@ -19545,7 +19567,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
       };
     }
   }
-  *(Value< double > **)&jresult = new Value< double >(result); 
+  jresult = fiftyoneToJlong< Value< double > * >(new Value< double >(result)); 
   {
     if (jarg2) jenv->ReleaseByteArrayElements(jarg2, (jbyte *)arg2, JNI_ABORT);
   }
@@ -19564,7 +19586,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   {
     if (jarg2) {
       arg2 = (char *) jenv->GetByteArrayElements(jarg2, 0);
@@ -19637,7 +19659,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
     jlong baseptr = 0;
     (void)jenv;
     (void)jcls;
-    *(ConfigBase **)&baseptr = *(ConfigDeviceDetection **)&jarg1;
+    baseptr = fiftyoneToJlong< ConfigBase * >(fiftyoneFromJlong< ConfigDeviceDetection * >(jarg1));
     return baseptr;
 }
 
@@ -19645,7 +19667,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
     jlong baseptr = 0;
     (void)jenv;
     (void)jcls;
-    *(std::map< std::string,std::string > **)&baseptr = *(EvidenceBase **)&jarg1;
+    baseptr = fiftyoneToJlong< std::map< std::string,std::string > * >(fiftyoneFromJlong< EvidenceBase * >(jarg1));
     return baseptr;
 }
 
@@ -19653,7 +19675,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
     jlong baseptr = 0;
     (void)jenv;
     (void)jcls;
-    *(EvidenceBase **)&baseptr = *(EvidenceDeviceDetection **)&jarg1;
+    baseptr = fiftyoneToJlong< EvidenceBase * >(fiftyoneFromJlong< EvidenceDeviceDetection * >(jarg1));
     return baseptr;
 }
 
@@ -19661,7 +19683,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
     jlong baseptr = 0;
     (void)jenv;
     (void)jcls;
-    *(EngineBase **)&baseptr = *(EngineDeviceDetection **)&jarg1;
+    baseptr = fiftyoneToJlong< EngineBase * >(fiftyoneFromJlong< EngineDeviceDetection * >(jarg1));
     return baseptr;
 }
 
@@ -19669,7 +19691,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
     jlong baseptr = 0;
     (void)jenv;
     (void)jcls;
-    *(ResultsBase **)&baseptr = *(ResultsDeviceDetection **)&jarg1;
+    baseptr = fiftyoneToJlong< ResultsBase * >(fiftyoneFromJlong< ResultsDeviceDetection * >(jarg1));
     return baseptr;
 }
 
@@ -19677,7 +19699,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
     jlong baseptr = 0;
     (void)jenv;
     (void)jcls;
-    *(ResultsDeviceDetection **)&baseptr = *(ResultsHash **)&jarg1;
+    baseptr = fiftyoneToJlong< ResultsDeviceDetection * >(fiftyoneFromJlong< ResultsHash * >(jarg1));
     return baseptr;
 }
 
@@ -19685,7 +19707,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
     jlong baseptr = 0;
     (void)jenv;
     (void)jcls;
-    *(ConfigDeviceDetection **)&baseptr = *(ConfigHash **)&jarg1;
+    baseptr = fiftyoneToJlong< ConfigDeviceDetection * >(fiftyoneFromJlong< ConfigHash * >(jarg1));
     return baseptr;
 }
 
@@ -19693,7 +19715,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_devicedetection_hash_engine_onpremise_int
     jlong baseptr = 0;
     (void)jenv;
     (void)jcls;
-    *(EngineDeviceDetection **)&baseptr = *(EngineHash **)&jarg1;
+    baseptr = fiftyoneToJlong< EngineDeviceDetection * >(fiftyoneFromJlong< EngineHash * >(jarg1));
     return baseptr;
 }
 

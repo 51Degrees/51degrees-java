@@ -185,7 +185,8 @@ public class CalculationsTest {
          */
         private static final long serialVersionUID = 1L;
 
-        private final Set<String> seen = new HashSet<>();
+        // Never serialized: the test only calls transform.
+        private final transient Set<String> seen = new HashSet<>();
 
         @Override
         public CoordinateReferenceSystem getSourceCRS() {

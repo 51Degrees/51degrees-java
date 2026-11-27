@@ -31,6 +31,8 @@ import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
 import fiftyone.pipeline.engines.flowelements.AspectEngine;
 import fiftyone.pipeline.engines.services.MissingPropertyService;
+import java.util.Map;
+import java.util.TreeMap;
 import org.slf4j.Logger;
 
 /**
@@ -47,8 +49,27 @@ public class GeoDataDefault extends AspectDataBase implements GeoData {
      * @param missingPropertyService explains why a property has no value
      */
     public GeoDataDefault(Logger logger, FlowData flowData, AspectEngine<? extends AspectData,? extends AspectPropertyMetaData> engine, MissingPropertyService missingPropertyService) {
-        super(logger, flowData, engine, missingPropertyService);
-        setJavaScript(new AspectPropertyValueDefault<JavaScript>(new JavaScript("")));
+        super(
+            logger,
+            flowData,
+            engine,
+            missingPropertyService,
+            newInitialData());
+    }
+
+    /**
+     * Create the case-insensitive map the values are held in, with an empty
+     * JavaScript value, so the constructor does not need to call a method a
+     * subclass can override to set it.
+     * @return the map for the values
+     */
+    private static Map<String, Object> newInitialData() {
+        Map<String, Object> data =
+            new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        data.put(
+            "javascript",
+            new AspectPropertyValueDefault<JavaScript>(new JavaScript("")));
+        return data;
     }
 
 

@@ -54,9 +54,12 @@ public abstract class DeviceDataBaseOnPremise extends DeviceDataBase
     implements ProvidesValuesAsString {
 
     /**
-     * Maps each primitive type to its boxed type, used when converting native
-     * values.
+     * Maps each primitive type to its boxed type.
+     * @deprecated no longer used, as native values are converted without
+     * it. Use {@link fiftyone.pipeline.util.Types#getPrimitiveTypeMap()}
+     * for the same map.
      */
+    @Deprecated
     protected final Map<Class<?>, Class<?>> primitiveTypes;
     private final Object dataLock = new Object();
     private final Object getLock = new Object();
@@ -165,6 +168,24 @@ public abstract class DeviceDataBaseOnPremise extends DeviceDataBase
         String propertyName);
 
     /**
+     * Whether the map {@link #asKeyMap()} fills holds the value in the form
+     * asked for. The map holds each property as the type in its metadata, so
+     * a property asked for as another type is read from the results instead.
+     * @param key name of the property
+     * @param type the type asked for
+     * @param parameterizedTypes the parameterized types asked for
+     * @return true if the value in the map is in the form asked for
+     */
+    private boolean isHeldInMap(
+        String key,
+        Class<?> type,
+        Class<?>[] parameterizedTypes) {
+        return type.equals(AspectPropertyValue.class) == false ||
+            parameterizedTypes.length == 0 ||
+            parameterizedTypes[0].equals(getPropertyType(key));
+    }
+
+    /**
      * By default, the base map will not be populated as doing so is a fairly
      * expensive operation. Instead, we override the AsDictionary method to
      * populate the dictionary on-demand.
@@ -219,12 +240,14 @@ public abstract class DeviceDataBaseOnPremise extends DeviceDataBase
     protected <T> TryGetResult<T> tryGetValue(
         String key,
         Class<T> type,
-        Class<?>... parameterisedTypes) {
+        Class<?>... parameterizedTypes) {
         TryGetResult<T> result = new TryGetResult<>();
-        if (mapPopulated == true) {
-            // If the complete set of values has been populated
-            // then we can use the base implementation to get
-            // the value from the dictionary.
+        if (mapPopulated == true &&
+            isHeldInMap(key, type, parameterizedTypes)) {
+            // If the complete set of values has been populated, and the
+            // value is wanted in the form the map holds it, then we can
+            // use the base implementation to get the value from the
+            // dictionary.
             return super.tryGetValue(key, type);
         } else {
             // If the complete set of values has not been populated
@@ -234,13 +257,13 @@ public abstract class DeviceDataBaseOnPremise extends DeviceDataBase
                 Class<?> valueType = type;
                 if (type.equals(Object.class)) {
                     valueType = AspectPropertyValue.class;
-                    parameterisedTypes = new Class<?>[]{ getPropertyType(key) };
+                    parameterizedTypes = new Class<?>[]{ getPropertyType(key) };
                 }
                 synchronized (getLock) {
                     Object obj = null;
                     if (valueType.equals(AspectPropertyValue.class)){
-                        if (parameterisedTypes.length > 0) {
-                            Class<?> innerType = parameterisedTypes[0];
+                        if (parameterizedTypes.length > 0) {
+                            Class<?> innerType = parameterizedTypes[0];
                             if (innerType.equals(String.class)) {
                                 obj = getValueAsString(key);
                             } else if (innerType.equals(Boolean.class)) {

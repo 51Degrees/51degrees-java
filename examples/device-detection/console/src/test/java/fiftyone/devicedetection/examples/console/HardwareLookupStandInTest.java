@@ -214,7 +214,7 @@ public class HardwareLookupStandInTest {
     }
 
     /**
-     * The output without the colour codes around the level of each log
+     * The output without the color codes around the level of each log
      * line.
      */
     private static String plain(String output) {

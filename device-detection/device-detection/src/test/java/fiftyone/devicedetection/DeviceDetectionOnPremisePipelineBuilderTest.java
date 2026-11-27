@@ -113,7 +113,7 @@ public class DeviceDetectionOnPremisePipelineBuilderTest {
             builder.setFilename(HASH_DATA_FILE_NAME.replace(".hash", ".any"), true);
             fail();
         } catch (Exception e) {
-            assertTrue(e.getMessage().contains("Unrecognised filename."));
+            assertTrue(e.getMessage().contains("Unrecognized filename."));
         }
     }
 

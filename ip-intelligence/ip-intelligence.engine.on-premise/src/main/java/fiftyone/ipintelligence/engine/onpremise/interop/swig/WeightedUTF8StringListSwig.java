@@ -8,19 +8,40 @@
 
 package fiftyone.ipintelligence.engine.onpremise.interop.swig;
 
-public class WeightedUTF8StringListSwig extends java.util.AbstractList<WeightedValueUTF8StringSwig> implements AutoCloseable, java.util.RandomAccess {
+public final class WeightedUTF8StringListSwig extends java.util.AbstractList<WeightedValueUTF8StringSwig> implements AutoCloseable, java.util.RandomAccess {
   private transient long swigCPtr;
+
+  /** Whether deleting this proxy deletes its C++ object. */
   protected transient boolean swigCMemOwn;
 
+  /**
+   * Makes a proxy for a C++ object.
+   *
+   * @param cPtr the address of the C++ object
+   * @param cMemoryOwn whether the proxy deletes the C++ object
+   */
   protected WeightedUTF8StringListSwig(long cPtr, boolean cMemoryOwn) {
     swigCMemOwn = cMemoryOwn;
     swigCPtr = cPtr;
   }
 
+  /**
+   * The address of the C++ object of a proxy, or 0 for null.
+   *
+   * @param obj the proxy, or null
+   * @return the address of its C++ object
+   */
   protected static long getCPtr(WeightedUTF8StringListSwig obj) {
     return (obj == null) ? 0 : obj.swigCPtr;
   }
 
+  /**
+   * Takes the C++ object from a proxy that owns it, so the caller deletes
+   * it and the proxy can no longer be used.
+   *
+   * @param obj the proxy, or null
+   * @return the address of its C++ object, or 0 for null
+   */
   protected static long swigRelease(WeightedUTF8StringListSwig obj) {
     long ptr = 0;
     if (obj != null) {
@@ -33,6 +54,10 @@ public class WeightedUTF8StringListSwig extends java.util.AbstractList<WeightedV
     return ptr;
   }
 
+  /**
+   * Deletes the C++ object if this proxy owns it. The proxy cannot be used
+   * after this.
+   */
   public synchronized void delete() {
     if (swigCPtr != 0) {
       if (swigCMemOwn) {
@@ -48,7 +73,6 @@ public class WeightedUTF8StringListSwig extends java.util.AbstractList<WeightedV
     this.delete();
   }
 
-  @SuppressWarnings("this-escape")
   public WeightedUTF8StringListSwig(WeightedValueUTF8StringSwig[] initialElements) {
     this();
     doReserve(initialElements.length);
@@ -58,7 +82,6 @@ public class WeightedUTF8StringListSwig extends java.util.AbstractList<WeightedV
     }
   }
 
-  @SuppressWarnings("this-escape")
   public WeightedUTF8StringListSwig(Iterable<WeightedValueUTF8StringSwig> initialElements) {
     this();
     for (WeightedValueUTF8StringSwig element : initialElements) {

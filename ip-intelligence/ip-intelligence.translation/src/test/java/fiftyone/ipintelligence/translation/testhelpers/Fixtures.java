@@ -138,7 +138,7 @@ public final class Fixtures {
     /**
      * Build a pipeline as {@link #build} but with a countries translation
      * engine using custom country name sources and a custom set of all known
-     * countries. Used to exercise the missing-single-name behaviour with a
+     * countries. Used to exercise the missing-single-name behavior with a
      * deliberately incomplete locale map.
      * @param geographical the geographical weighted codes
      * @param population the population weighted codes

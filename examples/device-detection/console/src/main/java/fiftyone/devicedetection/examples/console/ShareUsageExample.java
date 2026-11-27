@@ -229,7 +229,8 @@ public class ShareUsageExample {
     }
 
     /**
-     * Filter evidence entries to only include those with the specified prefix.
+     * Filter evidence entries to only include those with the specified prefix
+     * and both a name and a value.
      *
      * @param evidence the original evidence map
      * @param prefix the prefix to filter on (e.g., "header.")
@@ -238,10 +239,11 @@ public class ShareUsageExample {
     private static Map<String, String> filterEvidence(Map<?, ?> evidence, String prefix) {
         return evidence.entrySet()
                 .stream()
-                .filter(e -> String.valueOf(e.getKey()).startsWith(prefix))
+                .filter(e -> e.getKey() != null && e.getValue() != null)
+                .filter(e -> e.getKey().toString().startsWith(prefix))
                 .collect(Collectors.toMap(
-                        e -> String.valueOf(e.getKey()),
-                        e -> String.valueOf(e.getValue())));
+                        e -> e.getKey().toString(),
+                        e -> e.getValue().toString()));
     }
 
     /**

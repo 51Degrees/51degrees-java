@@ -11,9 +11,8 @@ package fiftyone.devicedetection.hash.engine.onpremise.interop.swig;
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.Constants;
 import fiftyone.pipeline.engines.fiftyone.flowelements.interop.LibLoader;
-import java.nio.ByteBuffer;
 
-public class DeviceDetectionHashEngineModuleJNI {
+final class DeviceDetectionHashEngineModuleJNI {
   public final static native long new_MapStringStringSwig__SWIG_0();
   public final static native long new_MapStringStringSwig__SWIG_1(long jarg1, MapStringStringSwig jarg1_);
   public final static native long MapStringStringSwig_Iterator_getNextUnchecked(long jarg1, MapStringStringSwig.Iterator jarg1_);

@@ -73,7 +73,8 @@ public class JsonBuilderElement
     private static final String RAW_WEIGHTING_KEY = "rawweighting";
     private static final String VALUE_KEY = "value";
     private final EvidenceKeyFilter evidenceKeyFilter;
-    private final List<ElementPropertyMetaData> properties;
+    private final Object propertiesLock = new Object();
+    private volatile List<ElementPropertyMetaData> properties = null;
     private final List<String> blacklist;
     private final Set<String> elementBlacklist;
 
@@ -91,14 +92,6 @@ public class JsonBuilderElement
         evidenceKeyFilter = new EvidenceKeyFilterWhitelist(
             whiteList,
             String.CASE_INSENSITIVE_ORDER);
-
-        properties = Collections.singletonList(
-            (ElementPropertyMetaData)new ElementPropertyMetaDataDefault(
-                "json",
-                this,
-                "",
-                String.class,
-                true));
 
         // Blacklist of properties which should not be added to the Json.
         blacklist = Arrays.asList("products", "properties");
@@ -185,9 +178,30 @@ public class JsonBuilderElement
         return evidenceKeyFilter;
     }
 
+    /**
+     * The properties are created on first use rather than in the
+     * constructor, as each refers to this element.
+     */
     @Override
     public List<ElementPropertyMetaData> getProperties() {
-        return properties;
+        List<ElementPropertyMetaData> result = properties;
+        if (result == null) {
+            synchronized (propertiesLock) {
+                result = properties;
+                if (result == null) {
+                    result = Collections.singletonList(
+                        (ElementPropertyMetaData)
+                            new ElementPropertyMetaDataDefault(
+                                "json",
+                                this,
+                                "",
+                                String.class,
+                                true));
+                    properties = result;
+                }
+            }
+        }
+        return result;
     }
 
     @Override

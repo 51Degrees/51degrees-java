@@ -94,7 +94,8 @@ public class Example extends HttpServlet {
      */
     private static final long serialVersionUID = -7420567024186859548L;
     /** Gives the Flow Data for each request. */
-    FlowDataProviderCore flowDataProvider = new FlowDataProviderCore.Default();
+    // HttpServlet is Serializable, but this servlet is never serialized.
+    transient FlowDataProviderCore flowDataProvider = new FlowDataProviderCore.Default();
 
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>

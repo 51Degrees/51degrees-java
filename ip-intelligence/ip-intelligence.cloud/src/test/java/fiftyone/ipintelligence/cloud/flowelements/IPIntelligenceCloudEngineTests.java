@@ -137,7 +137,7 @@ public class IPIntelligenceCloudEngineTests {
 
     /**
      * A property the cloud reports with the {@code WktString} type (e.g.
-     * {@code Areas}) is wrapped in a {@link WktString}. The cloud serialises it
+     * {@code Areas}) is wrapped in a {@link WktString}. The cloud serializes it
      * as an object that holds the text under a {@code "value"} key, so this also
      * exercises that the text is extracted rather than the object stringified.
      */

@@ -24,10 +24,8 @@ package fiftyone.devicedetection.shared.testhelpers;
 
 import org.junit.Test;
 
-import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.Map;
-import java.util.function.Function;
 
 import static org.junit.Assert.*;
 
@@ -59,36 +57,33 @@ public class KeyUtilsTest {
         }
     }
 
+    /**
+     * The deprecated KeyUtils.getNamedKey reads the environment under the
+     * name given.
+     * @deprecated tests the deprecated {@link KeyUtils}.
+     */
+    @Deprecated
     @Test
-    public void publishedGetNamedKey_ReadsTheEnvironmentUnderTheNameGiven()
-        throws Exception {
-        assertEquals("from-environment", publishedGetNamedKey(
+    public void publishedGetNamedKey_ReadsTheEnvironmentUnderTheNameGiven() {
+        assertEquals("from-environment", KeyUtils.getNamedKey(
             "KEY_UTILS_TEST_NAME", UPPER_CASE_ONLY::get));
-        assertNull(publishedGetNamedKey(NAME, UPPER_CASE_ONLY::get));
-    }
-
-    @Test
-    public void publishedGetNamedKey_NotInTheEnvironment_ReadsTheSystemProperty()
-        throws Exception {
-        System.setProperty(NAME, "from-property");
-        try {
-            assertEquals("from-property",
-                publishedGetNamedKey(NAME, UPPER_CASE_ONLY::get));
-        } finally {
-            System.clearProperty(NAME);
-        }
+        assertNull(KeyUtils.getNamedKey(NAME, UPPER_CASE_ONLY::get));
     }
 
     /**
-     * Calls the deprecated KeyUtils.getNamedKey, found by name, as the build
-     * treats the use of a deprecated class as an error.
+     * The deprecated KeyUtils.getNamedKey reads the system property when
+     * the environment has no value under the name given.
+     * @deprecated tests the deprecated {@link KeyUtils}.
      */
-    private static String publishedGetNamedKey(
-        String keyName,
-        Function<String, String> environment) throws Exception {
-        Method method = Class.forName(
-                "fiftyone.devicedetection.shared.testhelpers.KeyUtils")
-            .getDeclaredMethod("getNamedKey", String.class, Function.class);
-        return (String) method.invoke(null, keyName, environment);
+    @Deprecated
+    @Test
+    public void publishedGetNamedKey_NotInTheEnvironment_ReadsTheSystemProperty() {
+        System.setProperty(NAME, "from-property");
+        try {
+            assertEquals("from-property",
+                KeyUtils.getNamedKey(NAME, UPPER_CASE_ONLY::get));
+        } finally {
+            System.clearProperty(NAME);
+        }
     }
 }

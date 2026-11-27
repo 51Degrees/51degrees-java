@@ -14,11 +14,6 @@ $PSNativeCommandUseErrorActionPreference = $true
 
 ./java/setup-enviroment.ps1 -RepoName $RepoName -JavaSDKEnvVar $JavaSDKEnvVar
 
-# This build is ours, so any warning fails it. The poms and the native CMake
-# files read this, and the later steps run in this process. A build anyone
-# else runs leaves it unset and only shows its warnings.
-$env:_51DEGREES_WARNINGS_AS_ERRORS = 'true'
-
 # Every live cloud test that reads a key skips without its resource key, and
 # the later steps run in this process, so removing the keys here leaves them
 # out of the whole job. The license key of the same account goes too, as the

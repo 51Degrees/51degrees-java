@@ -278,7 +278,7 @@ public class DeviceDetectionHashEngineBuilder
     /**
      * Set whether the predictive optimized graph is used
      * for processing. When processing evidence, the predictive
-     * graph is optimised to find the best answer for evidence
+     * graph is optimized to find the best answer for evidence
      * which was not in the training data. However, this is at the
      * expense of processing time, as more possibilities are taken into
      * consideration.

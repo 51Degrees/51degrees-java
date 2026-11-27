@@ -123,7 +123,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
                 "Hash V4.1 data file.");
         }
         if (filename.endsWith(".hash") == false) {
-            throw new Exception("Unrecognised filename. " +
+            throw new Exception("Unrecognized filename. " +
                 "Expected a '*.hash' hash data file.");
         }
         return this;
@@ -360,7 +360,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
     /**
      * Set whether or not the performance optimized graph is used
      * for processing. When processing evidence, the performance
-     * graph is optimised to find an answer as quick as possible.
+     * graph is optimized to find an answer as quick as possible.
      * However, this can be at the expense of finding the best
      * match for evidence which was not in the training data. If
      * the predictive graph is also enabled, it will be used
@@ -378,7 +378,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
     /**
      * Set whether or not the predictive optimized graph is used
      * for processing. When processing evidence, the predictive
-     * graph is optimised to find the best answer for evidence
+     * graph is optimized to find the best answer for evidence
      * which was not in the training data. However, this is at the
      * expense of processing time, as more possibilities are taken into
      * consideration.
@@ -517,7 +517,7 @@ public class DeviceDetectionOnPremisePipelineBuilder
         if(updatePollingInterval != null) {
             builder.setUpdatePollingIntervalMillis(updatePollingInterval);
         }
-        // Configure update polling interval randomisation.
+        // Configure update polling interval randomization.
         if(updateRandomisationMax != null) {
             builder.setUpdateRandomisationMaxMillis(updateRandomisationMax);
         }

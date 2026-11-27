@@ -123,7 +123,7 @@ public class CloudRequestEngineDefault
      */
     private static final int HTTP_SERVER_ERROR_MIN = 500;
 
-    private List<AspectPropertyMetaData> propertyMetaData;
+    private volatile List<AspectPropertyMetaData> propertyMetaData;
 
     /**
      * The products the resource key gives access to, from the
@@ -324,27 +324,40 @@ public class CloudRequestEngineDefault
         } else {
             this.timeoutMillis = null;
         }
-
-        propertyMetaData = new ArrayList<>();
-        propertyMetaData.add(new AspectPropertyMetaDataDefault(
-                "json-response",
-                this,
-                "",
-                String.class,
-                new ArrayList<String>(),
-                true));
-        propertyMetaData.add(new AspectPropertyMetaDataDefault(
-                "process-started",
-                this,
-                "",
-                Boolean.class,
-                new ArrayList<String>(),
-                true));
     }
 
+    /**
+     * The property metadata of this engine, created on first use as it
+     * refers to the engine.
+     * @return the property metadata
+     */
     @Override
     public List<AspectPropertyMetaData> getProperties() {
-        return propertyMetaData;
+        List<AspectPropertyMetaData> localRef = propertyMetaData;
+        if (localRef == null) {
+            synchronized (this) {
+                localRef = propertyMetaData;
+                if (localRef == null) {
+                    localRef = new ArrayList<>();
+                    localRef.add(new AspectPropertyMetaDataDefault(
+                        "json-response",
+                        this,
+                        "",
+                        String.class,
+                        new ArrayList<String>(),
+                        true));
+                    localRef.add(new AspectPropertyMetaDataDefault(
+                        "process-started",
+                        this,
+                        "",
+                        Boolean.class,
+                        new ArrayList<String>(),
+                        true));
+                    propertyMetaData = localRef;
+                }
+            }
+        }
+        return localRef;
     }
 
     @Override

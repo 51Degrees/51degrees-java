@@ -293,7 +293,8 @@ public class OfflineProcessing {
     }
 	
     /**
-     * Filter entries that are not keyed on the required prefix
+     * Filter entries that are not keyed on the required prefix, or that
+     * have no name or no value
      *
      * @param prefix a prefix for the evidence to filter - e.g. "header."
      * @param evidence a Map<String, String> of evidence entries
@@ -303,10 +304,11 @@ public class OfflineProcessing {
 
         return evidence.entrySet()
                 .stream()
-                .filter(e -> String.valueOf(e.getKey()).startsWith(prefix))
+                .filter(e -> e.getKey() != null && e.getValue() != null)
+                .filter(e -> e.getKey().toString().startsWith(prefix))
                 .collect(Collectors.toMap(
-                        e -> String.valueOf(e.getKey()),
-                        e -> String.valueOf(e.getValue())));
+                        e -> e.getKey().toString(),
+                        e -> e.getValue().toString()));
     }
 
     /**

@@ -101,7 +101,7 @@ public class FiftyOneLookup {
      * via envsys, which means that - for example - ${sys:USER} yields ${env:USER}
      * which is not what we want.
      */
-    public static class FiftyOneStringSubstitutor extends StringSubstitutor {
+    public static final class FiftyOneStringSubstitutor extends StringSubstitutor {
         /**
          * Create a new instance.
          *

@@ -45,7 +45,7 @@ import java.util.List;
  * An on-premise engine whose data file is a text file, which it reads when it
  * is built and again whenever its data is refreshed.
  */
-public class TextFileEngine
+public final class TextFileEngine
     extends OnPremiseAspectEngineBase<EmptyEngineData, AspectPropertyMetaData> {
 
     @Override

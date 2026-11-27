@@ -31,12 +31,6 @@
     </developers>
 
     <properties>
-        <!-- Warnings fail the build only when the build is ours. CI sets
-             _51DEGREES_WARNINGS_AS_ERRORS to true, which turns on the
-             warnings-as-errors profile below. A build anyone else runs, from
-             a clone or a package, shows its warnings but never fails on one,
-             so a newer JDK cannot stop it. -->
-        <fiftyone.warningsAsErrors>false</fiftyone.warningsAsErrors>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.target>1.8</maven.compiler.target>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -67,7 +61,48 @@
 
         <skippackagesign>true</skippackagesign>
         <skipPublishing>false</skipPublishing>
+
+        <!-- Whether a compiler or tool warning stops the build. The
+             warnings-as-errors profile below sets it. -->
+        <fiftyone.warningsAsErrors>false</fiftyone.warningsAsErrors>
     </properties>
+
+    <profiles>
+        <!-- On JDK 9 and later, compile against the Java 8 API itself, which
+             these packages target, rather than against the newer JDK's own
+             classes with only the source and target set to 8. javac then
+             checks every call against Java 8, and judges deprecation by it,
+             as Java 8 users will run the code. JDK 8 has no release option
+             and compiles against its own API. -->
+        <profile>
+            <id>java-8-api</id>
+            <activation>
+                <jdk>[9,)</jdk>
+            </activation>
+            <properties>
+                <maven.compiler.release>8</maven.compiler.release>
+            </properties>
+        </profile>
+        <!-- javac's warnings and PMD's findings are shown in every build,
+             and stop it only in the builds 51Degrees runs, which set the
+             environment variable _51DEGREES_WARNINGS_AS_ERRORS to true. A
+             build from a clone anywhere else does not stop on a warning.
+             Maven reads failOnWarning and failOnViolation as true only for
+             the word true, in any case, so any other value leaves warnings
+             as warnings. -->
+        <profile>
+            <id>warnings-as-errors</id>
+            <activation>
+                <property>
+                    <name>env._51DEGREES_WARNINGS_AS_ERRORS</name>
+                </property>
+            </activation>
+            <properties>
+                <fiftyone.warningsAsErrors>${env._51DEGREES_WARNINGS_AS_ERRORS}</fiftyone.warningsAsErrors>
+            </properties>
+        </profile>
+    
+    </profiles>
 
     <dependencyManagement>
         <dependencies>
@@ -349,9 +384,6 @@
                     <failOnViolation>${fiftyone.warningsAsErrors}</failOnViolation>
                     <printFailingErrors>true</printFailingErrors>
                     <linkXRef>false</linkXRef>
-                    <excludes>
-                        <exclude>**/interop/swig/*.java</exclude>
-                    </excludes>
                 </configuration>
                 <executions>
                     <execution>
@@ -391,44 +423,4 @@
         <developerConnection>scm:git:https://github.com/51Degrees/51degrees-java.git</developerConnection>
     </scm>
 
-    <profiles>
-
-        <profile>
-
-            <id>warnings-as-errors</id>
-
-            <activation>
-
-                <property>
-
-                    <name>env._51DEGREES_WARNINGS_AS_ERRORS</name>
-
-                    <value>true</value>
-
-                </property>
-
-            </activation>
-
-            <properties>
-
-                <fiftyone.warningsAsErrors>true</fiftyone.warningsAsErrors>
-
-            </properties>
-
-        </profile>
-        <!-- javac 9 and later warn that the bootstrap class path is not set
-             when they compile for Java 8 with -source and -target. The
-             release option compiles against the Java 8 API instead, which
-             also stops a call to a later API from building. JDK 8 does not
-             know the option, so it is set only on later JDKs. -->
-        <profile>
-            <id>release-8</id>
-            <activation>
-                <jdk>[9,)</jdk>
-            </activation>
-            <properties>
-                <maven.compiler.release>8</maven.compiler.release>
-            </properties>
-        </profile>
-    </profiles>
 </project>

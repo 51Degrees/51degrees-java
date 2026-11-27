@@ -45,7 +45,8 @@ on:
       - 'pipeline/owid-java/**'
       - '.github/workflows/cloud-51did.yml'
 
-# This build is ours, so any warning fails it. The poms read this.
+# Every compiler and tool warning is an error in the builds 51Degrees runs.
+# The poms and the native CMake files read this variable.
 env:
   _51DEGREES_WARNINGS_AS_ERRORS: 'true'
 
@@ -60,7 +61,7 @@ jobs:
           submodules: recursive
       # The tests run on Java 8, the oldest Java the packages support. Maven
       # runs on JDK 17, the JDK every build compiles with, and compiles for
-      # Java 8 through the tree's release-8 profile.
+      # Java 8 through the tree's java-8-api profile.
       - uses: actions/setup-java@v4
         id: test-jdk
         with:

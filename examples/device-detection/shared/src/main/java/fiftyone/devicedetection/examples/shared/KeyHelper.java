@@ -106,7 +106,7 @@ public class KeyHelper {
 
     /**
      * The configuration page that creates a key with the properties the
-     * TAC and native model examples use, which need a paid licence.
+     * TAC and native model examples use, which need a paid license.
      */
     public static final String PAID_PROPERTIES_CONFIGURATION =
         "configure/QKyYH5XT";
@@ -150,7 +150,7 @@ public class KeyHelper {
             "example uses at " +
             FindOutMore.link(configuration, example, "no-resource-key"));
         if (PAID_PROPERTIES_CONFIGURATION.equals(configuration)) {
-            output.println("These properties need a paid licence. Contact " +
+            output.println("These properties need a paid license. Contact " +
                 "us about one at " +
                 FindOutMore.link("contact-us", example, "no-resource-key"));
         }

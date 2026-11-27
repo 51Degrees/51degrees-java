@@ -40,8 +40,8 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 public class FileUtils {
 
     /**
-     * Not needed, as every member is static. Kept so that code which made
-     * an instance still builds.
+     * Makes an instance. Every member is static, so an instance is not
+     * needed, and the constructor is public for code that makes one.
      */
     public FileUtils() {
     }

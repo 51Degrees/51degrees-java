@@ -97,7 +97,7 @@ public class SuspiciousOnPrem {
     For testing, contact us to obtain an enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=contact-us */
 
     /**
-     * The properties the judgement uses, which only the Enterprise data file
+     * The properties the judgment uses, which only the Enterprise data file
      * has.
      */
     public static final List<String> ENTERPRISE_PROPERTIES = Arrays.asList(
@@ -149,7 +149,7 @@ public class SuspiciousOnPrem {
             throw e;
         }
 
-        // The judgement needs properties only the Enterprise data file has.
+        // The judgment needs properties only the Enterprise data file has.
         if (DataFileHelper.lacksEnterpriseProperties(dataFileLocation,
                 "Judging whether an IP address is suspicious",
                 ENTERPRISE_PROPERTIES,

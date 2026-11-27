@@ -33,7 +33,8 @@ on:
 permissions:
   contents: read
 
-# This build is ours, so any warning fails it. The poms read this.
+# Every compiler and tool warning is an error in the builds 51Degrees runs.
+# The poms and the native CMake files read this variable.
 env:
   _51DEGREES_WARNINGS_AS_ERRORS: 'true'
 
