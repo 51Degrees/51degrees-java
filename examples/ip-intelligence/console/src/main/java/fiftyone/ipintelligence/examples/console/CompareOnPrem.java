@@ -301,7 +301,8 @@ public class CompareOnPrem {
         for (String property : LOCATION_PROPERTIES) {
             builder.setProperty(property);
         }
-        try (Pipeline pipeline = builder.build()) {
+        Pipeline pipeline = builder.build();
+        try {
 
             // Read the truth records, skipping duplicate IP addresses.
             List<Truth> truths = readTruths(truthFile);
@@ -343,6 +344,8 @@ public class CompareOnPrem {
             IPIntelligenceOnPremiseEngine engine =
                     pipeline.getElement(IPIntelligenceOnPremiseEngine.class);
             DataFileHelper.logDataFileInfo(engine);
+        } finally {
+            pipeline.close();
         }
     }
 
@@ -391,16 +394,17 @@ public class CompareOnPrem {
     private static String processTruth(Pipeline pipeline, Truth truth)
             throws Exception {
         // Get the data for the IP address.
-        try (FlowData flowData = pipeline.createFlowData()) {
+        FlowData flowData = pipeline.createFlowData();
+        try {
             flowData.addEvidence("query.client-ip", truth.ip);
             flowData.process();
             IPIntelligenceData data = flowData.get(IPIntelligenceData.class);
 
             // Check if the required properties have values. If not, skip this
             // record as the IP address was not found in the database.
-            Float latitude = firstValue(tryGet(data::getLatitude));
-            Float longitude = firstValue(tryGet(data::getLongitude));
-            Object areas = firstValue(tryGet(data::getAreas));
+            Float latitude = firstValue(tryGet(data::getLatitude), Float.class);
+            Float longitude = firstValue(tryGet(data::getLongitude), Float.class);
+            Object areas = firstValue(tryGet(data::getAreas), Object.class);
             if (latitude == null || longitude == null || areas == null) {
                 return null;
             }
@@ -413,7 +417,7 @@ public class CompareOnPrem {
                         "InterNetworkV6" : "InterNetwork";
             }
 
-            String confidence = firstValue(tryGet(data::getLocationConfidence));
+            String confidence = firstValue(tryGet(data::getLocationConfidence), String.class);
 
             // Get the distance in kilometers between the result and the truth.
             double distanceKms = haversineKms(
@@ -441,6 +445,8 @@ public class CompareOnPrem {
                     area.getSquareKms() + "," +
                     area.getGeometries() + "," +
                     area.getContains();
+        } finally {
+            flowData.close();
         }
     }
 

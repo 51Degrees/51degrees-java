@@ -39,7 +39,11 @@ public class PipelineBuilderBaseTests {
 	// functionalities in PipelineBuilderBase
 	private static class TestPipelineBuilder extends 
 		PipelineBuilderBase<TestPipelineBuilder> {
-		
+
+		@Override
+		protected TestPipelineBuilder self() {
+			return this;
+		}
 	}
 	
 	@Test
@@ -51,7 +55,7 @@ public class PipelineBuilderBaseTests {
         TestAutoCloseableService service2 = mock(TestAutoCloseableService.class);
         builder.addService(service1);
         builder.addService(service2);
-        try (Pipeline pipeline = builder.build()) {}
+        builder.build().close();
         verify(service1, times(1)).close();
         verify(service2, times(1)).close();
 	}

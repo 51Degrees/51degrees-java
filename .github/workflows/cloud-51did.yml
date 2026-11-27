@@ -45,6 +45,11 @@ on:
       - 'pipeline/owid-java/**'
       - '.github/workflows/cloud-51did.yml'
 
+# Every compiler and tool warning is an error in the builds 51Degrees runs.
+# The poms and the native CMake files read this variable.
+env:
+  _51DEGREES_WARNINGS_AS_ERRORS: 'true'
+
 jobs:
   cloud-51did:
     name: Cloud 51Did
@@ -54,12 +59,18 @@ jobs:
         with:
           # pipeline.did builds against the owid-java submodule source.
           submodules: recursive
+      # The tests run on Java 8, the oldest Java the packages support. Maven
+      # runs on JDK 17, the JDK every build compiles with, and compiles for
+      # Java 8 through the tree's java-8-api profile.
       - uses: actions/setup-java@v4
+        id: test-jdk
         with:
-          # The reactor targets 1.8, so the tests are compiled and run on a
-          # toolchain that can still produce it.
           distribution: temurin
           java-version: '8'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
           cache: maven
       - name: Cloud 51Did tests
         shell: pwsh
@@ -102,8 +113,10 @@ jobs:
               'repository.')
           }
           # Only the Pipeline API tree is built, as in its own repository.
+          $testJava = Join-Path '${{ steps.test-jdk.outputs.path }}' 'bin' 'java'
           mvn -B -f pipeline/pom.xml `
             -pl pipeline.did,pipeline.cloudrequestengine -am test `
+            "-Djvm=$testJava" `
             '-Dtest=DidClientLiveTests,CloudRequestEngineLiveTests#build_Process_LicenseKeyAlone*' `
             -DfailIfNoTests=false
           if ($LASTEXITCODE -ne 0) { exit 1 }

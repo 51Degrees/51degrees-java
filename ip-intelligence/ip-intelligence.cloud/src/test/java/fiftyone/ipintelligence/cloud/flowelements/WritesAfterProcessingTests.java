@@ -39,6 +39,7 @@ import fiftyone.pipeline.core.typed.TypedKey;
 import fiftyone.pipeline.engines.data.AspectDataBase;
 import org.junit.Test;
 import org.junit.function.ThrowingRunnable;
+import org.mockito.ArgumentMatchers;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
 
@@ -117,7 +118,6 @@ public class WritesAfterProcessingTests {
      * Data stand-in that holds the Element Data the engine adds and gives
      * the Cloud Request Engine's data with the response given.
      */
-    @SuppressWarnings({"unchecked", "rawtypes"})
     private static <T extends ElementData> T process(
         FlowElement<T, ?> engine,
         String response) throws Exception {
@@ -128,15 +128,15 @@ public class WritesAfterProcessingTests {
         final List<ElementData> added = new ArrayList<>();
         when(flowData.getFromElement(any(CloudRequestEngine.class)))
             .thenReturn(cloudData);
-        when(flowData.getOrAdd(any(TypedKey.class), any(DataFactory.class)))
+        when(flowData.getOrAdd(ArgumentMatchers.<TypedKey<ElementData>>any(), any()))
             .thenAnswer(invocation -> {
                 if (added.isEmpty()) {
-                    DataFactory factory = invocation.getArgument(1);
+                    DataFactory<?> factory = invocation.getArgument(1);
                     added.add(factory.create(flowData));
                 }
                 return added.get(0);
             });
-        when(flowData.tryGetValue(any(TypedKey.class)))
+        when(flowData.tryGetValue(ArgumentMatchers.<TypedKey<ElementData>>any()))
             .thenAnswer(invocation -> {
                 TryGetResult<ElementData> result = new TryGetResult<>();
                 if (added.isEmpty() == false) {
@@ -146,7 +146,7 @@ public class WritesAfterProcessingTests {
             });
         engine.process(flowData);
         assertEquals(1, added.size());
-        return (T) added.get(0);
+        return engine.getTypedDataKey().getType().cast(added.get(0));
     }
 
     @Test

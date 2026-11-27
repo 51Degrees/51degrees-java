@@ -87,7 +87,6 @@ public class DataUpdateServiceBackgroundErrorTests {
             futureFactory);
     }
 
-    @SuppressWarnings("unchecked")
     private AspectEngineDataFileDefault registerFile() {
         DataFileConfigurationDefault config =
             new DataFileConfigurationDefault();
@@ -95,7 +94,7 @@ public class DataUpdateServiceBackgroundErrorTests {
         config.setFileSystemWatcherEnabled(false);
         config.setDataFilePath("data.dat");
         AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
-        file.setEngine(mock(OnPremiseAspectEngine.class));
+        file.setEngine((OnPremiseAspectEngine<?, ?>) mock(OnPremiseAspectEngine.class));
         file.setConfiguration(config);
         file.setTempDataFilePath("temp.dat");
         dataUpdate.registerDataFile(file);

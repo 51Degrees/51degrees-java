@@ -25,10 +25,9 @@ package fiftyone.pipeline.core.testclasses.flowelements;
 import fiftyone.pipeline.annotations.ElementBuilder;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 
-@SuppressWarnings("rawtypes")
 @ElementBuilder
 public class RunsLastElementBuilder {
-    public FlowElement build() {
+    public FlowElement<?, ?> build() {
         return new RunsLastElement();
     }
 }

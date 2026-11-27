@@ -72,10 +72,20 @@ longer includes them, because Git leaves a removed submodule's folder on disk.
 
 ## Building
 
-You need a JDK (8 or later) and either Maven 3.8 or later or the `mvnw`
-wrapper in this folder. The two on-premise engines compile their native
-library during the build, which needs CMake 3.10 or later and a C++ toolchain:
+You need JDK 17 and either Maven 3.8 or later or the `mvnw` wrapper in this
+folder. The build compiles for Java 8, and javac 21 and later warn that Java 8
+is obsolete, so JDK 17 is the one to build with. The packages it makes run on
+Java 8 or later. The two on-premise engines compile their native library
+during the build, which needs CMake 3.24 or later and a C++ toolchain:
 Visual Studio with the C++ workload on Windows, GCC or Clang elsewhere.
+
+The build shows every warning from the C and C++ compilers, the linker, javac
+and PMD, and does not stop on one. The builds 51Degrees runs set the
+environment variable `_51DEGREES_WARNINGS_AS_ERRORS` to `true`, in any case,
+and there each of those warnings is an error. Set it to build the
+same way. The two engine `CMakeLists.txt` files also take
+`-D_51DEGREES_WARNINGS_AS_ERRORS=ON` or `OFF`, which takes the place of the
+variable for the native build.
 
 From this folder:
 
@@ -114,6 +124,16 @@ lists and checks.
 Tests find data files by searching from the root of this repository, so run
 Maven from here rather than from inside a package folder.
 
+On JDK 9 and later the build compiles against the Java 8 API, so the packages
+run on Java 8. To run the tests on another JDK than the one Maven runs on,
+give Surefire its `java` with `-Djvm=<path to java>`, and add
+`-Dfiftyone.testJava=8` when that is Java 8, which leaves out the browser
+tests that need Java 11:
+
+```
+mvn surefire:test -Djvm=/path/to/jdk-8/bin/java -Dfiftyone.testJava=8
+```
+
 ## Examples
 
 The examples reference the packages published to Maven Central, which is how
@@ -128,16 +148,21 @@ mvn install -DskipTests -Pdev
 
 The C++ wrappers `Java_Hash_Engine.cpp` and `Java_Ipi_Engine.cpp` are
 generated and must not be edited by hand. They include the C++ headers through
-`cxx/`, so SWIG needs the root of this repository on its include path. With
-SWIG 4.0 or later, from this folder:
+`cxx/`, so SWIG needs the root of this repository on its include path. Build
+either engine with SWIG 4.5.1 and `-DRebuildSwig=ON`, from this folder:
 
 ```
-cd device-detection/device-detection.hash.engine.on-premise/src/main/cxx
-swig -c++ -java -I../../../../.. -package fiftyone.devicedetection.hash.engine.onpremise.interop.swig -outdir ../java/fiftyone/devicedetection/hash/engine/onpremise/interop/swig -o Java_Hash_Engine.cpp hash_java.i
+cmake -S device-detection/device-detection.hash.engine.on-premise/src/main/cxx -B build-swig -DRebuildSwig=ON
 ```
 
-The IP Intelligence engine has `RegenSwig.ps1` beside its interface file that
-does the same.
+Every SWIG warning is an error. After SWIG runs, the build replaces each base
+class conversion SWIG writes in the wrapper with one that copies the pointer
+with `memcpy`. The vector proxies are final, so the `this-escape` annotation
+SWIG's own `std_vector.i` puts on two of their constructors is removed, and
+the build stops if any proxy still turns a javac warning off. The committed
+files are replaced only when all of that succeeds. The IP Intelligence
+engine also has `RegenSwig.ps1` beside its interface file, which does the
+same.
 
 ## Versions
 

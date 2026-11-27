@@ -68,7 +68,6 @@ public class JavaScriptBuilderPromiseTests {
      * Renders the script for a request whose Promise Property is the value
      * given.
      */
-    @SuppressWarnings("unchecked")
     private String scriptWithPromise(String promise) throws Exception {
         ILoggerFactory internalLogger = mock(ILoggerFactory.class);
         when(internalLogger.getLogger(anyString()))
@@ -90,7 +89,7 @@ public class JavaScriptBuilderPromiseTests {
         Evidence evidenceObject = mock(Evidence.class);
         when(evidenceObject.asKeyMap()).thenReturn(evidence);
         when(flowData.getEvidence()).thenReturn(evidenceObject);
-        when(flowData.tryGetEvidence(anyString(), any(Class.class)))
+        when(flowData.tryGetEvidence(anyString(), any()))
             .thenAnswer(invocation -> {
                 TryGetResult<Object> found = new TryGetResult<>();
                 if (evidence.containsKey((String) invocation.getArgument(0))) {
@@ -118,7 +117,7 @@ public class JavaScriptBuilderPromiseTests {
             result = factory.create(flowData);
             return result;
         }).when(flowData).getOrAdd(
-            anyString(), any(FlowElement.DataFactory.class));
+            anyString(), any());
 
         new JavaScriptBuilderElementBuilder(loggerFactory)
             .build()

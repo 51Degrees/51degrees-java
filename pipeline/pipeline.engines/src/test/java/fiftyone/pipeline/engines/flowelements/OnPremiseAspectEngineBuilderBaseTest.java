@@ -59,10 +59,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@SuppressWarnings("rawtypes")
 public class OnPremiseAspectEngineBuilderBaseTest {
 
-    private OnPremiseAspectEngineBuilderBase aspectEngineBuilder;
+    private TestBuilder aspectEngineBuilder;
 
     @Before
     public void Init() {
@@ -70,18 +69,8 @@ public class OnPremiseAspectEngineBuilderBaseTest {
         deleteTempDir();
     }
 
-    private OnPremiseAspectEngineBuilderBase createEngineBuilderBase() {
-        return new OnPremiseAspectEngineBuilderBase() {
-            @Override
-            public OnPremiseAspectEngineBuilderBase setPerformanceProfile(Constants.PerformanceProfiles profile) {
-                return null;
-            }
-
-            @Override
-            protected AspectEngine newEngine(List properties) {
-                return null;
-            }
-        };
+    private TestBuilder createEngineBuilderBase() {
+        return new TestBuilder(null, false);
     }
 
     @After
@@ -158,25 +147,8 @@ public class OnPremiseAspectEngineBuilderBaseTest {
     @Test
     public void LaterDataFileHasNoLicenseKey_NothingRegistered() {
         DataUpdateService updateService = mock(DataUpdateService.class);
-        OnPremiseAspectEngineBuilderBase builder =
-            new OnPremiseAspectEngineBuilderBase(null, updateService) {
-                @Override
-                public OnPremiseAspectEngineBuilderBase setPerformanceProfile(
-                    Constants.PerformanceProfiles profile) {
-                    return this;
-                }
-
-                @Override
-                protected AspectEngine newEngine(List properties) {
-                    return null;
-                }
-
-                @Override
-                protected boolean isLicenseKeyRequired(
-                    DataFileConfiguration dataFileConfig) {
-                    return true;
-                }
-            };
+        TestBuilder builder =
+            new TestBuilder(updateService, true);
         builder.addDataFile(autoUpdateConfiguration("First", "SOMELICENSEKEY"));
         builder.addDataFile(autoUpdateConfiguration("Second", null));
 
@@ -210,7 +182,7 @@ public class OnPremiseAspectEngineBuilderBaseTest {
             .then(invocation -> mock(ScheduledFuture.class));
         DataUpdateService updateService = new DataUpdateServiceDefault(
             null, mock(HttpClient.class), null, futureFactory);
-        OnPremiseAspectEngineBuilderBase builder =
+        TestBuilder builder =
             keyRequiredBuilder(updateService);
 
         Path directory = Files.createTempDirectory("watched");
@@ -226,8 +198,7 @@ public class OnPremiseAspectEngineBuilderBaseTest {
 
         try {
             builder.buildEngine();
-            AspectEngineDataFile file =
-                (AspectEngineDataFile) builder.dataFiles.get(0);
+            AspectEngineDataFile file = builder.dataFiles.get(0);
             assertEquals(name + ", the data file is registered",
                 watching, file.getIsRegistered());
             assertEquals(name + ", a file system watcher was created",
@@ -251,26 +222,9 @@ public class OnPremiseAspectEngineBuilderBaseTest {
     /**
      * A builder whose update source serves nothing without a license key.
      */
-    private static OnPremiseAspectEngineBuilderBase keyRequiredBuilder(
+    private static TestBuilder keyRequiredBuilder(
         DataUpdateService updateService) {
-        return new OnPremiseAspectEngineBuilderBase(null, updateService) {
-            @Override
-            public OnPremiseAspectEngineBuilderBase setPerformanceProfile(
-                Constants.PerformanceProfiles profile) {
-                return this;
-            }
-
-            @Override
-            protected AspectEngine newEngine(List properties) {
-                return null;
-            }
-
-            @Override
-            protected boolean isLicenseKeyRequired(
-                DataFileConfiguration dataFileConfig) {
-                return true;
-            }
-        };
+        return new TestBuilder(updateService, true);
     }
 
     private static DataFileConfiguration autoUpdateConfiguration(
@@ -284,5 +238,45 @@ public class OnPremiseAspectEngineBuilderBaseTest {
                 Collections.singletonList(licenseKey));
         }
         return config;
+    }
+
+    /**
+     * A builder for an engine that is never made, which can require a
+     * license key for every data file.
+     */
+    private static class TestBuilder extends OnPremiseAspectEngineBuilderBase<
+        TestBuilder,
+        OnPremiseAspectEngine<?, ?>> {
+        private final boolean licenseKeyRequired;
+
+        TestBuilder(
+            DataUpdateService updateService,
+            boolean licenseKeyRequired) {
+            super(null, updateService);
+            this.licenseKeyRequired = licenseKeyRequired;
+        }
+
+        @Override
+        protected TestBuilder self() {
+            return this;
+        }
+
+        @Override
+        public TestBuilder setPerformanceProfile(
+            Constants.PerformanceProfiles profile) {
+            return this;
+        }
+
+        @Override
+        protected OnPremiseAspectEngine<?, ?> newEngine(
+            List<String> properties) {
+            return null;
+        }
+
+        @Override
+        protected boolean isLicenseKeyRequired(
+            DataFileConfiguration dataFileConfig) {
+            return licenseKeyRequired;
+        }
     }
 }

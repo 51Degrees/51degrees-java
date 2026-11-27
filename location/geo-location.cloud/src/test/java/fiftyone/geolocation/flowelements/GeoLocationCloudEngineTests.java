@@ -180,7 +180,6 @@ public class GeoLocationCloudEngineTests {
      * one string property.
      */
     // thenReturn has a varargs overload, so a generic Map is an unchecked array.
-    @SuppressWarnings("unchecked")
     private GeoLocationCloudEngine buildEngine(
         String productKey,
         String property) throws Exception {

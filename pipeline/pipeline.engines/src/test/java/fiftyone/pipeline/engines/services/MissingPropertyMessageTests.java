@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -72,7 +73,7 @@ public class MissingPropertyMessageTests {
 
     @Test
     public void DataFileUpgradeRequired_TiersKnown() {
-        AspectEngine<? extends AspectData, AspectPropertyMetaData> engine =
+        AspectEngine<?, ?> engine =
             onPremise("Lite");
         listed(engine, Arrays.asList("Premium", "Enterprise"), true);
 
@@ -87,7 +88,7 @@ public class MissingPropertyMessageTests {
 
     @Test
     public void DataFileUpgradeRequired_TiersNotKnown() {
-        AspectEngine<? extends AspectData, AspectPropertyMetaData> engine =
+        AspectEngine<?, ?> engine =
             onPremise("Lite");
         listed(engine, Collections.<String>emptyList(), true);
 
@@ -100,7 +101,7 @@ public class MissingPropertyMessageTests {
 
     @Test
     public void PropertyExcludedFromEngineConfiguration() {
-        AspectEngine<? extends AspectData, AspectPropertyMetaData> engine =
+        AspectEngine<?, ?> engine =
             onPremise("Premium");
         listed(engine, Arrays.asList("Premium", "Enterprise"), false);
 
@@ -112,7 +113,7 @@ public class MissingPropertyMessageTests {
 
     @Test
     public void ProductNotAccessibleWithResourceKey() {
-        AspectEngine<? extends AspectData, AspectPropertyMetaData> engine =
+        AspectEngine<?, ?> engine =
             cloud(Collections.<String>emptyList());
 
         assertMessage(
@@ -125,7 +126,7 @@ public class MissingPropertyMessageTests {
 
     @Test
     public void PropertyNotAccessibleWithResourceKey() {
-        AspectEngine<? extends AspectData, AspectPropertyMetaData> engine =
+        AspectEngine<?, ?> engine =
             cloud(Arrays.asList("IsMobile", "IsTablet"));
 
         assertMessage(
@@ -139,10 +140,11 @@ public class MissingPropertyMessageTests {
 
     @Test
     public void Unknown() {
-        AspectEngine<? extends AspectData, AspectPropertyMetaData> engine =
+        AspectEngine<?, ?> engine =
             onPremise("Premium");
-        when(engine.getProperties()).thenReturn(
-            Collections.<AspectPropertyMetaData>emptyList());
+        doReturn(
+            Collections.<AspectPropertyMetaData>emptyList())
+            .when(engine).getProperties();
 
         assertMessage(
             PREFIX + "The reason for this is unknown. Please check that the " +
@@ -152,16 +154,15 @@ public class MissingPropertyMessageTests {
 
     private void assertMessage(
         String expected,
-        AspectEngine<? extends AspectData, AspectPropertyMetaData> engine) {
+        AspectEngine<?, ?> engine) {
         String message = service.getMissingPropertyReason(PROPERTY, engine)
             .getDescription();
         assertEquals(expected, CAMPAIGN.matcher(message).replaceAll(""));
     }
 
-    @SuppressWarnings("unchecked")
-    private static AspectEngine<? extends AspectData, AspectPropertyMetaData>
+    private static AspectEngine<?, ?>
         onPremise(String tier) {
-        OnPremiseAspectEngine<? extends AspectData, AspectPropertyMetaData>
+        OnPremiseAspectEngine<?, ?>
             engine = mock(OnPremiseAspectEngine.class);
         when(engine.getDataSourceTier()).thenReturn(tier);
         when(engine.getElementDataKey()).thenReturn(DATA_KEY);
@@ -171,10 +172,9 @@ public class MissingPropertyMessageTests {
     /**
      * A Cloud Engine whose metadata is loaded and lists the given names.
      */
-    @SuppressWarnings("unchecked")
-    private static AspectEngine<? extends AspectData, AspectPropertyMetaData>
+    private static AspectEngine<?, ?>
         cloud(List<String> names) {
-        CloudAspectEngine<? extends AspectData, AspectPropertyMetaData>
+        CloudAspectEngine<?, ?>
             engine = mock(CloudAspectEngine.class);
         when(engine.getElementDataKey()).thenReturn(DATA_KEY);
         when(engine.hasLoadedProperties()).thenReturn(true);
@@ -188,7 +188,8 @@ public class MissingPropertyMessageTests {
                 Collections.<String>emptyList(),
                 true));
         }
-        when(engine.getProperties()).thenReturn(properties);
+        doReturn(properties)
+            .when(engine).getProperties();
         return engine;
     }
 
@@ -196,7 +197,7 @@ public class MissingPropertyMessageTests {
      * The engine's metadata lists the property, in the given data tiers.
      */
     private static void listed(
-        AspectEngine<? extends AspectData, AspectPropertyMetaData> engine,
+        AspectEngine<?, ?> engine,
         List<String> tiers,
         boolean available) {
         AspectPropertyMetaData property = new AspectPropertyMetaDataDefault(
@@ -206,6 +207,7 @@ public class MissingPropertyMessageTests {
             String.class,
             tiers,
             available);
-        when(engine.getProperties()).thenReturn(Arrays.asList(property));
+        doReturn(Arrays.asList(property))
+            .when(engine).getProperties();
     }
 }

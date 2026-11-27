@@ -31,6 +31,9 @@ import org.springframework.beans.factory.annotation.Autowired;
  * Default implementation of the {@link FiftyOneInterceptorConfig} interface.
  */
 public class FiftyOneInterceptorConfigDefault implements FiftyOneInterceptorConfig {
+    /** Create a new instance. */
+    public FiftyOneInterceptorConfigDefault() {
+    }
 
     private String dataFilePath;
 
@@ -47,13 +50,24 @@ public class FiftyOneInterceptorConfigDefault implements FiftyOneInterceptorConf
 
     private boolean setHeadersElementEnabled = true;
 
+    /** The servlet context of the application. */
     @Autowired
     public ServletContext servletContext;
     
+    /**
+     * Set the path of the Pipeline options file.
+     *
+     * @param dataFilePath the path, or empty for the default file
+     */
     public void setDataFilePath(String dataFilePath) {
         this.dataFilePath = dataFilePath;
     }
 
+    /**
+     * Set whether the client-side JavaScript and JSON are served.
+     *
+     * @param clientsidePropertiesEnabled true to serve them
+     */
     public void setClientsidePropertiesEnabled(boolean clientsidePropertiesEnabled) {
         this.clientsidePropertiesEnabled = clientsidePropertiesEnabled;
     }
@@ -73,18 +87,39 @@ public class FiftyOneInterceptorConfigDefault implements FiftyOneInterceptorConf
         this.clientsideCacheMaxAge = seconds;
     }
 
+    /**
+     * Set the path the JavaScript is served from.
+     *
+     * @param javaScriptPath the end of the request path, or empty for the
+     *    default
+     */
     public void setJavaScriptPath(String javaScriptPath) {
         this.javaScriptPath = javaScriptPath;
     }
 
+    /**
+     * Set the path the JSON is served from.
+     *
+     * @param jsonPath the end of the request path, or empty for the default
+     */
     public void setJsonPath(String jsonPath) {
         this.jsonPath = jsonPath;
     }
 
+    /**
+     * Set whether the Pipeline gets a Sequence Element.
+     *
+     * @param sequenceElementEnabled true to add one
+     */
     public void setSequenceElementEnabled(boolean sequenceElementEnabled) {
         this.sequenceElementEnabled = sequenceElementEnabled;
     }
 
+    /**
+     * Set whether the Pipeline gets a Set Headers Element.
+     *
+     * @param setHeadersElementEnabled true to add one
+     */
     public void setSetHeadersElementEnabled(boolean setHeadersElementEnabled) {
         this.setHeadersElementEnabled = setHeadersElementEnabled;
     }

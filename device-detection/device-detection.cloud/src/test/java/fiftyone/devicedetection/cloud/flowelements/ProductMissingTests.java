@@ -237,7 +237,6 @@ public class ProductMissingTests {
      * one string property.
      */
     // thenReturn has a varargs overload, so a generic Map is an unchecked array.
-    @SuppressWarnings("unchecked")
     private DeviceDetectionCloudEngine buildEngine(
         String productKey,
         String property) throws Exception {

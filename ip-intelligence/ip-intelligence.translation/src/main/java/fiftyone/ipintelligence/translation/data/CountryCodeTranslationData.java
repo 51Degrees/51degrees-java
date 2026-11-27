@@ -46,19 +46,15 @@ public class CountryCodeTranslationData
         super(logger, flowData);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public AspectPropertyValue<List<IWeightedValue<String>>>
         getCountryNamesGeographical() {
-        return getAs("CountryNamesGeographical", AspectPropertyValue.class,
-            List.class, IWeightedValue.class, String.class);
+        return getWeightedList("CountryNamesGeographical", String.class);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public AspectPropertyValue<List<IWeightedValue<String>>>
         getCountryNamesPopulation() {
-        return getAs("CountryNamesPopulation", AspectPropertyValue.class,
-            List.class, IWeightedValue.class, String.class);
+        return getWeightedList("CountryNamesPopulation", String.class);
     }
 }

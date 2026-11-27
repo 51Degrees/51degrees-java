@@ -35,10 +35,13 @@ public class DidHttpException extends IOException {
 
     private static final long serialVersionUID = 1L;
 
+    /** The HTTP status code of the answer. */
     private final int statusCode;
+    /** The content of the answer. */
     private final String body;
 
     /**
+     * Create a new instance.
      * @param message    what went wrong
      * @param statusCode the HTTP status the service answered with
      * @param body       the body the service answered with
@@ -49,7 +52,10 @@ public class DidHttpException extends IOException {
         this.body = body == null ? "" : body;
     }
 
-    /** @return the HTTP status the service answered with */
+    /**
+     * Returns the HTTP status the service answered with.
+     * @return the HTTP status the service answered with
+     */
     public int getStatusCode() {
         return statusCode;
     }

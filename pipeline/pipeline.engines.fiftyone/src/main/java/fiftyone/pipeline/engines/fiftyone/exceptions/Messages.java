@@ -22,7 +22,12 @@
 
 package fiftyone.pipeline.engines.fiftyone.exceptions;
 
+/** Exception messages used by the 51Degrees engines. */
 public class Messages {
+    /** Create a new instance. */
+    public Messages() {
+    }
+
 	/**
 	 * Exception message when a SetHeader property does not have name starts
 	 * with 'SetHeader'

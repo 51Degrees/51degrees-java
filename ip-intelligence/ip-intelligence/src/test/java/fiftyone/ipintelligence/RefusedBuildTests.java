@@ -49,7 +49,6 @@ import static org.junit.Assume.assumeTrue;
  * leaves the caller's own Flow Elements open.
  * @see <a href="https://github.com/51Degrees/specifications/blob/52e9b047743db365592f9bd1c737fc7ddb6a2de4/pipeline-specification/features/resource-cleanup.md">Specification</a>
  */
-@SuppressWarnings("rawtypes")
 public class RefusedBuildTests {
 
     /**
@@ -67,7 +66,7 @@ public class RefusedBuildTests {
      */
     private static class RecordingBuilder
         extends IPIntelligenceOnPremisePipelineBuilder {
-        private final List<FlowElement> made = new ArrayList<>();
+        private final List<FlowElement<?, ?>> made = new ArrayList<>();
 
         RecordingBuilder(ILoggerFactory loggerFactory) {
             super(
@@ -78,16 +77,16 @@ public class RefusedBuildTests {
                     new HttpClientDefault()));
         }
 
-        List<FlowElement> elements() {
+        List<FlowElement<?, ?>> elements() {
             return super.getFlowElements();
         }
 
         @Override
-        protected List<FlowElement> getFlowElements() {
-            final List<FlowElement> elements = super.getFlowElements();
-            return new AbstractList<FlowElement>() {
+        protected List<FlowElement<?, ?>> getFlowElements() {
+            final List<FlowElement<?, ?>> elements = super.getFlowElements();
+            return new AbstractList<FlowElement<?, ?>>() {
                 @Override
-                public FlowElement get(int index) {
+                public FlowElement<?, ?> get(int index) {
                     return elements.get(index);
                 }
 
@@ -97,18 +96,18 @@ public class RefusedBuildTests {
                 }
 
                 @Override
-                public void add(int index, FlowElement element) {
+                public void add(int index, FlowElement<?, ?> element) {
                     made.add(element);
                     elements.add(index, element);
                 }
 
                 @Override
-                public FlowElement set(int index, FlowElement element) {
+                public FlowElement<?, ?> set(int index, FlowElement<?, ?> element) {
                     return elements.set(index, element);
                 }
 
                 @Override
-                public FlowElement remove(int index) {
+                public FlowElement<?, ?> remove(int index) {
                     return elements.remove(index);
                 }
             };
@@ -149,7 +148,7 @@ public class RefusedBuildTests {
 
             assertFalse("The builder made no Flow Elements",
                 builder.made.isEmpty());
-            for (FlowElement element : builder.made) {
+            for (FlowElement<?, ?> element : builder.made) {
                 assertTrue(element + " that the builder made is open",
                     element.isClosed());
                 assertFalse(element + " is still in the builder's list",

@@ -103,7 +103,7 @@ public class NativeModelCloud {
             output.println("----------------------------------------");
 
             // Create the pipeline and the engines we need.
-            try (Pipeline pipeline = new PipelineBuilder(LoggerFactory.getILoggerFactory())
+            Pipeline pipeline = new PipelineBuilder(LoggerFactory.getILoggerFactory())
                 // Create the cloud request engine and add to the pipeline.
                 .addFlowElement(new CloudRequestEngineBuilder(LoggerFactory.getILoggerFactory())
                         .setResourceKey(resourceKey)
@@ -115,7 +115,8 @@ public class NativeModelCloud {
                 // very important to ask pipeline to close the engines we added since
                 //   we are not closing them ourselves
                 .setAutoCloseElements(true)
-                .build()) {
+                .build();
+            try {
                 // The pipeline asked the cloud for the key's accessible
                 // properties as it was built, so unless that request failed,
                 // a key without the lookup is found here, before any lookup.
@@ -126,6 +127,8 @@ public class NativeModelCloud {
                     // Repeat for an alternative native model name.
                     analyseNativeModel(NATIVE_MODEL_2, pipeline, output);
                 }
+            } finally {
+                pipeline.close();
             }
             // The writer closes the stream it was given, so the section is
             // written before it.
@@ -140,9 +143,10 @@ public class NativeModelCloud {
      * @return false if the key does not include the lookup
      */
     static boolean analyseNativeModel(String nativemodel, Pipeline pipeline, PrintWriter output) throws Exception {
-        // Create the FlowData instance. This is wrapped in a try with resources to ensure
+        // Create the FlowData instance. This is closed in a finally block to ensure
         // that resources are disposed correctly.
-        try (FlowData data = pipeline.createFlowData()) {
+        FlowData data = pipeline.createFlowData();
+        try {
             // Add the native model key as evidence.
             data.addEvidence(Constants.EVIDENCE_QUERY_NATIVE_MODEL_KEY, nativemodel);
             // Process the supplied evidence. If the accessible properties
@@ -175,6 +179,8 @@ public class NativeModelCloud {
 
             }
             return true;
+        } finally {
+            data.close();
         }
     }
 

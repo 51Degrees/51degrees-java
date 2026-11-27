@@ -14,6 +14,15 @@ BeforeAll {
     Copy-Item -Recurse $PSScriptRoot (Join-Path $Root 'repo' 'ci')
     $Script = Join-Path $Root 'repo' 'ci' 'build-package.ps1'
     $Given = Join-Path $Root 'given.json'
+    $JavaHomeSeen = Join-Path $Root 'java-home.txt'
+
+    # The JDK the runner has to compile with, under the name the runner gives
+    # it for its architecture.
+    $Arch = if ([Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -eq
+        [Runtime.InteropServices.Architecture]::Arm64) { 'arm64' } else { 'X64' }
+    $CompileJdkName = "JAVA_HOME_17_$Arch"
+    $CompileJdk = Join-Path $Root 'jdk-17'
+    [Environment]::SetEnvironmentVariable($CompileJdkName, $CompileJdk)
     Set-Content (Join-Path $Root 'steps' 'release-plan.ps1') `
         'function Get-ReleasePlan([string]$RepoPath) { }'
 
@@ -29,6 +38,7 @@ param(
     [string[]]$VersionPaths = @('.')
 )
 $PSBoundParameters | ConvertTo-Json | Set-Content (Join-Path $PWD 'given.json')
+Set-Content (Join-Path $PWD 'java-home.txt') $env:JAVA_HOME
 $global:LASTEXITCODE = 0
 '@
 
@@ -56,6 +66,7 @@ $global:LASTEXITCODE = 0
 }
 
 AfterAll {
+    [Environment]::SetEnvironmentVariable($CompileJdkName, $null)
     Remove-Item -Recurse -Force $Root
 }
 
@@ -87,5 +98,12 @@ Describe 'build-package.ps1' {
         $given.ExtraArgs | Should -Be @(
             '-DskipNativeBuild=true', '-pl', 'pipeline/pipeline.core')
         $given.VersionPaths | Should -BeNullOrEmpty
+    }
+
+    It 'builds on JDK 17 and puts JAVA_HOME back' {
+        $javaHome = $env:JAVA_HOME
+        Invoke-Build
+        (Get-Content $JavaHomeSeen) | Should -Be $CompileJdk
+        $env:JAVA_HOME | Should -Be $javaHome
     }
 }

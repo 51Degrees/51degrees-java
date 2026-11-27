@@ -133,10 +133,13 @@ public class GetAllPropertiesCloud {
         }
 
         // Create the pipeline
-        try (Pipeline pipeline = builder.build()) {
+        Pipeline pipeline = builder.build();
+        try {
             // Output details for the IP address
             analyzeEvidence(SOME_IP_ADDRESS, pipeline, outputStream);
             logger.info("All done");
+        } finally {
+            pipeline.close();
         }
     }
 
@@ -145,7 +148,8 @@ public class GetAllPropertiesCloud {
                                         OutputStream out) throws Exception {
         PrintWriter writer = new PrintWriter(out);
         // Create the FlowData instance.
-        try (FlowData data = pipeline.createFlowData()) {
+        FlowData data = pipeline.createFlowData();
+        try {
             // Add the client IP as evidence.
             data.addEvidence("query.client-ip", ipAddress);
             // Process the supplied evidence.
@@ -163,6 +167,8 @@ public class GetAllPropertiesCloud {
                         property.getKey(),
                         getValueToOutput(property.getValue()));
             }
+        } finally {
+            data.close();
         }
         writer.println();
         writer.flush();

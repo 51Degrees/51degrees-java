@@ -8,19 +8,40 @@
 
 package fiftyone.devicedetection.hash.engine.onpremise.interop.swig;
 
-public class VectorUInt32Swig extends java.util.AbstractList<Long> implements AutoCloseable, java.util.RandomAccess {
+public final class VectorUInt32Swig extends java.util.AbstractList<Long> implements AutoCloseable, java.util.RandomAccess {
   private transient long swigCPtr;
+
+  /** Whether deleting this proxy deletes its C++ object. */
   protected transient boolean swigCMemOwn;
 
+  /**
+   * Makes a proxy for a C++ object.
+   *
+   * @param cPtr the address of the C++ object
+   * @param cMemoryOwn whether the proxy deletes the C++ object
+   */
   protected VectorUInt32Swig(long cPtr, boolean cMemoryOwn) {
     swigCMemOwn = cMemoryOwn;
     swigCPtr = cPtr;
   }
 
+  /**
+   * The address of the C++ object of a proxy, or 0 for null.
+   *
+   * @param obj the proxy, or null
+   * @return the address of its C++ object
+   */
   protected static long getCPtr(VectorUInt32Swig obj) {
     return (obj == null) ? 0 : obj.swigCPtr;
   }
 
+  /**
+   * Takes the C++ object from a proxy that owns it, so the caller deletes
+   * it and the proxy can no longer be used.
+   *
+   * @param obj the proxy, or null
+   * @return the address of its C++ object, or 0 for null
+   */
   protected static long swigRelease(VectorUInt32Swig obj) {
     long ptr = 0;
     if (obj != null) {
@@ -33,6 +54,10 @@ public class VectorUInt32Swig extends java.util.AbstractList<Long> implements Au
     return ptr;
   }
 
+  /**
+   * Deletes the C++ object if this proxy owns it. The proxy cannot be used
+   * after this.
+   */
   public synchronized void delete() {
     if (swigCPtr != 0) {
       if (swigCMemOwn) {
@@ -48,7 +73,6 @@ public class VectorUInt32Swig extends java.util.AbstractList<Long> implements Au
     this.delete();
   }
 
-  @SuppressWarnings("this-escape")
   public VectorUInt32Swig(long[] initialElements) {
     this();
     doReserve(initialElements.length);
@@ -58,7 +82,6 @@ public class VectorUInt32Swig extends java.util.AbstractList<Long> implements Au
     }
   }
 
-  @SuppressWarnings("this-escape")
   public VectorUInt32Swig(Iterable<Long> initialElements) {
     this();
     for (long element : initialElements) {

@@ -44,6 +44,7 @@ public class PropertyIterable
     /**
      * Create a new instance.
      * @param engine the engine which the meta data relates to
+     * @param list holds the properties once they have been read
      * @param collection the native collection of properties
      */
     public PropertyIterable(
@@ -61,7 +62,7 @@ public class PropertyIterable
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         collection.delete();
     }
 }

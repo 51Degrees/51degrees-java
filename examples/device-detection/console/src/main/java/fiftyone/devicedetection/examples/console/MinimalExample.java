@@ -73,14 +73,16 @@ public class MinimalExample {
 
         // create a minimal pipeline to access the cloud engine
         // you only need one pipeline for multiple requests
-        // use try-with-resources to free the pipeline when done
-        try (Pipeline pipeline = new DeviceDetectionPipelineBuilder()
+        // close the pipeline in a finally block to free it when done
+        Pipeline pipeline = new DeviceDetectionPipelineBuilder()
                 .useCloud(resource)
-                .build()) {
+                .build();
+        try {
 
             /* get a flow data from the singleton pipeline for each detection */
             // it's important to free the flowdata when done
-            try (FlowData data = pipeline.createFlowData()) {
+            FlowData data = pipeline.createFlowData();
+            try {
                 // add user-agent and client hint headers (if any) from the HTTP request
                 data.addEvidence("header.user-agent",
                             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
@@ -98,7 +100,11 @@ public class MinimalExample {
                 DeviceData device = data.get(DeviceData.class);
 
                 System.out.println("device.IsMobile: " + device.getIsMobile().getValue());
+            } finally {
+                data.close();
             }
+        } finally {
+            pipeline.close();
         }
     }
 }

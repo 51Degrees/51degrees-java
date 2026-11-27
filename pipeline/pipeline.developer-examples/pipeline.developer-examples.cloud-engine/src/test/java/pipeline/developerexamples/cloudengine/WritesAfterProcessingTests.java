@@ -32,6 +32,7 @@ import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.typed.TypedKey;
 import fiftyone.pipeline.engines.data.AspectDataBase;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
 import pipeline.developerexamples.cloudengine.flowelements.SimpleCloudEngine;
@@ -92,7 +93,6 @@ public class WritesAfterProcessingTests {
     }
 
     @Test
-    @SuppressWarnings({"unchecked", "rawtypes"})
     public void simpleCloudEngine_ElementDataRefusesWrites() throws Exception {
         CloudRequestEngine requestEngine = mock(CloudRequestEngine.class);
         when(requestEngine.getPublicProperties())
@@ -108,15 +108,17 @@ public class WritesAfterProcessingTests {
         final List<ElementData> added = new ArrayList<>();
         when(flowData.getFromElement(any(CloudRequestEngine.class)))
             .thenReturn(cloudData);
-        when(flowData.getOrAdd(any(TypedKey.class), any(DataFactory.class)))
+        when(flowData.getOrAdd(
+            ArgumentMatchers.<TypedKey<ElementData>>any(),
+            any()))
             .thenAnswer(invocation -> {
                 if (added.isEmpty()) {
-                    DataFactory factory = invocation.getArgument(1);
+                    DataFactory<?> factory = invocation.getArgument(1);
                     added.add(factory.create(flowData));
                 }
                 return added.get(0);
             });
-        when(flowData.tryGetValue(any(TypedKey.class)))
+        when(flowData.tryGetValue(ArgumentMatchers.<TypedKey<ElementData>>any()))
             .thenAnswer(invocation -> {
                 TryGetResult<ElementData> result = new TryGetResult<>();
                 if (added.isEmpty() == false) {

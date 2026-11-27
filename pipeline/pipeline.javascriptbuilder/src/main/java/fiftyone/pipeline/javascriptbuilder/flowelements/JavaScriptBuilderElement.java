@@ -66,12 +66,24 @@ import static fiftyone.pipeline.javascriptbuilder.Constants.EVIDENCE_OBJECT_NAME
 public class JavaScriptBuilderElement
     extends FlowElementBase<JavaScriptBuilderData, ElementPropertyMetaData> {
 
+    @Override
+    protected Class<JavaScriptBuilderData> getDataType() {
+        return JavaScriptBuilderData.class;
+    }
+
+    /** Host of the callback URL, or empty to use the Host header. */
     protected String host;
+    /** Path of the callback endpoint. */
     protected String endpoint;
+    /** Protocol of the callback URL, or empty to use the request's. */
     protected String protocol;
+    /** Context root of the callback URL, or empty to use the evidence. */
     protected String contextRoot;
+    /** Name of the JavaScript object. */
     protected final String objName;
+    /** Whether the JavaScript keeps the cookies it sets. */
     protected final boolean enableCookies;
+    /** Whether the JavaScript is minified. */
     protected final boolean minify;
     private final Mustache mustache;
 

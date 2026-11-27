@@ -107,7 +107,7 @@ public class ManualDataUpdate {
 
         // The data file changes only when this code says so, because
         // automatic updates and the file system watcher are off.
-        try (Pipeline pipeline = new DeviceDetectionPipelineBuilder()
+        Pipeline pipeline = new DeviceDetectionPipelineBuilder()
                 // The engine works from a copy of the data file, so a newer
                 // file can be copied over the original while it runs.
                 .useOnPremise(dataFileLocation, true)
@@ -118,7 +118,8 @@ public class ManualDataUpdate {
                 // known to 51Degrees. In production, leave usage sharing on, which adds
                 // a Usage Sharing Element to the Pipeline and helps improve the service.
                 .setShareUsage(false)
-                .build()) {
+                .build();
+        try {
             DeviceDetectionHashEngine engine =
                     pipeline.getElement(DeviceDetectionHashEngine.class);
 
@@ -148,6 +149,8 @@ public class ManualDataUpdate {
                         "updates.");
                 DataFileHelper.writeEnterpriseNote(writer, CONTACT_US);
             }
+        } finally {
+            pipeline.close();
         }
         writer.flush();
     }
@@ -166,7 +169,8 @@ public class ManualDataUpdate {
         // The flow data is closed straight away, which releases the results
         // of the detection. Results that are not released keep the data
         // they were read from in memory, even after the data is refreshed.
-        try (FlowData data = pipeline.createFlowData()) {
+        FlowData data = pipeline.createFlowData();
+        try {
             data.addEvidence("header.user-agent", userAgent);
             data.process();
             DeviceData device = data.get(DeviceData.class);
@@ -182,6 +186,8 @@ public class ManualDataUpdate {
                     DataFileHelper.NEEDS_ENTERPRISE);
             writer.println();
             return true;
+        } finally {
+            data.close();
         }
     }
 

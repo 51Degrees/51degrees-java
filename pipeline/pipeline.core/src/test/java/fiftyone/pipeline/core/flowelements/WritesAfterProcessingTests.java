@@ -55,6 +55,11 @@ public class WritesAfterProcessingTests {
      */
     private static class Member
         extends FlowElementBase<TestElementData, ElementPropertyMetaData> {
+
+        @Override
+        protected Class<TestElementData> getDataType() {
+            return TestElementData.class;
+        }
         private final String key;
 
         Member(String key) {
@@ -119,14 +124,13 @@ public class WritesAfterProcessingTests {
     }
 
     @Test
-    @SuppressWarnings("rawtypes")
     public void parallelElements_MembersElementDataRefusesWrites()
         throws Exception {
         Member first = new Member("first");
         Member second = new Member("second");
         try (Pipeline pipeline = new PipelineBuilder(
                 LoggerFactory.getILoggerFactory())
-                .addFlowElementsParallel(new FlowElement[] { first, second })
+                .addFlowElementsParallel(new FlowElement<?, ?>[] { first, second })
                 .build();
              FlowData data = pipeline.createFlowData()) {
             data.process();

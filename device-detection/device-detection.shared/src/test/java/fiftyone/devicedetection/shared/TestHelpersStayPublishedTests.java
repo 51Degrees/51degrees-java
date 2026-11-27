@@ -30,27 +30,33 @@ import static org.junit.Assert.assertTrue;
 /**
  * FileUtils and KeyUtils, which earlier releases published, stay in the
  * published jar, deprecated, as a patch release removes no public name.
- * They are found by name, because the build treats the use of a
- * deprecated class as an error.
  */
 public class TestHelpersStayPublishedTests {
 
-    private static final String PACKAGE =
-        "fiftyone.devicedetection.shared.testhelpers.";
-
+    /**
+     * FileUtils is in the main jar, and deprecated.
+     * @deprecated tests the deprecated FileUtils.
+     */
+    @Deprecated
     @Test
-    public void FileUtils_InTheMainJar_Deprecated() throws Exception {
-        assertPublishedAndDeprecated(PACKAGE + "FileUtils");
+    public void FileUtils_InTheMainJar_Deprecated() {
+        assertPublishedAndDeprecated(
+            fiftyone.devicedetection.shared.testhelpers.FileUtils.class);
     }
 
+    /**
+     * KeyUtils is in the main jar, and deprecated.
+     * @deprecated tests the deprecated KeyUtils.
+     */
+    @Deprecated
     @Test
-    public void KeyUtils_InTheMainJar_Deprecated() throws Exception {
-        assertPublishedAndDeprecated(PACKAGE + "KeyUtils");
+    public void KeyUtils_InTheMainJar_Deprecated() {
+        assertPublishedAndDeprecated(
+            fiftyone.devicedetection.shared.testhelpers.KeyUtils.class);
     }
 
-    private static void assertPublishedAndDeprecated(String name)
-        throws ClassNotFoundException {
-        Class<?> type = Class.forName(name);
+    private static void assertPublishedAndDeprecated(Class<?> type) {
+        String name = type.getName();
         String location = type.getProtectionDomain()
             .getCodeSource().getLocation().toString();
         assertFalse(name + " comes from " + location + ", not the main jar",

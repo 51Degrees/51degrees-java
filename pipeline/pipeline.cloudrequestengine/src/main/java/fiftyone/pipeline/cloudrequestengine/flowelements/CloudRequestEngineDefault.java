@@ -72,6 +72,12 @@ import static fiftyone.pipeline.util.StringManipulation.stringJoin;
 public class CloudRequestEngineDefault
     extends AspectEngineBase<CloudRequestData, AspectPropertyMetaData>
     implements CloudRequestEngine {
+
+    @Override
+    protected Class<CloudRequestData> getDataType() {
+        return CloudRequestData.class;
+    }
+
     /**
      * The Evidence key of the whole web request, which the web integration
      * adds for usage sharing to read. It holds every header and cookie of
@@ -117,7 +123,7 @@ public class CloudRequestEngineDefault
      */
     private static final int HTTP_SERVER_ERROR_MIN = 500;
 
-    private List<AspectPropertyMetaData> propertyMetaData;
+    private volatile List<AspectPropertyMetaData> propertyMetaData;
 
     /**
      * The products the resource key gives access to, from the
@@ -162,6 +168,18 @@ public class CloudRequestEngineDefault
             return thread;
         });
 
+    /**
+     * Create a new instance with a resource key.
+     *
+     * @param logger used for logging
+     * @param aspectDataFactory creates the element data this engine returns
+     * @param httpClient used to make requests to the cloud service
+     * @param endPoint the cloud service endpoint
+     * @param resourceKey the resource key, or null
+     * @param propertiesEndpoint the properties endpoint
+     * @param evidenceKeysEndpoint the evidence keys endpoint
+     * @param timeoutMillis the request timeout in milliseconds
+     */
     public CloudRequestEngineDefault(
         Logger logger,
         ElementDataFactory<CloudRequestData> aspectDataFactory,
@@ -183,6 +201,20 @@ public class CloudRequestEngineDefault
             timeoutMillis,
             null);
     }
+    /**
+     * Create a new instance with a resource key and Origin header.
+     *
+     * @param logger used for logging
+     * @param aspectDataFactory creates the element data this engine returns
+     * @param httpClient used to make requests to the cloud service
+     * @param endPoint the cloud service endpoint
+     * @param resourceKey the resource key, or null
+     * @param propertiesEndpoint the properties endpoint
+     * @param evidenceKeysEndpoint the evidence keys endpoint
+     * @param timeoutMillis the request timeout in milliseconds
+     * @param cloudRequestOrigin the value of the Origin header, or null for
+     *    none
+     */
     public CloudRequestEngineDefault(
         Logger logger,
         ElementDataFactory<CloudRequestData> aspectDataFactory,
@@ -206,6 +238,21 @@ public class CloudRequestEngineDefault
             cloudRequestOrigin);
     }
 
+    /**
+     * Create a new instance with a resource key or license key.
+     *
+     * @param logger used for logging
+     * @param aspectDataFactory creates the element data this engine returns
+     * @param httpClient used to make requests to the cloud service
+     * @param endPoint the cloud service endpoint
+     * @param resourceKey the resource key, or null
+     * @param licenseKey the license key, or null
+     * @param propertiesEndpoint the properties endpoint
+     * @param evidenceKeysEndpoint the evidence keys endpoint
+     * @param timeoutMillis the request timeout in milliseconds
+     * @param cloudRequestOrigin the value of the Origin header, or null for
+     *    none
+     */
     public CloudRequestEngineDefault(
         Logger logger,
         ElementDataFactory<CloudRequestData> aspectDataFactory,
@@ -233,11 +280,21 @@ public class CloudRequestEngineDefault
 
     /**
      * Constructor.
+     * @param logger used for logging
+     * @param aspectDataFactory creates the element data this engine returns
+     * @param httpClient used to make requests to the cloud service
+     * @param endPoint the cloud service endpoint
+     * @param resourceKey the resource key, or null
+     * @param licenseKey the license key, or null
+     * @param propertiesEndpoint the properties endpoint
+     * @param evidenceKeysEndpoint the evidence keys endpoint
+     * @param timeoutMillis the request timeout in milliseconds
+     * @param cloudRequestOrigin the value of the Origin header, or null for
+     *                           none
      * @param requestedProperties the fully qualified names of the
      *                            properties to ask for, sent as {@code values}
      *                            when the list is not empty
      */
-    @SuppressWarnings("this-escape")
     public CloudRequestEngineDefault(
         Logger logger,
         ElementDataFactory<CloudRequestData> aspectDataFactory,
@@ -267,27 +324,40 @@ public class CloudRequestEngineDefault
         } else {
             this.timeoutMillis = null;
         }
-
-        propertyMetaData = new ArrayList<>();
-        propertyMetaData.add(new AspectPropertyMetaDataDefault(
-                "json-response",
-                this,
-                "",
-                String.class,
-                new ArrayList<String>(),
-                true));
-        propertyMetaData.add(new AspectPropertyMetaDataDefault(
-                "process-started",
-                this,
-                "",
-                Boolean.class,
-                new ArrayList<String>(),
-                true));
     }
 
+    /**
+     * The property metadata of this engine, created on first use as it
+     * refers to the engine.
+     * @return the property metadata
+     */
     @Override
     public List<AspectPropertyMetaData> getProperties() {
-        return propertyMetaData;
+        List<AspectPropertyMetaData> localRef = propertyMetaData;
+        if (localRef == null) {
+            synchronized (this) {
+                localRef = propertyMetaData;
+                if (localRef == null) {
+                    localRef = new ArrayList<>();
+                    localRef.add(new AspectPropertyMetaDataDefault(
+                        "json-response",
+                        this,
+                        "",
+                        String.class,
+                        new ArrayList<String>(),
+                        true));
+                    localRef.add(new AspectPropertyMetaDataDefault(
+                        "process-started",
+                        this,
+                        "",
+                        Boolean.class,
+                        new ArrayList<String>(),
+                        true));
+                    propertyMetaData = localRef;
+                }
+            }
+        }
+        return localRef;
     }
 
     @Override

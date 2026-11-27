@@ -1,6 +1,9 @@
 param(
     [Parameter(Mandatory)][string]$RepoName,
-    [string]$Name
+    [string]$Name,
+    # The runner variable naming the entry's JDK. The native modules and those
+    # they depend on compile with JDK 17 of the same architecture.
+    [Parameter(Mandatory)][string]$JavaSDKEnvVar
 )
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
@@ -13,7 +16,9 @@ Write-Host "Entering '$RepoName'"
 Push-Location $RepoName
 try {
     Write-Host "Building '$Name'"
-    mvn package @MavenOptions -DskipTests -pl ($NativePackages.Path -join ',') -am
+    Invoke-WithJavaHome (Get-CompileJavaHome $JavaSDKEnvVar) {
+        mvn package @MavenOptions -DskipTests -pl ($NativePackages.Path -join ',') -am
+    }
 } finally {
     Write-Host "Leaving '$RepoName'"
     Pop-Location

@@ -24,12 +24,12 @@ package fiftyone.pipeline.core.flowelements;
 
 import fiftyone.pipeline.core.data.*;
 import fiftyone.pipeline.core.data.factories.FlowDataFactory;
+import fiftyone.pipeline.core.exceptions.CloseException;
 import fiftyone.pipeline.core.exceptions.PipelineDataException;
 import fiftyone.pipeline.core.services.PipelineService;
 import fiftyone.pipeline.exceptions.AggregateException;
 import org.slf4j.Logger;
 
-import java.io.Closeable;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -41,7 +41,6 @@ import java.util.stream.Collectors;
  * is called.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/conceptual-overview.md#pipeline">Specification</a>
  */
-@SuppressWarnings("rawtypes")
 class PipelineDefault implements PipelineInternal {
 
     /**
@@ -100,7 +99,7 @@ class PipelineDefault implements PipelineInternal {
     /**
      * The {@link FlowElement}s that make up this Pipeline.
      */
-    private final List<FlowElement> flowElements;
+    private final List<FlowElement<?, ?>> flowElements;
     
     /**
      * The services that are used by this Pipeline.
@@ -119,7 +118,7 @@ class PipelineDefault implements PipelineInternal {
      * The pipeline maintains a map of the elements it contains indexed by type.
      * This is used by the {@link #getElement(Class)} method.
      */
-    private final Map<Class, List<FlowElement>> elementsByType = new HashMap<>();
+    private final Map<Class<?>, List<FlowElement<?, ?>>> elementsByType = new HashMap<>();
 
     /**
      * The pipeline maintains a map of property meta data indexed by property
@@ -144,7 +143,7 @@ class PipelineDefault implements PipelineInternal {
      */
     PipelineDefault(
         Logger logger,
-        List<FlowElement> flowElements,
+        List<FlowElement<?, ?>> flowElements,
         FlowDataFactory flowDataFactory,
         boolean autoDisposeElements,
         boolean suppressProcessExceptions) {
@@ -162,12 +161,12 @@ class PipelineDefault implements PipelineInternal {
         addElementsByType(flowElements);
 
         isConcurrent = false;
-        for (FlowElement element : this.flowElements) {
+        for (FlowElement<?, ?> element : this.flowElements) {
             isConcurrent = isConcurrent || element.isConcurrent();
         }
 
         EvidenceKeyFilterAggregator filter = new EvidenceKeyFilterAggregator();
-        for (FlowElement element : this.flowElements) {
+        for (FlowElement<?, ?> element : this.flowElements) {
             filter.addFilter(element.getEvidenceKeyFilter());
         }
         evidenceKeyFilter = filter;
@@ -228,7 +227,7 @@ class PipelineDefault implements PipelineInternal {
      * @return map of available properties for elements
      */
     private Map<String, Map<String, ElementPropertyMetaData>>
-    getElementAvailableProperties(List<FlowElement> elements) {
+    getElementAvailableProperties(List<FlowElement<?, ?>> elements) {
         Map<String, Map<String, ElementPropertyMetaData>> map =
             new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
@@ -249,9 +248,9 @@ class PipelineDefault implements PipelineInternal {
      * @param map to add the properties to
      */
     private void addAvailableProperties(
-        List<FlowElement> elements,
+        List<FlowElement<?, ?>> elements,
         Map<String, Map<String, ElementPropertyMetaData>> map) {
-        for (FlowElement element : elements) {
+        for (FlowElement<?, ?> element : elements) {
             if (element instanceof ParallelElements) {
                 addAvailableProperties(((ParallelElements) element).getFlowElements(), map);
             } else {
@@ -262,9 +261,7 @@ class PipelineDefault implements PipelineInternal {
                 }
                 Map<String, ElementPropertyMetaData> availableElementProperties =
                     map.get(element.getElementDataKey());
-                for (Object propertyObject : element.getProperties()) {
-                    ElementPropertyMetaData property =
-                        (ElementPropertyMetaData)propertyObject;
+                for (ElementPropertyMetaData property : element.getProperties()) {
                     if (property.isAvailable() &&
                         availableElementProperties.containsKey(property.getName()) == false) {
                         availableElementProperties.put(
@@ -281,10 +278,10 @@ class PipelineDefault implements PipelineInternal {
      * contains a list of all the elements in the pipeline indexed by type.
      * @param elements the {@link FlowElement}s to add
      */
-    private void addElementsByType(List<FlowElement> elements) {
-        for (FlowElement element : elements) {
+    private void addElementsByType(List<FlowElement<?, ?>> elements) {
+        for (FlowElement<?, ?> element : elements) {
             element.addPipeline(this);
-            Class type = element.getClass();
+            Class<?> type = element.getClass();
             // If the element is a ParallelElements then add it's child elements.
             if (element instanceof ParallelElements) {
                 addElementsByType(((ParallelElements) element).getFlowElements());
@@ -292,7 +289,7 @@ class PipelineDefault implements PipelineInternal {
             // Otherwise, just add the element directly.
             else {
                 if (elementsByType.containsKey(type) == false) {
-                    elementsByType.put(type, new ArrayList<FlowElement>());
+                    elementsByType.put(type, new ArrayList<FlowElement<?, ?>>());
                 }
                 elementsByType.get(type).add(element);
             }
@@ -308,8 +305,8 @@ class PipelineDefault implements PipelineInternal {
      * @param <T> the type of the class
      * @return true if any elements are the requested type
      */
-    private <T extends FlowElement> boolean anyAssignableFrom(
-        Map<Class, List<FlowElement>> elements,
+    private <T extends FlowElement<?, ?>> boolean anyAssignableFrom(
+        Map<Class<?>, List<FlowElement<?, ?>>> elements,
         Class<T> type) {
         for (Class<?> element : elements.keySet()) {
             if (type.isAssignableFrom(element)) {
@@ -327,12 +324,12 @@ class PipelineDefault implements PipelineInternal {
      * @param <T> the type of elements to get
      * @return list of elements
      */
-    private <T extends FlowElement> List<List<FlowElement>>
+    private <T extends FlowElement<?, ?>> List<List<FlowElement<?, ?>>>
     getElementsWhereAssignableFrom(
-        Map<Class, List<FlowElement>> elements,
+        Map<Class<?>, List<FlowElement<?, ?>>> elements,
         Class<T> type) {
-        List<List<FlowElement>> result = new ArrayList<>();
-        for (Map.Entry<Class, List<FlowElement>> element : elements.entrySet()) {
+        List<List<FlowElement<?, ?>>> result = new ArrayList<>();
+        for (Map.Entry<Class<?>, List<FlowElement<?, ?>>> element : elements.entrySet()) {
             if (type.isAssignableFrom(element.getKey())) {
                 result.add(element.getValue());
             }
@@ -341,8 +338,7 @@ class PipelineDefault implements PipelineInternal {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public <T extends FlowElement> T getElement(Class<T> type) {
+    public <T extends FlowElement<?, ?>> T getElement(Class<T> type) {
         T result = null;
         if (elementsByType.containsKey(type)) {
             try {
@@ -352,12 +348,12 @@ class PipelineDefault implements PipelineInternal {
             }
         }
         else if (anyAssignableFrom(elementsByType, type)) {
-            List<List<FlowElement>> matches = getElementsWhereAssignableFrom(
+            List<List<FlowElement<?, ?>>> matches = getElementsWhereAssignableFrom(
                 elementsByType,
                 type);
             if (matches.size() == 1 &&
                 matches.get(0).size() == 1) {
-                result = (T)matches.get(0).get(0);
+                result = type.cast(matches.get(0).get(0));
             }
         }
 
@@ -365,7 +361,7 @@ class PipelineDefault implements PipelineInternal {
     }
 
     @Override
-    public List<FlowElement> getFlowElements() {
+    public List<FlowElement<?, ?>> getFlowElements() {
         return Collections.unmodifiableList(flowElements);
     }
 
@@ -398,7 +394,7 @@ class PipelineDefault implements PipelineInternal {
     }
 
     private boolean allPropertiesLoaded() {
-        for (FlowElement element : flowElements) {
+        for (FlowElement<?, ?> element : flowElements) {
             if (element.hasLoadedProperties() == false) {
                 return false;
             }
@@ -406,7 +402,7 @@ class PipelineDefault implements PipelineInternal {
         return true;
     }
 
-    public void close(boolean closing) throws Exception {
+    public void close(boolean closing) {
         if (isClosed == false) {
             synchronized (lock) {
                 if (isClosed == false) {
@@ -414,7 +410,7 @@ class PipelineDefault implements PipelineInternal {
                     if (closing && autoDisposeElements) {
                     	// Dispose all elements
                         List<Exception> exceptions = new ArrayList<>();
-                        for (FlowElement element : flowElements) {
+                        for (FlowElement<?, ?> element : flowElements) {
                             try {
                                 element.close();
                             } catch (Exception e) {
@@ -425,24 +421,31 @@ class PipelineDefault implements PipelineInternal {
                         // Dispose the services after all elements have been
                         // disposed.
                         for (PipelineService service : services) {
-                        	if (service instanceof Closeable) {
-                        		((Closeable)service).close();
-                        	}
-                        	else if (service instanceof AutoCloseable){
-                        		try {
-                        			((AutoCloseable)service).close();
-                        		}
-                        		catch (Exception e) {
-                        			exceptions.add(e);
-                        		}
-                        	}
+                            if (service instanceof AutoCloseable) {
+                                try {
+                                    ((AutoCloseable) service).close();
+                                } catch (Exception e) {
+                                    exceptions.add(e);
+                                }
+                            }
                         }
-                        
-                        // Throw an exception if an exception occurred
+
+                        // Once everything is closed, throw with the first
+                        // failure as the cause and the others suppressed.
                         if (exceptions.size() > 0) {
-                            throw new Exception(
-                                "One or more exceptions occurred while closing the pipeline",
+                            CloseException failure = new CloseException(
+                                "One or more exceptions occurred while " +
+                                "closing the pipeline",
                                 exceptions.get(0));
+                            for (Exception e : exceptions) {
+                                if (e instanceof InterruptedException) {
+                                    Thread.currentThread().interrupt();
+                                }
+                                if (e != exceptions.get(0)) {
+                                    failure.addSuppressed(e);
+                                }
+                            }
+                            throw failure;
                         }
                     }
                 }
@@ -451,31 +454,11 @@ class PipelineDefault implements PipelineInternal {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         logger.debug("Pipeline '" + hashCode() + "' closed.");
         close(true);
     }
 
-/*   @SuppressWarnings("deprecation")
-    @Override
-    protected void finalize() throws Throwable {
-        if (isClosed) {
-            logger.info("Pipeline '{}' finalizing, but already closed", hashCode());
-            super.finalize();
-            return;
-        }
-        try {
-            logger.warn(
-                "Pipeline '" + hashCode() + "' finalised. It is recommended " +
-                "that instance lifetimes are managed explicitly with a 'try' " +
-                "block or calling the close method as part of a 'finally' block.");
-            // Do not change this code. Put cleanup code in close(boolean disposing) above.
-            close(false);
-        } finally {
-            super.finalize();
-        }
-    }
-*/
     @Override
     public void process(FlowData data) {
         logger.debug("Pipeline '" + hashCode() + "' started processing.");
@@ -484,7 +467,7 @@ class PipelineDefault implements PipelineInternal {
 
             throw new RuntimeException("Pipeline is closed");
         }
-        for (FlowElement element : flowElements) {
+        for (FlowElement<?, ?> element : flowElements) {
             try {
                 element.process(data);
                 if (data.isStopped()) break;
@@ -520,7 +503,7 @@ class PipelineDefault implements PipelineInternal {
         }
         else {
             List<ElementPropertyMetaData> properties = new ArrayList<>();
-            for (FlowElement element : flowElements) {
+            for (FlowElement<?, ?> element : flowElements) {
                 for (Object property : element.getProperties()) {
                     if (((ElementPropertyMetaData) property).getName()
                         .equalsIgnoreCase(propertyName)) {

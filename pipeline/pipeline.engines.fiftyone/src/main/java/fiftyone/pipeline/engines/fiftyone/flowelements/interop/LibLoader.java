@@ -36,6 +36,9 @@ import java.util.Optional;
  * {@link AspectEngine}.
  */
 public class LibLoader {
+    /** Create a new instance. */
+    public LibLoader() {
+    }
 
     /**
      * Get the enumeration of the group of Operating Systems to which the system
@@ -130,7 +133,6 @@ public class LibLoader {
      *                                       a native library for the environment
      * @throws IOException thrown if there is a problem copying the resource
      */
-    @SuppressWarnings("restricted")
     public static void load(Class<?> engineClass)
         throws IOException, UnsupportedOperationException {
         File nativeLibraryFile = copyResource(

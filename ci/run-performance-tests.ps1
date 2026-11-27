@@ -4,7 +4,10 @@ param(
     # Set by the publish workflow, which built and installed the packages, to
     # its label for the run. Not set when a pull request is tested, which
     # builds the reactor itself.
-    [string]$Version
+    [string]$Version,
+    # The runner variable naming the entry's JDK, which the tests run on.
+    # Maven compiles with JDK 17 of the same architecture.
+    [Parameter(Mandatory)][string]$JavaSDKEnvVar
 )
 $ErrorActionPreference = "Stop"
 # Each product's exit code is checked below, so one failing product does not
@@ -20,6 +23,8 @@ $PSNativeCommandUseErrorActionPreference = $false
 $summary = @{ HigherIsBetter = [ordered]@{}; LowerIsBetter = [ordered]@{} }
 $results = "$RepoName/test-results/performance"
 $failed = @()
+$compileJavaHome = Get-CompileJavaHome $JavaSDKEnvVar
+$testJvm = Get-TestJvmArgument
 
 # A publish measures the versions it built, each package's own.
 if ($Version) {
@@ -35,8 +40,10 @@ $pipelineResults = Join-Path $PWD "pipeline-performance-$Name.json"
 Remove-Item -Path $pipelineResults -Force -ErrorAction SilentlyContinue
 Push-Location "$RepoName/pipeline"
 try {
-    mvn test @MavenOptions -DfailIfNoTests=false "-Dsurefire.failIfNoSpecifiedTests=false" `
-        "-Dtest=*ShareUsageOverheadTests*" "-D_51DEGREES_PERFORMANCE_JSON=$pipelineResults"
+    Invoke-WithJavaHome $compileJavaHome {
+        mvn test @MavenOptions $testJvm -DfailIfNoTests=false "-Dsurefire.failIfNoSpecifiedTests=false" `
+            "-Dtest=*ShareUsageOverheadTests*" "-D_51DEGREES_PERFORMANCE_JSON=$pipelineResults"
+    }
     if ($LASTEXITCODE -ne 0) { $failed += 'Pipeline API' }
 } finally {
     Pop-Location
@@ -121,7 +128,9 @@ foreach ($benchmark in $benchmarks) {
     Write-Host "::group::$($benchmark.Product)"
     Push-Location "$RepoName/$($benchmark.Path)"
     try {
-        mvn clean test @MavenOptions @versionArgs -DfailIfNoTests=false "-Dsurefire.failIfNoSpecifiedTests=false" "-Dtest=*Performance*"
+        Invoke-WithJavaHome $compileJavaHome {
+            mvn clean test @MavenOptions $testJvm @versionArgs -DfailIfNoTests=false "-Dsurefire.failIfNoSpecifiedTests=false" "-Dtest=*Performance*"
+        }
         if ($LASTEXITCODE -ne 0) { $failed += $benchmark.Product }
     } finally {
         Pop-Location

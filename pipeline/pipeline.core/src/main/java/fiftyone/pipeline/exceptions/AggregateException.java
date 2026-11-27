@@ -26,10 +26,10 @@ import java.util.Collection;
 
 /**
  * Aggregation of multiple exceptions. All exceptions which caused an instance
- * of this are added to the {@link #suppressedExceptions} list and can be
- * retrieved via the {@link #getSuppressed()} method.
+ * of this are added as suppressed exceptions and can be retrieved with the
+ * {@link #getSuppressed()} method.
  */
-public class AggregateException extends RuntimeException {
+public final class AggregateException extends RuntimeException {
 
     /**
      * Serializable class version number, which is used during deserialization.
@@ -41,7 +41,6 @@ public class AggregateException extends RuntimeException {
      * @param message the message to give to the exception
      * @param causes multiple causes to be contained in the exception
      */
-    @SuppressWarnings("this-escape")
     public AggregateException(String message, Collection<Throwable> causes) {
         super(message);
         for (Throwable cause : causes) {
@@ -53,7 +52,6 @@ public class AggregateException extends RuntimeException {
      * Construct a new instance with no message.
      * @param causes multiple causes to be contained in the exception
      */
-    @SuppressWarnings("this-escape")
     public AggregateException(Collection<Throwable> causes) {
         super();
         for (Throwable cause : causes) {

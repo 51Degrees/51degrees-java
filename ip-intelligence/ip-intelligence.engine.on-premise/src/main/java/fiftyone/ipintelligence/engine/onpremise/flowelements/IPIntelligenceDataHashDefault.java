@@ -43,6 +43,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -161,9 +162,15 @@ public class IPIntelligenceDataHashDefault
         return false;
     }
 
+    /**
+     * Sets the result to the weighted values of a native list, or to its no
+     * value message. The native list and the value holding it are freed with
+     * the close methods given, whose native types throw no checked
+     * exception, unlike AutoCloseable's close().
+     */
     private static <
-            TListValueSwig extends AutoCloseable,
-            TListSwig extends AutoCloseable & List<TWeightedValueSwig>,
+            TListValueSwig,
+            TListSwig extends List<TWeightedValueSwig>,
             TWeightedValueSwig,
             TElement>
     void populateWeightedValues(
@@ -172,22 +179,56 @@ public class IPIntelligenceDataHashDefault
             Predicate<TListValueSwig> listValueSwigHasValue,
             Function<TListValueSwig, String> listValueSwigGetNoValueMessage,
             Function<TListValueSwig, TListSwig> listSwigExtractor,
-            Function<TWeightedValueSwig, TElement> elementConverter) {
-        try (TListValueSwig listValueSwig = listValueSwigSupplier.get())
-        {
+            Function<TWeightedValueSwig, TElement> elementConverter,
+            Consumer<TListValueSwig> listValueSwigClose,
+            Consumer<TListSwig> listSwigClose) {
+        useAndClose(listValueSwigSupplier.get(), listValueSwig -> {
             if (listValueSwigHasValue.test(listValueSwig)) {
-                try (TListSwig listSwig = listSwigExtractor.apply(listValueSwig)) {
+                useAndClose(listSwigExtractor.apply(listValueSwig), listSwig -> {
                     List<?> convertedWeightedElements = listSwig.stream()
                             .map(elementConverter)
                             .collect(Collectors.toList());
                     result.setValue(Collections.unmodifiableList(convertedWeightedElements));
-                }
+                }, listSwigClose);
             }
             else {
                 result.setNoValueMessage(listValueSwigGetNoValueMessage.apply(listValueSwig));
             }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        }, listValueSwigClose);
+    }
+
+    /**
+     * Passes a native object to the action and then closes it, as a
+     * try-with-resources statement does. A null object is not closed, and
+     * when the action throws, an exception from the close is added to the
+     * action's exception as suppressed rather than replacing it.
+     * @param resource the native object, or null
+     * @param action what to do with the object
+     * @param close how to close the object
+     * @param <T> the type of the native object
+     */
+    static <T> void useAndClose(
+            T resource,
+            Consumer<T> action,
+            Consumer<T> close) {
+        Throwable primary = null;
+        try {
+            action.accept(resource);
+        } catch (Throwable t) {
+            primary = t;
+            throw t;
+        } finally {
+            if (resource != null) {
+                if (primary != null) {
+                    try {
+                        close.accept(resource);
+                    } catch (Throwable suppressed) {
+                        primary.addSuppressed(suppressed);
+                    }
+                } else {
+                    close.accept(resource);
+                }
+            }
         }
     }
 
@@ -230,7 +271,9 @@ public class IPIntelligenceDataHashDefault
                     WeightedBoolListValueSwig::hasValue,
                     WeightedBoolListValueSwig::getNoValueMessage,
                     WeightedBoolListValueSwig::getValue,
-                    x -> new WeightedValue<>(x.getShortRawWeight(), x.getValue())
+                    x -> new WeightedValue<>(x.getShortRawWeight(), x.getValue()),
+                    WeightedBoolListValueSwig::close,
+                    WeightedBoolListSwig::close
             );
         } else if (valueType.equals(Double.class)) {
             populateWeightedValues(
@@ -241,7 +284,9 @@ public class IPIntelligenceDataHashDefault
                     WeightedDoubleListValueSwig::hasValue,
                     WeightedDoubleListValueSwig::getNoValueMessage,
                     WeightedDoubleListValueSwig::getValue,
-                    x -> new WeightedValue<>(x.getShortRawWeight(), x.getValue())
+                    x -> new WeightedValue<>(x.getShortRawWeight(), x.getValue()),
+                    WeightedDoubleListValueSwig::close,
+                    WeightedDoubleListSwig::close
             );
         } else if (valueType.equals(Float.class)) {
             populateWeightedValues(
@@ -252,7 +297,9 @@ public class IPIntelligenceDataHashDefault
                     WeightedDoubleListValueSwig::hasValue,
                     WeightedDoubleListValueSwig::getNoValueMessage,
                     WeightedDoubleListValueSwig::getValue,
-                    x -> new WeightedValue<>(x.getShortRawWeight(), (float)x.getValue())
+                    x -> new WeightedValue<>(x.getShortRawWeight(), (float)x.getValue()),
+                    WeightedDoubleListValueSwig::close,
+                    WeightedDoubleListSwig::close
             );
         } else if (valueType.equals(Integer.class)) {
             populateWeightedValues(
@@ -263,7 +310,9 @@ public class IPIntelligenceDataHashDefault
                     WeightedIntListValueSwig::hasValue,
                     WeightedIntListValueSwig::getNoValueMessage,
                     WeightedIntListValueSwig::getValue,
-                    x -> new WeightedValue<>(x.getShortRawWeight(), x.getValue())
+                    x -> new WeightedValue<>(x.getShortRawWeight(), x.getValue()),
+                    WeightedIntListValueSwig::close,
+                    WeightedIntListSwig::close
             );
         } else if (valueType.equals(InetAddress.class)
                 || valueType.equals(Inet4Address.class)
@@ -282,7 +331,9 @@ public class IPIntelligenceDataHashDefault
                         } catch (UnknownHostException e) {
                             throw new RuntimeException(e);
                         }
-                    }
+                    },
+                    WeightedStringListValueSwig::close,
+                    WeightedStringListSwig::close
             );
         } else if (valueType.equals(String.class)) {
             populateWeightedValues(
@@ -303,7 +354,9 @@ public class IPIntelligenceDataHashDefault
                             theString = new String(bytes, StandardCharsets.UTF_8);
                         }
                         return new WeightedValue<>(x.getShortRawWeight(), theString);
-                    }
+                    },
+                    WeightedUTF8StringListValueSwig::close,
+                    WeightedUTF8StringListSwig::close
             );
         } else {
             throw new IllegalArgumentException("Unsupported value type: " + valueType.getName());

@@ -37,7 +37,6 @@ import static fiftyone.pipeline.util.StringManipulation.stringJoin;
  * Public builder for instances of {@link TypedKeyMap}. This follows the fluent
  * builder pattern.
  */
-@SuppressWarnings({"unchecked", "rawtypes"})
 public class TypedKeyMapBuilder {
 
     private final TypedKeyMap _map;
@@ -133,7 +132,7 @@ public class TypedKeyMapBuilder {
                 if (existing != null) {
                     return typedKey.getType().cast(existing._value);
                 }
-                Entry<T> first = new Entry<>(typedKey, value);
+                Entry first = new Entry(typedKey, value);
                 first._next = head;
                 if (HEAD.compareAndSet(this, head, first)) {
                     return value;
@@ -241,10 +240,10 @@ public class TypedKeyMapBuilder {
                 if (current[1] == _head) {
                     _head = current[1]._next;
                 }
-                T value = (T) current[1]._value;
+                Object value = current[1]._value;
                 current[1].closeValue();
                 current[1]._value = null;
-                return value;
+                return typedKey.getType().cast(value);
             }
             return null;
         }
@@ -401,12 +400,12 @@ public class TypedKeyMapBuilder {
             }
         }
 
-        private static class Entry<T> {
-            final TypedKey<T> _key;
-            volatile T _value;
+        private static class Entry {
+            final TypedKey<?> _key;
+            volatile Object _value;
             volatile Entry _next = null;
 
-            Entry(TypedKey<T> key, T value) {
+            Entry(TypedKey<?> key, Object value) {
                 _key = key;
                 _value = value;
             }

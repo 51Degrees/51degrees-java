@@ -2,7 +2,8 @@ name: Examples from a fresh clone
 
 # Builds each product's console examples as AGENTS.md says, from a clone
 # with its submodules, against the packages published on Maven Central, with
-# the JDK and Maven the runner has. Then runs the getting started example
+# the Maven the runner has on JDK 17, which compiles for Java 8 with no
+# warning. Then runs the getting started example
 # from the repository root with no settings. A fresh clone holds only a link
 # for each free data file. On Ubuntu the example downloads its file, which
 # tests the download, from a stand-in on the runner that serves the free file
@@ -28,6 +29,11 @@ on:
 
 permissions:
   contents: read
+
+# Every compiler and tool warning is an error in the builds 51Degrees runs.
+# The poms and the native CMake files read this variable.
+env:
+  _51DEGREES_WARNINGS_AS_ERRORS: 'true'
 
 jobs:
   download:
@@ -55,6 +61,11 @@ jobs:
         with:
           submodules: recursive
           persist-credentials: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
       # common-ci's fetch-assets step, which the builds use, puts the free
       # file in the assets folder and keeps it in the cache for the day.
@@ -140,6 +151,11 @@ jobs:
           key: fresh-clone-${{ matrix.product }}-${{ hashFiles(format('{0}.link', matrix.file)) }}
           enableCrossOsArchive: true
           fail-on-cache-miss: true
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
       - name: The runner's Java and Maven
         shell: pwsh

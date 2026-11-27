@@ -42,5 +42,10 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface AlternateName {
+    /**
+     * The other name the method answers to.
+     *
+     * @return the alternate name
+     */
     String value();
 }

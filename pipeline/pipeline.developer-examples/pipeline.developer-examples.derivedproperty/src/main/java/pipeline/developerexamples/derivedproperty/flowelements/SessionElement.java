@@ -54,6 +54,11 @@ import java.util.List;
 public final class SessionElement
     extends FlowElementBase<ElementData, ElementPropertyMetaData> {
 
+    @Override
+    protected Class<ElementData> getDataType() {
+        return ElementData.class;
+    }
+
     /**
      * The Element Data key, being the part of session.PagesViewed before
      * the dot.
@@ -75,8 +80,11 @@ public final class SessionElement
      */
     public static final String POINTER_MOVED_EVIDENCE = "query.pointermoved";
 
+    /** Name of the pages viewed property. */
     public static final String PAGES_VIEWED = "PagesViewed";
+    /** Name of the seconds since page load property. */
     public static final String SECONDS_SINCE_PAGE_LOAD = "SecondsSincePageLoad";
+    /** Name of the pointer moved property. */
     public static final String POINTER_MOVED = "PointerMoved";
 
     private final EvidenceKeyFilter evidenceKeyFilter =

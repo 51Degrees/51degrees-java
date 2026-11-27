@@ -191,6 +191,11 @@ The web example will start a Jetty server on port 5151. Access it at: `http://lo
 
 Alternatively, you can build "fat" JARs and run examples from the command line.
 
+Build the examples with JDK 17. They compile for Java 8 and treat every
+compiler warning as an error, and javac 21 and later warn that Java 8 is
+obsolete, so the build fails on JDK 21 and later. The JARs it makes run on
+Java 8 or later.
+
 First, build the packages:
 
 ```bash

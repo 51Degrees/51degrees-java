@@ -72,7 +72,6 @@ import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-@SuppressWarnings("rawtypes")
 public class PipelineFilterTests {
 
     private FilterConfig config;
@@ -260,7 +259,7 @@ public class PipelineFilterTests {
         verify(flowData, times(1)).close();
     }
 
-    private List<FlowElement> elementsOf(PipelineFilter initialised)
+    private List<FlowElement<?, ?>> elementsOf(PipelineFilter initialised)
         throws Exception {
         Field field = PipelineFilter.class.getDeclaredField("pipeline");
         field.setAccessible(true);
@@ -268,9 +267,9 @@ public class PipelineFilterTests {
     }
 
     private static boolean hasElement(
-        List<FlowElement> elements,
-        Class<? extends FlowElement> type) {
-        for (FlowElement element : elements) {
+        List<FlowElement<?, ?>> elements,
+        Class<? extends FlowElement<?, ?>> type) {
+        for (FlowElement<?, ?> element : elements) {
             if (type.isInstance(element)) {
                 return true;
             }
@@ -278,9 +277,9 @@ public class PipelineFilterTests {
         return false;
     }
 
-    private static String endpointOf(List<FlowElement> elements)
+    private static String endpointOf(List<FlowElement<?, ?>> elements)
         throws Exception {
-        for (FlowElement element : elements) {
+        for (FlowElement<?, ?> element : elements) {
             if (element instanceof JavaScriptBuilderElement) {
                 Field field =
                     JavaScriptBuilderElement.class.getDeclaredField("endpoint");
@@ -309,7 +308,7 @@ public class PipelineFilterTests {
         filter = new PipelineFilter();
         filter.init(config);
 
-        List<FlowElement> elements = elementsOf(filter);
+        List<FlowElement<?, ?>> elements = elementsOf(filter);
         assertTrue(hasElement(elements, SequenceElement.class));
         assertTrue(hasElement(elements, SetHeadersElement.class));
         assertTrue(hasElement(elements, JsonBuilderElement.class));
@@ -324,7 +323,7 @@ public class PipelineFilterTests {
             .getInitParameter("clientside-properties-enabled");
         filter = initFilterWith("sequence-element-enabled", "false");
 
-        List<FlowElement> elements = elementsOf(filter);
+        List<FlowElement<?, ?>> elements = elementsOf(filter);
         assertFalse(hasElement(elements, SequenceElement.class));
         assertTrue(hasElement(elements, SetHeadersElement.class));
     }
@@ -353,7 +352,7 @@ public class PipelineFilterTests {
         throws Exception {
         filter = initFilterWith("set-headers-element-enabled", "false");
 
-        List<FlowElement> elements = elementsOf(filter);
+        List<FlowElement<?, ?>> elements = elementsOf(filter);
         assertTrue(hasElement(elements, SequenceElement.class));
         assertFalse(hasElement(elements, SetHeadersElement.class));
     }
@@ -367,7 +366,7 @@ public class PipelineFilterTests {
         throws Exception {
         filter = initFilterWith("clientside-properties-enabled", "false");
 
-        List<FlowElement> elements = elementsOf(filter);
+        List<FlowElement<?, ?>> elements = elementsOf(filter);
         assertTrue(hasElement(elements, SequenceElement.class));
         assertTrue(hasElement(elements, SetHeadersElement.class));
         assertFalse(hasElement(elements, JsonBuilderElement.class));

@@ -30,6 +30,10 @@ import java.util.concurrent.Executors;
  * {@link Executors#newCachedThreadPool()} method to create a new service.
  */
 public class ExecutorServiceFactoryDefault implements ExecutorServiceFactory {
+    /** Create a new instance. */
+    public ExecutorServiceFactoryDefault() {
+    }
+
     @Override
     public ExecutorService create() {
         return Executors.newCachedThreadPool();

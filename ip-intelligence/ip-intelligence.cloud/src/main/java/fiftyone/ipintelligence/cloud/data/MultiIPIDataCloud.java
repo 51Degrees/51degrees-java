@@ -47,6 +47,11 @@ public final class MultiIPIDataCloud
     private static final String PROFILE_LIST_KEY = "profiles";
 
     /**
+     * The profiles, which are also stored under {@link #PROFILE_LIST_KEY}.
+     */
+    private final List<IPIntelligenceData> profiles = new ArrayList<>();
+
+    /**
      * Constructs a new instance with a non-thread-safe, case-insensitive
      * {@link Map} as the underlying storage.
      * @param logger used for logging
@@ -59,7 +64,7 @@ public final class MultiIPIDataCloud
         FlowData flowData,
         AspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine) {
         super(logger, flowData, engine);
-        this.put(PROFILE_LIST_KEY, new ArrayList<IPIntelligenceData>());
+        this.put(PROFILE_LIST_KEY, profiles);
     }
 
     /**
@@ -78,7 +83,7 @@ public final class MultiIPIDataCloud
         AspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine,
         MissingPropertyService missingPropertyService) {
         super(logger, flowData, engine, missingPropertyService);
-        this.put(PROFILE_LIST_KEY, new ArrayList<IPIntelligenceData>());
+        this.put(PROFILE_LIST_KEY, profiles);
     }
 
     @Override
@@ -99,8 +104,7 @@ public final class MultiIPIDataCloud
      * Internal method to get the list of profiles from the underlying data.
      * @return the list of profiles from the underlying data.
      */
-    @SuppressWarnings("unchecked")
     private List<IPIntelligenceData> getProfileList() {
-        return (List<IPIntelligenceData>)this.get(PROFILE_LIST_KEY);
+        return profiles;
     }
 }

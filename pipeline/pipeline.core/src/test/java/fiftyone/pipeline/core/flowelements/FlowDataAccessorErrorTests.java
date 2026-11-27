@@ -62,10 +62,9 @@ public class FlowDataAccessorErrorTests {
      * adds Element Data holding the given value; when writes is false it
      * adds nothing, as an element that did not run.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     private static FlowElement<?, ?> element(boolean writes, Object value)
         throws Exception {
-        FlowElement element = mock(FlowElement.class);
+        FlowElement<?, ?> element = mock(FlowElement.class);
         ElementPropertyMetaData property = new ElementPropertyMetaDataDefault(
             "value", element, "test", String.class, true);
         doReturn("props").when(element).getElementDataKey();
@@ -135,6 +134,5 @@ public class FlowDataAccessorErrorTests {
     /**
      * Keeps the List import, which the element's properties use.
      */
-    @SuppressWarnings("unused")
     private static List<?> unused;
 }

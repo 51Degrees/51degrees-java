@@ -103,8 +103,7 @@ public class MissingPropertyReasonTests {
 
     @Test
     public void OtherEngine_PropertyListed_NoDataTierCheck() {
-        @SuppressWarnings("unchecked")
-        AspectEngine<AspectData, AspectPropertyMetaData> engine =
+        AspectEngine<?, ?> engine =
             mock(AspectEngine.class);
         when(engine.getElementDataKey()).thenReturn("device");
         when(engine.getDataSourceTier()).thenReturn("Lite");
@@ -228,9 +227,8 @@ public class MissingPropertyReasonTests {
             result.getReason().name());
     }
 
-    @SuppressWarnings("unchecked")
     private static CloudAspectEngine<?, ?> cloud() {
-        CloudAspectEngine<AspectData, AspectPropertyMetaData> engine =
+        CloudAspectEngine<?, ?> engine =
             mock(CloudAspectEngine.class);
         when(engine.getElementDataKey()).thenReturn("device");
         when(engine.getDataSourceTier()).thenReturn("Lite");
@@ -243,14 +241,14 @@ public class MissingPropertyReasonTests {
         when(engine.getElementDataKey()).thenReturn("device");
         when(engine.hasLoadedProperties()).thenReturn(false);
         when(engine.propertyListRequestFailed()).thenReturn(failed);
-        when(engine.getProperties()).thenReturn(
-            Collections.<AspectPropertyMetaData>emptyList());
+        doReturn(
+            Collections.<AspectPropertyMetaData>emptyList())
+            .when(engine).getProperties();
         return engine;
     }
 
-    @SuppressWarnings("unchecked")
     private static AspectEngine<?, ?> onPremise(Class<?> dataType) {
-        OnPremiseAspectEngine<AspectData, AspectPropertyMetaData> engine =
+        OnPremiseAspectEngine<?, ?> engine =
             mock(OnPremiseAspectEngine.class);
         when(engine.getElementDataKey()).thenReturn("device");
         when(engine.getDataSourceTier()).thenReturn("Lite");

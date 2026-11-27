@@ -29,13 +29,24 @@ import fiftyone.pipeline.core.flowelements.FlowElement;
 import org.slf4j.ILoggerFactory;
 
 //! [class]
+/** Builder for the {@link SimpleFlowElement}. */
 public class SimpleFlowElementBuilder {
     private final ILoggerFactory loggerFactory;
 
+    /**
+     * Create a new builder.
+     *
+     * @param loggerFactory creates the loggers the element uses
+     */
     public SimpleFlowElementBuilder(ILoggerFactory loggerFactory) {
         this.loggerFactory = loggerFactory;
     }
 
+    /**
+     * Build an element.
+     *
+     * @return a new element
+     */
     public SimpleFlowElement build() {
         return new SimpleFlowElement(
             loggerFactory.getLogger(SimpleFlowElement.class.getName()),

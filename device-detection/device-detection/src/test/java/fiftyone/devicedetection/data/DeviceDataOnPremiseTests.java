@@ -55,7 +55,7 @@ public class DeviceDataOnPremiseTests {
     private static String testPropertyName = "testproperty";
     private Logger logger;
     private FlowData flowData;
-    private AspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine;
+    private AspectEngine<?, ?> engine;
     private Pipeline pipeline;
     private MissingPropertyService missingPropertyService;
 
@@ -76,7 +76,6 @@ public class DeviceDataOnPremiseTests {
             .thenReturn(elementProperties);
     }
 
-    @SuppressWarnings("unchecked")
     @Before
     public void init() {
         logger = mock(Logger.class);
@@ -289,11 +288,14 @@ public class DeviceDataOnPremiseTests {
             }
         }
 
-        @SuppressWarnings("unchecked")
         @Override
         public AspectPropertyValue<List<String>> getValues(String propertyName) {
             if (propertyName.equals(testPropertyName)) {
-                return new AspectPropertyValueDefault<>((List<String>)value);
+                List<String> values = new ArrayList<>();
+                for (Object item : (List<?>) value) {
+                    values.add((String) item);
+                }
+                return new AspectPropertyValueDefault<>(values);
             } else {
                 throw new PropertyMissingException();
             }

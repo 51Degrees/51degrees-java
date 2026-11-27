@@ -24,6 +24,7 @@ package fiftyone.ipintelligence.examples.console;
 
 import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.IPIntelligencePipelineBuilder;
+import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
 import fiftyone.ipintelligence.shared.testhelpers.KeyUtils;
 import fiftyone.pipeline.core.flowelements.Pipeline;
@@ -73,7 +74,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * </ol>
  * ## License Key
  * Updating the data file downloads the Enterprise data file from the Distributor service, which
- * needs a 51Degrees licence key. Without one, the example shows the free Asn data file and says
+ * needs a 51Degrees license key. Without one, the example shows the free Asn data file and says
  * where to ask for a key. To obtain a key and an Enterprise data file, please
  * [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-updatedatafile.java&utm_term=header).
  *
@@ -178,7 +179,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * # Location
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/ip-intelligence/console/src/main/java/fiftyone/ipintelligence/examples/console/UpdateDataFile.java).
  *
- * To test this example you need a licence key for the Enterprise data file. To obtain one,
+ * To test this example you need a license key for the Enterprise data file. To obtain one,
  * please [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-updatedatafile.java&utm_term=header-2).
  *
  */
@@ -195,7 +196,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  *     <li>Daily auto-update</li>
  * </ol>
  * <p>
- * Updating the data file needs a licence key for the Enterprise data file. To obtain one, please
+ * Updating the data file needs a license key for the Enterprise data file. To obtain one, please
  * <a href="https://51degrees.com/contact-us?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-updatedatafile.java&amp;utm_term=updatedatafile">contact us</a>.
  * This license key must be supplied as a command line argument or by setting
  * an environment variable or system property called {@link UpdateDataFile#UPDATE_EXAMPLE_LICENSE_KEY_NAME}
@@ -215,7 +216,7 @@ public class UpdateDataFile {
     private static final Logger logger = LoggerFactory.getLogger(UpdateDataFile.class);
 
     /**
-     * Where to ask for a licence key and a copy of the Enterprise data file,
+     * Where to ask for a license key and a copy of the Enterprise data file,
      * tagged with this example.
      */
     private static final String CONTACT_US = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-updatedatafile.java&utm_term=licence-key";
@@ -352,7 +353,7 @@ public class UpdateDataFile {
 
             // Build the IP Intelligence pipeline  and pass in the desired settings to configure
             // automatic updates.
-            try (Pipeline pipeline = new IPIntelligencePipelineBuilder()
+            Pipeline pipeline = new IPIntelligencePipelineBuilder()
                     // specify the filename for the data file. When using update on start-up
                     // the file need not exist, but the directory it is in must exist.
                     // Any file that is present is overwritten. Because the file will be
@@ -370,7 +371,7 @@ public class UpdateDataFile {
                     // pass in the update listener which has been configured
                     // to notify when update complete
                     .setDataUpdateService(dataUpdateService)
-                    // Updates from the Distributor service need a licence key for the
+                    // Updates from the Distributor service need a license key for the
                     // Enterprise data file. To obtain one, please contact us at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-updatedatafile.java&utm_term=run
                     .setDataUpdateLicenseKey(licenseKey)
                     // The address to download from, when one is given. With
@@ -397,7 +398,8 @@ public class UpdateDataFile {
                     // by default this is 30 mins
                     .setUpdatePollingInterval(1)
                     // build the pipeline
-                    .build()) {
+                    .build();
+            try {
 
                 // thread blocks till update checking is complete - or if there is an
                 // exception we don't get this far
@@ -436,13 +438,21 @@ public class UpdateDataFile {
                     throw new IllegalStateException("Auto update failed: " + status);
                 }
 
+                // The engine now uses the data file the update loaded.
+                IPIntelligenceOnPremiseEngine engine =
+                        pipeline.getElement(IPIntelligenceOnPremiseEngine.class);
+                logger.info("The data file in use was published {}",
+                        engine.getDataFilePublishedDate());
+
                 logger.info("Finished Example");
+            } finally {
+                pipeline.close();
             }
         }
     }
 
     /**
-     * Without a licence key the example cannot download a data file, so it
+     * Without a license key the example cannot download a data file, so it
      * shows the data file it would start from, the free Asn file unless
      * another is given, and says what an update needs.
      * @param dataFilename the data file given, or null
@@ -468,7 +478,7 @@ public class UpdateDataFile {
         }
         output.println();
         output.println("Updating the data file downloads the Enterprise data " +
-                "file, which needs a licence key. Give the key as the first " +
+                "file, which needs a license key. Give the key as the first " +
                 "command line argument, or in the environment variable or " +
                 "system property '" + UPDATE_EXAMPLE_LICENSE_KEY_NAME + "'. " +
                 "Contact us for a key and a copy at " + CONTACT_US);

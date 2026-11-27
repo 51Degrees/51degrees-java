@@ -23,6 +23,7 @@
 package fiftyone.pipeline.core.flowelements;
 
 import fiftyone.pipeline.core.data.*;
+import fiftyone.pipeline.core.exceptions.CloseException;
 import fiftyone.pipeline.core.exceptions.PipelineDataException;
 import fiftyone.pipeline.core.typed.TypedKey;
 import fiftyone.pipeline.core.typed.TypedKeyDefault;
@@ -193,8 +194,7 @@ class FlowDataDefault implements FlowData {
     }
 
     @Override
-    @SuppressWarnings("rawtypes")
-    public void addError(Throwable e, FlowElement element) {
+    public void addError(Throwable e, FlowElement<?, ?> element) {
         addError(new FlowError.Default(e, element));
     }
 
@@ -342,10 +342,9 @@ class FlowDataDefault implements FlowData {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public <T extends ElementData> T getOrAdd(
+    public ElementData getOrAdd(
         String elementDataKey,
-        FlowElement.DataFactory<T> dataFactory) {
+        FlowElement.DataFactory<? extends ElementData> dataFactory) {
 
         TypedKey<ElementData> typedKey = new TypedKeyDefault<>(
             elementDataKey,
@@ -357,7 +356,7 @@ class FlowDataDefault implements FlowData {
             checkNotFinished();
             data.putIfAbsent(typedKey, dataFactory.create(this));
         }
-        return (T) data.get(typedKey);
+        return data.get(typedKey);
     }
 
     @Override
@@ -477,14 +476,13 @@ class FlowDataDefault implements FlowData {
     }
 
     @Override
-    @SuppressWarnings("rawtypes")
     public Map<String, String> getWhere(PropertyMatcher matcher) {
         if (processed.get() == false) {
             throw new IllegalStateException(
                 "This instance has not yet been processed.");
         }
         Map<String, String> map = new HashMap<>();
-        for (FlowElement element : pipeline.getFlowElements()) {
+        for (FlowElement<?, ?> element : pipeline.getFlowElements()) {
             // An element that did not run, for example because an earlier
             // one stopped processing, has no data, and a property may have
             // no value. Neither is the caller's mistake, so both are left
@@ -541,13 +539,18 @@ class FlowDataDefault implements FlowData {
      * call the pool may have given an instance to another request.
      */
     @Override
-    public void close() throws Exception {
+    public void close() {
         if (closed.getAndSet(true)) {
             return;
         }
         for (Object elementData : data.asStringKeyMap().values()) {
             if (AutoCloseable.class.isAssignableFrom(elementData.getClass())) {
-                ((AutoCloseable) elementData).close();
+                try {
+                    ((AutoCloseable) elementData).close();
+                } catch (Exception e) {
+                    throw CloseException.of(
+                        "Closing Element Data of the Flow Data failed", e);
+                }
             }
         }
         // Pooled Element Data goes back to its Flow Element's pool. A

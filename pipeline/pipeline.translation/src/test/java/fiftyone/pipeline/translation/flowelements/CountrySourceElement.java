@@ -41,6 +41,11 @@ import java.util.List;
 public class CountrySourceElement
     extends FlowElementBase<ElementData, ElementPropertyMetaData> {
 
+    @Override
+    protected Class<ElementData> getDataType() {
+        return ElementData.class;
+    }
+
     private final String country;
 
     CountrySourceElement(String country) {

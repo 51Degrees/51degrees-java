@@ -141,7 +141,7 @@ public class GettingStartedCloud {
         For more information about pipelines in general see the documentation at
         https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedcloud.java&utm_term=configuration-builders
 
-        Note that we wrap the creation of a pipeline in a try/resources to control its lifecycle */
+        Note that we close the pipeline in a finally block to control its lifecycle */
         IPIntelligenceCloudPipelineBuilder builder = new IPIntelligencePipelineBuilder()
                 // Tell it that we want to use cloud and pass our resource key.
                 .useCloud(resourceKey);
@@ -150,7 +150,8 @@ public class GettingStartedCloud {
         if (endPoint != null && endPoint.isEmpty() == false) {
             builder.setEndPoint(endPoint);
         }
-        try (Pipeline pipeline = builder.build()) {
+        Pipeline pipeline = builder.build();
+        try {
 
             // carry out some sample lookups
             for (Map<String, String> evidence : evidenceList) {
@@ -158,6 +159,8 @@ public class GettingStartedCloud {
             }
 
             logger.info("All done");
+        } finally {
+            pipeline.close();
         }
     }
 
@@ -177,9 +180,10 @@ public class GettingStartedCloud {
         a lookup is called "evidence", in this case represented by a Map<String, String> of
         evidence key/value entries.
 
-        FlowData is wrapped in a try/resources block in order to ensure that the resources
+        FlowData is closed in a finally block in order to ensure that the resources
         are freed in a timely manner */
-        try (FlowData data = pipeline.createFlowData()) {
+        FlowData data = pipeline.createFlowData();
+        try {
 
             // list the evidence
             writer.println("Input values:");
@@ -220,6 +224,8 @@ public class GettingStartedCloud {
             writeValue(writer, "Areas", tryGet(ipData::getAreas));
             writeValue(writer, "AccuracyRadiusMin", tryGet(ipData::getAccuracyRadiusMin));
             writeValue(writer, "TimeZoneOffset", tryGet(ipData::getTimeZoneOffset));
+        } finally {
+            data.close();
         }
         writer.println();
         writer.flush();

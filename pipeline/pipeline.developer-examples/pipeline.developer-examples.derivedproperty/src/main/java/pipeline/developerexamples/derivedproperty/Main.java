@@ -48,7 +48,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * @example derivedproperty/Main.java
+ * \example derivedproperty/Main.java
  *
  * The Derived Property Element computes new properties from properties
  * that other elements in the Pipeline have already produced, following a
@@ -75,12 +75,15 @@ import java.util.List;
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/pipeline/pipeline.developer-examples/pipeline.developer-examples.derivedproperty/src/main/java/pipeline/developerexamples/derivedproperty/Main.java).
  *
  * The script file the example reads is
- * @include pipeline.developer-examples.derivedproperty/src/main/resources/ReaderEngagement.yaml
+ * \include pipeline.developer-examples.derivedproperty/src/main/resources/ReaderEngagement.yaml
  *
  * and the configuration file is
- * @include pipeline.developer-examples.derivedproperty/src/main/resources/derived-property.xml
+ * \include pipeline.developer-examples.derivedproperty/src/main/resources/derived-property.xml
  */
 public class Main {
+    /** Create a new instance. */
+    public Main() {
+    }
 
     private static final ILoggerFactory loggerFactory =
         LoggerFactory.getILoggerFactory();
@@ -141,7 +144,11 @@ public class Main {
     private static final String RULE =
         "----------------------------------------------------------------";
 
+    /** Runs the example. */
     public static class Example {
+        /** Create a new instance. */
+        public Example() {
+        }
 
         /**
          * Run the example.
@@ -367,6 +374,12 @@ public class Main {
         output.flush();
     }
 
+    /**
+     * Run the example, then print where to find out more.
+     *
+     * @param args not used
+     * @throws Exception if the example fails
+     */
     public static void main(String[] args) throws Exception {
         new Example().run(System.out);
         writeFindOutMore(System.out);

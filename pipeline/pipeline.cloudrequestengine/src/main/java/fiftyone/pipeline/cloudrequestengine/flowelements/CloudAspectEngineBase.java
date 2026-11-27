@@ -37,13 +37,10 @@ import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.data.types.JavaScript;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.Pipeline;
-import fiftyone.pipeline.core.typed.TypedKey;
-import fiftyone.pipeline.core.typed.TypedKeyDefault;
 import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.engines.data.*;
 import fiftyone.pipeline.engines.flowelements.AspectEngineBase;
 import fiftyone.pipeline.engines.flowelements.CloudAspectEngine;
-import fiftyone.pipeline.util.Types;
 
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -57,6 +54,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Base class for 51Degrees Cloud Aspect Engines
+ * @param <TData> the type of element data the engine returns
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/pipeline-elements/cloud-aspect-engine.md">Specification</a>
  */
 public abstract class CloudAspectEngineBase<TData extends AspectData>
@@ -72,6 +70,12 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
         private volatile CloudRequestEngine cloudRequestEngine;
         private FlowElement<?, ?> currentElement;
 
+        /**
+         * Create a new instance.
+         *
+         * @param pipelines the Pipelines the engine has been added to
+         * @param currentElement the engine that needs the Cloud Request Engine
+         */
         public RequestEngineAccessor(List<Pipeline> pipelines, FlowElement<?, ?> currentElement) {
             this.pipelines = pipelines;
             this.currentElement = currentElement;
@@ -113,7 +117,7 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
 
     private volatile List<AspectPropertyMetaData> aspectProperties;
     private String dataSourceTier;
-    private RequestEngineAccessor requestEngine;
+    private volatile RequestEngineAccessor requestEngine;
     private final AtomicBoolean productMissingLogged = new AtomicBoolean(false);
 
     /**
@@ -122,12 +126,10 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
      * @param aspectDataFactory the factory to use when creating a TData
      *                          instance
      */
-    @SuppressWarnings("this-escape")
     public CloudAspectEngineBase(
         Logger logger,
         ElementDataFactory<TData> aspectDataFactory) {
         super(logger, aspectDataFactory);
-        this.setRequestEngine(new RequestEngineAccessor(this.getPipelines(), this));
     }
 
     @Override
@@ -136,13 +138,29 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
     }
     /**
      * Used to access the CloudRequestEngine that will be making HTTP
-     * requests on behalf of this engine. 
+     * requests on behalf of this engine. Created on first use, unless set
+     * with {@link #setRequestEngine(RequestEngineAccessor)}.
      * @return A RequestEngineAccessor.
      */
     protected RequestEngineAccessor getRequestEngine() {
-        return requestEngine;
+        RequestEngineAccessor localRef = requestEngine;
+        if (localRef == null) {
+            synchronized (this) {
+                localRef = requestEngine;
+                if (localRef == null) {
+                    localRef = new RequestEngineAccessor(getPipelines(), this);
+                    requestEngine = localRef;
+                }
+            }
+        }
+        return localRef;
     }
 
+    /**
+     * Set the accessor that finds the Cloud Request Engine.
+     *
+     * @param requestEngine the accessor
+     */
     protected void setRequestEngine(RequestEngineAccessor requestEngine) {
         this.requestEngine = requestEngine;
     }
@@ -180,16 +198,6 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
     public boolean hasLoadedProperties() {
         getProperties();
         return aspectProperties != null;
-    }
-
-    @Override
-    public TypedKey<TData> getTypedDataKey() {
-        if (typedKey == null) {
-            typedKey = new TypedKeyDefault<>(
-                getElementDataKey(),
-                Types.findSubClassParameterType(this, CloudAspectEngineBase.class, 0));
-        }
-        return typedKey;
     }
 
     /**

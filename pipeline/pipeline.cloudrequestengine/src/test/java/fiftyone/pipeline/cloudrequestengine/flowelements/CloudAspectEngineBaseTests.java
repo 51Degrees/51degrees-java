@@ -73,6 +73,12 @@ public class CloudAspectEngineBaseTests {
     }
 
     private class TestInstance extends CloudAspectEngineBase<TestData> {
+
+        @Override
+        protected Class<TestData> getDataType() {
+            return TestData.class;
+        }
+
         public TestInstance() {
             super(loggerFactory.getLogger("TestInstance"), new ElementDataFactory<TestData>() {
                 @Override
@@ -150,6 +156,12 @@ public class CloudAspectEngineBaseTests {
 
     private class TestKeyedInstance
         extends PropertyKeyedCloudEngineBase<TestProfiles, TestData> {
+
+        @Override
+        protected Class<TestProfiles> getDataType() {
+            return TestProfiles.class;
+        }
+
         public TestKeyedInstance() {
             super(loggerFactory.getLogger("TestKeyedInstance"), new ElementDataFactory<TestProfiles>() {
                 @Override
@@ -177,6 +189,11 @@ public class CloudAspectEngineBaseTests {
 
     private class TestRequestEngine extends AspectEngineBase<CloudRequestData, AspectPropertyMetaData>
         implements CloudRequestEngine {
+
+        @Override
+        protected Class<CloudRequestData> getDataType() {
+            return CloudRequestData.class;
+        }
 
         public TestRequestEngine() {
             super(loggerFactory.getLogger("TestRequestEngine"), new ElementDataFactory<CloudRequestData>() {

@@ -35,6 +35,7 @@ public class DerivedScriptValidationException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 
+    /** Every fault found. */
     private final DerivedScriptFault[] faults;
 
     /**
@@ -47,6 +48,7 @@ public class DerivedScriptValidationException extends RuntimeException {
     }
 
     /**
+     * Returns every fault found, in the order found.
      * @return every fault found, in the order found
      */
     public List<DerivedScriptFault> getFaults() {

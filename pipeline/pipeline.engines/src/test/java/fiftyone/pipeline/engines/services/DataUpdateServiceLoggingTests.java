@@ -70,7 +70,6 @@ import static org.mockito.Mockito.when;
  * specification, and the If-Modified-Since time the update URL is sent.
  * @see <a href="https://github.com/51Degrees/specifications/blob/rc/pipeline-specification/features/data-updates.md#logging">Specification</a>
  */
-@SuppressWarnings("unchecked")
 public class DataUpdateServiceLoggingTests {
 
     private static final String UPDATE_URL = "http://test.com";
@@ -91,8 +90,7 @@ public class DataUpdateServiceLoggingTests {
     private HttpClient httpClient;
     private HttpURLConnection connection;
     private DataUpdateServiceDefault dataUpdate;
-    private OnPremiseAspectEngine<? extends AspectData,
-        ? extends AspectPropertyMetaData> engine;
+    private OnPremiseAspectEngine<?, ?> engine;
     private String engineType;
     private File dataFile;
 

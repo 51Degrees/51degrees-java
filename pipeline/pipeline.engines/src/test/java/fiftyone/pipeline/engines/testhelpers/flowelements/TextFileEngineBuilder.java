@@ -42,6 +42,11 @@ public class TextFileEngineBuilder extends SingleFileAspectEngineBuilderBase<
     TextFileEngineBuilder,
     TextFileEngine> {
 
+    @Override
+    protected TextFileEngineBuilder self() {
+        return this;
+    }
+
     public TextFileEngineBuilder(
         ILoggerFactory loggerFactory,
         DataUpdateService dataUpdateService) {
@@ -49,7 +54,6 @@ public class TextFileEngineBuilder extends SingleFileAspectEngineBuilderBase<
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     protected TextFileEngine newEngine(List<String> properties)
         throws Exception {
         DataFileConfiguration config = dataFileConfigs.get(0);

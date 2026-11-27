@@ -86,9 +86,10 @@ public class MetadataCloud {
         // the meta-data.
         // If you already have a pipeline and just want to get a reference to the engine 
         // then you can use `var engine = pipeline.GetElement<DeviceDetectionHashEngine>();`
-        try (Pipeline pipeline = new DeviceDetectionPipelineBuilder(LoggerFactory.getILoggerFactory())
+        Pipeline pipeline = new DeviceDetectionPipelineBuilder(LoggerFactory.getILoggerFactory())
                 .useCloud(resourceKey)
-                .build()) {
+                .build();
+        try {
 
             PrintWriter writer = new PrintWriter(output);
 
@@ -108,6 +109,8 @@ public class MetadataCloud {
             outputEvidenceKeyDetails(pipeline.getElement(CloudRequestEngine.class), writer);
             writer.println();
             writer.flush();
+        } finally {
+            pipeline.close();
         }
     }
 

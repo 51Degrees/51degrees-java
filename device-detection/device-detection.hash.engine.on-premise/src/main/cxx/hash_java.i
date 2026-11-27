@@ -20,8 +20,192 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
+/* SWIG passes each C++ pointer to Java as a jlong. Its own typemaps read and
+   write the jlong through a pointer of another type, which breaks the strict
+   aliasing rules and makes gcc warn when it optimizes. These typemaps copy
+   the bytes with memcpy instead, which is defined behavior and compiles to
+   the same move. The build replaces the base class conversions SWIG writes
+   for each derived class with the same functions, as SWIG has no typemap for
+   them. */
+%fragment("fiftyonePointers", "header") %{
+#include <cstring>
+  template <typename P> static P fiftyoneFromJlong(jlong value) {
+    P pointer = 0;
+    memcpy(&pointer, &value, sizeof(pointer));
+    return pointer;
+  }
+  template <typename P> static jlong fiftyoneToJlong(P pointer) {
+    jlong value = 0;
+    memcpy(&value, &pointer, sizeof(pointer));
+    return value;
+  }
+%}
+%typemap(in, fragment="fiftyonePointers") SWIGTYPE ($&1_type argp)
+%{ argp = fiftyoneFromJlong< $&1_ltype >($input);
+   if (!argp) {
+     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Attempt to dereference null $1_type");
+     return $null;
+   }
+   $1 = *argp; %}
+%typemap(out, fragment="fiftyonePointers") SWIGTYPE
+%{ $result = fiftyoneToJlong< $&1_ltype >(new $1_ltype($1)); %}
+%typemap(in, fragment="fiftyonePointers") SWIGTYPE *, SWIGTYPE []
+%{ $1 = fiftyoneFromJlong< $1_ltype >($input); %}
+%typemap(in, fragment="fiftyonePointers") SWIGTYPE &
+%{ $1 = fiftyoneFromJlong< $1_ltype >($input);
+  if (!$1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "$1_type is null");
+    return $null;
+  } %}
+%typemap(out, fragment="fiftyonePointers") SWIGTYPE *, SWIGTYPE &, SWIGTYPE []
+%{ $result = fiftyoneToJlong($1); %}
+%typemap(in, fragment="fiftyonePointers") SWIGTYPE *const& ($*1_ltype temp = 0)
+%{ temp = fiftyoneFromJlong< $*1_ltype >($input);
+   $1 = ($1_ltype)&temp; %}
+%typemap(out, fragment="fiftyonePointers") SWIGTYPE *const&
+%{ $result = fiftyoneToJlong(*$1); %}
 
 %include "cxx/src/common/JavaTypes.i"
+
+/* Nothing extends the vector proxies, so they are final. The constructors
+   SWIG's std_vector.i gives them pass this to native code before they
+   return, which javac reports as a this-escape in a class that can be
+   extended. The build removes the annotation std_vector.i puts on them to
+   hide it, and only from final classes. */
+%typemap(javaclassmodifiers) std::vector "public final class"
+
+/* The Java side. Each proxy class documents the members SWIG adds to it, so
+   javadoc checks the proxies as it checks the rest of the code. The class
+   that declares the native methods and the module class are only used by
+   the proxies, so they are not public. */
+%pragma(java) jniclassclassmodifiers="final class"
+%pragma(java) moduleclassmodifiers="final class"
+
+/* A proxy that owns its C++ object deletes it when the garbage collector
+   finalizes the proxy, unless JavaTypes.i says the class is closed instead.
+   Object.finalize is not deprecated in the Java 8 API these classes are
+   compiled against, so the method needs no annotation. */
+%typemap(javafinalize) SWIGTYPE %{
+  /**
+   * Deletes the C++ object, if this proxy owns it, when the garbage
+   * collector finalizes this proxy.
+   */
+  protected void finalize() {
+    delete();
+  }
+%}
+
+%typemap(javadestruct, methodname="delete", methodmodifiers="/**\n   * Deletes the C++ object if this proxy owns it. The proxy cannot be used\n   * after this.\n   */\n  public synchronized", parameters="") SWIGTYPE {
+    if (swigCPtr != 0) {
+      if (swigCMemOwn) {
+        swigCMemOwn = false;
+        $jnicall;
+      }
+      swigCPtr = 0;
+    }
+  }
+
+%typemap(javadestruct_derived, methodname="delete", methodmodifiers="/**\n   * Deletes the C++ object if this proxy owns it. The proxy cannot be used\n   * after this.\n   */\n  public synchronized", parameters="") SWIGTYPE {
+    if (swigCPtr != 0) {
+      if (swigCMemOwn) {
+        swigCMemOwn = false;
+        $jnicall;
+      }
+      swigCPtr = 0;
+    }
+    super.delete();
+  }
+
+%typemap(javabody) SWIGTYPE %{
+  private transient long swigCPtr;
+
+  /** Whether deleting this proxy deletes its C++ object. */
+  protected transient boolean swigCMemOwn;
+
+  /**
+   * Makes a proxy for a C++ object.
+   *
+   * @param cPtr the address of the C++ object
+   * @param cMemoryOwn whether the proxy deletes the C++ object
+   */
+  protected $javaclassname(long cPtr, boolean cMemoryOwn) {
+    swigCMemOwn = cMemoryOwn;
+    swigCPtr = cPtr;
+  }
+
+  /**
+   * The address of the C++ object of a proxy, or 0 for null.
+   *
+   * @param obj the proxy, or null
+   * @return the address of its C++ object
+   */
+  protected static long getCPtr($javaclassname obj) {
+    return (obj == null) ? 0 : obj.swigCPtr;
+  }
+
+  /**
+   * Takes the C++ object from a proxy that owns it, so the caller deletes
+   * it and the proxy can no longer be used.
+   *
+   * @param obj the proxy, or null
+   * @return the address of its C++ object, or 0 for null
+   */
+  protected static long swigRelease($javaclassname obj) {
+    long ptr = 0;
+    if (obj != null) {
+      if (!obj.swigCMemOwn)
+        throw new RuntimeException("Cannot release ownership as memory is not owned");
+      ptr = obj.swigCPtr;
+      obj.swigCMemOwn = false;
+      obj.delete();
+    }
+    return ptr;
+  }
+%}
+
+%typemap(javabody_derived) SWIGTYPE %{
+  private transient long swigCPtr;
+
+  /**
+   * Makes a proxy for a C++ object.
+   *
+   * @param cPtr the address of the C++ object
+   * @param cMemoryOwn whether the proxy deletes the C++ object
+   */
+  protected $javaclassname(long cPtr, boolean cMemoryOwn) {
+    super($imclassname.$javaclazznameSWIGUpcast(cPtr), cMemoryOwn);
+    swigCPtr = cPtr;
+  }
+
+  /**
+   * The address of the C++ object of a proxy, or 0 for null.
+   *
+   * @param obj the proxy, or null
+   * @return the address of its C++ object
+   */
+  protected static long getCPtr($javaclassname obj) {
+    return (obj == null) ? 0 : obj.swigCPtr;
+  }
+
+  /**
+   * Takes the C++ object from a proxy that owns it, so the caller deletes
+   * it and the proxy can no longer be used.
+   *
+   * @param obj the proxy, or null
+   * @return the address of its C++ object, or 0 for null
+   */
+  protected static long swigRelease($javaclassname obj) {
+    long ptr = 0;
+    if (obj != null) {
+      if (!obj.swigCMemOwn)
+        throw new RuntimeException("Cannot release ownership as memory is not owned");
+      ptr = obj.swigCPtr;
+      obj.swigCMemOwn = false;
+      obj.delete();
+    }
+    return ptr;
+  }
+%}
 
 nofinalize(EvidenceDeviceDetection);
 nofinalize(ResultsDeviceDetection);
@@ -38,28 +222,39 @@ nofinalize(ResultsHash);
 %apply (const char *STRING, size_t LENGTH) { (const char propertyName[], size_t propertyNameLength) }
 %apply (const char *STRING, size_t LENGTH) { (const char key[], size_t keyLength) }
 %apply (const char *STRING, size_t LENGTH) { (const char value[], size_t valueLength) }
+/* The Java side ends each byte array with a zero, which the string leaves
+   out. The length stops the read at the end of the array if there is none. */
+%{
+  static std::string fiftyoneBytesToString(const char bytes[], size_t length) {
+    size_t used = 0;
+    while (used < length && bytes[used] != '\0') {
+      used++;
+    }
+    return used == 0 ? std::string() : std::string(bytes, used);
+  }
+%}
 %inline %{
   void Evidence_AddFromBytes(EvidenceBase *evidence, const char key[], size_t keyLength, const char value[], size_t valueLength) {
-    (*evidence)[key] = value;
+    (*evidence)[fiftyoneBytesToString(key, keyLength)] = fiftyoneBytesToString(value, valueLength);
   }
 
   Value<std::string> Results_GetValueAsString(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->getValueAsString(propertyName);
+    return results->getValueAsString(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
   Value<std::vector<std::string>> Results_GetValues(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->getValues(propertyName);
+    return results->getValues(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
   Value<bool> Results_GetValueAsBool(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->getValueAsBool(propertyName);
+    return results->getValueAsBool(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
   Value<int> Results_GetValueAsInteger(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->getValueAsInteger(propertyName);
+    return results->getValueAsInteger(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
   Value<double> Results_GetValueAsDouble(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->getValueAsDouble(propertyName);
+    return results->getValueAsDouble(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
   bool Results_ContainsProperty(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->containsProperty(propertyName);
+    return results->containsProperty(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
 %}
 
@@ -98,7 +293,6 @@ nofinalize(ResultsHash);
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.Constants;
 import fiftyone.pipeline.engines.fiftyone.flowelements.interop.LibLoader;
-import java.nio.ByteBuffer;
 %}
 %pragma(java) jniclasscode=%{
   static {

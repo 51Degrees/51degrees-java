@@ -173,6 +173,11 @@ public final class DerivedPropertyElement
         return DATA_KEY;
     }
 
+    @Override
+    protected Class<IDerivedPropertyData> getDataType() {
+        return IDerivedPropertyData.class;
+    }
+
     /**
      * The element reads properties other elements produce and nothing from
      * the request itself, so it accepts no evidence.

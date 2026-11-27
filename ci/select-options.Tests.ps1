@@ -53,7 +53,8 @@ Describe 'select-options.ps1' {
         $entries = Select-Entries 'ci/run-unit-tests.ps1'
         ($entries | ForEach-Object { $_.Name }) -join ',' | Should -Be (
             'Ubuntu_Java_21,Ubuntu_Java_17,Ubuntu_Java_11,Ubuntu_Java_8,' +
-            'Ubuntu_ARM_Java_17,Windows_Java_21,Windows_Java_17,' +
+            'Ubuntu_ARM_Java_21,Ubuntu_ARM_Java_17,Ubuntu_ARM_Java_11,' +
+            'Ubuntu_ARM_Java_8,Windows_Java_21,Windows_Java_17,' +
             'Windows_Java_11,Windows_Java_8')
         $entries | ForEach-Object { $_.Depth | Should -Be 'deep' }
     }

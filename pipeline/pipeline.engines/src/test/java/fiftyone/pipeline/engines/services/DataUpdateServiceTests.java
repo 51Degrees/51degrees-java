@@ -79,7 +79,6 @@ import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 import static org.mockito.Mockito.*;
 
-@SuppressWarnings("unchecked")
 @RunWith(Parameterized.class)
 public class DataUpdateServiceTests {
 
@@ -179,7 +178,7 @@ public class DataUpdateServiceTests {
     @Test
     public void DataUpdateService_Register_AutoUpdateDefaults() {
         // Arrange
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         DataFileConfiguration config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(true);
 
@@ -210,7 +209,7 @@ public class DataUpdateServiceTests {
         Calendar calendar = Calendar.getInstance();
         calendar.set(Calendar.DAY_OF_YEAR, 1);
         long testTime = calendar.getTimeInMillis();
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(true);
 
@@ -253,7 +252,7 @@ public class DataUpdateServiceTests {
         for (int i = 0; i < registrations; i++) {
             AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
             file.setUpdateAvailableTime(availableAt);
-            file.setEngine(mock(OnPremiseAspectEngine.class));
+            file.setEngine((OnPremiseAspectEngine<?, ?>) mock(OnPremiseAspectEngine.class));
             file.setConfiguration(config);
             dataUpdate.registerDataFile(file);
         }
@@ -280,7 +279,7 @@ public class DataUpdateServiceTests {
     @Test
     public void DataUpdateService_Register_AutoUpdateConfiguredInterval() {
         // Arrange
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(true);
         config.setPollingIntervalSeconds(0);
@@ -310,7 +309,7 @@ public class DataUpdateServiceTests {
     @Test
     public void DataUpdateService_Register_AutoUpdateNoRandomisation() {
         // Arrange
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(true);
         config.setMaxRandomisationSeconds(0);
@@ -336,12 +335,12 @@ public class DataUpdateServiceTests {
         // nothing. This is needed so that the timer can be stored against
         // the configuration, otherwise the second call to register will
         // not know that the engine is already registered.
-        when(futureFactory.schedule(
-            any(Runnable.class),
-            anyLong()))
-            .thenReturn(mock(ScheduledFuture.class));
+        doReturn(mock(ScheduledFuture.class))
+            .when(futureFactory).schedule(
+                any(Runnable.class),
+                anyLong());
 
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(true);
 
@@ -364,7 +363,7 @@ public class DataUpdateServiceTests {
     @Test
     public void DataUpdateService_Register_FileSystemWatcher() throws IOException {
         // Arrange
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(autoUpdateEnabled);
         config.setFileSystemWatcherEnabled(true);
@@ -400,7 +399,7 @@ public class DataUpdateServiceTests {
                 System.getProperty("os.name").contains("Mac OS X"));
 
         // Arrange
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         // The watcher needs no automatic updates.
         config.setAutomaticUpdatesEnabled(false);
@@ -466,7 +465,7 @@ public class DataUpdateServiceTests {
     public void DataUpdateService_UpdateFromFile_FileNotUpdated() throws InterruptedException {
         // Arrange
         configureTimerImmediateCallback();
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(true);
         config.setFileSystemWatcherEnabled(false);
@@ -513,7 +512,7 @@ public class DataUpdateServiceTests {
         // Configure the timer to execute immediately.
         // When subsequent timers are created, they will not execute.
         configureTimerImmediateCallbackOnce();
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(true);
         config.setFileSystemWatcherEnabled(false);
@@ -563,7 +562,7 @@ public class DataUpdateServiceTests {
         throws InterruptedException {
         // Arrange
         RaceDataFile file = new RaceDataFile();
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
+        OnPremiseAspectEngine<?, ?> engine =
             mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(true);
@@ -597,7 +596,7 @@ public class DataUpdateServiceTests {
         throws InterruptedException {
         // Arrange
         RaceDataFile file = new RaceDataFile();
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
+        OnPremiseAspectEngine<?, ?> engine =
             mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(true);
@@ -629,7 +628,7 @@ public class DataUpdateServiceTests {
         // so we need to ignore this
         ignoreWranings = 1;
 
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(true);
 
@@ -692,7 +691,7 @@ public class DataUpdateServiceTests {
             }
         });
 
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(true);
         config.setVerifyMd5(true);
@@ -766,7 +765,7 @@ public class DataUpdateServiceTests {
         // at Error, so it is ignored in cleanup.
         ignoreErrors = 1;
 
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(true);
         config.setVerifyMd5(true);
@@ -854,7 +853,7 @@ public class DataUpdateServiceTests {
             }
         });
 
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         String tempPath = System.getProperty("java.io.tmpdir");
         String dataFile = File.createTempFile("test", ".tmp").getAbsolutePath();
         try {
@@ -924,7 +923,7 @@ public class DataUpdateServiceTests {
         // so we need to ignore this
         ignoreWranings = 1;
 
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(true);
         config.setFileSystemWatcherEnabled(true);
@@ -980,7 +979,7 @@ public class DataUpdateServiceTests {
     @Test
     public void DataUpdateService_CheckForUpdate_FileNotUpdated() {
         // Arrange
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
 
         AspectEngineDataFileDefault file = new AspectEngineDataFileDefault();
@@ -1006,7 +1005,7 @@ public class DataUpdateServiceTests {
     @Test
     public void DataUpdateService_CheckForUpdate_FileUpdated() {
         // Arrange
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(true);
         config.setFileSystemWatcherEnabled(false);
@@ -1039,7 +1038,7 @@ public class DataUpdateServiceTests {
     @Test
     public void DataUpdateService_CheckForUpdate_FileUpdated_AutoUpdateOffWatcherFlagDefault() {
         // Arrange
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(false);
 
@@ -1065,7 +1064,7 @@ public class DataUpdateServiceTests {
 
         // Arrange
         configureHttpNoUpdateAvailable();
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(true);
         config.setDataUpdateUrl("http://www.test.com");
@@ -1124,7 +1123,7 @@ public class DataUpdateServiceTests {
             }
         });
 
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         String tempDir = System.getProperty("java.io.tmpdir");
         Path dataFile = Paths.get(tempDir, getClass().getName() + ".tmp");
         // We want to make sure there is no existing data file.
@@ -1221,7 +1220,7 @@ public class DataUpdateServiceTests {
             }
         });
 
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         String tempPath = System.getProperty("java.io.tmpdir");
 
         // Configure the engine to return the relevant paths.
@@ -1292,7 +1291,7 @@ public class DataUpdateServiceTests {
             DataUpdateServiceTests.class.getClassLoader()
                 .getResourceAsStream("file.gz"));
 
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
+        OnPremiseAspectEngine<?, ?> engine =
             mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         config.setDataUpdateUrl("http://www.test.com");
@@ -1332,7 +1331,7 @@ public class DataUpdateServiceTests {
     @Test
     public void DataUpdateService_CheckForUpdate_FileUpdated_TimerSetAgain() {
         // Arrange
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
+        OnPremiseAspectEngine<?, ?> engine =
             mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(autoUpdateEnabled);
@@ -1387,7 +1386,7 @@ public class DataUpdateServiceTests {
         ignoreErrors = 1;
 
         // Arrange
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
+        OnPremiseAspectEngine<?, ?> engine =
             mock(OnPremiseAspectEngine.class);
         doThrow(new IllegalStateException("The refresh failed."))
             .when(engine).refreshData((String) any());
@@ -1439,7 +1438,7 @@ public class DataUpdateServiceTests {
     @Test
     public void DataUpdateService_Unregister_NoLongerRegistered() {
         // Arrange
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
+        OnPremiseAspectEngine<?, ?> engine =
             mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(autoUpdateEnabled);
@@ -1486,7 +1485,7 @@ public class DataUpdateServiceTests {
             DataUpdateServiceTests.class.getClassLoader()
                 .getResourceAsStream("file.gz"));
 
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
+        OnPremiseAspectEngine<?, ?> engine =
             mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(autoUpdateEnabled);
@@ -1542,7 +1541,7 @@ public class DataUpdateServiceTests {
         configureNoFileSystem();
         configureHttpNoUpdateAvailable();
 
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine =
+        OnPremiseAspectEngine<?, ?> engine =
             mock(OnPremiseAspectEngine.class);
         DataFileConfigurationDefault config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(autoUpdateEnabled);
@@ -1602,7 +1601,7 @@ public class DataUpdateServiceTests {
             }
         });
 
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         String tempDir = System.getProperty("java.io.tmpdir");
         Path dataFile = Paths.get(tempDir, getClass().getName() + ".tmp");
 
@@ -1659,7 +1658,7 @@ public class DataUpdateServiceTests {
      */
     @Test
     public void DataUpdateService_Unregister() {
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
 
         DataFileConfiguration config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(true);
@@ -1682,7 +1681,7 @@ public class DataUpdateServiceTests {
     @Test
     public void DataUpdateService_Register_TimerSetAfter429() throws InterruptedException, IOException {
         // Arrange
-        OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(OnPremiseAspectEngine.class);
+        OnPremiseAspectEngine<?, ?> engine = mock(OnPremiseAspectEngine.class);
         DataFileConfiguration config = new DataFileConfigurationDefault();
         config.setAutomaticUpdatesEnabled(true);
         config.setPollingIntervalSeconds(10);
@@ -1963,7 +1962,6 @@ public class DataUpdateServiceTests {
      * registration has finished. Thread.getId() is deprecated from Java 19
      * but is the id that ThreadMXBean reports on every version.
      */
-    @SuppressWarnings("deprecation")
     private static boolean waitForCheck(
         RaceDataFile file,
         ThreadMXBean threads) throws InterruptedException {

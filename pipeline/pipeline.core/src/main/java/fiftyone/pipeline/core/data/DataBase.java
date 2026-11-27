@@ -37,6 +37,7 @@ import static fiftyone.pipeline.util.Check.getNotNull;
  */
 public abstract class DataBase implements Data {
 
+    /** Used for logging. */
     protected final Logger logger;
 
     private final Map<String, Object> data;

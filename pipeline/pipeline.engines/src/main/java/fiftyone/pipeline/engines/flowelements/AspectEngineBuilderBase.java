@@ -41,12 +41,21 @@ import java.util.Set;
  *                  the fluent builder methods
  * @param <TEngine> the type of the engine that this builder will build
  */
-@SuppressWarnings("rawtypes")
 public abstract class AspectEngineBuilderBase<
     TBuilder extends AspectEngineBuilderBase<TBuilder, TEngine>,
-    TEngine extends AspectEngine> {
+    TEngine extends AspectEngine<?, ?>> {
+
+    /**
+     * This builder as its own type, returned by the fluent setters so that a
+     * chain of calls keeps the type of the builder in use.
+     * @return this builder
+     */
+    protected abstract TBuilder self();
+
+    /** Creates the loggers the engine uses. */
     protected final ILoggerFactory loggerFactory;
     private final List<String> properties = new ArrayList<>();
+    /** The results cache settings, or null for no cache. */
     protected CacheConfiguration cacheConfig = null;
     private LazyLoadingConfiguration lazyLoadingConfig = null;
 
@@ -96,12 +105,11 @@ public abstract class AspectEngineBuilderBase<
      * @return this builder
      */
     @DefaultValue("All properties")
-    @SuppressWarnings("unchecked")
     public TBuilder setProperties(Set<AspectPropertyMetaData> set) {
         for (AspectPropertyMetaData property : set) {
             tryAddProperty(property.getName());
         }
-        return (TBuilder) this;
+        return self();
     }
 
     /**
@@ -113,10 +121,9 @@ public abstract class AspectEngineBuilderBase<
      * @return this builder
      */
     @DefaultValue("All properties")
-    @SuppressWarnings("unchecked")
     public TBuilder setProperty(String s) {
         tryAddProperty(s);
-        return (TBuilder) this;
+        return self();
     }
 
     /**
@@ -126,12 +133,11 @@ public abstract class AspectEngineBuilderBase<
      * @return this builder
      */
     @DefaultValue("All properties")
-    @SuppressWarnings("unchecked")
     public TBuilder setProperties(List<String> properties) {
         for (String property : properties) {
             tryAddProperty(property);
         }
-        return (TBuilder) this;
+        return self();
     }
 
     /**
@@ -144,7 +150,6 @@ public abstract class AspectEngineBuilderBase<
      * @return this builder
      */
     @DefaultValue("All properties")
-    @SuppressWarnings("unchecked")
     public TBuilder setProperties(String properties) {
         for (String property : properties.split(",")) {
             String name = property.trim();
@@ -152,7 +157,7 @@ public abstract class AspectEngineBuilderBase<
                 tryAddProperty(name);
             }
         }
-        return (TBuilder) this;
+        return self();
     }
     
     /**
@@ -162,10 +167,9 @@ public abstract class AspectEngineBuilderBase<
      * @return this builder
      */
     @DefaultValue("All properties")
-    @SuppressWarnings("unchecked")
     public TBuilder setProperty(AspectPropertyMetaData aspectProperty) {
         tryAddProperty(aspectProperty.getName());
-        return (TBuilder) this;
+        return self();
     }
 
     /**
@@ -177,10 +181,9 @@ public abstract class AspectEngineBuilderBase<
      * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/advanced-features/lazy-loading.md">Specification</a>
      */
     @DefaultValue("No lazy loading")
-    @SuppressWarnings("unchecked")
     public TBuilder setLazyLoading(LazyLoadingConfiguration configuration) {
         this.lazyLoadingConfig = configuration;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -190,10 +193,9 @@ public abstract class AspectEngineBuilderBase<
      * @return this builder
      */
     @DefaultValue("No results cache")
-    @SuppressWarnings("unchecked")
     public TBuilder setCache(CacheConfiguration cacheConfiguration) {
         this.cacheConfig = cacheConfiguration;
-        return (TBuilder) this;
+        return self();
     }
 
     /**

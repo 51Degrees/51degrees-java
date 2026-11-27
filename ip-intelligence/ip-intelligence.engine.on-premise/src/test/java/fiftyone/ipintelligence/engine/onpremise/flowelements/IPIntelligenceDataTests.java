@@ -70,6 +70,7 @@ public class IPIntelligenceDataTests extends TestsBase {
      */
     @Test
     public void IPIData_ResultsClose() throws Exception {
+        ResultsIpiSwig results = mock(ResultsIpiSwig.class);
         try (FlowData flowData = getWrapper().getPipeline().createFlowData()) {
 	        IPIntelligenceDataHashDefault data = new IPIntelligenceDataHashDefault(
 	            logger,
@@ -77,14 +78,12 @@ public class IPIntelligenceDataTests extends TestsBase {
 	            getWrapper().getEngine(),
 	            missingPropertyService);
 	
-	        ResultsIpiSwig results = mock(ResultsIpiSwig.class);
 	        data.setResults(results);
 	        flowData.getOrAdd(
 	            getWrapper().getEngine().getTypedDataKey(),
 	            arg -> data);
-	        flowData.close();
-	        verify(results, times(1)).close();
-        }            
+        }
+        verify(results, times(1)).close();
     }
 
     /**

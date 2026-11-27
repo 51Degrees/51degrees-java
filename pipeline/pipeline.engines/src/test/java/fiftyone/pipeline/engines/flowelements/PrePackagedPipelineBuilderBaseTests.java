@@ -37,6 +37,11 @@ public class PrePackagedPipelineBuilderBaseTests {
 
     private static class TestBuilder
         extends PrePackagedPipelineBuilderBase<TestBuilder> {
+
+        @Override
+        protected TestBuilder self() {
+            return this;
+        }
     }
 
     @Test

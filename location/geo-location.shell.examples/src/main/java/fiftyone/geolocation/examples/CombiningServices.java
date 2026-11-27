@@ -47,7 +47,7 @@ import static fiftyone.geolocation.core.Constants.EVIDENCE_GEO_LON_PARAM_KEY;
 import static fiftyone.pipeline.core.Constants.EVIDENCE_HEADER_USERAGENT_KEY;
 
 /**
- *  @example CombiningServices.java
+ *  \example CombiningServices.java
  *
  * Getting started example of using 51Degrees geo-location alongside 51Degrees
  * device detection.
@@ -110,12 +110,15 @@ import static fiftyone.pipeline.core.Constants.EVIDENCE_HEADER_USERAGENT_KEY;
  * ```
  *
  * 5. Extract the value of a property as a string from the results.
- * ```
+ * <pre>{@code
  * AspectPropertyValue<Boolean> isMobile = data.get(Device.class).getIsMobile();
  * AspectPropertyValue<String> country = data.get(GeoData.class).getCountry();
- * ```
+ * }</pre>
  */
 public class CombiningServices {
+    /** Create a new instance. */
+    public CombiningServices() {
+    }
 
     private static ILoggerFactory loggerFactory = LoggerFactory.getILoggerFactory();
 
@@ -126,6 +129,12 @@ public class CombiningServices {
             "AppleWebKit/537.51.2 (KHTML, like Gecko) Version/7.0 Mobile" +
             "/11D167 Safari/9537.53";
 
+    /**
+     * Run the example.
+     *
+     * @param args not used
+     * @throws Exception if the example fails
+     */
     public static void main(String[] args) throws Exception {
         // Obtain a resource key for free at https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-src-main-java-fiftyone-geolocation-examples-combiningservices.java&utm_term=main
         // Make sure to include the 'Country' and 'IsMobile' properties as they

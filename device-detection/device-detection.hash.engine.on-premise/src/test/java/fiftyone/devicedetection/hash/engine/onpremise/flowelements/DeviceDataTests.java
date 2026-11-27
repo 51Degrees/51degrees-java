@@ -71,6 +71,7 @@ public class DeviceDataTests extends TestsBase {
      */
     @Test
     public void DeviceData_ResultsClose() throws Exception {
+        ResultsHashSwig results = mock(ResultsHashSwig.class);
         try (FlowData flowData = getWrapper().getPipeline().createFlowData()) {
 	        DeviceDataHashDefault data = new DeviceDataHashDefault(
 	            logger,
@@ -78,14 +79,12 @@ public class DeviceDataTests extends TestsBase {
 	            getWrapper().getEngine(),
 	            missingPropertyService);
 	
-	        ResultsHashSwig results = mock(ResultsHashSwig.class);
 	        data.setResults(results);
 	        flowData.getOrAdd(
 	            getWrapper().getEngine().getTypedDataKey(),
 	            arg -> data);
-	        flowData.close();
-	        verify(results, times(1)).close();
         }
+        verify(results, times(1)).close();
     }
 
     /**

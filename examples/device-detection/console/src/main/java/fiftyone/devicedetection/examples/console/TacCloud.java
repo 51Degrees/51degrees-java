@@ -128,8 +128,9 @@ public class TacCloud {
 
 
             // Create the pipeline using the service provider and the configured options.
-            try (Pipeline pipeline = new FiftyOnePipelineBuilder()
-                    .buildFromConfiguration(pipelineOptions)) {
+            Pipeline pipeline = new FiftyOnePipelineBuilder()
+                    .buildFromConfiguration(pipelineOptions);
+            try {
                 // The pipeline asked the cloud for the key's accessible
                 // properties as it was built, so unless that request failed,
                 // a key without the lookup is found here, before any lookup.
@@ -140,6 +141,8 @@ public class TacCloud {
                     // matching devices.
                     analyseTac(TAC_2, pipeline, writer);
                 }
+            } finally {
+                pipeline.close();
             }
             // The writer closes the stream it was given, so the section is
             // written before it.
@@ -155,7 +158,8 @@ public class TacCloud {
      */
     static boolean analyseTac(String tac, Pipeline pipeline, PrintWriter output) throws Exception {
         // Create the FlowData instance.
-        try (FlowData data = pipeline.createFlowData()) {
+        FlowData data = pipeline.createFlowData();
+        try {
             // Add the TAC as evidence.
             data.addEvidence(Constants.EVIDENCE_QUERY_TAC_KEY, tac);
             // Process the supplied evidence. If the accessible properties
@@ -187,6 +191,8 @@ public class TacCloud {
                 output.format("\t%s %s (%s)%n", asString(vendor), asString(name), asString(model));
             }
             return true;
+        } finally {
+            data.close();
         }
     }
 

@@ -22,6 +22,8 @@
 
 package fiftyone.pipeline.engines.fiftyone.flowelements;
 
+import fiftyone.pipeline.core.typed.TypedKey;
+import org.mockito.ArgumentMatchers;
 import fiftyone.common.testhelpers.TestLoggerFactory;
 import fiftyone.pipeline.core.data.*;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
@@ -48,6 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import static org.mockito.Mockito.doReturn;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -276,12 +279,12 @@ public class SetHeadersElementTests {
 		verify(mockPipeline, times(2)).getElementAvailableProperties();
 	}
 
-	@SuppressWarnings({"rawtypes", "unchecked"})
-	private static Pipeline mockPipeline(FlowElement source) {
+	private static Pipeline mockPipeline(FlowElement<?, ?> source) {
 		Pipeline mockPipeline = mock(Pipeline.class);
-		List<FlowElement> elements = new ArrayList<>();
+		List<FlowElement<?, ?>> elements = new ArrayList<>();
 		elements.add(source);
-		when(mockPipeline.getFlowElements()).thenReturn(elements);
+		doReturn(elements)
+            .when(mockPipeline).getFlowElements();
 		when(mockPipeline.getElementAvailableProperties()).thenReturn(
 			new HashMap<String, Map<String, ElementPropertyMetaData>>());
 		return mockPipeline;
@@ -290,7 +293,9 @@ public class SetHeadersElementTests {
 	private static FlowData mockFlowData(Pipeline mockPipeline) {
 		FlowData data = mock(FlowData.class);
 		when(data.getPipeline()).thenReturn(mockPipeline);
-		when(data.getOrAdd(anyString(), any())).thenReturn(mock(SetHeadersData.class));
+		when(data.getOrAdd(
+			ArgumentMatchers.<TypedKey<SetHeadersData>>any(),
+			any())).thenReturn(mock(SetHeadersData.class));
 		return data;
 	}
 
@@ -364,6 +369,11 @@ public class SetHeadersElementTests {
 	
 	private class ActivePropertySourceElement
 		extends FlowElementBase<SetHeadersSourceData, ElementPropertyMetaData> {
+
+	    @Override
+	    protected Class<SetHeadersSourceData> getDataType() {
+	        return SetHeadersSourceData.class;
+	    }
 		Map<String, Object> propertyNameValuesToReturn;
 		String elementDataKey = "setheadersourceelement";
 		EvidenceKeyFilter evidenceKeyFilter;

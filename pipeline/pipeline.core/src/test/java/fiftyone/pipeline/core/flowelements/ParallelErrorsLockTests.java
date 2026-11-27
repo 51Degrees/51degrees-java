@@ -76,6 +76,11 @@ public class ParallelErrorsLockTests {
      */
     private static class ErrorMember
         extends FlowElementBase<ElementData, ElementPropertyMetaData> {
+
+        @Override
+        protected Class<ElementData> getDataType() {
+            return ElementData.class;
+        }
         private final String key;
         private final CountDownLatch adding = new CountDownLatch(1);
         private final CountDownLatch added = new CountDownLatch(1);
@@ -137,7 +142,6 @@ public class ParallelErrorsLockTests {
     }
 
     @Test
-    @SuppressWarnings("rawtypes")
     public void memberError_AddedUnderTheLockWhileTheGroupRuns()
         throws Exception {
         ErrorMember member = new ErrorMember("member", null);
@@ -146,7 +150,7 @@ public class ParallelErrorsLockTests {
         try (Pipeline pipeline = new PipelineBuilder(
                 LoggerFactory.getILoggerFactory())
                 .setSuppressProcessException(true)
-                .addFlowElementsParallel(new FlowElement[]{member, other})
+                .addFlowElementsParallel(new FlowElement<?, ?>[]{member, other})
                 .setAutoCloseElements(true)
                 .build();
              FlowData data = pipeline.createFlowData()) {
@@ -175,7 +179,6 @@ public class ParallelErrorsLockTests {
     }
 
     @Test
-    @SuppressWarnings("rawtypes")
     public void errorOutsideTheGroup_AddedWithNoLock() throws Exception {
         ErrorMember before = new ErrorMember("before", null);
         ErrorMember first = new ErrorMember("first", null);
@@ -185,7 +188,7 @@ public class ParallelErrorsLockTests {
                 LoggerFactory.getILoggerFactory())
                 .setSuppressProcessException(true)
                 .addFlowElement(before)
-                .addFlowElementsParallel(new FlowElement[]{first, second})
+                .addFlowElementsParallel(new FlowElement<?, ?>[]{first, second})
                 .setAutoCloseElements(true)
                 .build();
              FlowData data = pipeline.createFlowData()) {
@@ -216,7 +219,6 @@ public class ParallelErrorsLockTests {
     }
 
     @Test
-    @SuppressWarnings("rawtypes")
     public void membersAddErrorsAtOnce_AllPresent() throws Exception {
         CyclicBarrier together = new CyclicBarrier(2);
         ErrorMember first = new ErrorMember("first", together);
@@ -224,7 +226,7 @@ public class ParallelErrorsLockTests {
         try (Pipeline pipeline = new PipelineBuilder(
                 LoggerFactory.getILoggerFactory())
                 .setSuppressProcessException(true)
-                .addFlowElementsParallel(new FlowElement[]{first, second})
+                .addFlowElementsParallel(new FlowElement<?, ?>[]{first, second})
                 .setAutoCloseElements(true)
                 .build();
              FlowData data = pipeline.createFlowData()) {

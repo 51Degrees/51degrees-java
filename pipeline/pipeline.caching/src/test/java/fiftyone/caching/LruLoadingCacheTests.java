@@ -27,16 +27,14 @@ import org.junit.Test;
 import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.*;
 
 public class LruLoadingCacheTests {
 
     @Test
-    @SuppressWarnings("unchecked")
     public void LruLoadingCache_Get() throws IOException {
-        ValueLoader<Integer, String> loader = mock(ValueLoader.class);
-        // Configure the loader to return 'test' for key '1'.
-        when(loader.load(eq((Integer) 1))).thenReturn("test");
+        // A loader that returns 'test' for key '1'.
+        ValueLoader<Integer, String> loader =
+            key -> key == 1 ? "test" : null;
         // Create the cache, passing in the loader.
         LruLoadingCache<Integer, String> cache =
             new LruLoadingCache<>(2, loader);
@@ -47,11 +45,10 @@ public class LruLoadingCacheTests {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void LruLoadingCache_Get2() throws IOException {
-        ValueLoader<Integer, String> loader = mock(ValueLoader.class);
-        // Configure the loader to return 'test' for key '1'.
-        when(loader.load(eq((Integer) 1))).thenReturn("test");
+        // A loader that returns 'test' for key '1'.
+        ValueLoader<Integer, String> loader =
+            key -> key == 1 ? "test" : null;
         LruLoadingCache<Integer, String> cache =
             new LruLoadingCache<>(2);
 

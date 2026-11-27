@@ -120,7 +120,7 @@ public class GettingStartedOnPrem {
         For more information about pipelines in general see the documentation at
         https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-gettingstartedonprem.java&utm_term=run
 
-        Note that we wrap the creation of a pipeline in a try/resources to control its lifecycle */
+        Note that we close the pipeline in a finally block to control its lifecycle */
         // the configuration file is in the resources directory
         File optionsFile = getFilePath("examples/device-detection/console/src/main/resources/gettingStartedOnPrem.xml");
         // load the options and if no resource key has been set in the file
@@ -135,8 +135,9 @@ public class GettingStartedOnPrem {
         already holds, but in normal operation usage sharing should be enabled
         by adding a Usage Sharing Element to the Pipeline, which the
         FiftyOnePipelineBuilder does unless ShareUsage is false. */
-        try (Pipeline pipeline = new FiftyOnePipelineBuilder()
-                .buildFromConfiguration(pipelineOptions)) {
+        Pipeline pipeline = new FiftyOnePipelineBuilder()
+                .buildFromConfiguration(pipelineOptions);
+        try {
 
             /* Get the 'engine' element within the pipeline that performs device detection. We
             can use this to get details about the data file as well as meta-data describing
@@ -155,6 +156,8 @@ public class GettingStartedOnPrem {
             DataFileHelper.logDataFileInfo(engine);
 
             logger.info("All done");
+        } finally {
+            pipeline.close();
         }
     }
 
@@ -178,9 +181,10 @@ public class GettingStartedOnPrem {
         detection is called "evidence" and usually consists of a number of HTTP Header field
         values, in this case represented by a Map<String, String> of header name/value entries.
 
-        FlowData is wrapped in a try/resources block in order to ensure that the unmanaged
+        FlowData is closed in a finally block in order to ensure that the unmanaged
         resources allocated by the native device detection library are freed */
-        try (FlowData data = pipeline.createFlowData()) {
+        FlowData data = pipeline.createFlowData();
+        try {
 
             // list the evidence
             writer.println("Input values:");
@@ -217,6 +221,8 @@ public class GettingStartedOnPrem {
                     engine, "HardwareName", device::getHardwareName);
             needsEnterprise |= writeEnterpriseValue(writer, "Device Type",
                     engine, "DeviceType", device::getDeviceType);
+        } finally {
+            data.close();
         }
         writer.println();
         writer.flush();

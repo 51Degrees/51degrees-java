@@ -37,6 +37,11 @@ import java.io.IOException;
  */
 @Service
 public interface ClientsidePropertyService extends ClientsidePropertyServiceCore {
+    /**
+     * Set the Pipeline whose results are served.
+     *
+     * @param pipeline the Pipeline
+     */
     void setPipeline(Pipeline pipeline);
 
     /**
@@ -54,8 +59,14 @@ public interface ClientsidePropertyService extends ClientsidePropertyServiceCore
         HttpServletRequest request,
         HttpServletResponse response) throws IOException;
 
+    /** Default implementation of {@link ClientsidePropertyService}. */
     @Service
     class Default extends ClientsidePropertyServiceCore.Default implements ClientsidePropertyService {
+        /**
+         * Create a new instance.
+         *
+         * @param flowDataProvider gives the Flow Data for each request
+         */
         @Autowired
         public Default(FlowDataProvider flowDataProvider) {
             super(flowDataProvider, null);

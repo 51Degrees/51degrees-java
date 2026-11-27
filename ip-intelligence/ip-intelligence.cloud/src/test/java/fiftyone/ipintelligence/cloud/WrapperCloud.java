@@ -84,8 +84,7 @@ public class WrapperCloud implements Closeable {
         return pipeline;
     }
     
-    @SuppressWarnings("rawtypes")
-	public AspectEngine getEngine() {
+	public AspectEngine<?, ?> getEngine() {
        return IPIntelligenceCloudEngine;
     }
 

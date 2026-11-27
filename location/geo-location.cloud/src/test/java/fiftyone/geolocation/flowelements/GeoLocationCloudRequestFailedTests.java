@@ -107,7 +107,6 @@ public class GeoLocationCloudRequestFailedTests {
      * holding a property other than the one read.
      */
     // thenReturn has a varargs overload, so a generic Map is an unchecked array.
-    @SuppressWarnings("unchecked")
     private GeoLocationCloudEngine buildEngine() throws Exception {
         GeoLocationCloudEngine engine =
             new GeoLocationCloudEngineBuilder(loggerFactory)

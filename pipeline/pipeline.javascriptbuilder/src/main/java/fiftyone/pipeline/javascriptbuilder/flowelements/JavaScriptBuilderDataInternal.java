@@ -36,6 +36,12 @@ public class JavaScriptBuilderDataInternal
     extends ElementDataBase
     implements JavaScriptBuilderData {
 
+    /**
+     * Create a new instance.
+     *
+     * @param logger used for logging
+     * @param flowData the Flow Data this element data belongs to
+     */
     public JavaScriptBuilderDataInternal(Logger logger, FlowData flowData) {
         super(logger, flowData);
     }

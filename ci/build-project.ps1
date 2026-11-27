@@ -1,13 +1,17 @@
 param(
     [Parameter(Mandatory)][string]$RepoName,
-    [string]$Name
+    [string]$Name,
+    # The runner variable naming the entry's JDK. The build compiles with JDK
+    # 17 of the same architecture, whichever JDK the entry tests on.
+    [Parameter(Mandatory)][string]$JavaSDKEnvVar
 )
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
 
 . "$PSScriptRoot/packages.ps1"
 
-Write-Host "JAVA_HOME: $ENV:JAVA_HOME"
+$compileJavaHome = Get-CompileJavaHome $JavaSDKEnvVar
+Write-Host "Compiling with $compileJavaHome, testing with $ENV:JAVA_HOME"
 
 # A publish releases a package's dependents only when packages.json names
 # them, so a module or dependency it leaves out fails here, before the change
@@ -24,7 +28,9 @@ if ($gaps.Count -gt 0) {
 Push-Location $RepoName
 try {
     Write-Host "Building $Name..."
-    mvn install @MavenOptions -DskipTests -Pdev
+    Invoke-WithJavaHome $compileJavaHome {
+        mvn install @MavenOptions -DskipTests -Pdev
+    }
 } finally {
     Pop-Location
 }

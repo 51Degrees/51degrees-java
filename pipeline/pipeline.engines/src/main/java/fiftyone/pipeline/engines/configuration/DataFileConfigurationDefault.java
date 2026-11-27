@@ -34,6 +34,10 @@ import java.util.List;
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/data-updates.md">Specification</a>
  */
 public class DataFileConfigurationDefault implements DataFileConfiguration {
+    /** Create a new instance. */
+    public DataFileConfigurationDefault() {
+    }
+
     private String identifier = "Default";
     private String dataFilePath;
     private boolean createTempDataCopy;

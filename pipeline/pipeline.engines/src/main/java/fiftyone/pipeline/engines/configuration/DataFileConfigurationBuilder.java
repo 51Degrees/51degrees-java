@@ -30,6 +30,14 @@ public class DataFileConfigurationBuilder extends DataFileConfigurationBuilderBa
     DataFileConfiguration> {
 
     @Override
+    protected DataFileConfigurationBuilder self() {
+        return this;
+    }
+    /** Create a new instance. */
+    public DataFileConfigurationBuilder() {
+    }
+
+    @Override
     protected DataFileConfiguration createConfig() {
         return new DataFileConfigurationDefault();
     }

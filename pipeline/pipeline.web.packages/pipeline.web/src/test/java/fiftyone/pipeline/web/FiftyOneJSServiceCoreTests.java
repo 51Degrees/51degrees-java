@@ -188,25 +188,18 @@ public class FiftyOneJSServiceCoreTests {
         verify(clientside, never()).serveJson(request, response);
     }
 
-    // The tests below stub and verify createFlowData on a mock, which
-    // creates nothing to close, so the FlowData rule does not apply.
-
     /**
      * A request with no If-None-Match is left to be processed, and no
      * FlowData is created for it.
      */
     @Test
-    @SuppressWarnings("PMD.FlowDataInTryWithResources")
     public void NotModified_NoIfNoneMatch_NothingCreated() throws IOException {
         FiftyOneJSServiceCore service =
             new FiftyOneJSServiceCore.Default(clientside, true);
-        PipelineResultServiceCore results =
-            mock(PipelineResultServiceCore.class);
+        PipelineResultServiceCore results = results(null);
         requestPath("/51Degrees.core.js");
 
         assertFalse(service.serveNotModified(request, response, results));
-
-        verify(results, never()).createFlowData(request);
     }
 
     /**
@@ -214,37 +207,29 @@ public class FiftyOneJSServiceCoreTests {
      * If-None-Match.
      */
     @Test
-    @SuppressWarnings("PMD.FlowDataInTryWithResources")
     public void NotModified_OtherPath_NothingCreated() throws IOException {
         FiftyOneJSServiceCore service =
             new FiftyOneJSServiceCore.Default(clientside, true);
-        PipelineResultServiceCore results =
-            mock(PipelineResultServiceCore.class);
+        PipelineResultServiceCore results = results(null);
         when(request.getHeader("If-None-Match")).thenReturn("*");
         requestPath("/page");
 
         assertFalse(service.serveNotModified(request, response, results));
-
-        verify(results, never()).createFlowData(request);
     }
 
     /**
      * With the client-side features off, nothing is answered early.
      */
     @Test
-    @SuppressWarnings("PMD.FlowDataInTryWithResources")
     public void NotModified_ClientSideDisabled_NothingCreated()
         throws IOException {
         FiftyOneJSServiceCore service =
             new FiftyOneJSServiceCore.Default(clientside, false);
-        PipelineResultServiceCore results =
-            mock(PipelineResultServiceCore.class);
+        PipelineResultServiceCore results = results(null);
         when(request.getHeader("If-None-Match")).thenReturn("*");
         requestPath("/51Degrees.core.js");
 
         assertFalse(service.serveNotModified(request, response, results));
-
-        verify(results, never()).createFlowData(request);
     }
 
     /**
@@ -252,15 +237,12 @@ public class FiftyOneJSServiceCoreTests {
      * with a FlowData created for it, which is closed afterwards.
      */
     @Test
-    @SuppressWarnings("PMD.FlowDataInTryWithResources")
     public void NotModified_JavaScriptAndJson_AskTheirEndpoint()
         throws Exception {
         FiftyOneJSServiceCore service =
             new FiftyOneJSServiceCore.Default(clientside, true);
-        PipelineResultServiceCore results =
-            mock(PipelineResultServiceCore.class);
         FlowData flowData = mock(FlowData.class);
-        when(results.createFlowData(request)).thenReturn(flowData);
+        PipelineResultServiceCore results = results(flowData);
         when(request.getHeader("If-None-Match")).thenReturn("*");
         when(clientside.serveJavascriptNotModified(flowData, request, response))
             .thenReturn(true);
@@ -277,5 +259,26 @@ public class FiftyOneJSServiceCoreTests {
         verify(clientside, times(1))
             .serveJsonNotModified(flowData, request, response);
         verify(flowData, times(2)).close();
+    }
+
+    /**
+     * A results service whose createFlowData gives the FlowData, or, when
+     * it is null, fails the test, as no FlowData should be created.
+     */
+    private static PipelineResultServiceCore results(FlowData flowData) {
+        return new PipelineResultServiceCore() {
+            @Override
+            public void process(HttpServletRequest request) {
+                throw new AssertionError("The request was processed.");
+            }
+
+            @Override
+            public FlowData createFlowData(HttpServletRequest request) {
+                if (flowData == null) {
+                    throw new AssertionError("A FlowData was created.");
+                }
+                return flowData;
+            }
+        };
     }
 }

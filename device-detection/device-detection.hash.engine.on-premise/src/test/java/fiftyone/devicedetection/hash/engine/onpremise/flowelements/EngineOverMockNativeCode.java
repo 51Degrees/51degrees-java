@@ -36,8 +36,6 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
@@ -45,9 +43,10 @@ import static org.mockito.Mockito.withSettings;
 /**
  * Makes a {@link DeviceDetectionHashEngine} whose native engine is a mock
  * with no properties and no components of its own, so the parts of the
- * engine written in Java can be tested without the native library or a data
- * file. The engine's own methods run as written. Its constructor does not
- * run, as it loads a data file, so the fields it would set are set here.
+ * engine written in Java can be tested without a data file. The vectors it
+ * gives are real native vectors, as the vector proxies are final. The
+ * engine's own methods run as written. Its constructor does not run, as it
+ * loads a data file, so the fields it would set are set here.
  */
 class EngineOverMockNativeCode {
 
@@ -101,15 +100,9 @@ class EngineOverMockNativeCode {
      * @param keys the keys
      */
     void setKeys(String... keys) {
-        VectorStringSwig vector = mock(
-            VectorStringSwig.class,
-            withSettings().defaultAnswer(CALLS_REAL_METHODS));
-        doReturn(keys.length).when(vector).size();
-        for (int i = 0; i < keys.length; i++) {
-            doReturn(keys[i]).when(vector).get(i);
-        }
-        doNothing().when(vector).delete();
-        when(nativeEngine.getKeys()).thenReturn(vector);
+        // Each call gives a new native vector, as the native engine does.
+        when(nativeEngine.getKeys())
+            .thenAnswer(invocation -> new VectorStringSwig(keys));
     }
 
     private void set(String name, Object value) throws Exception {

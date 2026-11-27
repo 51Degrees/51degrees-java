@@ -27,8 +27,15 @@ package fiftyone.ipintelligence;
  */
 @Deprecated
 public class Enums {
+    /** Create a new instance. */
+    public Enums() {
+    }
+
+    /** The detection algorithms an engine can use. */
     public enum IPIntelligenceAlgorithm {
+        /** The Hash algorithm. */
         Hash,
+        /** Not supported by any engine. */
         Pattern
     }
 }

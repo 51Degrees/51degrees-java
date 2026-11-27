@@ -42,26 +42,26 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class EmptyEngine
     extends AspectEngineBase<EmptyEngineData, AspectPropertyMetaData> {
 
+    @Override
+    protected Class<EmptyEngineData> getDataType() {
+        return EmptyEngineData.class;
+    }
+
     private long processCost = 0;
     private final AtomicInteger processCount = new AtomicInteger();
     private Exception exception = null;
-    private List<AspectPropertyMetaData> properties = null;
+    private List<AspectPropertyMetaData> properties;
     private EvidenceKeyFilterWhitelist evidenceWhitelist =
         new EvidenceKeyFilterWhitelist(Arrays.asList("test.value"));
 
-    @SuppressWarnings("this-escape")
-    private final TypedKey<EmptyEngineData> typedKey = new TypedKeyDefault<>(getElementDataKey(), EmptyEngineData.class);
+    private static final String ELEMENT_DATA_KEY = "empty-aspect";
 
-    @SuppressWarnings("this-escape")
+    private final TypedKey<EmptyEngineData> typedKey = new TypedKeyDefault<>(ELEMENT_DATA_KEY, EmptyEngineData.class);
+
     public EmptyEngine(
         Logger logger,
         ElementDataFactory<EmptyEngineData> aspectDataFactory) {
         super(logger, aspectDataFactory);
-
-        properties = Arrays.asList(
-            (AspectPropertyMetaData) new AspectPropertyMetaDataDefault("valueone", this, "", int.class, new ArrayList<String>(), true),
-            (AspectPropertyMetaData) new AspectPropertyMetaDataDefault("valuetwo", this, "", int.class, new ArrayList<String>(), true)
-        );
     }
 
 
@@ -85,13 +85,20 @@ public class EmptyEngine
     }
 
     @Override
-    public List<AspectPropertyMetaData> getProperties() {
+    public synchronized List<AspectPropertyMetaData> getProperties() {
+        // Created on first use, as the properties refer to this engine.
+        if (properties == null) {
+            properties = Arrays.asList(
+                (AspectPropertyMetaData) new AspectPropertyMetaDataDefault("valueone", this, "", int.class, new ArrayList<String>(), true),
+                (AspectPropertyMetaData) new AspectPropertyMetaDataDefault("valuetwo", this, "", int.class, new ArrayList<String>(), true)
+            );
+        }
         return properties;
     }
 
     @Override
     public String getElementDataKey() {
-        return "empty-aspect";
+        return ELEMENT_DATA_KEY;
     }
 
     @Override

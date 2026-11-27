@@ -133,8 +133,7 @@ public class DataUpdateServiceCheckFailureTests {
             throw failure;
         });
 
-        OnPremiseAspectEngine<? extends AspectData,
-            ? extends AspectPropertyMetaData> engine = engine();
+        OnPremiseAspectEngine<?, ?> engine = engine();
         Path directory = Files.createTempDirectory("watched");
         Path dataFile = directory.resolve("data.dat");
         Files.write(dataFile, "Old".getBytes());
@@ -195,8 +194,7 @@ public class DataUpdateServiceCheckFailureTests {
             fileWrapperFactory(),
             futureFactory);
 
-        OnPremiseAspectEngine<? extends AspectData,
-            ? extends AspectPropertyMetaData> engine = engine();
+        OnPremiseAspectEngine<?, ?> engine = engine();
         doThrow(new Error("The refresh failed"))
             .when(engine).refreshData(any());
         Path directory = Files.createTempDirectory("watched");
@@ -248,8 +246,7 @@ public class DataUpdateServiceCheckFailureTests {
             throw failure;
         });
 
-        OnPremiseAspectEngine<? extends AspectData,
-            ? extends AspectPropertyMetaData> engine = engine();
+        OnPremiseAspectEngine<?, ?> engine = engine();
         Path directory = Files.createTempDirectory("polled");
         Path dataFile = directory.resolve("data.dat");
         Files.write(dataFile, "Old".getBytes());
@@ -303,8 +300,7 @@ public class DataUpdateServiceCheckFailureTests {
         dataUpdate.onUpdateComplete((sender, args) ->
             statuses.add(args.getStatus().name()));
 
-        OnPremiseAspectEngine<? extends AspectData,
-            ? extends AspectPropertyMetaData> engine = engine();
+        OnPremiseAspectEngine<?, ?> engine = engine();
         Path directory = Files.createTempDirectory("polled");
         Path dataFile = directory.resolve("data.dat");
         Files.write(dataFile, "Old".getBytes());
@@ -362,8 +358,7 @@ public class DataUpdateServiceCheckFailureTests {
         dataUpdate.onUpdateComplete((sender, args) ->
             statuses.add(args.getStatus().name()));
 
-        OnPremiseAspectEngine<? extends AspectData,
-            ? extends AspectPropertyMetaData> engine = engine();
+        OnPremiseAspectEngine<?, ?> engine = engine();
         doThrow(failure).when(engine).refreshData(any());
         AspectEngineDataFileDefault file = dataFile(engine, dataFile, false);
         file.setTempDataFilePath(tempFile.toString());
@@ -414,8 +409,7 @@ public class DataUpdateServiceCheckFailureTests {
         dataUpdate.onUpdateComplete((sender, args) ->
             statuses.add(args.getStatus().name()));
 
-        OnPremiseAspectEngine<? extends AspectData,
-            ? extends AspectPropertyMetaData> engine = engine();
+        OnPremiseAspectEngine<?, ?> engine = engine();
         Path directory = Files.createTempDirectory("checked");
         Path dataFile = directory.resolve("data.dat");
         Files.write(dataFile, "Old".getBytes());
@@ -532,9 +526,7 @@ public class DataUpdateServiceCheckFailureTests {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private static OnPremiseAspectEngine<? extends AspectData,
-        ? extends AspectPropertyMetaData> engine() {
+    private static OnPremiseAspectEngine<?, ?> engine() {
         return mock(OnPremiseAspectEngine.class);
     }
 

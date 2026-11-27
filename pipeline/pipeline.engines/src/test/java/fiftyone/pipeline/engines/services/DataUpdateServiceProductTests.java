@@ -122,8 +122,7 @@ public class DataUpdateServiceProductTests {
 
     private Logger logger;
     private DataUpdateServiceDefault service;
-    private OnPremiseAspectEngine<? extends AspectData,
-        ? extends AspectPropertyMetaData> engine;
+    private OnPremiseAspectEngine<?, ?> engine;
     private AspectEngineDataFileDefault file;
 
     @Before
@@ -766,7 +765,6 @@ public class DataUpdateServiceProductTests {
      * As {@link #configure}, with a data file that names the product it
      * needs itself.
      */
-    @SuppressWarnings("unchecked")
     private void configureFileThatNamesItsProduct(final String product) {
         configure(PATH, null);
         DataFileConfiguration config = file.getConfiguration();
@@ -862,7 +860,6 @@ public class DataUpdateServiceProductTests {
      * A data file held in memory that is updated from the given path of the
      * fake data update service, and that needs the given product.
      */
-    @SuppressWarnings("unchecked")
     private void configure(String path, String product) {
         DataFileConfiguration config = new DataFileConfigurationDefault();
         config.setDataUpdateUrl(address + path);

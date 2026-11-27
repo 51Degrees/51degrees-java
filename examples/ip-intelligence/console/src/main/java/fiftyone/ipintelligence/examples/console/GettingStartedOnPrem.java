@@ -146,7 +146,7 @@ public class GettingStartedOnPrem {
         For more information about pipelines in general see the documentation at
         https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedonprem.java&utm_term=run
 
-        Note that we wrap the creation of a pipeline in a try/resources to control its lifecycle */
+        Note that we close the pipeline in a finally block to control its lifecycle */
         // the configuration file is in the resources directory
         File optionsFile = getFilePath("examples/ip-intelligence/console/src/main/resources/gettingStartedOnPrem.xml");
         // load the options and if no resource key has been set in the file
@@ -157,12 +157,13 @@ public class GettingStartedOnPrem {
         DataFileHelper.useDataFile(
                 pipelineOptions, "IPIntelligenceOnPremiseEngine", dataFileLocation);
         // Build a new Pipeline from the configuration.
-        try (Pipeline pipeline = new FiftyOnePipelineBuilder()
+        Pipeline pipeline = new FiftyOnePipelineBuilder()
                 // Usage sharing is off because this example's evidence is already
                 // known to 51Degrees. In production, leave usage sharing on, which adds
                 // a Usage Sharing Element to the Pipeline and helps improve the service.
                 .setShareUsage(false)
-                .buildFromConfiguration(pipelineOptions)) {
+                .buildFromConfiguration(pipelineOptions);
+        try {
 
             /* Get the 'engine' element within the pipeline that performs IP Intelligence. We
             can use this to get details about the data file as well as meta-data describing
@@ -181,6 +182,8 @@ public class GettingStartedOnPrem {
             DataFileHelper.logDataFileInfo(engine);
 
             logger.info("All done");
+        } finally {
+            pipeline.close();
         }
     }
 
@@ -204,9 +207,10 @@ public class GettingStartedOnPrem {
         a lookup is called "evidence", for IP Intelligence this is an IP address, in this
         case represented by a Map<String, String> of evidence key/value entries.
 
-        FlowData is wrapped in a try/resources block in order to ensure that the unmanaged
+        FlowData is closed in a finally block in order to ensure that the unmanaged
         resources allocated by the native IP Intelligence library are freed */
-        try (FlowData data = pipeline.createFlowData()) {
+        FlowData data = pipeline.createFlowData();
+        try {
 
             // list the evidence
             writer.println("Input values:");
@@ -250,6 +254,8 @@ public class GettingStartedOnPrem {
             needsEnterprise |= writeValue(writer, engine, ipData, "Areas");
             needsEnterprise |= writeValue(writer, engine, ipData, "AccuracyRadiusMin");
             needsEnterprise |= writeValue(writer, engine, ipData, "TimeZoneOffset");
+        } finally {
+            data.close();
         }
         writer.println();
         writer.flush();

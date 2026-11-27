@@ -322,14 +322,15 @@ public class ShareUsageOptionsTests {
     public void tracker_BuildsOneCache() {
         CountingCacheBuilder builder = new CountingCacheBuilder();
 
-        try (ShareUsageTracker tracker = new ShareUsageTracker(
-            new CacheConfiguration(builder, 10),
-            1000,
-            new EvidenceKeyFilterShareUsage(
-                new ArrayList<String>(),
-                new ArrayList<String>(),
-                false,
-                DEFAULT_SESSION_COOKIE_NAME))) {
+        try {
+            new ShareUsageTracker(
+                new CacheConfiguration(builder, 10),
+                1000,
+                new EvidenceKeyFilterShareUsage(
+                    new ArrayList<String>(),
+                    new ArrayList<String>(),
+                    false,
+                    DEFAULT_SESSION_COOKIE_NAME)).close();
             assertEquals(1, builder.built.get());
         } catch (java.io.IOException e) {
             throw new IllegalStateException(e);

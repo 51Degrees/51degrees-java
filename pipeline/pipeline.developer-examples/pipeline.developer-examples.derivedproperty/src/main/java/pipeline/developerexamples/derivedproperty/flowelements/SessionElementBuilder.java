@@ -43,6 +43,7 @@ public class SessionElementBuilder {
     }
 
     /**
+     * Returns a new element.
      * @return a new element
      */
     public SessionElement build() {

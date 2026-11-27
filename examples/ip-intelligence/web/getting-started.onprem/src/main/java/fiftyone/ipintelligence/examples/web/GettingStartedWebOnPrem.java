@@ -153,7 +153,8 @@ public class GettingStartedWebOnPrem extends HttpServlet {
         return configXml.getParentFile().getParent();
     }
 
-    FlowDataProviderCore flowDataProvider = new FlowDataProviderCore.Default();
+    // HttpServlet is Serializable, but this servlet is never serialized.
+    transient FlowDataProviderCore flowDataProvider = new FlowDataProviderCore.Default();
 
     /**
      * Process the HTTP request and generate the IP Intelligence results page

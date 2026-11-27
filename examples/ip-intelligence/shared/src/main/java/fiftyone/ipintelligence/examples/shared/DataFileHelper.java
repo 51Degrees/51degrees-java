@@ -185,12 +185,15 @@ public static class DatafileInfo {
      * @throws Exception if the data file cannot be opened
      */
     public static DatafileInfo getDatafileMetaData(String dataFileLocation) throws Exception {
-        try(IPIntelligenceOnPremiseEngine ddhe = new IPIntelligenceOnPremiseEngineBuilder()
+        IPIntelligenceOnPremiseEngine ddhe = new IPIntelligenceOnPremiseEngineBuilder()
                 .setPerformanceProfile(Constants.PerformanceProfiles.LowMemory)
                 .setAutoUpdate(false)
-                .build(dataFileLocation,false)) {
+                .build(dataFileLocation,false);
+        try {
             return new DatafileInfo((FiftyOneDataFile) ddhe.getDataFileMetaData(),
                     ddhe.getDataSourceTier(), isFreeDataFile(ddhe));
+        } finally {
+            ddhe.close();
         }
     }
 
@@ -267,12 +270,15 @@ public static class DatafileInfo {
                                                     List<String> properties,
                                                     PrintWriter output,
                                                     String contactUs) throws Exception {
-        try (IPIntelligenceOnPremiseEngine engine = new IPIntelligenceOnPremiseEngineBuilder()
+        IPIntelligenceOnPremiseEngine engine = new IPIntelligenceOnPremiseEngineBuilder()
                 .setPerformanceProfile(Constants.PerformanceProfiles.LowMemory)
                 .setAutoUpdate(false)
-                .build(dataFile, false)) {
+                .build(dataFile, false);
+        try {
             return lacksEnterpriseProperties(
                     engine, purpose, properties, output, contactUs);
+        } finally {
+            engine.close();
         }
     }
 
@@ -387,7 +393,6 @@ public static class DatafileInfo {
      * @throws Exception if the file was not found
      */
 
-    @SuppressWarnings("RedundantThrows")
     public static File getEvidenceFile(String evidenceFilename) throws Exception {
         if (Objects.isNull(evidenceFilename)) {
             evidenceFilename = FileUtils.EVIDENCE_FILE_NAME;
@@ -413,7 +418,6 @@ public static class DatafileInfo {
      * @return a full pathname
      * @throws Exception if the file was not found
      */
-    @SuppressWarnings("RedundantThrows")
     public static String getDataFileLocation(String dataFilename) throws Exception {
         // an explicit path supplied via the aligned environment variable or
         // system property is checked before any search for the filename

@@ -108,7 +108,6 @@ public class CloudRequestFailedTests {
      * product, holding a property other than the one read.
      */
     // thenReturn has a varargs overload, so a generic Map is an unchecked array.
-    @SuppressWarnings("unchecked")
     private IPIntelligenceCloudEngine buildEngine() throws Exception {
         IPIntelligenceCloudEngine engine =
             new IPIntelligenceCloudEngineBuilder(loggerFactory).build();

@@ -94,7 +94,7 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
 /**
  * Provides a local HTTP API for IP Intelligence lookups, mirroring the endpoints of the
  * 51Degrees Cloud service. The pipeline contains the on-premise IP Intelligence engine
- * and a JSON builder element which serialises the results.
+ * and a JSON builder element which serializes the results.
  * <p>
  * The data file can be supplied as a command line argument. When no argument is given
  * the free Lite data file is used, and downloaded when it is missing.
@@ -122,8 +122,9 @@ public class GettingStartedApi extends HttpServlet {
 
     private static final String CONTACT_US = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-getting-started.api-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedapi.java&utm_term=enterprise-data-file";
 
-    private Pipeline pipeline;
-    private IPIntelligenceOnPremiseEngine engine;
+    // HttpServlet is Serializable, but this servlet is never serialized.
+    private transient Pipeline pipeline;
+    private transient IPIntelligenceOnPremiseEngine engine;
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
@@ -267,7 +268,8 @@ public class GettingStartedApi extends HttpServlet {
         // A Flow Data cannot be used by two threads at once. Work handed to
         // another thread or task gets the values it needs, read here on the
         // request's thread, not the Flow Data.
-        try (FlowData flowData = pipeline.createFlowData()) {
+        FlowData flowData = pipeline.createFlowData();
+        try {
             flowData.addEvidence(evidence);
             flowData.process();
 
@@ -280,6 +282,8 @@ public class GettingStartedApi extends HttpServlet {
             }
             response.setContentType("application/json");
             response.getWriter().write(jsonData.getJson());
+        } finally {
+            flowData.close();
         }
     }
 

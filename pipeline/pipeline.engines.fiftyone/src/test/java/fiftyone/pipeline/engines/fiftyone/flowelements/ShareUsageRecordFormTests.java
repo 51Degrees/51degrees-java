@@ -237,18 +237,12 @@ public class ShareUsageRecordFormTests {
 
     /**
      * DateSent is the time in UTC, whatever time zone the JVM runs in.
-     * {@code DATE_FMT} keeps the zone that was the default when the class
-     * loaded, so the test gives it the zone a JVM started in that zone
-     * has.
      */
     @Test
-    @SuppressWarnings("deprecation")
     public void DateSent_IsUtc_WhenTheDefaultTimeZoneIsNot() throws Exception {
         TimeZone defaultBefore = TimeZone.getDefault();
-        TimeZone formatBefore = ShareUsageBase.DATE_FMT.getTimeZone();
         try {
             TimeZone.setDefault(TimeZone.getTimeZone("Pacific/Kiritimati"));
-            ShareUsageBase.DATE_FMT.setTimeZone(TimeZone.getDefault());
             build();
 
             long before = System.currentTimeMillis();
@@ -265,7 +259,6 @@ public class ShareUsageRecordFormTests {
                 + utc.format(before));
         } finally {
             TimeZone.setDefault(defaultBefore);
-            ShareUsageBase.DATE_FMT.setTimeZone(formatBefore);
         }
     }
 

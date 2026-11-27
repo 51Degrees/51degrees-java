@@ -35,16 +35,21 @@ import java.util.zip.GZIPOutputStream;
 public interface DataUploader {
     /**
      * returns an OutputStream through which data may be uploaded
+     * @return the stream to write the data to
+     * @throws Exception if the connection could not be opened
      */
     OutputStream getOutputStream() throws Exception;
 
     /**
-     *
+     * The HTTP status code of the answer to the upload.
      * @return 200 for success
+     * @throws IOException if the answer could not be read
      */
     int getResponseCode() throws IOException;
 
     /**
+     * Returns the content of the answer, which is logged when the code is not
+     * 200, or an empty string if the uploader cannot give it.
      * @return the content of the answer, which is logged when the code is
      * not 200, or an empty string if the uploader cannot give it
      */

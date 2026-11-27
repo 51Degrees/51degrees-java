@@ -162,6 +162,11 @@ public class ClientsideJsonEndpointTests {
     private static class ValuesElement
         extends FlowElementBase<ElementDataBase, ElementPropertyMetaData> {
 
+        @Override
+        protected Class<ElementDataBase> getDataType() {
+            return ElementDataBase.class;
+        }
+
         ValuesElement() {
             super(LoggerFactory.getLogger(ValuesElement.class), null);
         }

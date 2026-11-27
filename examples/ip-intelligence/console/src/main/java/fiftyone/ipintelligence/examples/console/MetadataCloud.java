@@ -136,7 +136,8 @@ public class MetadataCloud {
             builder.setEndPoint(endPoint);
         }
 
-        try (Pipeline pipeline = builder.build()) {
+        Pipeline pipeline = builder.build();
+        try {
             PrintWriter writer = new PrintWriter(outputStream);
 
             logger.info("Listing Properties");
@@ -162,6 +163,8 @@ public class MetadataCloud {
             writer.flush();
 
             logger.info("All done");
+        } finally {
+            pipeline.close();
         }
     }
 

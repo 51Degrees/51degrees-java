@@ -31,10 +31,15 @@ public final class DerivedScriptFault implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    /** The name the script was given, or empty where it had none. */
     private final String script;
+    /** The built-in script's name, the file path, or "code". */
     private final String source;
+    /** The place in the document, or empty for the document as a whole. */
     private final String path;
+    /** The one based line, or 0 where the parser gave none. */
     private final int line;
+    /** What is wrong. */
     private final String message;
 
     /**
@@ -61,6 +66,7 @@ public final class DerivedScriptFault implements Serializable {
     }
 
     /**
+     * Returns the name the script was given, or empty where it had none.
      * @return the name the script was given, or empty where it had none
      */
     public String getScript() {
@@ -68,6 +74,7 @@ public final class DerivedScriptFault implements Serializable {
     }
 
     /**
+     * Returns the built-in script's name, the file path, or "code".
      * @return the built-in script's name, the file path, or "code"
      */
     public String getSource() {
@@ -75,6 +82,8 @@ public final class DerivedScriptFault implements Serializable {
     }
 
     /**
+     * Returns the place in the document, such as Rules[3].When.All[1], or empty
+     * for the document as a whole.
      * @return the place in the document, such as Rules[3].When.All[1], or
      * empty for the document as a whole
      */
@@ -83,6 +92,7 @@ public final class DerivedScriptFault implements Serializable {
     }
 
     /**
+     * Returns the one based line, or 0 where the parser gave none.
      * @return the one based line, or 0 where the parser gave none
      */
     public int getLine() {
@@ -90,6 +100,7 @@ public final class DerivedScriptFault implements Serializable {
     }
 
     /**
+     * Returns what is wrong.
      * @return what is wrong
      */
     public String getMessage() {

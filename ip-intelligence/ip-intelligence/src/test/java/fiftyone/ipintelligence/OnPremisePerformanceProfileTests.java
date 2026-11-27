@@ -105,7 +105,7 @@ public class OnPremisePerformanceProfileTests {
     /**
      * A pipeline builder with the profile and the concurrency left at their
      * defaults. Data updates and usage sharing are switched off, so that
-     * the test needs no licence key and no network, and neither touches
+     * the test needs no license key and no network, and neither touches
      * the profile.
      */
     private static IPIntelligenceOnPremisePipelineBuilder builder()

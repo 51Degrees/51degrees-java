@@ -66,6 +66,7 @@ import static fiftyone.pipeline.web.Constants.DEFAULT_JSON_PATH;
  */
 @Component
 public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
+    /** The Pipeline built from the options file. */
     public Pipeline pipeline;
 
     private final PipelineResultService resultService;
@@ -78,6 +79,20 @@ public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
     
     private final UACHService uachService;
 
+    /**
+     * Create the interceptor and build the Pipeline from the options file the
+     * configuration names.
+     *
+     * @param config the interceptor configuration
+     * @param resultService processes each request
+     * @param flowDataProvider gives the Flow Data for each request
+     * @param clientsidePropertyService serves the client-side JavaScript and
+     *    JSON
+     * @param fiftyOneJsService decides which requests get the JavaScript and
+     *    JSON
+     * @param uachService sets the User-Agent Client Hints response headers
+     * @throws RuntimeException if the Pipeline could not be built
+     */
     @Autowired
     public FiftyOneInterceptor(
         FiftyOneInterceptorConfig config,
@@ -133,6 +148,11 @@ public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
         fiftyOneJsService.setPaths(config.getJavaScriptPath(), jsonPath);
     }
 
+    /**
+     * Register the paths the client-side JavaScript and JSON are served from.
+     *
+     * @param viewControllerRegistry the registry to add the paths to
+     */
     public static void enableClientsideProperties(ViewControllerRegistry viewControllerRegistry) {
         viewControllerRegistry.addViewController("/" + CORE_JS_NAME);
         viewControllerRegistry.addViewController(DEFAULT_JSON_PATH);
@@ -211,6 +231,11 @@ public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
         }
     }
 
+    /**
+     * The service that serves the client-side JavaScript and JSON.
+     *
+     * @return the service
+     */
     public ClientsidePropertyService getClientsidePropertyService() {
         return clientsidePropertyService;
     }

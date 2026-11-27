@@ -10,7 +10,10 @@ param(
     [bool]$SeleniumContract = $true,
     # The branch of the shared Selenium contract tests to run, so a change
     # there can be tried here before it is merged.
-    [string]$SeleniumTestsRef = 'main'
+    [string]$SeleniumTestsRef = 'main',
+    # The runner variable naming the entry's JDK, which the tests run on.
+    # Maven compiles with JDK 17 of the same architecture.
+    [Parameter(Mandatory)][string]$JavaSDKEnvVar
 )
 $ErrorActionPreference = "Stop"
 # Each part's exit code is checked below, so one failing part does not stop
@@ -20,6 +23,8 @@ $PSNativeCommandUseErrorActionPreference = $false
 . "$PSScriptRoot/packages.ps1"
 
 $results = "$RepoName/test-results/integration"
+$compileJavaHome = Get-CompileJavaHome $JavaSDKEnvVar
+$testJvm = Get-TestJvmArgument
 $failed = @()
 
 # The examples take the libraries from Maven Central unless told otherwise.
@@ -41,7 +46,9 @@ try {
     # The cloud engine example calls the live cloud service. Its test reads
     # the key from _51DEGREES_RESOURCE_KEY_BESPOKE and gives it to the example
     # as _51DEGREES_RESOURCE_KEY.
-    mvn test @MavenOptions -DfailIfNoTests=false "-Dsurefire.failIfNoSpecifiedTests=false" -Dtest=ExampleTests
+    Invoke-WithJavaHome $compileJavaHome {
+        mvn test @MavenOptions $testJvm -DfailIfNoTests=false "-Dsurefire.failIfNoSpecifiedTests=false" -Dtest=ExampleTests
+    }
     if ($LASTEXITCODE -ne 0) { $failed += 'pipeline developer examples' }
 } finally {
     Pop-Location
@@ -59,7 +66,9 @@ if ($Version) {
         Write-Host "::group::$example against $($versionArgs -join ' ')"
         Push-Location "$RepoName/$example"
         try {
-            mvn clean test @MavenOptions @versionArgs
+            Invoke-WithJavaHome $compileJavaHome {
+                mvn clean test @MavenOptions $testJvm @versionArgs
+            }
             if ($LASTEXITCODE -ne 0) { $failed += $example }
         } finally {
             Pop-Location
@@ -87,7 +96,9 @@ function Invoke-ContractTests {
     $example = $null
     Push-Location "$RepoName/examples/device-detection"
     try {
-        mvn @MavenOptions -pl $Module -am package -DskipTests @versionArgs
+        Invoke-WithJavaHome $compileJavaHome {
+            mvn @MavenOptions -pl $Module -am package -DskipTests @versionArgs
+        }
         if ($LASTEXITCODE -ne 0) { throw "Building the $Label web example failed." }
         $jar = (Get-ChildItem "$Module/target/*-jar-with-dependencies.jar" | Select-Object -First 1).FullName
         # The port the example listens on, under the name the shared suite

@@ -26,6 +26,9 @@ package fiftyone.pipeline.engines.fiftyone.flowelements;
  * Constants used by 51Degrees aspect engines.
  */
 public class Constants {
+    /** Create a new instance. */
+    public Constants() {
+    }
 
     /**
      * The maximum length, in characters, of a piece of evidence's value which
@@ -65,7 +68,11 @@ public class Constants {
      */
     public static final boolean SHARE_USAGE_DEFAULT_ENABLED = true;
 
+    /**
+     * Default for how long the same evidence is not shared again, in minutes.
+     */
     public static final int SHARE_USAGE_DEFAULT_REPEAT_EVIDENCE_MINUTES = 20;
+    /** Default proportion of requests shared, where 1.0 is all of them. */
     public static final double SHARE_USAGE_DEFAULT_SHARE_PERCENTAGE = 1.0;
 
     /**

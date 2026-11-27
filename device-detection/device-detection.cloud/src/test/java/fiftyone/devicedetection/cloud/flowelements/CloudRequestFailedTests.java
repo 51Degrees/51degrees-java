@@ -132,7 +132,6 @@ public class CloudRequestFailedTests {
      * holding IsMobile alone.
      */
     // thenReturn has a varargs overload, so a generic Map is an unchecked array.
-    @SuppressWarnings("unchecked")
     private DeviceDetectionCloudEngine buildEngine() throws Exception {
         DeviceDetectionCloudEngine engine =
             new DeviceDetectionCloudEngineBuilder(loggerFactory).build();

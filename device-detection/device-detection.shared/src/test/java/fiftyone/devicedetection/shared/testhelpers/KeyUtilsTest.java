@@ -57,16 +57,26 @@ public class KeyUtilsTest {
         }
     }
 
+    /**
+     * The deprecated KeyUtils.getNamedKey reads the environment under the
+     * name given.
+     * @deprecated tests the deprecated {@link KeyUtils}.
+     */
+    @Deprecated
     @Test
-    @SuppressWarnings("deprecation")
     public void publishedGetNamedKey_ReadsTheEnvironmentUnderTheNameGiven() {
         assertEquals("from-environment", KeyUtils.getNamedKey(
             "KEY_UTILS_TEST_NAME", UPPER_CASE_ONLY::get));
         assertNull(KeyUtils.getNamedKey(NAME, UPPER_CASE_ONLY::get));
     }
 
+    /**
+     * The deprecated KeyUtils.getNamedKey reads the system property when
+     * the environment has no value under the name given.
+     * @deprecated tests the deprecated {@link KeyUtils}.
+     */
+    @Deprecated
     @Test
-    @SuppressWarnings("deprecation")
     public void publishedGetNamedKey_NotInTheEnvironment_ReadsTheSystemProperty() {
         System.setProperty(NAME, "from-property");
         try {

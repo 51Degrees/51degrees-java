@@ -36,28 +36,16 @@ public class TypedKeyDefault<T> implements TypedKey<T> {
     private final Class<T> type;
 
     /**
-     *  Construct a new instance with the name provided, and {@link Object} as
-     *  the type
-     * @param name the name of the key
-     */
-    @SuppressWarnings("unchecked")
-    public TypedKeyDefault(String name) {
-        this(name, Object.class);
-    }
-
-    /**
      * Construct a new instance with the name and type provided.
      * @param name the name of the key
-     * @param type the type of the key
+     * @param type the type of the value the key gives, which reads through
+     *             the key are checked against
      */
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-    public TypedKeyDefault(String name, Class type) {
+    public TypedKeyDefault(String name, Class<T> type) {
         //noinspection ConstantConditions
         this.name = getNotNull(name, "Name must not be null").trim();
         guard(name.isEmpty(), "Name must not be empty");
-        // Not checked as argument cannot be constrained due to the non-typed
-        // constructor
-        this.type = type;
+        this.type = getNotNull(type, "Type must not be null");
     }
 
     @Override

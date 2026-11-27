@@ -36,10 +36,13 @@ public class PropertyMissingException extends RuntimeException {
      */
     private static final long serialVersionUID = -2395447752714222366L;
 
+    /** Name of the property that has no value. */
     private String propertyName = null;
 
+    /** Why the property has no value. */
     private MissingPropertyReason reason;
 
+    /** Create a new instance with no message. */
     public PropertyMissingException() {
         super();
     }

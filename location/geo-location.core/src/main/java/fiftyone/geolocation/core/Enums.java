@@ -22,9 +22,17 @@
 
 package fiftyone.geolocation.core;
 
+/** Enumerations used by the location engines. */
 public class Enums {
+    /** Create a new instance. */
+    public Enums() {
+    }
+
+    /** The providers of location data. */
     public enum GeoLocationProvider {
+        /** Location data from 51Degrees. */
         FiftyOneDegrees,
+        /** Location data from Digital Element. */
         DigitalElement
     }
 }

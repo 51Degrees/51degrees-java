@@ -167,7 +167,6 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     /**
      * Constructor with default for everything
      */
-    @SuppressWarnings("unused")
     public DataUpdateServiceDefault() {
         this(null, null, null, null);
     }
@@ -545,9 +544,11 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                                         watchedFileOpenTimeoutMillis);
                         while (fileLockable == false &&
                                 System.nanoTime() - deadline < 0) {
-                            try (BinaryReader reader = fileWrapperFactory.build(
-                                    aspectDataFile.getDataFilePath()).getReader()) {
+                            try {
+                                BinaryReader reader = fileWrapperFactory.build(
+                                    aspectDataFile.getDataFilePath()).getReader();
                                 fileLockable = true;
+                                reader.close();
                             } catch (IOException ignored) {
                                 try {
                                     Thread.sleep(WATCHED_FILE_OPEN_PAUSE_MILLIS);

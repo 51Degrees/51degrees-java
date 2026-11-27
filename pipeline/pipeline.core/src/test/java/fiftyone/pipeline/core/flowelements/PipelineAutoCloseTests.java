@@ -50,15 +50,14 @@ public class PipelineAutoCloseTests {
     public void autoCloseOff_SharedElementStaysOpen() throws Exception {
         MultiplyByFiveElement shared =
             new MultiplyByFiveElement(mock(Logger.class));
-        try (Pipeline first = new PipelineBuilder(loggerFactory)
-                .setAutoCloseElements(false)
-                .addFlowElement(shared)
-                .build();
-             Pipeline second = new PipelineBuilder(loggerFactory)
+        Pipeline first = new PipelineBuilder(loggerFactory)
+            .setAutoCloseElements(false)
+            .addFlowElement(shared)
+            .build();
+        try (Pipeline second = new PipelineBuilder(loggerFactory)
                 .setAutoCloseElements(false)
                 .addFlowElement(shared)
                 .build()) {
-            // Closing again at the end of the block does nothing.
             first.close();
 
             assertFalse("Closing one Pipeline closed the shared element.",
@@ -69,6 +68,8 @@ public class PipelineAutoCloseTests {
                 assertEquals(10, flowData.getFromElement(shared).getResult());
             }
         } finally {
+            // Closing again does nothing.
+            first.close();
             shared.close();
         }
     }
@@ -77,11 +78,14 @@ public class PipelineAutoCloseTests {
     public void autoCloseOn_ClosesTheElement() throws Exception {
         MultiplyByFiveElement element =
             new MultiplyByFiveElement(mock(Logger.class));
-        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
-                .setAutoCloseElements(true)
-                .addFlowElement(element)
-                .build()) {
+        Pipeline pipeline = new PipelineBuilder(loggerFactory)
+            .setAutoCloseElements(true)
+            .addFlowElement(element)
+            .build();
+        try {
             assertFalse(element.isClosed());
+        } finally {
+            pipeline.close();
         }
         assertTrue(element.isClosed());
     }

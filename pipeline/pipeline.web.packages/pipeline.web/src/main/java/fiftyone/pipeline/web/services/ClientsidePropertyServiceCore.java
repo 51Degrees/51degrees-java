@@ -209,13 +209,12 @@ public interface ClientsidePropertyServiceCore {
         /**
          * Initialise the service.
          */
-        @SuppressWarnings("rawtypes")
         protected final void init() {
             List<String> headers = new ArrayList<>();
             boolean complete = true;
             // Get evidence filters for all elements.
             List<EvidenceKeyFilter> filters = new ArrayList<>();
-            for (FlowElement element : pipeline.getFlowElements()) {
+            for (FlowElement<?, ?> element : pipeline.getFlowElements()) {
                 complete = complete && element.hasLoadedProperties();
                 filters.add(element.getEvidenceKeyFilter());
             }
@@ -302,6 +301,14 @@ public interface ClientsidePropertyServiceCore {
             serveContent(request, response, ContentTypes.Json);
         }
 
+        /**
+         * Serve the JavaScript or JSON for the request.
+         *
+         * @param request the request
+         * @param response the response to write to
+         * @param contentType whether to serve JavaScript or JSON
+         * @throws IOException if the response could not be written
+         */
         public void serveContent(
             HttpServletRequest request,
             HttpServletResponse response,

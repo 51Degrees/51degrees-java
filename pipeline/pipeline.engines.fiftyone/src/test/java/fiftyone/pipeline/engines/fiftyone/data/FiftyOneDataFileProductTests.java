@@ -217,13 +217,11 @@ public class FiftyOneDataFileProductTests {
         return configuration;
     }
 
-    @SuppressWarnings("unchecked")
     private static FiftyOneDataFileDefault dataFile(String type, String tier) {
         FiftyOneDataFileDefault file = new FiftyOneDataFileDefault();
         file.setDataUpdateDownloadType(type);
         if (tier != null) {
-            OnPremiseAspectEngine<? extends AspectData,
-                ? extends AspectPropertyMetaData> engine =
+            OnPremiseAspectEngine<?, ?> engine =
                 mock(OnPremiseAspectEngine.class);
             when(engine.getDataSourceTier()).thenReturn(tier);
             file.setEngine(engine);

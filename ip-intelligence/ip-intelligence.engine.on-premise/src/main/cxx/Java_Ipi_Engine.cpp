@@ -319,6 +319,19 @@ using namespace FiftyoneDegrees::IpIntelligence;
 #include <map>
 #include <stdexcept>
 
+
+#include <cstring>
+  template <typename P> static P fiftyoneFromJlong(jlong value) {
+    P pointer = 0;
+    memcpy(&pointer, &value, sizeof(pointer));
+    return pointer;
+  }
+  template <typename P> static jlong fiftyoneToJlong(P pointer) {
+    jlong value = 0;
+    memcpy(&value, &pointer, sizeof(pointer));
+    return value;
+  }
+
 SWIGINTERN std::map< std::string,std::string,std::less< std::string > >::iterator std_map_Sl_std_string_Sc_std_string_Sg__iterator_getNextUnchecked(std::map< std::string,std::string >::iterator *self){
           std::map< std::string, std::string, std::less< std::string > >::iterator copy = (*self);
           return ++copy;
@@ -913,27 +926,36 @@ SWIGINTERN int ResultsIpi_copyValueAsUTF8String(ResultsIpi *self,int requiredPro
         return required;
     }
 
+  static std::string fiftyoneBytesToString(const char bytes[], size_t length) {
+    size_t used = 0;
+    while (used < length && bytes[used] != '\0') {
+      used++;
+    }
+    return used == 0 ? std::string() : std::string(bytes, used);
+  }
+
+
   void Evidence_AddFromBytes(EvidenceBase *evidence, const char key[], size_t keyLength, const char value[], size_t valueLength) {
-    (*evidence)[key] = value;
+    (*evidence)[fiftyoneBytesToString(key, keyLength)] = fiftyoneBytesToString(value, valueLength);
   }
 
   Value<std::string> Results_GetValueAsString(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->getValueAsString(propertyName);
+    return results->getValueAsString(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
   Value<std::vector<std::string>> Results_GetValues(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->getValues(propertyName);
+    return results->getValues(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
   Value<bool> Results_GetValueAsBool(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->getValueAsBool(propertyName);
+    return results->getValueAsBool(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
   Value<int> Results_GetValueAsInteger(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->getValueAsInteger(propertyName);
+    return results->getValueAsInteger(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
   Value<double> Results_GetValueAsDouble(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->getValueAsDouble(propertyName);
+    return results->getValueAsDouble(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
   bool Results_ContainsProperty(ResultsBase *results, const char propertyName[], size_t propertyNameLength) {
-    return results->containsProperty(propertyName);
+    return results->containsProperty(fiftyoneBytesToString(propertyName, propertyNameLength));
   }
 
 
@@ -948,7 +970,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   result = (std::map< std::string,std::string > *)new std::map< std::string,std::string >();
-  *(std::map< std::string,std::string > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -961,13 +983,13 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string > **)&jarg1;
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string > * >(jarg1);
   if (!arg1) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::map< std::string,std::string > const & is null");
     return 0;
   } 
   result = (std::map< std::string,std::string > *)new std::map< std::string,std::string >((std::map< std::string,std::string > const &)*arg1);
-  *(std::map< std::string,std::string > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -980,9 +1002,9 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string >::iterator **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string >::iterator * >(jarg1); 
   result = std_map_Sl_std_string_Sc_std_string_Sg__iterator_getNextUnchecked(arg1);
-  *(std::map< std::string,std::string,std::less< std::string > >::iterator **)&jresult = new std::map< std::string,std::string,std::less< std::string > >::iterator(result); 
+  jresult = fiftyoneToJlong< std::map< std::string,std::string,std::less< std::string > >::iterator * >(new std::map< std::string,std::string,std::less< std::string > >::iterator(result)); 
   return jresult;
 }
 
@@ -998,8 +1020,8 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(std::map< std::string,std::string >::iterator **)&jarg1; 
-  argp2 = *(std::map< std::string,std::string >::iterator **)&jarg2; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string >::iterator * >(jarg1); 
+  argp2 = fiftyoneFromJlong< std::map< std::string,std::string >::iterator * >(jarg2);
   if (!argp2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Attempt to dereference null std::map< std::string,std::string >::iterator");
     return 0;
@@ -1019,7 +1041,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string >::iterator **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string >::iterator * >(jarg1); 
   result = std_map_Sl_std_string_Sc_std_string_Sg__iterator_getKey((std::map< std::string,std::string >::iterator const *)arg1);
   jresult = jenv->NewStringUTF((&result)->c_str()); 
   return jresult;
@@ -1034,7 +1056,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string >::iterator **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string >::iterator * >(jarg1); 
   result = std_map_Sl_std_string_Sc_std_string_Sg__iterator_getValue((std::map< std::string,std::string >::iterator const *)arg1);
   jresult = jenv->NewStringUTF((&result)->c_str()); 
   return jresult;
@@ -1048,7 +1070,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string >::iterator **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string >::iterator * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return ;
@@ -1067,7 +1089,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(std::map< std::string,std::string >::iterator **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string >::iterator * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -1129,7 +1151,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string > * >(jarg1); 
   result = (bool)((std::map< std::string,std::string > const *)arg1)->empty();
   jresult = (jboolean)result; 
   return jresult;
@@ -1142,7 +1164,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string > * >(jarg1); 
   (arg1)->clear();
 }
 
@@ -1156,7 +1178,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string > * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -1167,7 +1189,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
   result = (arg1)->find((std::string const &)*arg2);
-  *(std::map< std::string,std::string >::iterator **)&jresult = new std::map< std::string,std::string >::iterator(result); 
+  jresult = fiftyoneToJlong< std::map< std::string,std::string >::iterator * >(new std::map< std::string,std::string >::iterator(result)); 
   return jresult;
 }
 
@@ -1180,9 +1202,9 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string > * >(jarg1); 
   result = (arg1)->begin();
-  *(std::map< std::string,std::string >::iterator **)&jresult = new std::map< std::string,std::string >::iterator(result); 
+  jresult = fiftyoneToJlong< std::map< std::string,std::string >::iterator * >(new std::map< std::string,std::string >::iterator(result)); 
   return jresult;
 }
 
@@ -1195,9 +1217,9 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string > * >(jarg1); 
   result = (arg1)->end();
-  *(std::map< std::string,std::string >::iterator **)&jresult = new std::map< std::string,std::string >::iterator(result); 
+  jresult = fiftyoneToJlong< std::map< std::string,std::string >::iterator * >(new std::map< std::string,std::string >::iterator(result)); 
   return jresult;
 }
 
@@ -1210,7 +1232,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string > * >(jarg1); 
   try {
     result = std_map_Sl_std_string_Sc_std_string_Sg__sizeImpl((std::map< std::string,std::string > const *)arg1);
   } catch(std::out_of_range &_e) {
@@ -1231,7 +1253,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string > * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -1255,7 +1277,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::map< std::string,std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string > * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return ;
@@ -1287,8 +1309,8 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(std::map< std::string,std::string > **)&jarg1; 
-  argp2 = *(std::map< std::string,std::string,std::less< std::string > >::iterator **)&jarg2; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string > * >(jarg1); 
+  argp2 = fiftyoneFromJlong< std::map< std::string,std::string,std::less< std::string > >::iterator * >(jarg2);
   if (!argp2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Attempt to dereference null std::map< std::string,std::string,std::less< std::string > >::iterator const");
     return ;
@@ -1303,7 +1325,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(std::map< std::string,std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::map< std::string,std::string > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -1364,7 +1386,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   result = (std::vector< std::string > *)new std::vector< std::string >();
-  *(std::vector< std::string > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -1377,13 +1399,13 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1;
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1);
   if (!arg1) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< std::string > const & is null");
     return 0;
   } 
   result = (std::vector< std::string > *)new std::vector< std::string >((std::vector< std::string > const &)*arg1);
-  *(std::vector< std::string > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -1396,7 +1418,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   result = (bool)((std::vector< std::string > const *)arg1)->empty();
   jresult = (jboolean)result; 
   return jresult;
@@ -1409,7 +1431,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   (arg1)->clear();
 }
 
@@ -1438,7 +1460,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
     SWIG_JavaThrowException(jenv, SWIG_JavaIndexOutOfBoundsException, (&_e)->what());
     return 0;
   }
-  *(std::vector< std::string > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -1451,7 +1473,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   try {
     result = std_vector_Sl_std_string_Sg__doCapacity(arg1);
   } catch(std::out_of_range &_e) {
@@ -1470,7 +1492,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   arg2 = jarg2; 
   try {
     std_vector_Sl_std_string_Sg__doReserve(arg1,SWIG_STD_MOVE(*(&arg2)));
@@ -1492,7 +1514,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   try {
     result = std_vector_Sl_std_string_Sg__doSize((std::vector< std::string > const *)arg1);
   } catch(std::out_of_range &_e) {
@@ -1511,7 +1533,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return ;
@@ -1533,7 +1555,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   arg2 = jarg2; 
   if(!jarg3) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
@@ -1562,7 +1584,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   arg2 = jarg2; 
   try {
     result = std_vector_Sl_std_string_Sg__doRemove(arg1,SWIG_STD_MOVE(*(&arg2)));
@@ -1584,7 +1606,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   arg2 = jarg2; 
   try {
     result = (std::vector< std::string >::value_type *) &std_vector_Sl_std_string_Sg__doGet(arg1,SWIG_STD_MOVE(*(&arg2)));
@@ -1607,7 +1629,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   arg2 = jarg2; 
   if(!jarg3) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
@@ -1637,7 +1659,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   arg2 = jarg2; 
   arg3 = jarg3; 
   try {
@@ -1654,7 +1676,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -1764,7 +1786,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(RequiredPropertiesConfig **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -1777,7 +1799,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< std::string > * >(jarg1); 
   {
     try {
       result = (RequiredPropertiesConfig *)new RequiredPropertiesConfig((std::vector< std::string > const *)arg1);;
@@ -1828,7 +1850,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(RequiredPropertiesConfig **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -1895,7 +1917,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(RequiredPropertiesConfig **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   if (arg1) jenv->ReleaseStringUTFChars(jarg1, (const char *)arg1);
   return jresult;
 }
@@ -1906,7 +1928,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(RequiredPropertiesConfig **)&jarg1; 
+  arg1 = fiftyoneFromJlong< RequiredPropertiesConfig * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -1968,7 +1990,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(RequiredPropertiesConfig **)&jarg1; 
+  arg1 = fiftyoneFromJlong< RequiredPropertiesConfig * >(jarg1); 
   {
     try {
       result = (arg1)->getProperties();;
@@ -2019,7 +2041,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< std::string > **)&jresult = new std::vector< std::string >(result); 
+  jresult = fiftyoneToJlong< std::vector< std::string > * >(new std::vector< std::string >(result)); 
   return jresult;
 }
 
@@ -2080,7 +2102,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::string > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -2093,7 +2115,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::string > * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->hasValue();;
@@ -2157,7 +2179,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::string > * >(jarg1); 
   {
     try {
       result = (char *)(arg1)->getNoValueMessage();;
@@ -2221,7 +2243,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::string > * >(jarg1); 
   {
     try {
       result = (arg1)->getValue();;
@@ -2282,7 +2304,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Value< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::string > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -2392,7 +2414,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< bool > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -2405,7 +2427,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< bool > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< bool > * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->hasValue();;
@@ -2469,7 +2491,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< bool > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< bool > * >(jarg1); 
   {
     try {
       result = (char *)(arg1)->getNoValueMessage();;
@@ -2533,7 +2555,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< bool > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< bool > * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getValue();;
@@ -2594,7 +2616,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Value< bool > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< bool > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -2704,7 +2726,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< int > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -2717,7 +2739,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< int > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< int > * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->hasValue();;
@@ -2781,7 +2803,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< int > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< int > * >(jarg1); 
   {
     try {
       result = (char *)(arg1)->getNoValueMessage();;
@@ -2845,7 +2867,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< int > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< int > * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getValue();;
@@ -2906,7 +2928,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Value< int > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< int > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -3016,7 +3038,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< std::string > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -3029,7 +3051,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< std::string > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< std::string > > * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->hasValue();;
@@ -3093,7 +3115,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< std::string > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< std::string > > * >(jarg1); 
   {
     try {
       result = (char *)(arg1)->getNoValueMessage();;
@@ -3157,7 +3179,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< std::string > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< std::string > > * >(jarg1); 
   {
     try {
       result = (arg1)->getValue();;
@@ -3208,7 +3230,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< std::string > **)&jresult = new std::vector< std::string >(result); 
+  jresult = fiftyoneToJlong< std::vector< std::string > * >(new std::vector< std::string >(result)); 
   return jresult;
 }
 
@@ -3218,7 +3240,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Value< std::vector< std::string > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< std::string > > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -3328,7 +3350,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< double > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -3341,7 +3363,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< double > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< double > * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->hasValue();;
@@ -3405,7 +3427,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< double > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< double > * >(jarg1); 
   {
     try {
       result = (char *)(arg1)->getNoValueMessage();;
@@ -3469,7 +3491,7 @@ SWIGEXPORT jdouble JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< double > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< double > * >(jarg1); 
   {
     try {
       result = (double)(arg1)->getValue();;
@@ -3530,7 +3552,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Value< double > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< double > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -3589,7 +3611,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -3651,7 +3673,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getAvailableProperties();;
@@ -3716,7 +3738,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -3789,7 +3811,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   {
     try {
       result = (arg1)->getProperties();;
@@ -3840,7 +3862,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< std::string > **)&jresult = new std::vector< std::string >(result); 
+  jresult = fiftyoneToJlong< std::vector< std::string > * >(new std::vector< std::string >(result)); 
   return jresult;
 }
 
@@ -3854,7 +3876,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -3920,7 +3942,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -3980,7 +4002,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< std::string > > **)&jresult = new Value< std::vector< std::string > >(result); 
+  jresult = fiftyoneToJlong< Value< std::vector< std::string > > * >(new Value< std::vector< std::string > >(result)); 
   return jresult;
 }
 
@@ -3994,7 +4016,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -4046,7 +4068,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< std::string > > **)&jresult = new Value< std::vector< std::string > >(result); 
+  jresult = fiftyoneToJlong< Value< std::vector< std::string > > * >(new Value< std::vector< std::string > >(result)); 
   return jresult;
 }
 
@@ -4060,7 +4082,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -4120,7 +4142,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::string > **)&jresult = new Value< std::string >(result); 
+  jresult = fiftyoneToJlong< Value< std::string > * >(new Value< std::string >(result)); 
   return jresult;
 }
 
@@ -4134,7 +4156,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -4186,7 +4208,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::string > **)&jresult = new Value< std::string >(result); 
+  jresult = fiftyoneToJlong< Value< std::string > * >(new Value< std::string >(result)); 
   return jresult;
 }
 
@@ -4200,7 +4222,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -4260,7 +4282,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< bool > **)&jresult = new Value< bool >(result); 
+  jresult = fiftyoneToJlong< Value< bool > * >(new Value< bool >(result)); 
   return jresult;
 }
 
@@ -4274,7 +4296,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -4326,7 +4348,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< bool > **)&jresult = new Value< bool >(result); 
+  jresult = fiftyoneToJlong< Value< bool > * >(new Value< bool >(result)); 
   return jresult;
 }
 
@@ -4340,7 +4362,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -4400,7 +4422,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< int > **)&jresult = new Value< int >(result); 
+  jresult = fiftyoneToJlong< Value< int > * >(new Value< int >(result)); 
   return jresult;
 }
 
@@ -4414,7 +4436,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -4466,7 +4488,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< int > **)&jresult = new Value< int >(result); 
+  jresult = fiftyoneToJlong< Value< int > * >(new Value< int >(result)); 
   return jresult;
 }
 
@@ -4480,7 +4502,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -4540,7 +4562,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< double > **)&jresult = new Value< double >(result); 
+  jresult = fiftyoneToJlong< Value< double > * >(new Value< double >(result)); 
   return jresult;
 }
 
@@ -4554,7 +4576,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -4606,7 +4628,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< double > **)&jresult = new Value< double >(result); 
+  jresult = fiftyoneToJlong< Value< double > * >(new Value< double >(result)); 
   return jresult;
 }
 
@@ -4620,7 +4642,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -4680,7 +4702,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< bool > **)&jresult = new Value< bool >(result); 
+  jresult = fiftyoneToJlong< Value< bool > * >(new Value< bool >(result)); 
   return jresult;
 }
 
@@ -4694,7 +4716,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -4746,7 +4768,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< bool > **)&jresult = new Value< bool >(result); 
+  jresult = fiftyoneToJlong< Value< bool > * >(new Value< bool >(result)); 
   return jresult;
 }
 
@@ -4760,7 +4782,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -4820,7 +4842,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< int > **)&jresult = new Value< int >(result); 
+  jresult = fiftyoneToJlong< Value< int > * >(new Value< int >(result)); 
   return jresult;
 }
 
@@ -4834,7 +4856,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -4886,7 +4908,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< int > **)&jresult = new Value< int >(result); 
+  jresult = fiftyoneToJlong< Value< int > * >(new Value< int >(result)); 
   return jresult;
 }
 
@@ -4900,7 +4922,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -4960,7 +4982,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< double > **)&jresult = new Value< double >(result); 
+  jresult = fiftyoneToJlong< Value< double > * >(new Value< double >(result)); 
   return jresult;
 }
 
@@ -4974,7 +4996,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -5026,7 +5048,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< double > **)&jresult = new Value< double >(result); 
+  jresult = fiftyoneToJlong< Value< double > * >(new Value< double >(result)); 
   return jresult;
 }
 
@@ -5039,7 +5061,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Date **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Date * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getYear();;
@@ -5103,7 +5125,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Date **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Date * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getMonth();;
@@ -5167,7 +5189,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Date **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Date * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getDay();;
@@ -5228,7 +5250,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Date **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Date * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -5290,7 +5312,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getName();;
@@ -5354,7 +5376,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getDataFilesWherePresent();;
@@ -5405,7 +5427,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< std::string > **)&jresult = new std::vector< std::string >(result); 
+  jresult = fiftyoneToJlong< std::vector< std::string > * >(new std::vector< std::string >(result)); 
   return jresult;
 }
 
@@ -5418,7 +5440,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getType();;
@@ -5482,7 +5504,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getCategory();;
@@ -5546,7 +5568,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getUrl();;
@@ -5610,7 +5632,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getAvailable();;
@@ -5674,7 +5696,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getDisplayOrder();;
@@ -5738,7 +5760,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getIsMandatory();;
@@ -5802,7 +5824,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getIsList();;
@@ -5866,7 +5888,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getIsObsolete();;
@@ -5930,7 +5952,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getShow();;
@@ -5994,7 +6016,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getShowValues();;
@@ -6058,7 +6080,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getDescription();;
@@ -6119,7 +6141,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(PropertyMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< PropertyMetaData * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -6181,7 +6203,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ComponentMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ComponentMetaData * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getComponentIdAsInt();;
@@ -6245,7 +6267,7 @@ SWIGEXPORT int JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_swi
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ComponentMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ComponentMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getComponentId();;
@@ -6309,7 +6331,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ComponentMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ComponentMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getName();;
@@ -6370,7 +6392,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(ComponentMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ComponentMetaData * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -6432,7 +6454,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ProfileMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ProfileMetaData * >(jarg1); 
   {
     try {
       result = (uint32_t)(arg1)->getProfileId();;
@@ -6493,7 +6515,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(ProfileMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ProfileMetaData * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -6603,7 +6625,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< uint8_t > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -6616,7 +6638,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1;
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1);
   if (!arg1) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< uint8_t > const & is null");
     return 0;
@@ -6671,7 +6693,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< uint8_t > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -6684,7 +6706,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   {
     try {
       result = (bool)((std::vector< uint8_t > const *)arg1)->empty();;
@@ -6746,7 +6768,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   {
     try {
       (arg1)->clear();;
@@ -6867,7 +6889,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< uint8_t > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -6880,7 +6902,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   {
     try {
       try {
@@ -6948,7 +6970,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -7019,7 +7041,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   {
     try {
       try {
@@ -7088,7 +7110,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   temp2 = (std::vector< unsigned char >::value_type)jarg2; 
   arg2 = &temp2; 
   {
@@ -7153,7 +7175,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   arg2 = jarg2; 
   temp3 = (std::vector< unsigned char >::value_type)jarg3; 
   arg3 = &temp3; 
@@ -7224,7 +7246,7 @@ SWIGEXPORT jshort JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -7295,7 +7317,7 @@ SWIGEXPORT jshort JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -7368,7 +7390,7 @@ SWIGEXPORT jshort JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   arg2 = jarg2; 
   temp3 = (std::vector< unsigned char >::value_type)jarg3; 
   arg3 = &temp3; 
@@ -7440,7 +7462,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   arg2 = jarg2; 
   arg3 = jarg3; 
   {
@@ -7501,19 +7523,30 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
 }
 
 
-SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_swig_IpIntelligenceOnPremiseEngineModuleJNI_UTF8StringSwig_1copyToArray(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2, jint jarg3) {
+SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_swig_IpIntelligenceOnPremiseEngineModuleJNI_UTF8StringSwig_1copyToArray(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jbyteArray jarg2) {
   jint jresult = 0 ;
   std::vector< uint8_t > *arg1 = 0 ;
   unsigned char *arg2 = (unsigned char *)0 ;
   int arg3 ;
+  std::vector< unsigned char > buffer2 ;
   int result;
   
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
-  arg2 = *(unsigned char **)&jarg2; 
-  arg3 = (int)jarg3; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
+  {
+    if (!jarg2) {
+      SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "The array to copy into is null");
+      return 0;
+    }
+    arg3 = (int)jenv->GetArrayLength(jarg2);
+    buffer2.resize((size_t)arg3);
+    if (arg3 > 0) {
+      jenv->GetByteArrayRegion(jarg2, 0, arg3, reinterpret_cast<jbyte *>(buffer2.data()));
+    }
+    arg2 = buffer2.data();
+  }
   {
     try {
       result = (int)std_vector_Sl_uint8_t_Sg__copyToArray(arg1,arg2,arg3);;
@@ -7565,6 +7598,11 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
     }
   }
   jresult = (jint)result; 
+  {
+    if (arg3 > 0) {
+      jenv->SetByteArrayRegion(jarg2, 0, arg3, reinterpret_cast<const jbyte *>(buffer2.data()));
+    }
+  }
   
   return jresult;
 }
@@ -7575,7 +7613,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(std::vector< uint8_t > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -7703,7 +7741,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(ValueMetaDataKey **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -7812,7 +7850,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(ValueMetaDataKey **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   
   return jresult;
 }
@@ -7826,7 +7864,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ValueMetaDataKey **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ValueMetaDataKey * >(jarg1); 
   {
     try {
       result = (arg1)->getPropertyName();;
@@ -7890,7 +7928,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ValueMetaDataKey **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ValueMetaDataKey * >(jarg1); 
   {
     try {
       result = (arg1)->getValueName();;
@@ -7951,7 +7989,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(ValueMetaDataKey **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ValueMetaDataKey * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -8013,7 +8051,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ValueMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ValueMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getName();;
@@ -8077,7 +8115,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ValueMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ValueMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getDescription();;
@@ -8141,7 +8179,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ValueMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ValueMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getUrl();;
@@ -8205,7 +8243,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ValueMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ValueMetaData * >(jarg1); 
   {
     try {
       result = (arg1)->getUtf8ValueName();;
@@ -8256,7 +8294,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< uint8_t > **)&jresult = new std::vector< uint8_t >(result); 
+  jresult = fiftyoneToJlong< std::vector< uint8_t > * >(new std::vector< uint8_t >(result)); 
   return jresult;
 }
 
@@ -8266,7 +8304,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(ValueMetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ValueMetaData * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -8325,7 +8363,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Collection< byte,ComponentMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< byte,ComponentMetaData > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -8388,7 +8426,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Collection< byte,ComponentMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< byte,ComponentMetaData > * >(jarg1); 
   {
     arg2 = (byte)jarg2;
   }
@@ -8442,7 +8480,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(ComponentMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   
   return jresult;
 }
@@ -8457,7 +8495,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Collection< byte,ComponentMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< byte,ComponentMetaData > * >(jarg1); 
   arg2 = (uint32_t)jarg2; 
   {
     try {
@@ -8509,7 +8547,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(ComponentMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -8522,7 +8560,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Collection< byte,ComponentMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< byte,ComponentMetaData > * >(jarg1); 
   {
     try {
       result = (uint32_t)(arg1)->getSize();;
@@ -8583,7 +8621,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Collection< std::string,PropertyMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< std::string,PropertyMetaData > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -8646,7 +8684,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Collection< std::string,PropertyMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< std::string,PropertyMetaData > * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -8705,7 +8743,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(PropertyMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -8719,7 +8757,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Collection< std::string,PropertyMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< std::string,PropertyMetaData > * >(jarg1); 
   arg2 = (uint32_t)jarg2; 
   {
     try {
@@ -8771,7 +8809,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(PropertyMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -8784,7 +8822,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Collection< std::string,PropertyMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< std::string,PropertyMetaData > * >(jarg1); 
   {
     try {
       result = (uint32_t)(arg1)->getSize();;
@@ -8845,7 +8883,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Collection< uint32_t,ProfileMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< uint32_t,ProfileMetaData > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -8908,7 +8946,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Collection< uint32_t,ProfileMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< uint32_t,ProfileMetaData > * >(jarg1); 
   arg2 = (unsigned int)jarg2; 
   {
     try {
@@ -8960,7 +8998,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(ProfileMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -8974,7 +9012,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Collection< uint32_t,ProfileMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< uint32_t,ProfileMetaData > * >(jarg1); 
   arg2 = (uint32_t)jarg2; 
   {
     try {
@@ -9026,7 +9064,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(ProfileMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9039,7 +9077,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Collection< uint32_t,ProfileMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< uint32_t,ProfileMetaData > * >(jarg1); 
   {
     try {
       result = (uint32_t)(arg1)->getSize();;
@@ -9100,7 +9138,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Collection< ValueMetaDataKey,ValueMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< ValueMetaDataKey,ValueMetaData > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -9165,8 +9203,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(Collection< ValueMetaDataKey,ValueMetaData > **)&jarg1; 
-  argp2 = *(ValueMetaDataKey **)&jarg2; 
+  arg1 = fiftyoneFromJlong< Collection< ValueMetaDataKey,ValueMetaData > * >(jarg1); 
+  argp2 = fiftyoneFromJlong< ValueMetaDataKey * >(jarg2);
   if (!argp2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Attempt to dereference null ValueMetaDataKey");
     return 0;
@@ -9222,7 +9260,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(ValueMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9236,7 +9274,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Collection< ValueMetaDataKey,ValueMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< ValueMetaDataKey,ValueMetaData > * >(jarg1); 
   arg2 = (uint32_t)jarg2; 
   {
     try {
@@ -9288,7 +9326,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(ValueMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9301,7 +9339,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Collection< ValueMetaDataKey,ValueMetaData > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Collection< ValueMetaDataKey,ValueMetaData > * >(jarg1); 
   {
     try {
       result = (uint32_t)(arg1)->getSize();;
@@ -9362,7 +9400,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(MetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -9424,7 +9462,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(MetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
   {
     try {
       result = (Collection< byte,ComponentMetaData > *)(arg1)->getComponents();;
@@ -9475,7 +9513,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Collection< byte,ComponentMetaData > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9488,7 +9526,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(MetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
   {
     try {
       result = (Collection< std::string,PropertyMetaData > *)(arg1)->getProperties();;
@@ -9539,7 +9577,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Collection< std::string,PropertyMetaData > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9552,7 +9590,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(MetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
   {
     try {
       result = (Collection< uint32_t,ProfileMetaData > *)(arg1)->getProfiles();;
@@ -9603,7 +9641,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Collection< uint32_t,ProfileMetaData > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9616,7 +9654,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(MetaData **)&jarg1; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
   {
     try {
       result = (Collection< ValueMetaDataKey,ValueMetaData > *)(arg1)->getValues();;
@@ -9667,7 +9705,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Collection< ValueMetaDataKey,ValueMetaData > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9682,8 +9720,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(MetaData **)&jarg1; 
-  arg2 = *(PropertyMetaData **)&jarg2; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
+  arg2 = fiftyoneFromJlong< PropertyMetaData * >(jarg2); 
   {
     try {
       result = (Collection< ValueMetaDataKey,ValueMetaData > *)(arg1)->getValuesForProperty(arg2);;
@@ -9734,7 +9772,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Collection< ValueMetaDataKey,ValueMetaData > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9749,8 +9787,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(MetaData **)&jarg1; 
-  arg2 = *(ProfileMetaData **)&jarg2; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
+  arg2 = fiftyoneFromJlong< ProfileMetaData * >(jarg2); 
   {
     try {
       result = (Collection< ValueMetaDataKey,ValueMetaData > *)(arg1)->getValuesForProfile(arg2);;
@@ -9801,7 +9839,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Collection< ValueMetaDataKey,ValueMetaData > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9816,8 +9854,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(MetaData **)&jarg1; 
-  arg2 = *(ProfileMetaData **)&jarg2; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
+  arg2 = fiftyoneFromJlong< ProfileMetaData * >(jarg2); 
   {
     try {
       result = (ComponentMetaData *)(arg1)->getComponentForProfile(arg2);;
@@ -9868,7 +9906,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(ComponentMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9883,8 +9921,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(MetaData **)&jarg1; 
-  arg2 = *(PropertyMetaData **)&jarg2; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
+  arg2 = fiftyoneFromJlong< PropertyMetaData * >(jarg2); 
   {
     try {
       result = (ComponentMetaData *)(arg1)->getComponentForProperty(arg2);;
@@ -9935,7 +9973,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(ComponentMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -9950,8 +9988,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(MetaData **)&jarg1; 
-  arg2 = *(ComponentMetaData **)&jarg2; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
+  arg2 = fiftyoneFromJlong< ComponentMetaData * >(jarg2); 
   {
     try {
       result = (ProfileMetaData *)(arg1)->getDefaultProfileForComponent(arg2);;
@@ -10002,7 +10040,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(ProfileMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -10017,8 +10055,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(MetaData **)&jarg1; 
-  arg2 = *(PropertyMetaData **)&jarg2; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
+  arg2 = fiftyoneFromJlong< PropertyMetaData * >(jarg2); 
   {
     try {
       result = (ValueMetaData *)(arg1)->getDefaultValueForProperty(arg2);;
@@ -10069,7 +10107,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(ValueMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -10084,8 +10122,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(MetaData **)&jarg1; 
-  arg2 = *(ComponentMetaData **)&jarg2; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
+  arg2 = fiftyoneFromJlong< ComponentMetaData * >(jarg2); 
   {
     try {
       result = (Collection< std::string,PropertyMetaData > *)(arg1)->getPropertiesForComponent(arg2);;
@@ -10136,7 +10174,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Collection< std::string,PropertyMetaData > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -10151,8 +10189,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(MetaData **)&jarg1; 
-  arg2 = *(ValueMetaData **)&jarg2; 
+  arg1 = fiftyoneFromJlong< MetaData * >(jarg1); 
+  arg2 = fiftyoneFromJlong< ValueMetaData * >(jarg2); 
   {
     try {
       result = (PropertyMetaData *)(arg1)->getPropertyForValue(arg2);;
@@ -10203,7 +10241,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(PropertyMetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -10213,7 +10251,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -10274,7 +10312,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return ;
@@ -10344,7 +10382,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return ;
@@ -10415,7 +10453,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (MetaData *)(arg1)->getMetaData();;
@@ -10466,7 +10504,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(MetaData **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -10479,7 +10517,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getAutomaticUpdatesEnabled();;
@@ -10545,8 +10583,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(EngineBase **)&jarg1; 
-  arg2 = *(EvidenceBase **)&jarg2; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
+  arg2 = fiftyoneFromJlong< EvidenceBase * >(jarg2); 
   {
     try {
       result = (ResultsBase *)(arg1)->processBase(arg2);;
@@ -10597,7 +10635,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(ResultsBase **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -10608,7 +10646,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       (arg1)->refreshData();;
@@ -10669,7 +10707,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   arg2 = 0;
   if (jarg2) {
     arg2 = (char *)jenv->GetStringUTFChars(jarg2, 0);
@@ -10737,7 +10775,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     /*@SWIG:../../../../../cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
     if (jarg2 != NULL) {
@@ -10837,7 +10875,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (arg1)->getDataUpdateUrl();;
@@ -10901,7 +10939,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (arg1)->getPublishedTime();;
@@ -10952,7 +10990,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Date **)&jresult = new Date(result); 
+  jresult = fiftyoneToJlong< Date * >(new Date(result)); 
   return jresult;
 }
 
@@ -10965,7 +11003,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (arg1)->getUpdateAvailableTime();;
@@ -11016,7 +11054,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Date **)&jresult = new Date(result); 
+  jresult = fiftyoneToJlong< Date * >(new Date(result)); 
   return jresult;
 }
 
@@ -11029,7 +11067,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (arg1)->getDataFilePath();;
@@ -11093,7 +11131,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (arg1)->getDataFileTempPath();;
@@ -11157,7 +11195,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (arg1)->getProduct();;
@@ -11221,7 +11259,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (arg1)->getType();;
@@ -11285,7 +11323,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (std::vector< std::string > *)(arg1)->getKeys();;
@@ -11336,7 +11374,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< std::string > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -11349,7 +11387,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (arg1)->getRequiredProperties();;
@@ -11400,7 +11438,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< std::string > **)&jresult = new std::vector< std::string >(result); 
+  jresult = fiftyoneToJlong< std::vector< std::string > * >(new std::vector< std::string >(result)); 
   return jresult;
 }
 
@@ -11413,7 +11451,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineBase * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getIsThreadSafe();;
@@ -11477,7 +11515,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< std::string > * >(jarg1); 
   {
     try {
       result = (arg1)->getValue();;
@@ -11540,7 +11578,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< std::string > * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return ;
@@ -11610,7 +11648,7 @@ SWIGEXPORT jfloat JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< std::string > * >(jarg1); 
   {
     try {
       result = (float)(arg1)->getWeight();;
@@ -11674,7 +11712,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< std::string > * >(jarg1); 
   {
     try {
       result = (uint16_t)WeightedValue_Sl_std_string_Sg__getShortRawWeight(arg1);;
@@ -11737,7 +11775,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< std::string > * >(jarg1); 
   arg2 = (uint16_t)jarg2; 
   {
     try {
@@ -11797,7 +11835,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(WeightedValue< std::string > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< std::string > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -11859,7 +11897,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< std::vector< uint8_t > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< std::vector< uint8_t > > * >(jarg1); 
   {
     try {
       result = (arg1)->getValue();;
@@ -11910,7 +11948,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< uint8_t > **)&jresult = new std::vector< uint8_t >(result); 
+  jresult = fiftyoneToJlong< std::vector< uint8_t > * >(new std::vector< uint8_t >(result)); 
   return jresult;
 }
 
@@ -11924,8 +11962,8 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(WeightedValue< std::vector< uint8_t > > **)&jarg1; 
-  argp2 = *(std::vector< uint8_t > **)&jarg2; 
+  arg1 = fiftyoneFromJlong< WeightedValue< std::vector< uint8_t > > * >(jarg1); 
+  argp2 = fiftyoneFromJlong< std::vector< uint8_t > * >(jarg2);
   if (!argp2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Attempt to dereference null std::vector< uint8_t >");
     return ;
@@ -11992,7 +12030,7 @@ SWIGEXPORT jfloat JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< std::vector< uint8_t > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< std::vector< uint8_t > > * >(jarg1); 
   {
     try {
       result = (float)(arg1)->getWeight();;
@@ -12056,7 +12094,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< std::vector< uint8_t > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< std::vector< uint8_t > > * >(jarg1); 
   {
     try {
       result = (uint16_t)WeightedValue_Sl_std_vector_Sl_uint8_t_Sg__Sg__getShortRawWeight(arg1);;
@@ -12119,7 +12157,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< std::vector< uint8_t > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< std::vector< uint8_t > > * >(jarg1); 
   arg2 = (uint16_t)jarg2; 
   {
     try {
@@ -12179,7 +12217,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(WeightedValue< std::vector< uint8_t > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< std::vector< uint8_t > > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -12241,7 +12279,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< bool > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< bool > * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getValue();;
@@ -12304,7 +12342,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< bool > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< bool > * >(jarg1); 
   arg2 = jarg2 ? true : false; 
   {
     try {
@@ -12367,7 +12405,7 @@ SWIGEXPORT jfloat JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< bool > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< bool > * >(jarg1); 
   {
     try {
       result = (float)(arg1)->getWeight();;
@@ -12431,7 +12469,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< bool > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< bool > * >(jarg1); 
   {
     try {
       result = (uint16_t)WeightedValue_Sl_bool_Sg__getShortRawWeight(arg1);;
@@ -12494,7 +12532,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< bool > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< bool > * >(jarg1); 
   arg2 = (uint16_t)jarg2; 
   {
     try {
@@ -12554,7 +12592,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(WeightedValue< bool > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< bool > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -12616,7 +12654,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< int > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< int > * >(jarg1); 
   {
     try {
       result = (int)(arg1)->getValue();;
@@ -12679,7 +12717,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< int > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< int > * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -12742,7 +12780,7 @@ SWIGEXPORT jfloat JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< int > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< int > * >(jarg1); 
   {
     try {
       result = (float)(arg1)->getWeight();;
@@ -12806,7 +12844,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< int > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< int > * >(jarg1); 
   {
     try {
       result = (uint16_t)WeightedValue_Sl_int_Sg__getShortRawWeight(arg1);;
@@ -12869,7 +12907,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< int > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< int > * >(jarg1); 
   arg2 = (uint16_t)jarg2; 
   {
     try {
@@ -12929,7 +12967,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(WeightedValue< int > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< int > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -12991,7 +13029,7 @@ SWIGEXPORT jdouble JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< double > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< double > * >(jarg1); 
   {
     try {
       result = (double)(arg1)->getValue();;
@@ -13054,7 +13092,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< double > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< double > * >(jarg1); 
   arg2 = (double)jarg2; 
   {
     try {
@@ -13117,7 +13155,7 @@ SWIGEXPORT jfloat JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< double > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< double > * >(jarg1); 
   {
     try {
       result = (float)(arg1)->getWeight();;
@@ -13181,7 +13219,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< double > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< double > * >(jarg1); 
   {
     try {
       result = (uint16_t)WeightedValue_Sl_double_Sg__getShortRawWeight(arg1);;
@@ -13244,7 +13282,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(WeightedValue< double > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< double > * >(jarg1); 
   arg2 = (uint16_t)jarg2; 
   {
     try {
@@ -13304,7 +13342,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(WeightedValue< double > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< WeightedValue< double > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -13636,7 +13674,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(IpAddress **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   
   return jresult;
 }
@@ -13704,7 +13742,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(IpAddress **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   if (arg1) jenv->ReleaseStringUTFChars(jarg1, (const char *)arg1);
   return jresult;
 }
@@ -13718,7 +13756,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(IpAddress **)&jarg1; 
+  arg1 = fiftyoneFromJlong< IpAddress * >(jarg1); 
   {
     /*@SWIG:../../../../../cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
     if (jarg2 != NULL) {
@@ -13818,7 +13856,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(IpAddress **)&jarg1; 
+  arg1 = fiftyoneFromJlong< IpAddress * >(jarg1); 
   {
     try {
       result = (fiftyoneDegreesIpType)(arg1)->getType();;
@@ -13879,7 +13917,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(IpAddress **)&jarg1; 
+  arg1 = fiftyoneFromJlong< IpAddress * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -13989,7 +14027,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< std::string > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -14002,7 +14040,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< std::string > > **)&jarg1;
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::string > > * >(jarg1);
   if (!arg1) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< WeightedValue< std::string > > const & is null");
     return 0;
@@ -14057,7 +14095,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< std::string > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -14070,7 +14108,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< std::string > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::string > > * >(jarg1); 
   {
     try {
       result = (bool)((std::vector< WeightedValue< std::string > > const *)arg1)->empty();;
@@ -14132,7 +14170,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< std::string > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::string > > * >(jarg1); 
   {
     try {
       (arg1)->clear();;
@@ -14196,7 +14234,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jcls;
   (void)jarg2_;
   arg1 = jarg1; 
-  arg2 = *(WeightedValue< std::string > **)&jarg2;
+  arg2 = fiftyoneFromJlong< WeightedValue< std::string > * >(jarg2);
   if (!arg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "WeightedValue< std::string > const & is null");
     return 0;
@@ -14256,7 +14294,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< std::string > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -14269,7 +14307,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< std::string > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::string > > * >(jarg1); 
   {
     try {
       try {
@@ -14337,7 +14375,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< std::string > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::string > > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -14408,7 +14446,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< std::string > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::string > > * >(jarg1); 
   {
     try {
       try {
@@ -14477,8 +14515,8 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(std::vector< WeightedValue< std::string > > **)&jarg1; 
-  arg2 = *(std::vector< WeightedValue< std::string > >::value_type **)&jarg2;
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::string > > * >(jarg1); 
+  arg2 = fiftyoneFromJlong< std::vector< WeightedValue< std::string > >::value_type * >(jarg2);
   if (!arg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< WeightedValue< std::string > >::value_type const & is null");
     return ;
@@ -14545,9 +14583,9 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jcls;
   (void)jarg1_;
   (void)jarg3_;
-  arg1 = *(std::vector< WeightedValue< std::string > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::string > > * >(jarg1); 
   arg2 = jarg2; 
-  arg3 = *(std::vector< WeightedValue< std::string > >::value_type **)&jarg3;
+  arg3 = fiftyoneFromJlong< std::vector< WeightedValue< std::string > >::value_type * >(jarg3);
   if (!arg3) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< WeightedValue< std::string > >::value_type const & is null");
     return ;
@@ -14619,7 +14657,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< std::string > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::string > > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -14676,7 +14714,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< std::string > >::value_type **)&jresult = new std::vector< WeightedValue< std::string > >::value_type(result); 
+  jresult = fiftyoneToJlong< std::vector< WeightedValue< std::string > >::value_type * >(new std::vector< WeightedValue< std::string > >::value_type(result)); 
   return jresult;
 }
 
@@ -14690,7 +14728,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< std::string > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::string > > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -14747,7 +14785,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< std::string > >::value_type **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -14763,9 +14801,9 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jcls;
   (void)jarg1_;
   (void)jarg3_;
-  arg1 = *(std::vector< WeightedValue< std::string > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::string > > * >(jarg1); 
   arg2 = jarg2; 
-  arg3 = *(std::vector< WeightedValue< std::string > >::value_type **)&jarg3;
+  arg3 = fiftyoneFromJlong< std::vector< WeightedValue< std::string > >::value_type * >(jarg3);
   if (!arg3) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< WeightedValue< std::string > >::value_type const & is null");
     return 0;
@@ -14825,7 +14863,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< std::string > >::value_type **)&jresult = new std::vector< WeightedValue< std::string > >::value_type(result); 
+  jresult = fiftyoneToJlong< std::vector< WeightedValue< std::string > >::value_type * >(new std::vector< WeightedValue< std::string > >::value_type(result)); 
   return jresult;
 }
 
@@ -14838,7 +14876,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< std::string > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::string > > * >(jarg1); 
   arg2 = jarg2; 
   arg3 = jarg3; 
   {
@@ -14904,7 +14942,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(std::vector< WeightedValue< std::string > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::string > > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -15014,7 +15052,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< std::vector< uint8_t > > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -15027,7 +15065,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< std::vector< uint8_t > > > **)&jarg1;
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::vector< uint8_t > > > * >(jarg1);
   if (!arg1) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< WeightedValue< std::vector< uint8_t > > > const & is null");
     return 0;
@@ -15082,7 +15120,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< std::vector< uint8_t > > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -15095,7 +15133,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< std::vector< uint8_t > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::vector< uint8_t > > > * >(jarg1); 
   {
     try {
       result = (bool)((std::vector< WeightedValue< std::vector< uint8_t > > > const *)arg1)->empty();;
@@ -15157,7 +15195,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< std::vector< uint8_t > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::vector< uint8_t > > > * >(jarg1); 
   {
     try {
       (arg1)->clear();;
@@ -15221,7 +15259,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jcls;
   (void)jarg2_;
   arg1 = jarg1; 
-  arg2 = *(WeightedValue< std::vector< uint8_t > > **)&jarg2;
+  arg2 = fiftyoneFromJlong< WeightedValue< std::vector< uint8_t > > * >(jarg2);
   if (!arg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "WeightedValue< std::vector< uint8_t > > const & is null");
     return 0;
@@ -15281,7 +15319,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< std::vector< uint8_t > > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -15294,7 +15332,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< std::vector< uint8_t > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::vector< uint8_t > > > * >(jarg1); 
   {
     try {
       try {
@@ -15362,7 +15400,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< std::vector< uint8_t > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::vector< uint8_t > > > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -15433,7 +15471,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< std::vector< uint8_t > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::vector< uint8_t > > > * >(jarg1); 
   {
     try {
       try {
@@ -15502,8 +15540,8 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(std::vector< WeightedValue< std::vector< uint8_t > > > **)&jarg1; 
-  arg2 = *(std::vector< WeightedValue< std::vector< unsigned char > > >::value_type **)&jarg2;
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::vector< uint8_t > > > * >(jarg1); 
+  arg2 = fiftyoneFromJlong< std::vector< WeightedValue< std::vector< unsigned char > > >::value_type * >(jarg2);
   if (!arg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< WeightedValue< std::vector< unsigned char > > >::value_type const & is null");
     return ;
@@ -15570,9 +15608,9 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jcls;
   (void)jarg1_;
   (void)jarg3_;
-  arg1 = *(std::vector< WeightedValue< std::vector< uint8_t > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::vector< uint8_t > > > * >(jarg1); 
   arg2 = jarg2; 
-  arg3 = *(std::vector< WeightedValue< std::vector< unsigned char > > >::value_type **)&jarg3;
+  arg3 = fiftyoneFromJlong< std::vector< WeightedValue< std::vector< unsigned char > > >::value_type * >(jarg3);
   if (!arg3) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< WeightedValue< std::vector< unsigned char > > >::value_type const & is null");
     return ;
@@ -15644,7 +15682,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< std::vector< uint8_t > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::vector< uint8_t > > > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -15701,7 +15739,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< std::vector< unsigned char > > >::value_type **)&jresult = new std::vector< WeightedValue< std::vector< unsigned char > > >::value_type(result); 
+  jresult = fiftyoneToJlong< std::vector< WeightedValue< std::vector< unsigned char > > >::value_type * >(new std::vector< WeightedValue< std::vector< unsigned char > > >::value_type(result)); 
   return jresult;
 }
 
@@ -15715,7 +15753,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< std::vector< uint8_t > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::vector< uint8_t > > > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -15772,7 +15810,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< std::vector< unsigned char > > >::value_type **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -15788,9 +15826,9 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jcls;
   (void)jarg1_;
   (void)jarg3_;
-  arg1 = *(std::vector< WeightedValue< std::vector< uint8_t > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::vector< uint8_t > > > * >(jarg1); 
   arg2 = jarg2; 
-  arg3 = *(std::vector< WeightedValue< std::vector< unsigned char > > >::value_type **)&jarg3;
+  arg3 = fiftyoneFromJlong< std::vector< WeightedValue< std::vector< unsigned char > > >::value_type * >(jarg3);
   if (!arg3) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< WeightedValue< std::vector< unsigned char > > >::value_type const & is null");
     return 0;
@@ -15850,7 +15888,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< std::vector< unsigned char > > >::value_type **)&jresult = new std::vector< WeightedValue< std::vector< unsigned char > > >::value_type(result); 
+  jresult = fiftyoneToJlong< std::vector< WeightedValue< std::vector< unsigned char > > >::value_type * >(new std::vector< WeightedValue< std::vector< unsigned char > > >::value_type(result)); 
   return jresult;
 }
 
@@ -15863,7 +15901,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< std::vector< uint8_t > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::vector< uint8_t > > > * >(jarg1); 
   arg2 = jarg2; 
   arg3 = jarg3; 
   {
@@ -15929,7 +15967,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(std::vector< WeightedValue< std::vector< uint8_t > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< std::vector< uint8_t > > > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -16039,7 +16077,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< bool > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -16052,7 +16090,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< bool > > **)&jarg1;
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< bool > > * >(jarg1);
   if (!arg1) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< WeightedValue< bool > > const & is null");
     return 0;
@@ -16107,7 +16145,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< bool > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -16120,7 +16158,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< bool > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< bool > > * >(jarg1); 
   {
     try {
       result = (bool)((std::vector< WeightedValue< bool > > const *)arg1)->empty();;
@@ -16182,7 +16220,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< bool > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< bool > > * >(jarg1); 
   {
     try {
       (arg1)->clear();;
@@ -16246,7 +16284,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jcls;
   (void)jarg2_;
   arg1 = jarg1; 
-  arg2 = *(WeightedValue< bool > **)&jarg2;
+  arg2 = fiftyoneFromJlong< WeightedValue< bool > * >(jarg2);
   if (!arg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "WeightedValue< bool > const & is null");
     return 0;
@@ -16306,7 +16344,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< bool > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -16319,7 +16357,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< bool > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< bool > > * >(jarg1); 
   {
     try {
       try {
@@ -16387,7 +16425,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< bool > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< bool > > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -16458,7 +16496,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< bool > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< bool > > * >(jarg1); 
   {
     try {
       try {
@@ -16527,8 +16565,8 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(std::vector< WeightedValue< bool > > **)&jarg1; 
-  arg2 = *(std::vector< WeightedValue< bool > >::value_type **)&jarg2;
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< bool > > * >(jarg1); 
+  arg2 = fiftyoneFromJlong< std::vector< WeightedValue< bool > >::value_type * >(jarg2);
   if (!arg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< WeightedValue< bool > >::value_type const & is null");
     return ;
@@ -16595,9 +16633,9 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jcls;
   (void)jarg1_;
   (void)jarg3_;
-  arg1 = *(std::vector< WeightedValue< bool > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< bool > > * >(jarg1); 
   arg2 = jarg2; 
-  arg3 = *(std::vector< WeightedValue< bool > >::value_type **)&jarg3;
+  arg3 = fiftyoneFromJlong< std::vector< WeightedValue< bool > >::value_type * >(jarg3);
   if (!arg3) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< WeightedValue< bool > >::value_type const & is null");
     return ;
@@ -16669,7 +16707,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< bool > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< bool > > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -16726,7 +16764,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< bool > >::value_type **)&jresult = new std::vector< WeightedValue< bool > >::value_type(result); 
+  jresult = fiftyoneToJlong< std::vector< WeightedValue< bool > >::value_type * >(new std::vector< WeightedValue< bool > >::value_type(result)); 
   return jresult;
 }
 
@@ -16740,7 +16778,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< bool > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< bool > > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -16797,7 +16835,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< bool > >::value_type **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -16813,9 +16851,9 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jcls;
   (void)jarg1_;
   (void)jarg3_;
-  arg1 = *(std::vector< WeightedValue< bool > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< bool > > * >(jarg1); 
   arg2 = jarg2; 
-  arg3 = *(std::vector< WeightedValue< bool > >::value_type **)&jarg3;
+  arg3 = fiftyoneFromJlong< std::vector< WeightedValue< bool > >::value_type * >(jarg3);
   if (!arg3) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< WeightedValue< bool > >::value_type const & is null");
     return 0;
@@ -16875,7 +16913,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< bool > >::value_type **)&jresult = new std::vector< WeightedValue< bool > >::value_type(result); 
+  jresult = fiftyoneToJlong< std::vector< WeightedValue< bool > >::value_type * >(new std::vector< WeightedValue< bool > >::value_type(result)); 
   return jresult;
 }
 
@@ -16888,7 +16926,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< bool > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< bool > > * >(jarg1); 
   arg2 = jarg2; 
   arg3 = jarg3; 
   {
@@ -16954,7 +16992,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(std::vector< WeightedValue< bool > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< bool > > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -17064,7 +17102,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< int > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -17077,7 +17115,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< int > > **)&jarg1;
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< int > > * >(jarg1);
   if (!arg1) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< WeightedValue< int > > const & is null");
     return 0;
@@ -17132,7 +17170,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< int > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -17145,7 +17183,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< int > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< int > > * >(jarg1); 
   {
     try {
       result = (bool)((std::vector< WeightedValue< int > > const *)arg1)->empty();;
@@ -17207,7 +17245,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< int > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< int > > * >(jarg1); 
   {
     try {
       (arg1)->clear();;
@@ -17271,7 +17309,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jcls;
   (void)jarg2_;
   arg1 = jarg1; 
-  arg2 = *(WeightedValue< int > **)&jarg2;
+  arg2 = fiftyoneFromJlong< WeightedValue< int > * >(jarg2);
   if (!arg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "WeightedValue< int > const & is null");
     return 0;
@@ -17331,7 +17369,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< int > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -17344,7 +17382,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< int > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< int > > * >(jarg1); 
   {
     try {
       try {
@@ -17412,7 +17450,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< int > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< int > > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -17483,7 +17521,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< int > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< int > > * >(jarg1); 
   {
     try {
       try {
@@ -17552,8 +17590,8 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(std::vector< WeightedValue< int > > **)&jarg1; 
-  arg2 = *(std::vector< WeightedValue< int > >::value_type **)&jarg2;
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< int > > * >(jarg1); 
+  arg2 = fiftyoneFromJlong< std::vector< WeightedValue< int > >::value_type * >(jarg2);
   if (!arg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< WeightedValue< int > >::value_type const & is null");
     return ;
@@ -17620,9 +17658,9 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jcls;
   (void)jarg1_;
   (void)jarg3_;
-  arg1 = *(std::vector< WeightedValue< int > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< int > > * >(jarg1); 
   arg2 = jarg2; 
-  arg3 = *(std::vector< WeightedValue< int > >::value_type **)&jarg3;
+  arg3 = fiftyoneFromJlong< std::vector< WeightedValue< int > >::value_type * >(jarg3);
   if (!arg3) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< WeightedValue< int > >::value_type const & is null");
     return ;
@@ -17694,7 +17732,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< int > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< int > > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -17751,7 +17789,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< int > >::value_type **)&jresult = new std::vector< WeightedValue< int > >::value_type(result); 
+  jresult = fiftyoneToJlong< std::vector< WeightedValue< int > >::value_type * >(new std::vector< WeightedValue< int > >::value_type(result)); 
   return jresult;
 }
 
@@ -17765,7 +17803,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< int > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< int > > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -17822,7 +17860,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< int > >::value_type **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -17838,9 +17876,9 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jcls;
   (void)jarg1_;
   (void)jarg3_;
-  arg1 = *(std::vector< WeightedValue< int > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< int > > * >(jarg1); 
   arg2 = jarg2; 
-  arg3 = *(std::vector< WeightedValue< int > >::value_type **)&jarg3;
+  arg3 = fiftyoneFromJlong< std::vector< WeightedValue< int > >::value_type * >(jarg3);
   if (!arg3) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< WeightedValue< int > >::value_type const & is null");
     return 0;
@@ -17900,7 +17938,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< int > >::value_type **)&jresult = new std::vector< WeightedValue< int > >::value_type(result); 
+  jresult = fiftyoneToJlong< std::vector< WeightedValue< int > >::value_type * >(new std::vector< WeightedValue< int > >::value_type(result)); 
   return jresult;
 }
 
@@ -17913,7 +17951,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< int > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< int > > * >(jarg1); 
   arg2 = jarg2; 
   arg3 = jarg3; 
   {
@@ -17979,7 +18017,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(std::vector< WeightedValue< int > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< int > > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -18089,7 +18127,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< double > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -18102,7 +18140,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< double > > **)&jarg1;
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< double > > * >(jarg1);
   if (!arg1) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< WeightedValue< double > > const & is null");
     return 0;
@@ -18157,7 +18195,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< double > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -18170,7 +18208,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< double > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< double > > * >(jarg1); 
   {
     try {
       result = (bool)((std::vector< WeightedValue< double > > const *)arg1)->empty();;
@@ -18232,7 +18270,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< double > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< double > > * >(jarg1); 
   {
     try {
       (arg1)->clear();;
@@ -18296,7 +18334,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jcls;
   (void)jarg2_;
   arg1 = jarg1; 
-  arg2 = *(WeightedValue< double > **)&jarg2;
+  arg2 = fiftyoneFromJlong< WeightedValue< double > * >(jarg2);
   if (!arg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "WeightedValue< double > const & is null");
     return 0;
@@ -18356,7 +18394,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< double > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -18369,7 +18407,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< double > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< double > > * >(jarg1); 
   {
     try {
       try {
@@ -18437,7 +18475,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< double > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< double > > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -18508,7 +18546,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< double > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< double > > * >(jarg1); 
   {
     try {
       try {
@@ -18577,8 +18615,8 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(std::vector< WeightedValue< double > > **)&jarg1; 
-  arg2 = *(std::vector< WeightedValue< double > >::value_type **)&jarg2;
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< double > > * >(jarg1); 
+  arg2 = fiftyoneFromJlong< std::vector< WeightedValue< double > >::value_type * >(jarg2);
   if (!arg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< WeightedValue< double > >::value_type const & is null");
     return ;
@@ -18645,9 +18683,9 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jcls;
   (void)jarg1_;
   (void)jarg3_;
-  arg1 = *(std::vector< WeightedValue< double > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< double > > * >(jarg1); 
   arg2 = jarg2; 
-  arg3 = *(std::vector< WeightedValue< double > >::value_type **)&jarg3;
+  arg3 = fiftyoneFromJlong< std::vector< WeightedValue< double > >::value_type * >(jarg3);
   if (!arg3) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< WeightedValue< double > >::value_type const & is null");
     return ;
@@ -18719,7 +18757,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< double > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< double > > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -18776,7 +18814,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< double > >::value_type **)&jresult = new std::vector< WeightedValue< double > >::value_type(result); 
+  jresult = fiftyoneToJlong< std::vector< WeightedValue< double > >::value_type * >(new std::vector< WeightedValue< double > >::value_type(result)); 
   return jresult;
 }
 
@@ -18790,7 +18828,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< double > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< double > > * >(jarg1); 
   arg2 = jarg2; 
   {
     try {
@@ -18847,7 +18885,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< double > >::value_type **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -18863,9 +18901,9 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jcls;
   (void)jarg1_;
   (void)jarg3_;
-  arg1 = *(std::vector< WeightedValue< double > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< double > > * >(jarg1); 
   arg2 = jarg2; 
-  arg3 = *(std::vector< WeightedValue< double > >::value_type **)&jarg3;
+  arg3 = fiftyoneFromJlong< std::vector< WeightedValue< double > >::value_type * >(jarg3);
   if (!arg3) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< WeightedValue< double > >::value_type const & is null");
     return 0;
@@ -18925,7 +18963,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< double > >::value_type **)&jresult = new std::vector< WeightedValue< double > >::value_type(result); 
+  jresult = fiftyoneToJlong< std::vector< WeightedValue< double > >::value_type * >(new std::vector< WeightedValue< double > >::value_type(result)); 
   return jresult;
 }
 
@@ -18938,7 +18976,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(std::vector< WeightedValue< double > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< double > > * >(jarg1); 
   arg2 = jarg2; 
   arg3 = jarg3; 
   {
@@ -19004,7 +19042,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(std::vector< WeightedValue< double > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< std::vector< WeightedValue< double > > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -19114,7 +19152,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< WeightedValue< std::string > > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -19127,7 +19165,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< WeightedValue< std::string > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< WeightedValue< std::string > > > * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->hasValue();;
@@ -19191,7 +19229,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< WeightedValue< std::string > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< WeightedValue< std::string > > > * >(jarg1); 
   {
     try {
       result = (char *)(arg1)->getNoValueMessage();;
@@ -19255,7 +19293,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< WeightedValue< std::string > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< WeightedValue< std::string > > > * >(jarg1); 
   {
     try {
       result = (arg1)->getValue();;
@@ -19306,7 +19344,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< std::string > > **)&jresult = new std::vector< WeightedValue< std::string > >(result); 
+  jresult = fiftyoneToJlong< std::vector< WeightedValue< std::string > > * >(new std::vector< WeightedValue< std::string > >(result)); 
   return jresult;
 }
 
@@ -19316,7 +19354,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Value< std::vector< WeightedValue< std::string > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< WeightedValue< std::string > > > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -19426,7 +19464,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< WeightedValue< std::vector< uint8_t > > > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -19439,7 +19477,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< WeightedValue< std::vector< uint8_t > > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< WeightedValue< std::vector< uint8_t > > > > * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->hasValue();;
@@ -19503,7 +19541,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< WeightedValue< std::vector< uint8_t > > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< WeightedValue< std::vector< uint8_t > > > > * >(jarg1); 
   {
     try {
       result = (char *)(arg1)->getNoValueMessage();;
@@ -19567,7 +19605,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< WeightedValue< std::vector< uint8_t > > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< WeightedValue< std::vector< uint8_t > > > > * >(jarg1); 
   {
     try {
       result = (arg1)->getValue();;
@@ -19618,7 +19656,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< std::vector< uint8_t > > > **)&jresult = new std::vector< WeightedValue< std::vector< uint8_t > > >(result); 
+  jresult = fiftyoneToJlong< std::vector< WeightedValue< std::vector< uint8_t > > > * >(new std::vector< WeightedValue< std::vector< uint8_t > > >(result)); 
   return jresult;
 }
 
@@ -19628,7 +19666,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Value< std::vector< WeightedValue< std::vector< uint8_t > > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< WeightedValue< std::vector< uint8_t > > > > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -19738,7 +19776,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< WeightedValue< bool > > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -19751,7 +19789,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< WeightedValue< bool > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< WeightedValue< bool > > > * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->hasValue();;
@@ -19815,7 +19853,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< WeightedValue< bool > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< WeightedValue< bool > > > * >(jarg1); 
   {
     try {
       result = (char *)(arg1)->getNoValueMessage();;
@@ -19879,7 +19917,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< WeightedValue< bool > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< WeightedValue< bool > > > * >(jarg1); 
   {
     try {
       result = (arg1)->getValue();;
@@ -19930,7 +19968,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< bool > > **)&jresult = new std::vector< WeightedValue< bool > >(result); 
+  jresult = fiftyoneToJlong< std::vector< WeightedValue< bool > > * >(new std::vector< WeightedValue< bool > >(result)); 
   return jresult;
 }
 
@@ -19940,7 +19978,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Value< std::vector< WeightedValue< bool > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< WeightedValue< bool > > > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -20050,7 +20088,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< WeightedValue< int > > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -20063,7 +20101,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< WeightedValue< int > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< WeightedValue< int > > > * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->hasValue();;
@@ -20127,7 +20165,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< WeightedValue< int > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< WeightedValue< int > > > * >(jarg1); 
   {
     try {
       result = (char *)(arg1)->getNoValueMessage();;
@@ -20191,7 +20229,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< WeightedValue< int > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< WeightedValue< int > > > * >(jarg1); 
   {
     try {
       result = (arg1)->getValue();;
@@ -20242,7 +20280,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< int > > **)&jresult = new std::vector< WeightedValue< int > >(result); 
+  jresult = fiftyoneToJlong< std::vector< WeightedValue< int > > * >(new std::vector< WeightedValue< int > >(result)); 
   return jresult;
 }
 
@@ -20252,7 +20290,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Value< std::vector< WeightedValue< int > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< WeightedValue< int > > > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -20362,7 +20400,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< WeightedValue< double > > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -20375,7 +20413,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< WeightedValue< double > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< WeightedValue< double > > > * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->hasValue();;
@@ -20439,7 +20477,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< WeightedValue< double > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< WeightedValue< double > > > * >(jarg1); 
   {
     try {
       result = (char *)(arg1)->getNoValueMessage();;
@@ -20503,7 +20541,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< WeightedValue< double > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< WeightedValue< double > > > * >(jarg1); 
   {
     try {
       result = (arg1)->getValue();;
@@ -20554,7 +20592,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< WeightedValue< double > > **)&jresult = new std::vector< WeightedValue< double > >(result); 
+  jresult = fiftyoneToJlong< std::vector< WeightedValue< double > > * >(new std::vector< WeightedValue< double > >(result)); 
   return jresult;
 }
 
@@ -20564,7 +20602,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Value< std::vector< WeightedValue< double > > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< WeightedValue< double > > > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -20674,7 +20712,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< IpAddress > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -20687,7 +20725,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< IpAddress > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< IpAddress > * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->hasValue();;
@@ -20751,7 +20789,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< IpAddress > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< IpAddress > * >(jarg1); 
   {
     try {
       result = (char *)(arg1)->getNoValueMessage();;
@@ -20815,7 +20853,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< IpAddress > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< IpAddress > * >(jarg1); 
   {
     try {
       result = (arg1)->getValue();;
@@ -20866,7 +20904,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(IpAddress **)&jresult = new IpAddress(result); 
+  jresult = fiftyoneToJlong< IpAddress * >(new IpAddress(result)); 
   return jresult;
 }
 
@@ -20876,7 +20914,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Value< IpAddress > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< IpAddress > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -20986,7 +21024,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< uint8_t > > **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -20999,7 +21037,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< uint8_t > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< uint8_t > > * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->hasValue();;
@@ -21063,7 +21101,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< uint8_t > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< uint8_t > > * >(jarg1); 
   {
     try {
       result = (char *)(arg1)->getNoValueMessage();;
@@ -21127,7 +21165,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(Value< std::vector< uint8_t > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< uint8_t > > * >(jarg1); 
   {
     try {
       result = (arg1)->getValue();;
@@ -21178,7 +21216,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< uint8_t > **)&jresult = new std::vector< uint8_t >(result); 
+  jresult = fiftyoneToJlong< std::vector< uint8_t > * >(new std::vector< uint8_t >(result)); 
   return jresult;
 }
 
@@ -21188,7 +21226,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(Value< std::vector< uint8_t > > **)&jarg1; 
+  arg1 = fiftyoneFromJlong< Value< std::vector< uint8_t > > * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -21247,7 +21285,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(ResultsIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsIpi * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -21310,7 +21348,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsIpi * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -21370,7 +21408,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< WeightedValue< std::string > > > **)&jresult = new Value< std::vector< WeightedValue< std::string > > >(result); 
+  jresult = fiftyoneToJlong< Value< std::vector< WeightedValue< std::string > > > * >(new Value< std::vector< WeightedValue< std::string > > >(result)); 
   return jresult;
 }
 
@@ -21384,7 +21422,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsIpi * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -21436,7 +21474,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< WeightedValue< std::string > > > **)&jresult = new Value< std::vector< WeightedValue< std::string > > >(result); 
+  jresult = fiftyoneToJlong< Value< std::vector< WeightedValue< std::string > > > * >(new Value< std::vector< WeightedValue< std::string > > >(result)); 
   return jresult;
 }
 
@@ -21450,7 +21488,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsIpi * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -21510,7 +21548,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< WeightedValue< std::vector< uint8_t > > > > **)&jresult = new Value< std::vector< WeightedValue< std::vector< uint8_t > > > >(result); 
+  jresult = fiftyoneToJlong< Value< std::vector< WeightedValue< std::vector< uint8_t > > > > * >(new Value< std::vector< WeightedValue< std::vector< uint8_t > > > >(result)); 
   return jresult;
 }
 
@@ -21524,7 +21562,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsIpi * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -21576,7 +21614,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< WeightedValue< std::vector< uint8_t > > > > **)&jresult = new Value< std::vector< WeightedValue< std::vector< uint8_t > > > >(result); 
+  jresult = fiftyoneToJlong< Value< std::vector< WeightedValue< std::vector< uint8_t > > > > * >(new Value< std::vector< WeightedValue< std::vector< uint8_t > > > >(result)); 
   return jresult;
 }
 
@@ -21590,7 +21628,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsIpi * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -21650,7 +21688,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< uint8_t > > **)&jresult = new Value< std::vector< uint8_t > >(result); 
+  jresult = fiftyoneToJlong< Value< std::vector< uint8_t > > * >(new Value< std::vector< uint8_t > >(result)); 
   return jresult;
 }
 
@@ -21664,7 +21702,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsIpi * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -21716,7 +21754,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< uint8_t > > **)&jresult = new Value< std::vector< uint8_t > >(result); 
+  jresult = fiftyoneToJlong< Value< std::vector< uint8_t > > * >(new Value< std::vector< uint8_t > >(result)); 
   return jresult;
 }
 
@@ -21731,7 +21769,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsIpi * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -21792,7 +21830,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< WeightedValue< std::string > > > **)&jresult = new Value< std::vector< WeightedValue< std::string > > >(result); 
+  jresult = fiftyoneToJlong< Value< std::vector< WeightedValue< std::string > > > * >(new Value< std::vector< WeightedValue< std::string > > >(result)); 
   return jresult;
 }
 
@@ -21807,7 +21845,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsIpi * >(jarg1); 
   arg2 = (int)jarg2; 
   arg3 = (uint8_t)jarg3; 
   {
@@ -21860,7 +21898,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< WeightedValue< std::string > > > **)&jresult = new Value< std::vector< WeightedValue< std::string > > >(result); 
+  jresult = fiftyoneToJlong< Value< std::vector< WeightedValue< std::string > > > * >(new Value< std::vector< WeightedValue< std::string > > >(result)); 
   return jresult;
 }
 
@@ -21874,7 +21912,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsIpi * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -21934,7 +21972,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< WeightedValue< bool > > > **)&jresult = new Value< std::vector< WeightedValue< bool > > >(result); 
+  jresult = fiftyoneToJlong< Value< std::vector< WeightedValue< bool > > > * >(new Value< std::vector< WeightedValue< bool > > >(result)); 
   return jresult;
 }
 
@@ -21948,7 +21986,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsIpi * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -22000,7 +22038,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< WeightedValue< bool > > > **)&jresult = new Value< std::vector< WeightedValue< bool > > >(result); 
+  jresult = fiftyoneToJlong< Value< std::vector< WeightedValue< bool > > > * >(new Value< std::vector< WeightedValue< bool > > >(result)); 
   return jresult;
 }
 
@@ -22014,7 +22052,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsIpi * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -22074,7 +22112,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< WeightedValue< int > > > **)&jresult = new Value< std::vector< WeightedValue< int > > >(result); 
+  jresult = fiftyoneToJlong< Value< std::vector< WeightedValue< int > > > * >(new Value< std::vector< WeightedValue< int > > >(result)); 
   return jresult;
 }
 
@@ -22088,7 +22126,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsIpi * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -22140,7 +22178,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< WeightedValue< int > > > **)&jresult = new Value< std::vector< WeightedValue< int > > >(result); 
+  jresult = fiftyoneToJlong< Value< std::vector< WeightedValue< int > > > * >(new Value< std::vector< WeightedValue< int > > >(result)); 
   return jresult;
 }
 
@@ -22154,7 +22192,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsIpi * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -22214,7 +22252,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< WeightedValue< double > > > **)&jresult = new Value< std::vector< WeightedValue< double > > >(result); 
+  jresult = fiftyoneToJlong< Value< std::vector< WeightedValue< double > > > * >(new Value< std::vector< WeightedValue< double > > >(result)); 
   return jresult;
 }
 
@@ -22228,7 +22266,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsIpi * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -22280,7 +22318,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< WeightedValue< double > > > **)&jresult = new Value< std::vector< WeightedValue< double > > >(result); 
+  jresult = fiftyoneToJlong< Value< std::vector< WeightedValue< double > > > * >(new Value< std::vector< WeightedValue< double > > >(result)); 
   return jresult;
 }
 
@@ -22294,7 +22332,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsIpi * >(jarg1); 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
     return 0;
@@ -22354,7 +22392,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< IpAddress > **)&jresult = new Value< IpAddress >(result); 
+  jresult = fiftyoneToJlong< Value< IpAddress > * >(new Value< IpAddress >(result)); 
   return jresult;
 }
 
@@ -22368,7 +22406,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsIpi * >(jarg1); 
   arg2 = (int)jarg2; 
   {
     try {
@@ -22420,7 +22458,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< IpAddress > **)&jresult = new Value< IpAddress >(result); 
+  jresult = fiftyoneToJlong< Value< IpAddress > * >(new Value< IpAddress >(result)); 
   return jresult;
 }
 
@@ -22433,7 +22471,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsIpi * >(jarg1); 
   {
     try {
       result = (arg1)->getTargetIpAddress();;
@@ -22484,26 +22522,37 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< IpAddress > **)&jresult = new Value< IpAddress >(result); 
+  jresult = fiftyoneToJlong< Value< IpAddress > * >(new Value< IpAddress >(result)); 
   return jresult;
 }
 
 
-SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_swig_IpIntelligenceOnPremiseEngineModuleJNI_ResultsIpiSwig_1copyValueAsUTF8String(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jint jarg2, jlong jarg3, jint jarg4) {
+SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_swig_IpIntelligenceOnPremiseEngineModuleJNI_ResultsIpiSwig_1copyValueAsUTF8String(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jint jarg2, jbyteArray jarg3) {
   jint jresult = 0 ;
   ResultsIpi *arg1 = 0 ;
   int arg2 ;
   unsigned char *arg3 = (unsigned char *)0 ;
   int arg4 ;
+  std::vector< unsigned char > buffer3 ;
   int result;
   
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsIpi * >(jarg1); 
   arg2 = (int)jarg2; 
-  arg3 = *(unsigned char **)&jarg3; 
-  arg4 = (int)jarg4; 
+  {
+    if (!jarg3) {
+      SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "The array to copy into is null");
+      return 0;
+    }
+    arg4 = (int)jenv->GetArrayLength(jarg3);
+    buffer3.resize((size_t)arg4);
+    if (arg4 > 0) {
+      jenv->GetByteArrayRegion(jarg3, 0, arg4, reinterpret_cast<jbyte *>(buffer3.data()));
+    }
+    arg3 = buffer3.data();
+  }
   {
     try {
       result = (int)ResultsIpi_copyValueAsUTF8String(arg1,arg2,arg3,arg4);;
@@ -22555,6 +22604,11 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
     }
   }
   jresult = (jint)result; 
+  {
+    if (arg4 > 0) {
+      jenv->SetByteArrayRegion(jarg3, 0, arg4, reinterpret_cast<const jbyte *>(buffer3.data()));
+    }
+  }
   
   return jresult;
 }
@@ -22565,7 +22619,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(ConfigBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigBase * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -22626,7 +22680,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigBase * >(jarg1); 
   arg2 = jarg2 ? true : false; 
   {
     try {
@@ -22688,7 +22742,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigBase * >(jarg1); 
   arg2 = jarg2 ? true : false; 
   {
     try {
@@ -22750,7 +22804,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigBase * >(jarg1); 
   arg2 = jarg2 ? true : false; 
   {
     try {
@@ -22814,8 +22868,8 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(ConfigBase **)&jarg1; 
-  argp2 = *(std::vector< std::string > **)&jarg2; 
+  arg1 = fiftyoneFromJlong< ConfigBase * >(jarg1); 
+  argp2 = fiftyoneFromJlong< std::vector< std::string > * >(jarg2);
   if (!argp2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Attempt to dereference null std::vector< std::string >");
     return ;
@@ -22882,7 +22936,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigBase * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getUseUpperPrefixHeaders();;
@@ -22946,7 +23000,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigBase * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getUseTempFile();;
@@ -23010,7 +23064,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigBase * >(jarg1); 
   {
     try {
       result = (bool)(arg1)->getReuseTempFile();;
@@ -23074,7 +23128,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigBase * >(jarg1); 
   {
     try {
       result = (arg1)->getTempDirectories();;
@@ -23125,7 +23179,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(std::vector< std::string > **)&jresult = new std::vector< std::string >(result); 
+  jresult = fiftyoneToJlong< std::vector< std::string > * >(new std::vector< std::string >(result)); 
   return jresult;
 }
 
@@ -23138,7 +23192,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigBase * >(jarg1); 
   {
     try {
       result = (uint16_t)(arg1)->getConcurrency();;
@@ -23250,7 +23304,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(CollectionConfig **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -23262,7 +23316,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(CollectionConfig **)&jarg1; 
+  arg1 = fiftyoneFromJlong< CollectionConfig * >(jarg1); 
   arg2 = (uint32_t)jarg2; 
   {
     try {
@@ -23324,7 +23378,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(CollectionConfig **)&jarg1; 
+  arg1 = fiftyoneFromJlong< CollectionConfig * >(jarg1); 
   arg2 = (uint16_t)jarg2; 
   {
     try {
@@ -23386,7 +23440,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(CollectionConfig **)&jarg1; 
+  arg1 = fiftyoneFromJlong< CollectionConfig * >(jarg1); 
   arg2 = (uint32_t)jarg2; 
   {
     try {
@@ -23449,7 +23503,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(CollectionConfig **)&jarg1; 
+  arg1 = fiftyoneFromJlong< CollectionConfig * >(jarg1); 
   {
     try {
       result = (uint32_t)(arg1)->getCapacity();;
@@ -23513,7 +23567,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(CollectionConfig **)&jarg1; 
+  arg1 = fiftyoneFromJlong< CollectionConfig * >(jarg1); 
   {
     try {
       result = (uint16_t)(arg1)->getConcurrency();;
@@ -23577,7 +23631,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(CollectionConfig **)&jarg1; 
+  arg1 = fiftyoneFromJlong< CollectionConfig * >(jarg1); 
   {
     try {
       result = (uint32_t)(arg1)->getLoaded();;
@@ -23638,7 +23692,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(CollectionConfig **)&jarg1; 
+  arg1 = fiftyoneFromJlong< CollectionConfig * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -23748,7 +23802,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(ConfigIpi **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -23759,7 +23813,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigIpi * >(jarg1); 
   {
     try {
       (arg1)->setHighPerformance();;
@@ -23819,7 +23873,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigIpi * >(jarg1); 
   {
     try {
       (arg1)->setBalanced();;
@@ -23879,7 +23933,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigIpi * >(jarg1); 
   {
     try {
       (arg1)->setBalancedTemp();;
@@ -23939,7 +23993,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigIpi * >(jarg1); 
   {
     try {
       (arg1)->setLowMemory();;
@@ -23999,7 +24053,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigIpi * >(jarg1); 
   {
     try {
       (arg1)->setMaxPerformance();;
@@ -24060,7 +24114,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigIpi * >(jarg1); 
   arg2 = (uint16_t)jarg2; 
   {
     try {
@@ -24123,7 +24177,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigIpi * >(jarg1); 
   {
     try {
       result = (CollectionConfig *) &((ConfigIpi const *)arg1)->getStrings();;
@@ -24174,7 +24228,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(CollectionConfig **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -24187,7 +24241,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigIpi * >(jarg1); 
   {
     try {
       result = (CollectionConfig *) &((ConfigIpi const *)arg1)->getComponents();;
@@ -24238,7 +24292,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(CollectionConfig **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -24251,7 +24305,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigIpi * >(jarg1); 
   {
     try {
       result = (CollectionConfig *) &((ConfigIpi const *)arg1)->getMaps();;
@@ -24302,7 +24356,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(CollectionConfig **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -24315,7 +24369,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigIpi * >(jarg1); 
   {
     try {
       result = (CollectionConfig *) &((ConfigIpi const *)arg1)->getProperties();;
@@ -24366,7 +24420,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(CollectionConfig **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -24379,7 +24433,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigIpi * >(jarg1); 
   {
     try {
       result = (CollectionConfig *) &((ConfigIpi const *)arg1)->getValues();;
@@ -24430,7 +24484,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(CollectionConfig **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -24443,7 +24497,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigIpi * >(jarg1); 
   {
     try {
       result = (CollectionConfig *) &((ConfigIpi const *)arg1)->getProfiles();;
@@ -24494,7 +24548,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(CollectionConfig **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -24507,7 +24561,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigIpi * >(jarg1); 
   {
     try {
       result = (CollectionConfig *) &((ConfigIpi const *)arg1)->getGraphs();;
@@ -24558,7 +24612,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(CollectionConfig **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -24571,7 +24625,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigIpi * >(jarg1); 
   {
     try {
       result = (CollectionConfig *) &((ConfigIpi const *)arg1)->getProfileGroups();;
@@ -24622,7 +24676,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(CollectionConfig **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -24635,7 +24689,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigIpi * >(jarg1); 
   {
     try {
       result = (CollectionConfig *) &((ConfigIpi const *)arg1)->getProfileOffsets();;
@@ -24686,7 +24740,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(CollectionConfig **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -24699,7 +24753,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigIpi * >(jarg1); 
   {
     try {
       result = (CollectionConfig *) &((ConfigIpi const *)arg1)->getPropertyTypes();;
@@ -24750,7 +24804,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(CollectionConfig **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -24763,7 +24817,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigIpi * >(jarg1); 
   {
     try {
       result = (CollectionConfig *) &((ConfigIpi const *)arg1)->getGraph();;
@@ -24814,7 +24868,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(CollectionConfig **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -24827,7 +24881,7 @@ SWIGEXPORT jint JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ConfigIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigIpi * >(jarg1); 
   {
     try {
       result = (uint16_t)((ConfigIpi const *)arg1)->getConcurrency();;
@@ -24888,7 +24942,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(ConfigIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ConfigIpi * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -24998,7 +25052,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(EvidenceBase **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -25008,7 +25062,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(EvidenceBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EvidenceBase * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -25118,7 +25172,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(EvidenceIpi **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -25128,7 +25182,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(EvidenceIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EvidenceIpi * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -25202,8 +25256,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   std::string arg1_str(arg1_pstr);
   arg1 = &arg1_str;
   jenv->ReleaseStringUTFChars(jarg1, arg1_pstr); 
-  arg2 = *(ConfigIpi **)&jarg2; 
-  arg3 = *(RequiredPropertiesConfig **)&jarg3; 
+  arg2 = fiftyoneFromJlong< ConfigIpi * >(jarg2); 
+  arg3 = fiftyoneFromJlong< RequiredPropertiesConfig * >(jarg3); 
   {
     try {
       result = (EngineIpi *)new EngineIpi((std::string const &)*arg1,arg2,arg3);;
@@ -25254,7 +25308,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(EngineIpi **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -25308,8 +25362,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
     /*@SWIG@*/
     arg2 = arrSize;
   }
-  arg3 = *(ConfigIpi **)&jarg3; 
-  arg4 = *(RequiredPropertiesConfig **)&jarg4; 
+  arg3 = fiftyoneFromJlong< ConfigIpi * >(jarg3); 
+  arg4 = fiftyoneFromJlong< RequiredPropertiesConfig * >(jarg4); 
   {
     try {
       result = (EngineIpi *)new EngineIpi(arg1,arg2,arg3,arg4);;
@@ -25360,7 +25414,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(EngineIpi **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   
   return jresult;
 }
@@ -25374,7 +25428,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineIpi * >(jarg1); 
   {
     try {
       result = (arg1)->getPublishedTime();;
@@ -25425,7 +25479,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Date **)&jresult = new Date(result); 
+  jresult = fiftyoneToJlong< Date * >(new Date(result)); 
   return jresult;
 }
 
@@ -25438,7 +25492,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineIpi * >(jarg1); 
   {
     try {
       result = (arg1)->getUpdateAvailableTime();;
@@ -25489,7 +25543,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Date **)&jresult = new Date(result); 
+  jresult = fiftyoneToJlong< Date * >(new Date(result)); 
   return jresult;
 }
 
@@ -25560,7 +25614,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Date **)&jresult = new Date(result); 
+  jresult = fiftyoneToJlong< Date * >(new Date(result)); 
   return jresult;
 }
 
@@ -25644,7 +25698,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineIpi * >(jarg1); 
   {
     try {
       result = (arg1)->getDataFilePath();;
@@ -25708,7 +25762,7 @@ SWIGEXPORT jstring JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineIpi * >(jarg1); 
   {
     try {
       result = (arg1)->getDataFileTempPath();;
@@ -25770,7 +25824,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineIpi * >(jarg1); 
   {
     try {
       (arg1)->refreshData();;
@@ -25831,7 +25885,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineIpi * >(jarg1); 
   arg2 = 0;
   if (jarg2) {
     arg2 = (char *)jenv->GetStringUTFChars(jarg2, 0);
@@ -25899,7 +25953,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineIpi * >(jarg1); 
   {
     /*@SWIG:../../../../../cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
     if (jarg2 != NULL) {
@@ -26001,8 +26055,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(EngineIpi **)&jarg1; 
-  arg2 = *(EvidenceIpi **)&jarg2; 
+  arg1 = fiftyoneFromJlong< EngineIpi * >(jarg1); 
+  arg2 = fiftyoneFromJlong< EvidenceIpi * >(jarg2); 
   {
     try {
       result = (ResultsIpi *)(arg1)->process(arg2);;
@@ -26053,7 +26107,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(ResultsIpi **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -26067,7 +26121,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineIpi * >(jarg1); 
   arg2 = 0;
   if (jarg2) {
     arg2 = (char *)jenv->GetStringUTFChars(jarg2, 0);
@@ -26123,7 +26177,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(ResultsIpi **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   if (arg2) jenv->ReleaseStringUTFChars(jarg2, (const char *)arg2);
   return jresult;
 }
@@ -26140,7 +26194,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EngineIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineIpi * >(jarg1); 
   {
     /*@SWIG:../../../../../cxx/src/common/JavaTypes.i,28,JAVA_UBYTE_ARR_TYPEMAP_BODY@*/    long arrSize = 0;
     if (jarg2 != NULL) {
@@ -26229,7 +26283,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(ResultsIpi **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   
   return jresult;
 }
@@ -26245,8 +26299,8 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jcls;
   (void)jarg1_;
   (void)jarg2_;
-  arg1 = *(EngineIpi **)&jarg1; 
-  arg2 = *(EvidenceBase **)&jarg2; 
+  arg1 = fiftyoneFromJlong< EngineIpi * >(jarg1); 
+  arg2 = fiftyoneFromJlong< EvidenceBase * >(jarg2); 
   {
     try {
       result = (ResultsBase *)(arg1)->processBase(arg2);;
@@ -26297,7 +26351,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(ResultsBase **)&jresult = result; 
+  jresult = fiftyoneToJlong(result); 
   return jresult;
 }
 
@@ -26307,7 +26361,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   
   (void)jenv;
   (void)jcls;
-  arg1 = *(EngineIpi **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EngineIpi * >(jarg1); 
   {
     try {
       delete arg1;;
@@ -26371,7 +26425,7 @@ SWIGEXPORT void JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_sw
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(EvidenceBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< EvidenceBase * >(jarg1); 
   {
     if (jarg2) {
       arg2 = (char *) jenv->GetByteArrayElements(jarg2, 0);
@@ -26461,7 +26515,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   {
     if (jarg2) {
       arg2 = (char *) jenv->GetByteArrayElements(jarg2, 0);
@@ -26521,7 +26575,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::string > **)&jresult = new Value< std::string >(result); 
+  jresult = fiftyoneToJlong< Value< std::string > * >(new Value< std::string >(result)); 
   {
     if (jarg2) jenv->ReleaseByteArrayElements(jarg2, (jbyte *)arg2, 0);
   }
@@ -26540,7 +26594,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   {
     if (jarg2) {
       arg2 = (char *) jenv->GetByteArrayElements(jarg2, 0);
@@ -26600,7 +26654,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< std::vector< std::string > > **)&jresult = new Value< std::vector< std::string > >(result); 
+  jresult = fiftyoneToJlong< Value< std::vector< std::string > > * >(new Value< std::vector< std::string > >(result)); 
   {
     if (jarg2) jenv->ReleaseByteArrayElements(jarg2, (jbyte *)arg2, 0);
   }
@@ -26619,7 +26673,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   {
     if (jarg2) {
       arg2 = (char *) jenv->GetByteArrayElements(jarg2, 0);
@@ -26679,7 +26733,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< bool > **)&jresult = new Value< bool >(result); 
+  jresult = fiftyoneToJlong< Value< bool > * >(new Value< bool >(result)); 
   {
     if (jarg2) jenv->ReleaseByteArrayElements(jarg2, (jbyte *)arg2, 0);
   }
@@ -26698,7 +26752,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   {
     if (jarg2) {
       arg2 = (char *) jenv->GetByteArrayElements(jarg2, 0);
@@ -26758,7 +26812,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< int > **)&jresult = new Value< int >(result); 
+  jresult = fiftyoneToJlong< Value< int > * >(new Value< int >(result)); 
   {
     if (jarg2) jenv->ReleaseByteArrayElements(jarg2, (jbyte *)arg2, 0);
   }
@@ -26777,7 +26831,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   {
     if (jarg2) {
       arg2 = (char *) jenv->GetByteArrayElements(jarg2, 0);
@@ -26837,7 +26891,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
       };
     }
   }
-  *(Value< double > **)&jresult = new Value< double >(result); 
+  jresult = fiftyoneToJlong< Value< double > * >(new Value< double >(result)); 
   {
     if (jarg2) jenv->ReleaseByteArrayElements(jarg2, (jbyte *)arg2, 0);
   }
@@ -26856,7 +26910,7 @@ SWIGEXPORT jboolean JNICALL Java_fiftyone_ipintelligence_engine_onpremise_intero
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
-  arg1 = *(ResultsBase **)&jarg1; 
+  arg1 = fiftyoneFromJlong< ResultsBase * >(jarg1); 
   {
     if (jarg2) {
       arg2 = (char *) jenv->GetByteArrayElements(jarg2, 0);
@@ -26929,7 +26983,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
     jlong baseptr = 0;
     (void)jenv;
     (void)jcls;
-    *(ResultsBase **)&baseptr = *(ResultsIpi **)&jarg1;
+    baseptr = fiftyoneToJlong< ResultsBase * >(fiftyoneFromJlong< ResultsIpi * >(jarg1));
     return baseptr;
 }
 
@@ -26937,7 +26991,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
     jlong baseptr = 0;
     (void)jenv;
     (void)jcls;
-    *(ConfigBase **)&baseptr = *(ConfigIpi **)&jarg1;
+    baseptr = fiftyoneToJlong< ConfigBase * >(fiftyoneFromJlong< ConfigIpi * >(jarg1));
     return baseptr;
 }
 
@@ -26945,7 +26999,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
     jlong baseptr = 0;
     (void)jenv;
     (void)jcls;
-    *(std::map< std::string,std::string > **)&baseptr = *(EvidenceBase **)&jarg1;
+    baseptr = fiftyoneToJlong< std::map< std::string,std::string > * >(fiftyoneFromJlong< EvidenceBase * >(jarg1));
     return baseptr;
 }
 
@@ -26953,7 +27007,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
     jlong baseptr = 0;
     (void)jenv;
     (void)jcls;
-    *(EvidenceBase **)&baseptr = *(EvidenceIpi **)&jarg1;
+    baseptr = fiftyoneToJlong< EvidenceBase * >(fiftyoneFromJlong< EvidenceIpi * >(jarg1));
     return baseptr;
 }
 
@@ -26961,7 +27015,7 @@ SWIGEXPORT jlong JNICALL Java_fiftyone_ipintelligence_engine_onpremise_interop_s
     jlong baseptr = 0;
     (void)jenv;
     (void)jcls;
-    *(EngineBase **)&baseptr = *(EngineIpi **)&jarg1;
+    baseptr = fiftyoneToJlong< EngineBase * >(fiftyoneFromJlong< EngineIpi * >(jarg1));
     return baseptr;
 }
 

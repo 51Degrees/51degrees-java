@@ -33,6 +33,11 @@ on:
 permissions:
   contents: read
 
+# Every compiler and tool warning is an error in the builds 51Degrees runs.
+# The poms and the native CMake files read this variable.
+env:
+  _51DEGREES_WARNINGS_AS_ERRORS: 'true'
+
 jobs:
   cloud-human-confidence:
     name: Cloud Human Confidence

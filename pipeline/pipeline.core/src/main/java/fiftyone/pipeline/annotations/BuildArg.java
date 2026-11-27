@@ -40,5 +40,10 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.PARAMETER)
 public @interface BuildArg {
+    /**
+     * The name of the build argument.
+     *
+     * @return the argument name
+     */
     String value();
 }

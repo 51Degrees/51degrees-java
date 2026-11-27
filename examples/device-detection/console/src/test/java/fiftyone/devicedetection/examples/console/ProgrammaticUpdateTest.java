@@ -41,7 +41,7 @@ import static org.junit.Assert.assertSame;
  * illustrate:", the last of which is "programmatic (non-automatic)
  * update").
  *
- * An update needs a licence key and the Enterprise data file, so the test
+ * An update needs a license key and the Enterprise data file, so the test
  * gives the example's update step a stand-in service and engine, and checks
  * that the step asks the service to check for an update of that engine now
  * and gives back the status the service answers.
@@ -52,10 +52,9 @@ public class ProgrammaticUpdateTest {
      * A stand-in for an interface that answers Object's methods and records
      * every other call.
      */
-    @SuppressWarnings("unchecked")
     private static <T> T standIn(Class<T> type, List<Object[]> calls,
                                  Object answer) {
-        return (T) Proxy.newProxyInstance(
+        return type.cast(Proxy.newProxyInstance(
             type.getClassLoader(),
             new Class<?>[]{type},
             (proxy, method, args) -> {
@@ -70,7 +69,7 @@ public class ProgrammaticUpdateTest {
                         calls.add(new Object[]{method.getName(), args});
                         return answer;
                 }
-            });
+            }));
     }
 
     @Test

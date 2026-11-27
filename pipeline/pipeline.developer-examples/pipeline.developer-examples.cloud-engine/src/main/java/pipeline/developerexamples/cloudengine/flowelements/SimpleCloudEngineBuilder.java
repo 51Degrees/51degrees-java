@@ -34,11 +34,22 @@ import java.util.List;
 
 
 //! [class]
+/** Builder for the {@link SimpleCloudEngine}. */
 public class SimpleCloudEngineBuilder
     extends CloudAspectEngineBuilderBase<
             SimpleCloudEngineBuilder,
             SimpleCloudEngine> {
 
+    @Override
+    protected SimpleCloudEngineBuilder self() {
+        return this;
+    }
+
+    /**
+     * Create a new builder.
+     *
+     * @param loggerFactory creates the loggers the element uses
+     */
     public SimpleCloudEngineBuilder(
         ILoggerFactory loggerFactory) {
         super(loggerFactory);
@@ -62,6 +73,12 @@ public class SimpleCloudEngineBuilder
             });
     }
 
+    /**
+     * Build an engine using the current options.
+     *
+     * @return a new engine
+     * @throws Exception if the engine could not be created
+     */
     public SimpleCloudEngine build() throws Exception {
         return buildEngine();
     }

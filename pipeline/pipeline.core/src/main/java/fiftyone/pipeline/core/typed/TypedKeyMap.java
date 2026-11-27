@@ -49,8 +49,26 @@ public interface TypedKeyMap extends Closeable {
     <T> T get(TypedKey<T> typedKey);
 
 
+    /**
+     * Get the one value whose class is the type given, or failing that the one
+     * value assignable to it.
+     *
+     * @param type the type of the value
+     * @param <T> type of the value
+     * @return the value
+     * @throws fiftyone.pipeline.core.exceptions.PipelineDataException if no
+     *    value or more than one matches
+     */
     <T> T get(Class<T> type);
 
+    /**
+     * Get a value without failing when the key is missing or the type does not
+     * match.
+     *
+     * @param key the key of the value
+     * @param <T> type of the value
+     * @return the result, which says whether a value was found
+     */
     <T> TryGetResult<T> tryGet(TypedKey<T> key);
 
     /**
@@ -79,18 +97,53 @@ public interface TypedKeyMap extends Closeable {
         return get(typedKey);
     }
 
+    /**
+     * Remove a key and close its value.
+     *
+     * @param typedKey the key to remove
+     * @param <T> type of the value
+     * @return the value removed, or null if the key was not present
+     */
     <T> T removeIfExists(TypedKey<T> typedKey);
 
+    /**
+     * Whether a key of this name is present.
+     *
+     * @param key the name of the key
+     * @return true if present
+     */
     boolean containsKey(String key);
 
+    /**
+     * Whether a key of this name is present.
+     *
+     * @param typedKey the key
+     * @param <T> type of the value
+     * @return true if present
+     */
     <T> boolean containsKey(TypedKey<T> typedKey);
 
+    /**
+     * The map as a map of names to values.
+     *
+     * @return the map
+     */
     Map<String, Object> asStringKeyMap();
 
     @Override
     void close();
 
+    /**
+     * The names of every key.
+     *
+     * @return the names
+     */
     List<String> getKeys();
 
+    /**
+     * The number of keys.
+     *
+     * @return the number of keys
+     */
     int size();
 }

@@ -61,7 +61,6 @@ public class CloudRequestEngineBuilderTests extends CloudRequestEngineTestsBase 
 
     
     @Test
-    @SuppressWarnings("unused")
     public void BuildEngine_ResourceKey_NotSet() {
         assertThrows(PipelineConfigurationException.class, () -> {
             CloudRequestEngine cloudRequestsEngine =

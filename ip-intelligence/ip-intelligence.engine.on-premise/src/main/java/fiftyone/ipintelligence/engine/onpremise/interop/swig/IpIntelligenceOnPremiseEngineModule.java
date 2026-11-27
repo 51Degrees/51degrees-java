@@ -8,7 +8,7 @@
 
 package fiftyone.ipintelligence.engine.onpremise.interop.swig;
 
-public class IpIntelligenceOnPremiseEngineModule {
+final class IpIntelligenceOnPremiseEngineModule {
   public static void Evidence_AddFromBytes(EvidenceBaseSwig evidence, String key, String value) {
     IpIntelligenceOnPremiseEngineModuleJNI.Evidence_AddFromBytes(EvidenceBaseSwig.getCPtr(evidence), evidence, (key == null) ? null : key.getBytes(), (value == null) ? null : value.getBytes());
   }

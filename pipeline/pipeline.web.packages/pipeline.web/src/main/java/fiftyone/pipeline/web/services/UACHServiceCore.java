@@ -50,19 +50,22 @@ public interface UACHServiceCore {
      * Default implementation of the {@link UACHServiceCore} service.
      */
     class Default implements UACHServiceCore {
+        /** Create a new instance. */
+        public Default() {
+        }
         
-		@SuppressWarnings("unchecked")
 		@Override
 		public void setResponseHeaders(
 			FlowData flowData, HttpServletResponse response) {
 			
 			ElementData setHeaderData = flowData.get(SET_HEADER_ELEMENT_DATAKEY);
 			if (setHeaderData != null) {
-				Map<String, String> responseHeaders =
-					(Map<String, String>)
-						setHeaderData.get(RESPONSE_HEADER_PROPERTY_NAME);
+				Map<?, ?> responseHeaders =
+					(Map<?, ?>) setHeaderData.get(RESPONSE_HEADER_PROPERTY_NAME);
 				if (responseHeaders != null) {
-					responseHeaders.forEach((k, v) -> {
+					responseHeaders.forEach((key, value) -> {
+						String k = (String) key;
+						String v = (String) value;
 						if(response.getHeader(k) != null) {
 							v = response.getHeader(k) + ", " + v;
 						}

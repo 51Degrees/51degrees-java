@@ -65,6 +65,11 @@ public class CookieTests {
 
     class CookieElement extends FlowElementBase<CookieData, ElementPropertyMetaDataDefault> {
 
+        @Override
+        protected Class<CookieData> getDataType() {
+            return CookieData.class;
+        }
+
         public CookieElement(Logger logger) {
             super(logger, null);
         }

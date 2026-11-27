@@ -26,9 +26,20 @@ import fiftyone.pipeline.core.data.ElementData;
 import fiftyone.pipeline.core.data.types.JavaScript;
 
 //! [class]
+/** The star sign the element returns. */
 public interface StarSignData extends ElementData {
+    /**
+     * The star sign for the date of birth given.
+     *
+     * @return the name of the star sign
+     */
     String getStarSign();
 
+    /**
+     * JavaScript that asks for the date of birth, empty when one was given.
+     *
+     * @return the JavaScript
+     */
     JavaScript getDobJavaScript();
 }
 //! [class]

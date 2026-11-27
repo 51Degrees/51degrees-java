@@ -30,14 +30,25 @@ import fiftyone.pipeline.core.flowelements.FlowElement;
 import org.slf4j.ILoggerFactory;
 
 //! [class]
+/** Builder for the {@link SimpleClientSideElement}. */
 @ElementBuilder(alternateName = "SimpleClientSideElement")
 public class SimpleClientSideElementBuilder {
     private final ILoggerFactory loggerFactory;
 
+    /**
+     * Create a new builder.
+     *
+     * @param loggerFactory creates the loggers the element uses
+     */
     public SimpleClientSideElementBuilder(ILoggerFactory loggerFactory) {
         this.loggerFactory = loggerFactory;
     }
 
+    /**
+     * Build an element.
+     *
+     * @return a new element
+     */
     public SimpleClientSideElement build() {
         return new SimpleClientSideElement(
             loggerFactory.getLogger(SimpleClientSideElement.class.getName()),

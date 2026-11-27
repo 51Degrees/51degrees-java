@@ -25,11 +25,19 @@ package fiftyone.pipeline.developerexamples.clientsideelement.data;
 import java.util.Calendar;
 
 //! [class]
+/** A star sign and the days of the year it covers. */
 public class StarSign {
     private final Calendar end;
     private final Calendar start;
     private final String name;
 
+    /**
+     * Create a new instance.
+     *
+     * @param name the name of the star sign
+     * @param start the first day, as dd/mm
+     * @param end the last day, as dd/mm
+     */
     public StarSign(String name, String start, String end) {
         this.name = name;
         this.start = dayOfYear(start);
@@ -70,14 +78,29 @@ public class StarSign {
         return day.compareTo(start) >= 0 || day.compareTo(end) <= 0;
     }
 
+    /**
+     * The name of the star sign.
+     *
+     * @return the name
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * The first day of the star sign. Only the day and month are used.
+     *
+     * @return the first day
+     */
     public Calendar getStart() {
         return start;
     }
 
+    /**
+     * The last day of the star sign. Only the day and month are used.
+     *
+     * @return the last day
+     */
     public Calendar getEnd() {
         return end;
     }

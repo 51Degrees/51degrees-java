@@ -88,6 +88,11 @@ public class AspectDataPoolTests {
      */
     private static class PoolEngine
         extends AspectEngineBase<PooledAspectData, AspectPropertyMetaData> {
+
+        @Override
+        protected Class<PooledAspectData> getDataType() {
+            return PooledAspectData.class;
+        }
         private final List<AspectPropertyMetaData> properties;
         private final PoolEngine partner;
 

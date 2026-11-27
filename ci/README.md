@@ -40,6 +40,10 @@ repositories used to do for one package tree each.
   [select-options.Tests.ps1](select-options.Tests.ps1), which
   [ci-script-tests.yml](../.github/workflows/ci-script-tests.yml) runs on
   Linux and Windows for each pull request that changes this folder.
+- [options.json](options.json) tests on JDK 8, 11, 17 and 21 on Linux x64,
+  Linux ARM and Windows. The macOS entries test on JDK 11, 17 and 21 only,
+  because the GitHub macOS images (`macos-15` and `macos-15-intel`) have no
+  JDK 8, so no `JAVA_HOME_8_*` variable is set there.
 - [fetch-assets.ps1](fetch-assets.ps1) fetches every data file as one of
   common-ci's assets, which each run caches once, and links or copies it into
   `cxx/data/device-detection` or `cxx/data/ip-intelligence`, where the tests

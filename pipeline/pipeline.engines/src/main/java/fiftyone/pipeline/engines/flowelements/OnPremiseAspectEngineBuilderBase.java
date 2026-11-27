@@ -51,19 +51,22 @@ import static org.apache.commons.lang3.BooleanUtils.isFalse;
  *                  the fluent builder methods
  * @param <TEngine> the type of the engine that this builder will build
  */
-@SuppressWarnings("rawtypes")
 public abstract class OnPremiseAspectEngineBuilderBase<
     TBuilder extends OnPremiseAspectEngineBuilderBase<TBuilder, TEngine>,
-    TEngine extends OnPremiseAspectEngine>
+    TEngine extends OnPremiseAspectEngine<?, ?>>
     extends AspectEngineBuilderBase<TBuilder, TEngine> {
 
     private final DataUpdateService dataUpdateService;
 
+    /** The data files configured so far. */
     protected final List<DataFileConfiguration> dataFileConfigs = new ArrayList<>();
+    /** The data files created from the configurations. */
     protected final List<AspectEngineDataFile> dataFiles = new ArrayList<>();
+    /** Folder for temporary copies of the data file. */
     protected String tempDir = Paths.get(
             System.getProperty("java.io.tmpdir"),"fiftyone.tempfiles").toString();
 
+    /** Used for logging. */
     protected Logger logger = LoggerFactory.getLogger(OnPremiseAspectEngineBuilderBase.class);
 
     /**
@@ -100,6 +103,14 @@ public abstract class OnPremiseAspectEngineBuilderBase<
         createAndVerifyTempDir(Paths.get(tempDir));
     }
 
+    /**
+     * Create the folder if it does not exist, readable and writable by its
+     * owner only, and check it can be read and written.
+     *
+     * @param pathToCreate the folder
+     * @throws IllegalStateException if the path is not a folder or cannot be
+     *    read and written
+     */
     public final void createAndVerifyTempDir(Path pathToCreate) {
         try {
             File directory = pathToCreate.toFile();
@@ -148,10 +159,9 @@ public abstract class OnPremiseAspectEngineBuilderBase<
      * @param configuration  the data file configuration to add to this engine
      * @return this engine builder instance
      */
-    @SuppressWarnings("unchecked")
     public TBuilder addDataFile(DataFileConfiguration configuration) {
         dataFileConfigs.add(configuration);
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -163,10 +173,9 @@ public abstract class OnPremiseAspectEngineBuilderBase<
      * @return this engine builder instance
      */
     @DefaultValue("System.getProperty(java.io.tmpdir)+\"/fiftyone.tempfiles\"")
-    @SuppressWarnings("unchecked")
     public TBuilder setTempDirPath(String dirPath) {
         tempDir = dirPath;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -287,7 +296,6 @@ public abstract class OnPremiseAspectEngineBuilderBase<
         return false;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     protected void configureEngine(TEngine engine) throws Exception {
         super.configureEngine(engine);

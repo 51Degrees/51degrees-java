@@ -49,6 +49,9 @@ import static fiftyone.pipeline.core.flowelements.PipelineBuilder.getAvailableEl
  * and hence will transitively include Pipeline.
  */
 public class Builders {
+    /** Create a new instance. */
+    public Builders() {
+    }
 
     private static final Logger logger = LoggerFactory.getLogger("Builders");
     // what methods have we already seen for this builder (can be from superclass or interface)
@@ -56,8 +59,8 @@ public class Builders {
 
     /**
      * Output a Markdown table listing builders and properties
+     * @param out where the table is written
      */
-
     public static void doTable(PrintStream out) {
         for (Class<?> clazz : getAvailableElementBuilders()) {
             out.println("# " + clazz.getName());
@@ -87,8 +90,8 @@ public class Builders {
 
     /**
      * Output an XML property file with all builders and parameters
+     * @param out where the file is written
      */
-
     public static void doXml(PrintStream out) {
         out.println("<PipelineOptions>");
         out.println("    <Elements>");

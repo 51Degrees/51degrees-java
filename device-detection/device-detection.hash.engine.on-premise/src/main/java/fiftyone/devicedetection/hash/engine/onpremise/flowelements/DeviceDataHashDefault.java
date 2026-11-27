@@ -409,7 +409,6 @@ public class DeviceDataHashDefault
         return result;
     }
 
-    @SuppressWarnings("unchecked")
 	@Override
     protected <T> TryGetResult<T> tryGetValue(
         String key,
@@ -447,13 +446,9 @@ public class DeviceDataHashDefault
             }
             if (objSet == true) {
                 try {
-                    T value;
-                    if (type.isPrimitive()) {
-                        value = (T) primitiveTypes.get(type).cast(obj);
-                    } else {
-                        value = type.cast(obj);
-                    }
-                    result.setValue(value);
+                    // A primitive type's cast accepts only null, as the
+                    // value is always an AspectPropertyValue.
+                    result.setValue(type.cast(obj));
                 } catch (ClassCastException e) {
                     throw new ClassCastException(
                         "Expected property '" + key + "' to be of " +

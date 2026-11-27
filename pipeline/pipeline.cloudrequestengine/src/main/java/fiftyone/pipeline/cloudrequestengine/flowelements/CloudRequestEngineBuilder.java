@@ -52,6 +52,11 @@ import java.util.function.Function;
 @ElementBuilder
 public class CloudRequestEngineBuilder extends
     AspectEngineBuilderBase<CloudRequestEngineBuilder, CloudRequestEngine> {
+
+    @Override
+    protected CloudRequestEngineBuilder self() {
+        return this;
+    }
 	
     private final HttpClient httpClient;
 
@@ -72,10 +77,21 @@ public class CloudRequestEngineBuilder extends
     	return System.getenv(name);
     };
 
+    /**
+     * Create a new builder with the default HTTP client.
+     *
+     * @param loggerFactory creates the loggers the engine uses
+     */
     public CloudRequestEngineBuilder(ILoggerFactory loggerFactory) {
         this(loggerFactory, new HttpClientDefault());
     }
 
+    /**
+     * Create a new builder.
+     *
+     * @param loggerFactory creates the loggers the engine uses
+     * @param httpClient used to make requests to the cloud service
+     */
     public CloudRequestEngineBuilder(
         ILoggerFactory loggerFactory,
         HttpClient httpClient) {
@@ -210,6 +226,12 @@ public class CloudRequestEngineBuilder extends
         }
     }
     
+    /**
+     * Build an engine using the current options.
+     *
+     * @return a new engine
+     * @throws Exception if the engine could not be created
+     */
     public CloudRequestEngine build() throws Exception {
         return buildEngine();
     }

@@ -41,6 +41,11 @@ import static org.mockito.Mockito.mock;
 public class MultiplyByElement
     extends FlowElementBase<TestElementData, ElementPropertyMetaData> {
 
+    @Override
+    protected Class<TestElementData> getDataType() {
+        return TestElementData.class;
+    }
+
     public List<String> evidenceKeys = Arrays.asList("value");
     private EvidenceKeyFilterWhitelist evidenceKeyFilter;
     private int multiple;

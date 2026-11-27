@@ -168,14 +168,13 @@ public class ClientsidePropertyServiceTests {
    * headers in the Vary header once it has them.
    */
   @Test
-  @SuppressWarnings("rawtypes")
   public void JavaScript_VaryHeader_ReadAgainUntilLoaded() throws IOException {
-    FlowElement element = mock(FlowElement.class);
+    FlowElement<?, ?> element = mock(FlowElement.class);
     when(element.getEvidenceKeyFilter()).thenReturn(
       new EvidenceKeyFilterWhitelist(new ArrayList<String>()),
       new EvidenceKeyFilterWhitelist(Arrays.asList("header.User-Agent")));
     when(element.hasLoadedProperties()).thenReturn(false, true);
-    List<FlowElement> elements = new ArrayList<>();
+    List<FlowElement<?, ?>> elements = new ArrayList<>();
     elements.add(element);
     Configure(elements);
 
@@ -264,15 +263,14 @@ public class ClientsidePropertyServiceTests {
    * Evidence key filter, so they are in the Vary header too.
    */
   @Test
-  @SuppressWarnings("rawtypes")
   public void JavaScript_VaryHeader_ParallelElements() throws IOException {
     EvidenceKeyFilterAggregator group = new EvidenceKeyFilterAggregator();
     group.addFilter(new EvidenceKeyFilterWhitelist(
       Arrays.asList("header.User-Agent"),
       String.CASE_INSENSITIVE_ORDER));
-    FlowElement element = mock(FlowElement.class);
+    FlowElement<?, ?> element = mock(FlowElement.class);
     when(element.getEvidenceKeyFilter()).thenReturn(group);
-    List<FlowElement> elements = new ArrayList<>();
+    List<FlowElement<?, ?>> elements = new ArrayList<>();
     elements.add(element);
     Configure(elements);
 
@@ -997,6 +995,11 @@ public class ClientsidePropertyServiceTests {
   private static class UserAgentElement
     extends FlowElementBase<ElementData, ElementPropertyMetaData> {
 
+      @Override
+      protected Class<ElementData> getDataType() {
+          return ElementData.class;
+      }
+
     private final EvidenceKeyFilter filter = new EvidenceKeyFilterWhitelist(
       Collections.singletonList("header.user-agent"),
       String.CASE_INSENSITIVE_ORDER);
@@ -1121,13 +1124,12 @@ public class ClientsidePropertyServiceTests {
     verify(response).setHeader(eq("Access-Control-Allow-Origin"), eq("*"));
   }
 
-  @SuppressWarnings("rawtypes")
-  private List<FlowElement> ConfigureElements(List<List<String>> evidenceHeaders) {
-    List<FlowElement> elements = new ArrayList<FlowElement>();
+  private List<FlowElement<?, ?>> ConfigureElements(List<List<String>> evidenceHeaders) {
+    List<FlowElement<?, ?>> elements = new ArrayList<FlowElement<?, ?>>();
 
     for (List<String> entry : evidenceHeaders) {
       if(entry != null) {
-        FlowElement element = mock(FlowElement.class);
+        FlowElement<?, ?> element = mock(FlowElement.class);
         EvidenceKeyFilter filter = new EvidenceKeyFilterWhitelist(entry);
         when(element.getEvidenceKeyFilter()).thenReturn(filter);
 
@@ -1138,14 +1140,14 @@ public class ClientsidePropertyServiceTests {
     return elements;
   }
 
-  @SuppressWarnings("rawtypes")
-  private void Configure(List<FlowElement> elements) {
+  private void Configure(List<FlowElement<?, ?>> elements) {
     if(elements == null){
       elements = new ArrayList<>();
     }
     
     pipeline = mock(Pipeline.class);
-    when(pipeline.getFlowElements()).thenReturn(elements);
+    doReturn(elements)
+            .when(pipeline).getFlowElements();
     when(pipeline.getElement(JavaScriptBuilderElement.class)).thenReturn(jsElement);
     when(pipeline.getElement(JsonBuilderElement.class)).thenReturn(jsonElement);
     when(pipeline.getEvidenceKeyFilter())

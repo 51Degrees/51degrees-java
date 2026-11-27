@@ -343,6 +343,11 @@ public class JavaScriptMinifyTests {
     private static class ValuesElement
         extends FlowElementBase<ElementDataBase, ElementPropertyMetaData> {
 
+        @Override
+        protected Class<ElementDataBase> getDataType() {
+            return ElementDataBase.class;
+        }
+
         private final boolean promises;
 
         private final boolean delayed;

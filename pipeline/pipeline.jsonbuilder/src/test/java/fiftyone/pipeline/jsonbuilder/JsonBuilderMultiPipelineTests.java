@@ -94,7 +94,6 @@ public class JsonBuilderMultiPipelineTests {
      * Process Flow Data of the Pipeline with the element and return the
      * JSON of the "test" element.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     private static JSONObject process(
         JsonBuilderElement element,
         Pipeline pipeline) throws Exception {
@@ -111,18 +110,18 @@ public class JsonBuilderMultiPipelineTests {
         session.setValue("session");
         TryGetResult<Integer> sequence = new TryGetResult<>();
         sequence.setValue(1);
-        when(flowData.tryGetEvidence(eq("query.session-id"), any(Class.class)))
-            .thenReturn(session);
-        when(flowData.tryGetEvidence(eq("query.sequence"), any(Class.class)))
-            .thenReturn(sequence);
+        doReturn(session)
+            .when(flowData).tryGetEvidence(eq("query.session-id"), any());
+        doReturn(sequence)
+            .when(flowData).tryGetEvidence(eq("query.sequence"), any());
         when(flowData.getWhere(any(PropertyMatcher.class)))
             .thenReturn(new HashMap<>());
         when(flowData.getPipeline()).thenReturn(pipeline);
         when(flowData.getErrors()).thenReturn(new ArrayList<FlowError>());
         final JsonBuilderData[] result = { null };
-        when(flowData.getOrAdd(anyString(), any(FlowElement.DataFactory.class)))
+        when(flowData.getOrAdd(anyString(), any()))
             .thenAnswer((Answer<ElementData>) invocation -> {
-                FlowElement.DataFactory factory = invocation.getArgument(1);
+                FlowElement.DataFactory<?> factory = invocation.getArgument(1);
                 result[0] = (JsonBuilderData) factory.create(flowData);
                 return result[0];
             });

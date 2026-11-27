@@ -116,7 +116,8 @@ public class GettingStartedWebOnPrem extends HttpServlet {
         }
     }
 
-     FlowDataProviderCore flowDataProvider = new FlowDataProviderCore.Default();
+    // HttpServlet is Serializable, but this servlet is never serialized.
+    transient FlowDataProviderCore flowDataProvider = new FlowDataProviderCore.Default();
 
     /**
      *

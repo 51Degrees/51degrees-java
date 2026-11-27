@@ -23,12 +23,9 @@
 package fiftyone.pipeline.engines.fiftyone.flowelements;
 
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
-import fiftyone.pipeline.core.typed.TypedKey;
-import fiftyone.pipeline.core.typed.TypedKeyDefault;
 import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.fiftyone.data.*;
 import fiftyone.pipeline.engines.flowelements.OnPremiseAspectEngineBase;
-import fiftyone.pipeline.util.Types;
 import org.slf4j.Logger;
 
 /**
@@ -59,19 +56,6 @@ public abstract class FiftyOneOnPremiseAspectEngineBase<
         super(logger, aspectDataFactory, tempDataFilePath);
     }
 
-
-    @Override
-    public TypedKey<TData> getTypedDataKey() {
-        if (typedKey == null) {
-            typedKey = new TypedKeyDefault<>(
-                getElementDataKey(),
-                Types.findSubClassParameterType(
-                    this,
-                    FiftyOneOnPremiseAspectEngineBase.class,
-                    0));
-        }
-        return typedKey;
-    }
 
     @Override
     public abstract CloseableIterable<ProfileMetaData> getProfiles();

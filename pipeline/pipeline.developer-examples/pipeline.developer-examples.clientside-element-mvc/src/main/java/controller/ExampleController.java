@@ -35,6 +35,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.Random;
 
 //! [class]
+/** Shows the star sign for the date of birth the browser sends. */
 @Controller
 @RequestMapping("/")
 public class ExampleController {
@@ -43,11 +44,23 @@ public class ExampleController {
 
     private final Random rand = new Random();
 
+    /**
+     * Create a new instance.
+     *
+     * @param flowDataProvider gives the Flow Data for each request
+     */
     @Autowired
     public ExampleController(FlowDataProvider flowDataProvider) {
         this.flowDataProvider = flowDataProvider;
     }
 
+    /**
+     * Show the star sign for the request.
+     *
+     * @param model holds the values the page shows
+     * @param request the request
+     * @return the name of the view
+     */
     @RequestMapping(method = RequestMethod.GET)
     public String get(ModelMap model, HttpServletRequest request) {
     	String message = "";

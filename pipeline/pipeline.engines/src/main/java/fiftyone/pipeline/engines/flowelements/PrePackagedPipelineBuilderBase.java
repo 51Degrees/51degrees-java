@@ -36,13 +36,17 @@ public abstract class PrePackagedPipelineBuilderBase
     <TBuilder extends PrePackagedPipelineBuilderBase<TBuilder>>
     extends PipelineBuilderBase<TBuilder> {
 
+    /** Whether lazy loading is on, which has no effect. */
     protected boolean lazyLoading = Constants.DEFAULT_LAZY_LOADING;
 
+    /** Whether the engines cache results. */
     protected boolean resultsCache = Constants.DEFAULT_RESULTS_CACHE;
 
+    /** Timeout of the lazy loading option, which has no effect. */
     protected long lazyLoadingTimeoutMillis =
         Constants.DEFAULT_LAZY_LOADING_TIMEOUT_MILLIS;
 
+    /** Number of results each engine's cache holds. */
     protected int resultsCacheSize = Constants.DEFAULT_RESULTS_CACHE_SIZE;
 
     /**
@@ -70,10 +74,9 @@ public abstract class PrePackagedPipelineBuilderBase
      * @return this builder instance
      * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/advanced-features/lazy-loading.md">Specification</a>
      */
-    @SuppressWarnings("unchecked")
     public TBuilder useLazyLoading() {
         lazyLoading = true;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -84,11 +87,10 @@ public abstract class PrePackagedPipelineBuilderBase
      * @return this builder
      * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/advanced-features/lazy-loading.md">Specification</a>
      */
-    @SuppressWarnings("unchecked")
     public TBuilder useLazyLoading(long timeoutMillis) {
         lazyLoading = true;
         this.lazyLoadingTimeoutMillis = timeoutMillis;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -96,10 +98,9 @@ public abstract class PrePackagedPipelineBuilderBase
      * {@link Constants#DEFAULT_RESULTS_CACHE_SIZE}.
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
     public TBuilder useResultsCache() {
         resultsCache = true;
-        return (TBuilder) this;
+        return self();
     }
 
     /**
@@ -108,10 +109,9 @@ public abstract class PrePackagedPipelineBuilderBase
      *             cache
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
     public TBuilder useResultsCache(int size) {
         resultsCache = true;
         resultsCacheSize = size;
-        return (TBuilder) this;
+        return self();
     }
 }

@@ -31,11 +31,10 @@ import java.util.List;
  * Default implementation of the {@link ElementPropertyMetaData} interface.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/properties.md#property-metadata">Specification</a>
  */
-@SuppressWarnings("rawtypes")
 public class ElementPropertyMetaDataDefault implements ElementPropertyMetaData {
 
     private final String name;
-    private final FlowElement element;
+    private final FlowElement<?, ?> element;
     private final String category;
     private final Class<?> type;
     private final boolean available;
@@ -53,7 +52,7 @@ public class ElementPropertyMetaDataDefault implements ElementPropertyMetaData {
      */
     public ElementPropertyMetaDataDefault(
         String name,
-        FlowElement element,
+        FlowElement<?, ?> element,
         String category,
         Class<?> type,
         boolean available) {
@@ -80,7 +79,7 @@ public class ElementPropertyMetaDataDefault implements ElementPropertyMetaData {
      */
     public ElementPropertyMetaDataDefault(
         String name,
-        FlowElement element,
+        FlowElement<?, ?> element,
         String category,
         Class<?> type,
         boolean available,
@@ -121,7 +120,7 @@ public class ElementPropertyMetaDataDefault implements ElementPropertyMetaData {
      */
     public ElementPropertyMetaDataDefault(
         String name,
-        FlowElement element,
+        FlowElement<?, ?> element,
         String category,
         Class<?> type,
         boolean available,
@@ -144,7 +143,7 @@ public class ElementPropertyMetaDataDefault implements ElementPropertyMetaData {
     }
 
     @Override
-    public FlowElement getElement() {
+    public FlowElement<?, ?> getElement() {
         return element;
     }
 

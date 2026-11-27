@@ -72,12 +72,15 @@ public class GettingStartedOnPremUsageSharingTest {
         PipelineOptions options =
             PipelineOptionsFactory.getOptionsFromFile(getFilePath(OPTIONS));
         options.elements.clear();
-        try (Pipeline pipeline = new FiftyOnePipelineBuilder()
-            .buildFromConfiguration(options)) {
+        Pipeline pipeline = new FiftyOnePipelineBuilder()
+            .buildFromConfiguration(options);
+        try {
             for (FlowElement<?, ?> element : pipeline.getFlowElements()) {
                 assertFalse("The example's Pipeline should not share usage",
                     element instanceof ShareUsageElement);
             }
+        } finally {
+            pipeline.close();
         }
     }
 

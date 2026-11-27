@@ -241,10 +241,22 @@ public class PropertyMetaDataIPI implements FiftyOneAspectPropertyMetaData {
         return super.equals(obj);
     }
 
+    /**
+     * Whether this property has the same name as another.
+     *
+     * @param other the property to compare with
+     * @return true if the names are equal
+     */
     public boolean equals(FiftyOneAspectPropertyMetaData other) {
         return getName().equals(other.getName());
     }
 
+    /**
+     * Whether this property has the given name.
+     *
+     * @param other the name to compare with
+     * @return true if the names are equal
+     */
     public boolean equals(String other) {
         return getName().equals(other);
     }

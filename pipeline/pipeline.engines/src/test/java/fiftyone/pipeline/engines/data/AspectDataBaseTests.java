@@ -40,17 +40,16 @@ import static org.mockito.Mockito.*;
 public class AspectDataBaseTests {
 
     private TestData data;
-    private AspectEngine<? extends AspectData,? extends AspectPropertyMetaData> engine;
+    private AspectEngine<?, ?> engine;
     private FlowData flowData;
     private MissingPropertyService missingPropertyService;
 
-    @SuppressWarnings("unchecked")
     @Before
     public void Initisalise() {
         engine = mock(AspectEngine.class);
         flowData = mock(FlowData.class);
         missingPropertyService = mock(MissingPropertyService.class);
-        when(missingPropertyService.getMissingPropertyReason(any(String.class), any(List.class)))
+        when(missingPropertyService.getMissingPropertyReason(any(String.class), anyList()))
             .thenReturn(new MissingPropertyResult(
                 MissingPropertyReason.Unknown,
                 "TEST"

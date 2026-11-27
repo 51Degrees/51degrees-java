@@ -63,11 +63,18 @@ import static fiftyone.pipeline.core.Constants.EVIDENCE_SEPERATOR;
 public class JsonBuilderElement
     extends FlowElementBase<JsonBuilderData, ElementPropertyMetaData>
     implements JsonBuilder {
+
+    @Override
+    protected Class<JsonBuilderData> getDataType() {
+        return JsonBuilderData.class;
+    }
+
     private static final String JAVASCRIPT_PROPERTIES_NAME = "javascriptProperties";
     private static final String RAW_WEIGHTING_KEY = "rawweighting";
     private static final String VALUE_KEY = "value";
     private final EvidenceKeyFilter evidenceKeyFilter;
-    private final List<ElementPropertyMetaData> properties;
+    private final Object propertiesLock = new Object();
+    private volatile List<ElementPropertyMetaData> properties = null;
     private final List<String> blacklist;
     private final Set<String> elementBlacklist;
 
@@ -76,7 +83,6 @@ public class JsonBuilderElement
      * @param logger The logger.
      * @param elementDataFactory The element data factory.
      */
-    @SuppressWarnings("this-escape")
     public JsonBuilderElement(
             Logger logger,
             ElementDataFactory<JsonBuilderData> elementDataFactory) {
@@ -86,14 +92,6 @@ public class JsonBuilderElement
         evidenceKeyFilter = new EvidenceKeyFilterWhitelist(
             whiteList,
             String.CASE_INSENSITIVE_ORDER);
-
-        properties = Collections.singletonList(
-            (ElementPropertyMetaData)new ElementPropertyMetaDataDefault(
-                "json",
-                this,
-                "",
-                String.class,
-                true));
 
         // Blacklist of properties which should not be added to the Json.
         blacklist = Arrays.asList("products", "properties");
@@ -115,6 +113,10 @@ public class JsonBuilderElement
      * simultaneously.
      */
     protected class PipelineConfig {
+        /** Create a new instance. */
+        protected PipelineConfig() {
+        }
+
         /**
          * A collection of the complete string names of any properties
          * with the 'delay execution' flag set to true.
@@ -176,9 +178,30 @@ public class JsonBuilderElement
         return evidenceKeyFilter;
     }
 
+    /**
+     * The properties are created on first use rather than in the
+     * constructor, as each refers to this element.
+     */
     @Override
     public List<ElementPropertyMetaData> getProperties() {
-        return properties;
+        List<ElementPropertyMetaData> result = properties;
+        if (result == null) {
+            synchronized (propertiesLock) {
+                result = properties;
+                if (result == null) {
+                    result = Collections.singletonList(
+                        (ElementPropertyMetaData)
+                            new ElementPropertyMetaDataDefault(
+                                "json",
+                                this,
+                                "",
+                                String.class,
+                                true));
+                    properties = result;
+                }
+            }
+        }
+        return result;
     }
 
     @Override
@@ -312,8 +335,7 @@ public class JsonBuilderElement
                 if (propertyValue instanceof List &&
                     ((List<?>) propertyValue).size() > 0 &&
                     ElementData.class.isAssignableFrom(((List<?>) propertyValue).get(0).getClass())) {
-                    @SuppressWarnings("unchecked")
-                    List<Object> elementDatas = (List<Object>) propertyValue;
+                    List<?> elementDatas = (List<?>) propertyValue;
                     List<Object> results = new ArrayList<>();
                     for (Object elementData : elementDatas) {
                         results.add(getValues(
@@ -470,16 +492,15 @@ public class JsonBuilderElement
         for (Map.Entry<String, Object> entry : allProperties.entrySet()) {
             if (entry.getValue() instanceof Map) {
                 JSONObject element = new JSONObject();
-                @SuppressWarnings("unchecked")
-                Map<String, Object> properties = (Map<String, Object>)entry.getValue();
+                Map<?, ?> properties = (Map<?, ?>)entry.getValue();
 
-                for (Map.Entry<String, Object> ent : properties.entrySet()) {
+                for (Map.Entry<?, ?> ent : properties.entrySet()) {
                     Object value = ent.getValue();
                     
                     if(value instanceof JavaScript)
                         value = value.toString();
 
-                    element.put(resolveName(ent.getKey()), toJsonValue(value));
+                    element.put(resolveName((String) ent.getKey()), toJsonValue(value));
                 }
                 json.put(resolveName(entry.getKey()), element);
             } else {
