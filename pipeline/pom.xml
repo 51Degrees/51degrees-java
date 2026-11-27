@@ -421,29 +421,17 @@
     </scm>
 
     <profiles>
-
         <profile>
-
             <id>warnings-as-errors</id>
-
             <activation>
-
                 <property>
-
                     <name>env._51DEGREES_WARNINGS_AS_ERRORS</name>
-
                     <value>true</value>
-
                 </property>
-
             </activation>
-
             <properties>
-
                 <fiftyone.warningsAsErrors>true</fiftyone.warningsAsErrors>
-
             </properties>
-
         </profile>
         <!-- javac 9 and later warn that the bootstrap class path is not set
              when they compile for Java 8 with -source and -target. The
