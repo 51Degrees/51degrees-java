@@ -47,6 +47,7 @@
 
 package fiftyone.ipintelligence.examples.web;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.devicedetection.shared.DeviceData;
 import fiftyone.ipintelligence.examples.shared.KeyHelper;
 import fiftyone.ipintelligence.shared.IPIntelligenceData;
@@ -83,11 +84,25 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * <p>
  * The configuration file for the pipeline is at
  * src/main/webapp/WEB-INF/51Degrees-CloudMixed.xml. The resource key is taken from the
- * environment variable or system property "TestResourceKey" unless supplied as a command
- * line argument.
+ * environment variable or system property "_51DEGREES_RESOURCE_KEY" unless supplied as a command
+ * line argument. The server listens on the first port the
+ * _51DEGREES_EXAMPLE_HTTP_PORTS environment variable lists, or on 5151 when it
+ * is not set.
  */
 public class GettingStartedWebCloudMixed extends HttpServlet {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "web-getting-started.cloud.mixed-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedwebcloudmixed.java";
+
     private static final long serialVersionUID = 1734154705981153543L;
+    /**
+     * The port the example listens on when the
+     * _51DEGREES_EXAMPLE_HTTP_PORTS environment variable does not choose
+     * another.
+     */
+    public static final int DEFAULT_PORT = 5151;
     public static Logger logger = LoggerFactory.getLogger(GettingStartedWebCloudMixed.class);
 
     public static void main(String[] args) throws Exception {
@@ -95,12 +110,29 @@ public class GettingStartedWebCloudMixed extends HttpServlet {
         logger.info("Running Example {}", GettingStartedWebCloudMixed.class);
 
         // Get the resource key from the command line, environment variable or
-        // system property. This sets the "TestResourceKey" system property
+        // system property. This sets the "_51DEGREES_RESOURCE_KEY" system property
         // which is interpolated in the pipeline configuration file.
-        KeyHelper.getOrSetTestResourceKey(args.length > 0 ? args[0] : null, true);
+        String resourceKey = KeyHelper.findResourceKey(
+                args.length > 0 ? args[0] : null);
+        if (resourceKey == null) {
+            KeyHelper.writeNoResourceKey(System.out, EXAMPLE_TAG);
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES);
+            return;
+        }
+        KeyHelper.getOrSetTestResourceKey(resourceKey, true);
 
-        // Start Jetty with this WebApp
-        EmbedJetty.runWebApp(getResourceBase(), 8084);
+        Integer port = EmbedJetty.portFrom(
+                System.getenv(EmbedJetty.HTTP_PORTS_ENV_VAR));
+        if (port != null) {
+            // An automated run sets the port and has no console input, so
+            // keep the server running by joining it rather than waiting on
+            // Enter.
+            EmbedJetty.startWebApp(getResourceBase(), port).join();
+        } else {
+            // Start Jetty with this WebApp
+            EmbedJetty.runWebApp(getResourceBase(), DEFAULT_PORT);
+        }
     }
 
     public static String getResourceBase() {
@@ -110,7 +142,8 @@ public class GettingStartedWebCloudMixed extends HttpServlet {
         return configXml.getParentFile().getParent();
     }
 
-    FlowDataProviderCore flowDataProvider = new FlowDataProviderCore.Default();
+    // HttpServlet is Serializable, but this servlet is never serialized.
+    transient FlowDataProviderCore flowDataProvider = new FlowDataProviderCore.Default();
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws Exception {
@@ -121,6 +154,9 @@ public class GettingStartedWebCloudMixed extends HttpServlet {
         // The detection has already been carried out by the PipelineFilter,
         // which closes the FlowData at the end of the request, so it is not
         // closed here.
+        // A Flow Data cannot be used by two threads at once. Work handed to
+        // another thread or task gets the values it needs, read here on the
+        // request's thread, not the Flow Data.
         FlowData flowData = flowDataProvider.getFlowData(request);
 
         // Determine target IP for display.
@@ -194,6 +230,8 @@ public class GettingStartedWebCloudMixed extends HttpServlet {
             .replace("${AREAS_JS}", escapeForJs(asWktStringProperty(tryGet(ipiData::getAreas))))
             .replace("${ACCURACY_RADIUS}", asIntegerProperty(tryGet(ipiData::getAccuracyRadiusMin)))
             .replace("${TIME_ZONE_OFFSET}", asIntegerProperty(tryGet(ipiData::getTimeZoneOffset)))
+            .replace("${FIND_OUT_MORE}", FindOutMore.html(EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES))
             .replace("${EVIDENCE_ROWS}", buildEvidenceRows(flowData))
             .replace("${LocationConfidence}", asStringProperty(tryGet(ipiData::getLocationConfidence)))
             .replace("${ConnectionType}", asStringProperty(tryGet(ipiData::getConnectionType)))

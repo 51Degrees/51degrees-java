@@ -22,6 +22,7 @@
 
 package fiftyone.ipintelligence.examples.web;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
 import org.eclipse.jetty.server.Server;
 import org.junit.AfterClass;
@@ -50,7 +51,7 @@ public class GettingStartedWebOnPremTest {
         String dataFilePath = DataFileHelper.findAvailableDataFile();
         assumeTrue("Skipping test, no IP Intelligence data file found",
                 dataFilePath != null);
-        System.setProperty("TestDataFile", dataFilePath);
+        System.setProperty("_51DEGREES_IPI_PATH", dataFilePath);
 
         // Bind an OS-assigned ephemeral port (0) to avoid intermittent
         // "Address already in use" failures from a fixed port not yet released.
@@ -96,6 +97,9 @@ public class GettingStartedWebOnPremTest {
         // Assert we got a successful response
         assertEquals("Expected HTTP 200 OK response", 200, code);
         assertTrue("Response should not be empty", responseBody.length() > 0);
+        assertTrue("The page should end with the '" + FindOutMore.HEADING +
+                "' section", responseBody.contains(
+                        "<h2>" + FindOutMore.HEADING + "</h2>"));
     }
 
     @AfterClass

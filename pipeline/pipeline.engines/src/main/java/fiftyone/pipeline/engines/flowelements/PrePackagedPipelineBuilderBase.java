@@ -23,6 +23,7 @@
 package fiftyone.pipeline.engines.flowelements;
 
 import fiftyone.pipeline.core.flowelements.PipelineBuilderBase;
+import fiftyone.pipeline.engines.Constants;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
 
@@ -35,13 +36,18 @@ public abstract class PrePackagedPipelineBuilderBase
     <TBuilder extends PrePackagedPipelineBuilderBase<TBuilder>>
     extends PipelineBuilderBase<TBuilder> {
 
-    protected boolean lazyLoading = false;
+    /** Whether lazy loading is on, which has no effect. */
+    protected boolean lazyLoading = Constants.DEFAULT_LAZY_LOADING;
 
-    protected boolean resultsCache = false;
+    /** Whether the engines cache results. */
+    protected boolean resultsCache = Constants.DEFAULT_RESULTS_CACHE;
 
-    protected long lazyLoadingTimeoutMillis = 1000;
+    /** Timeout of the lazy loading option, which has no effect. */
+    protected long lazyLoadingTimeoutMillis =
+        Constants.DEFAULT_LAZY_LOADING_TIMEOUT_MILLIS;
 
-    protected int resultsCacheSize = 1000;
+    /** Number of results each engine's cache holds. */
+    protected int resultsCacheSize = Constants.DEFAULT_RESULTS_CACHE_SIZE;
 
     /**
      * Construct a new instance using the default {@link ILoggerFactory}
@@ -63,48 +69,49 @@ public abstract class PrePackagedPipelineBuilderBase
     }
 
     /**
-     * Enable lazy loading of results. Uses a default timeout of 5 seconds.
+     * Deprecated, and has no effect. Every Engine processes on the thread
+     * that processes the Flow Data, whether this is set or not.
      * @return this builder instance
+     * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/advanced-features/lazy-loading.md">Specification</a>
      */
-    @SuppressWarnings("unchecked")
     public TBuilder useLazyLoading() {
         lazyLoading = true;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
-     * Enable lazy loading of results.
-     * @param timeoutMillis the timeout to use when attempting to access
-     *                      lazy-loaded values. Default is 5 seconds
+     * Deprecated, and has no effect. Every Engine processes on the thread
+     * that processes the Flow Data, whether this is set or not, so the
+     * timeout is not used.
+     * @param timeoutMillis kept, but not used
      * @return this builder
+     * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/advanced-features/lazy-loading.md">Specification</a>
      */
-    @SuppressWarnings("unchecked")
     public TBuilder useLazyLoading(long timeoutMillis) {
         lazyLoading = true;
         this.lazyLoadingTimeoutMillis = timeoutMillis;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
-     * Enable caching of results. Uses a default cache size of 1000.
+     * Enable caching of results, with the size
+     * {@link Constants#DEFAULT_RESULTS_CACHE_SIZE}.
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
     public TBuilder useResultsCache() {
         resultsCache = true;
-        return (TBuilder) this;
+        return self();
     }
 
     /**
      * Enable caching of results.
      * @param size the maximum number of results to hold in the device detection
-     *             cache. Default is 1000
+     *             cache
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
     public TBuilder useResultsCache(int size) {
         resultsCache = true;
         resultsCacheSize = size;
-        return (TBuilder) this;
+        return self();
     }
 }

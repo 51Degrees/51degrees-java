@@ -30,6 +30,8 @@ import java.io.IOException;
  * already instantiated value of the type V to avoid construction
  * costs of that value. (In other words the loader has the signature
  * "extends V implements IValueLoader").
+ * @param <K> the type of the keys
+ * @param <V> the type of the values
  */
 public interface LoadingCache<K, V> extends Cache<K, V> {
 

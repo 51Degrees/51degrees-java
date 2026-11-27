@@ -42,7 +42,7 @@ public class TranslationEngine
     /**
      * Create a new translation engine.
      * @param sourceElementDataKey element data key of the source flow element
-     * @param translations the source -> destination property name pairs
+     * @param translations pairs of source and destination property names
      * @param sources the YAML translation sources, keyed on file name
      * @param fixedLanguage fixed language to translate to, or null to resolve
      *                     from the evidence

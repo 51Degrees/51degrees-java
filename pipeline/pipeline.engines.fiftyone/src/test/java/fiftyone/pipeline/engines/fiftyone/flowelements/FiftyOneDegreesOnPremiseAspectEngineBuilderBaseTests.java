@@ -52,20 +52,22 @@ public class FiftyOneDegreesOnPremiseAspectEngineBuilderBaseTests {
     final String licenseKey = "somelicensekey";
     final String downloadType = "sometype";
 
-    @SuppressWarnings("unchecked")
-    private FiftyOneAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine = mock(FiftyOneAspectEngine.class);
+    private FiftyOneAspectEngine<?, ?> engine = mock(FiftyOneAspectEngine.class);
 
     private DataUpdateService updateService = mock(DataUpdateService.class);
 
     private class ImplementedBuilder extends
-        FiftyOneOnPremiseAspectEngineBuilderBase<ImplementedBuilder, FiftyOneAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData>> {
+        FiftyOneOnPremiseAspectEngineBuilderBase<ImplementedBuilder, FiftyOneAspectEngine<?, ?>> {
 
-        @SuppressWarnings("unused")
+        @Override
+        protected ImplementedBuilder self() {
+            return this;
+        }
+
         public ImplementedBuilder() {
             super();
         }
 
-        @SuppressWarnings("unused")
         public ImplementedBuilder(ILoggerFactory loggerFactory) {
             super(loggerFactory);
         }
@@ -85,7 +87,7 @@ public class FiftyOneDegreesOnPremiseAspectEngineBuilderBaseTests {
         }
 
         @Override
-        protected FiftyOneAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> newEngine(List<String> properties) {
+        protected FiftyOneAspectEngine<?, ?> newEngine(List<String> properties) {
             // Follow the logic used by 51Degrees engines.
             AspectEngineDataFile dataFile = dataFiles.get(0);
             dataFiles.remove(dataFile);

@@ -23,6 +23,7 @@
 package fiftyone.pipeline.cloudrequestengine.flowelements;
 
 import static fiftyone.pipeline.cloudrequestengine.Constants.Messages.MessageProductNotInResourceKey;
+import static fiftyone.pipeline.cloudrequestengine.Constants.Messages.NoCloudResponse;
 import static fiftyone.pipeline.cloudrequestengine.Constants.Messages.ProcessCloudEngineNotImplemented;
 
 import fiftyone.pipeline.cloudrequestengine.NotImplementedException;
@@ -31,17 +32,15 @@ import fiftyone.pipeline.core.data.AccessiblePropertyMetaData;
 import fiftyone.pipeline.core.data.ElementPropertyMetaData;
 import fiftyone.pipeline.core.data.ElementPropertyMetaDataDefault;
 import fiftyone.pipeline.core.data.FlowData;
+import fiftyone.pipeline.core.data.FlowError;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.data.types.JavaScript;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.Pipeline;
-import fiftyone.pipeline.core.typed.TypedKey;
-import fiftyone.pipeline.core.typed.TypedKeyDefault;
 import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.engines.data.*;
 import fiftyone.pipeline.engines.flowelements.AspectEngineBase;
 import fiftyone.pipeline.engines.flowelements.CloudAspectEngine;
-import fiftyone.pipeline.util.Types;
 
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -49,11 +48,13 @@ import org.slf4j.Logger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Base class for 51Degrees Cloud Aspect Engines
+ * @param <TData> the type of element data the engine returns
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/pipeline-elements/cloud-aspect-engine.md">Specification</a>
  */
 public abstract class CloudAspectEngineBase<TData extends AspectData>
@@ -69,6 +70,12 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
         private volatile CloudRequestEngine cloudRequestEngine;
         private FlowElement<?, ?> currentElement;
 
+        /**
+         * Create a new instance.
+         *
+         * @param pipelines the Pipelines the engine has been added to
+         * @param currentElement the engine that needs the Cloud Request Engine
+         */
         public RequestEngineAccessor(List<Pipeline> pipelines, FlowElement<?, ?> currentElement) {
             this.pipelines = pipelines;
             this.currentElement = currentElement;
@@ -110,7 +117,7 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
 
     private volatile List<AspectPropertyMetaData> aspectProperties;
     private String dataSourceTier;
-    private RequestEngineAccessor requestEngine;
+    private volatile RequestEngineAccessor requestEngine;
     private final AtomicBoolean productMissingLogged = new AtomicBoolean(false);
 
     /**
@@ -119,12 +126,10 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
      * @param aspectDataFactory the factory to use when creating a TData
      *                          instance
      */
-    @SuppressWarnings("this-escape")
     public CloudAspectEngineBase(
         Logger logger,
         ElementDataFactory<TData> aspectDataFactory) {
         super(logger, aspectDataFactory);
-        this.setRequestEngine(new RequestEngineAccessor(this.getPipelines(), this));
     }
 
     @Override
@@ -133,13 +138,29 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
     }
     /**
      * Used to access the CloudRequestEngine that will be making HTTP
-     * requests on behalf of this engine. 
+     * requests on behalf of this engine. Created on first use, unless set
+     * with {@link #setRequestEngine(RequestEngineAccessor)}.
      * @return A RequestEngineAccessor.
      */
     protected RequestEngineAccessor getRequestEngine() {
-        return requestEngine;
+        RequestEngineAccessor localRef = requestEngine;
+        if (localRef == null) {
+            synchronized (this) {
+                localRef = requestEngine;
+                if (localRef == null) {
+                    localRef = new RequestEngineAccessor(getPipelines(), this);
+                    requestEngine = localRef;
+                }
+            }
+        }
+        return localRef;
     }
 
+    /**
+     * Set the accessor that finds the Cloud Request Engine.
+     *
+     * @param requestEngine the accessor
+     */
     protected void setRequestEngine(RequestEngineAccessor requestEngine) {
         this.requestEngine = requestEngine;
     }
@@ -177,16 +198,6 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
     public boolean hasLoadedProperties() {
         getProperties();
         return aspectProperties != null;
-    }
-
-    @Override
-    public TypedKey<TData> getTypedDataKey() {
-        if (typedKey == null) {
-            typedKey = new TypedKeyDefault<>(
-                getElementDataKey(),
-                Types.findSubClassParameterType(this, CloudAspectEngineBase.class, 0));
-        }
-        return typedKey;
     }
 
     /**
@@ -309,7 +320,7 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
         List<ElementPropertyMetaData> properties) {
         Map<String, ElementPropertyMetaData> result = new HashMap<>();
         for (ElementPropertyMetaData property : properties) {
-            result.put(property.getName().toLowerCase(), property);
+            result.put(property.getName().toLowerCase(Locale.ROOT), property);
         }
         return result;
     }
@@ -346,9 +357,9 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
         for (Map.Entry<String, Object> property : cloudData.entrySet()) {
             if (property.getKey().endsWith("nullreason") == false) {
                 Object outputValue = property.getValue();
-                if (metaDataMap.containsKey(property.getKey().toLowerCase())) {
+                if (metaDataMap.containsKey(property.getKey().toLowerCase(Locale.ROOT))) {
                     ElementPropertyMetaData metaData =
-                        metaDataMap.get(property.getKey().toLowerCase());
+                        metaDataMap.get(property.getKey().toLowerCase(Locale.ROOT));
 
                     // If this property has a type of AspectPropertyValue
                     // then create a new instance and populate it.
@@ -397,13 +408,14 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
 	protected void processEngine(FlowData data, TData aspectData) {
 
         CloudRequestData requestData;
-        
+        CloudRequestEngine requestEngine;
+
         // Get requestData from CloudRequestEngine. If requestData does not
         // exist in the element data TypedKeyMap then the CloudRequestEngine either 
         // does not exist in the Pipeline or is not run before this engine.        
         try {
-            requestData = data.getFromElement(
-                    getRequestEngine().getInstance());        	
+            requestEngine = getRequestEngine().getInstance();
+            requestData = data.getFromElement(requestEngine);        	
         } 
         catch(Exception ex) {
             throw new PipelineConfigurationException(
@@ -421,9 +433,10 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
                 "before it in the Pipeline. This engine will be unable " +
                 "to produce results until this is corrected.");
         }
-        
-        String json = requestData == null ? null : requestData.getJsonResponse();
-        
+
+        String json =
+            getJsonResponse(data, aspectData, requestData, requestEngine);
+
         // If the JSON is empty or null then do not Process the CloudAspectEngine.
         // Empty or null JSON indicates that an error has occurred in the 
         // CloudRequestEngine. The error will have been reported by the 
@@ -432,14 +445,112 @@ public abstract class CloudAspectEngineBase<TData extends AspectData>
         if (json != null && !json.isEmpty()) {
         	 processCloudEngine(data, aspectData, json);
         } else {
-            logger.warn("The  " + this.getClass().getSimpleName() + "  did not process " +
-                    "as the JSON response from the CloudRequestEngine was null " +
-                    "or empty. Please refer to errors generated by the " +
-                    "CloudRequestEngine in the logs as this indicates an error " +
-                    "occurred there.");
+            logger.warn(String.format(
+                NoCloudResponse, getClass().getSimpleName()));
        }
 	}
 	
+    /**
+     * The JSON response of the Cloud Request Engine's request for the Flow
+     * Data, waiting for the request to finish. A failed request met here,
+     * while the Flow Data is processed, is recorded once in the Flow Data's
+     * errors as the Cloud Request Engine's error, not this engine's, and the
+     * Element Data is marked so that a property it does not hold is missing
+     * with the CloudRequestFailed reason. An engine that overrides
+     * {@code processEngine} reads the response through this.
+     * @param data the Flow Data being processed
+     * @param aspectData the Element Data this engine populates
+     * @param requestData the Cloud Request Engine's Element Data
+     * @param requestEngine the Cloud Request Engine of the Pipeline
+     * @return the JSON response, or null where the request failed
+     */
+    protected String getJsonResponse(
+        FlowData data,
+        TData aspectData,
+        CloudRequestData requestData,
+        CloudRequestEngine requestEngine) {
+        String json;
+        try {
+            json = requestData.getJsonResponse();
+        } catch (RuntimeException e) {
+            // The request's own methods, which the public type does not show.
+            CloudRequestDataInternal request = requestData;
+            Throwable failure = request.getRequestFailure();
+            if (failure == null) {
+                throw e;
+            }
+            if (request.firstToMeetFailure()) {
+                data.addError(failure, requestEngine);
+            }
+            json = null;
+        }
+        setCloudRequestFailed(data, aspectData, requestEngine);
+        return json;
+    }
+
+    /**
+     * Where the Cloud Request Engine's request for the Flow Data failed,
+     * record it in the Element Data, so that a property the Element Data
+     * does not hold is missing with the CloudRequestFailed reason. The
+     * request itself says whether it failed, so the answer does not depend
+     * on whether another member of a parallel group has recorded the failure
+     * in the Flow Data's errors yet. A failure the Cloud Request Engine threw
+     * while it processed, before any request started, is in those errors.
+     * @param data the Flow Data being processed
+     * @param aspectData the Element Data this engine populates
+     * @param requestEngine the Cloud Request Engine of the Pipeline
+     */
+    protected void setCloudRequestFailed(
+        FlowData data,
+        TData aspectData,
+        CloudRequestEngine requestEngine) {
+        if (aspectData instanceof AspectDataBase == false) {
+            return;
+        }
+        if (requestFailed(data, requestEngine)) {
+            ((AspectDataBase) aspectData).setCloudRequestFailed();
+        }
+    }
+
+    /**
+     * @return true if the Cloud Request Engine's request for the Flow Data
+     * failed, or the engine threw while it processed
+     */
+    private static boolean requestFailed(
+        FlowData data,
+        CloudRequestEngine requestEngine) {
+        CloudRequestDataInternal request = data.getFromElement(requestEngine);
+        if (request != null && request.getRequestFailure() != null) {
+            return true;
+        }
+        if (data.getErrors() == null) {
+            return false;
+        }
+        for (FlowError error : data.getErrors()) {
+            if (error.getFlowElement() == requestEngine) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * The request for the property list failed where the Cloud Request
+     * Engine still does not know the accessible properties, because it
+     * requests them when it is built and again on first use.
+     * @return true if the request for the property list failed
+     */
+    @Override
+    public boolean propertyListRequestFailed() {
+        CloudRequestEngine requestEngine;
+        try {
+            requestEngine = getRequestEngine().getInstance();
+        } catch (PipelineConfigurationException e) {
+            return false;
+        }
+        return requestEngine.getPublicProperties() == null;
+    }
+
     /**
      * A virtual method to be implemented by the derived class which
      * uses the JsonResponse from the CloudRequestEngine to populate the TData

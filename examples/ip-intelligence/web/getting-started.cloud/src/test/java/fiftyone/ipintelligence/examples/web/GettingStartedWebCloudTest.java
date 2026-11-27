@@ -22,6 +22,7 @@
 
 package fiftyone.ipintelligence.examples.web;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.examples.shared.KeyHelper;
 import org.eclipse.jetty.server.Server;
 import org.junit.AfterClass;
@@ -91,6 +92,9 @@ public class GettingStartedWebCloudTest {
         // Assert we got a successful response
         assertEquals("Expected HTTP 200 OK response", 200, code);
         assertTrue("Response should not be empty", responseBody.length() > 0);
+        assertTrue("The page should end with the '" + FindOutMore.HEADING +
+                "' section", responseBody.contains(
+                        "<h2>" + FindOutMore.HEADING + "</h2>"));
     }
 
     @AfterClass

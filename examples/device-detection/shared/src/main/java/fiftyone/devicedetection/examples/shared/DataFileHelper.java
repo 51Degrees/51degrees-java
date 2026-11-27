@@ -24,7 +24,7 @@ package fiftyone.devicedetection.examples.shared;
 
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngineBuilder;
-import fiftyone.devicedetection.shared.testhelpers.FileUtils;
+import fiftyone.pipeline.core.configuration.PipelineOptions;
 import fiftyone.pipeline.engines.data.AspectEngineDataFile;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneDataFile;
@@ -75,6 +75,24 @@ public class DataFileHelper {
      */
     public static final String NEEDS_ENTERPRISE = "needs the Enterprise data file";
 
+    public static final String TAC_HASH_DATA_FILE_NAME = "TAC-HashV41.hash";
+
+    public static final String ENTERPRISE_HASH_DATA_FILE_NAME = "Enterprise-HashV41.hash";
+
+    /**
+     * Where the free Lite data file is in the data repository. A search for
+     * the path rather than the name does not stop at another file of the
+     * same name, such as a Git LFS pointer in an old device-detection-data
+     * folder.
+     */
+    public static final String LITE_HASH_DATA_FILE_PATH =
+            "device-detection/51Degrees-LiteV4.1.hash";
+
+    /**
+     * Where the evidence the examples process is in the data repository.
+     */
+    public static final String EVIDENCE_FILE_PATH =
+            "device-detection/20000 Evidence Records.yml";
 public static class DatafileInfo {
         FiftyOneDataFile fileInfo;
         String tier;
@@ -92,10 +110,13 @@ public static class DatafileInfo {
         }
     }
     public static DatafileInfo getDatafileMetaData(String dataFileLocation) throws Exception {
-        try(DeviceDetectionHashEngine ddhe = new DeviceDetectionHashEngineBuilder()
+        DeviceDetectionHashEngine ddhe = new DeviceDetectionHashEngineBuilder()
                 .setAutoUpdate(false)
-                .build(dataFileLocation,false)) {
+                .build(dataFileLocation,false);
+        try {
             return new DatafileInfo((FiftyOneDataFile) ddhe.getDataFileMetaData(), ddhe.getDataSourceTier());
+        } finally {
+            ddhe.close();
         }
     }
 
@@ -207,10 +228,9 @@ public static class DatafileInfo {
      * @throws Exception if the file was not found
      */
 
-    @SuppressWarnings("RedundantThrows")
     public static File getEvidenceFile(String evidenceFilename) throws Exception {
         if (Objects.isNull(evidenceFilename)) {
-            evidenceFilename = FileUtils.EVIDENCE_FILE_PATH;
+            evidenceFilename = EVIDENCE_FILE_PATH;
         }
 
         File evidenceFile;
@@ -230,13 +250,12 @@ public static class DatafileInfo {
      * @return a full pathname
      * @throws Exception if the file was not found
      */
-    @SuppressWarnings("RedundantThrows")
     public static String getDataFileLocation(String dataFilename) throws Exception {
         if (Objects.isNull(dataFilename)) {
-            dataFilename = FileUtils.getHashFileName();
+            dataFilename = findHashFileName();
         }
         if (Objects.isNull(dataFilename)) {
-            dataFilename = FileUtils.LITE_HASH_DATA_FILE_PATH;
+            dataFilename = LITE_HASH_DATA_FILE_PATH;
         }
         String dataFileLocation;
         try {
@@ -246,6 +265,25 @@ public static class DatafileInfo {
             throw e;
         }
         return dataFileLocation;
+    }
+
+    /**
+     * The first Hash data file found below the project root, being the TAC
+     * file, then the Enterprise file, then the free Lite file.
+     * @return the path of the file, or null when there is none
+     */
+    private static String findHashFileName() {
+        for (String file : new String[]{
+                TAC_HASH_DATA_FILE_NAME,
+                ENTERPRISE_HASH_DATA_FILE_NAME,
+                LITE_HASH_DATA_FILE_PATH}) {
+            try {
+                return getFilePath(file).getPath();
+            } catch (Exception e) {
+                // Not found, so try the next file.
+            }
+        }
+        return null;
     }
 
     /**
@@ -388,5 +426,26 @@ public static class DatafileInfo {
             }
         }
         return WINDOWS_POWERSHELL;
+    }
+
+    /**
+     * Gives the named engine in the options the data file to use, in place
+     * of the one the options file names.
+     * @param options the options loaded from the options file
+     * @param builderName the builder name of the engine in the options file
+     * @param dataFile the data file the engine is to use
+     * @throws IllegalArgumentException when the options have no engine with
+     * that builder name, so the data file would be dropped silently
+     */
+    public static void useDataFile(
+            PipelineOptions options,
+            String builderName,
+            String dataFile) {
+        if (options.replace(builderName, "DataFile", dataFile) == false) {
+            throw new IllegalArgumentException(
+                    "The options have no element with the builder name '" +
+                    builderName + "', so the data file '" + dataFile +
+                    "' cannot be given to it.");
+        }
     }
 }

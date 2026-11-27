@@ -179,7 +179,14 @@ public class CalculationsTest {
      * is given the same point, as compiled code can for Math.sin.
      */
     private static class DriftingTransform implements CoordinateTransform {
-        private final Set<String> seen = new HashSet<>();
+        /**
+         * CoordinateTransform is Serializable, so this class gives its
+         * serialized form a version of its own.
+         */
+        private static final long serialVersionUID = 1L;
+
+        // Never serialized: the test only calls transform.
+        private final transient Set<String> seen = new HashSet<>();
 
         @Override
         public CoordinateReferenceSystem getSourceCRS() {

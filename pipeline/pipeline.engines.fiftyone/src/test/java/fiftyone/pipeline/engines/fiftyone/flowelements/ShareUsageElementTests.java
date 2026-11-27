@@ -25,7 +25,13 @@ package fiftyone.pipeline.engines.fiftyone.flowelements;
 import fiftyone.common.testhelpers.LogbackHelper;
 import fiftyone.common.testhelpers.TestLogger;
 import fiftyone.common.testhelpers.TestLoggerFactory;
+import fiftyone.pipeline.core.data.ElementData;
+import fiftyone.pipeline.core.data.ElementPropertyMetaData;
+import fiftyone.pipeline.core.data.EvidenceKeyFilter;
+import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import fiftyone.pipeline.core.data.FlowData;
+import fiftyone.pipeline.core.flowelements.FlowElement;
+import fiftyone.pipeline.core.flowelements.FlowElementBase;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
 import fiftyone.pipeline.engines.services.DataUploader;
@@ -171,6 +177,12 @@ public class ShareUsageElementTests {
 
     // Dependencies
     private Pipeline pipeline;
+
+    /**
+     * A Pipeline holding the Sequence Element, which accepts the session id
+     * and sequence, so that usage sharing shares them.
+     */
+    private Pipeline sequencePipeline;
     private Tracker tracker;
 
     TestConnector connector;
@@ -197,12 +209,24 @@ public class ShareUsageElementTests {
             shareUsageElement.close();
         }
         pipeline.close();
+        if (sequencePipeline != null) {
+            sequencePipeline.close();
+        }
+    }
+
+    private Pipeline sequencePipeline() throws Exception {
+        if (sequencePipeline == null) {
+            sequencePipeline = new PipelineBuilder()
+                .addFlowElement(sequenceElement)
+                .build();
+        }
+        return sequencePipeline;
     }
 
     private void createShareUsage(
             double sharePercentage,
             int minimumEntriesPerMessage,
-            @SuppressWarnings("SameParameterValue") int interval,
+            int interval,
             List<String> blockedHeaders,
             List<String> includedQueryStringParams,
             List<Entry<String, String>> ignoreDataEvidenceFiler) {
@@ -220,7 +244,7 @@ public class ShareUsageElementTests {
             double sharePercentage,
             int minimumEntriesPerMessage,
             int maximumQueueSize,
-            @SuppressWarnings("SameParameterValue") int interval,
+            int interval,
             List<String> blockedHeaders,
             List<String> includedQueryStringParams,
             List<Entry<String, String>> ignoreDataEvidenceFiler) {
@@ -312,6 +336,177 @@ public class ShareUsageElementTests {
         while ((length = source.read(buf)) > 0) {
             target.write(buf, 0, length);
         }
+    }
+
+    /**
+     * The record carries a Package element for each 51Degrees package in
+     * use, named by its Maven group and artifact id, with its version, after
+     * the FlowElement elements and before Language, as the specification's
+     * Processing section sets out. The packages are asked for with this
+     * element's class among the classes in use.
+     */
+    @Test
+    public void ShareUsageElement_Packages_EachWithItsVersion() throws Exception {
+        createShareUsage(
+                1,
+                1,
+                1,
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>());
+        shareUsageElement.httpClient = new TestHttpClient();
+        shareUsageElement.dataUploader = null;
+        SortedMap<String, String> packages = new TreeMap<>();
+        packages.put("com.51degrees:pipeline.core", "4.5.131");
+        packages.put("com.51degrees:pipeline.engines.fiftyone", "4.5.132");
+        List<Collection<Class<?>>> asked = new ArrayList<>();
+        shareUsageElement.packageFinder = classes -> {
+            asked.add(classes);
+            return packages;
+        };
+
+        try (FlowData data = pipeline.createFlowData()) {
+            data.addEvidence(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
+            shareUsageElement.process(data);
+            assertNotNull(shareUsageElement.getSendDataFuture());
+            shareUsageElement.getSendDataFuture().get();
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte[] zip = ((TestHttpClient)shareUsageElement.httpClient).getBuffer();
+            copy(new GZIPInputStream(new ByteArrayInputStream(zip)), baos);
+            Document doc = docBuilderFactory.newDocumentBuilder().parse(
+                new ByteArrayInputStream(baos.toByteArray()));
+
+            NodeList found = (NodeList) xpath.compile("//Devices/Device/Package")
+                .evaluate(doc, XPathConstants.NODESET);
+            assertEquals(2, found.getLength(), "One Package element for each package");
+            int i = 0;
+            for (Map.Entry<String, String> entry : packages.entrySet()) {
+                org.w3c.dom.Element element = (org.w3c.dom.Element) found.item(i++);
+                assertEquals(entry.getKey(), element.getAttribute("Name"));
+                assertEquals(entry.getValue(), element.getTextContent());
+            }
+            assertEquals("Product", previousElement(found.item(0)).getNodeName(),
+                "With no Flow Elements the Package elements follow Product");
+            assertEquals("Language", nextElement(found.item(1)).getNodeName(),
+                "Language follows the Package elements");
+        }
+        assertEquals(1, asked.size(), "The packages are found once");
+        assertTrue(asked.get(0).contains(ShareUsageElement.class),
+            "This element's own package is among those in use");
+    }
+
+    /**
+     * A Flow Element of the test's own, which processes nothing. Each
+     * subclass is a class of its own, so the classes the packages are asked
+     * for show which elements were found.
+     */
+    private static class GroupMember
+        extends FlowElementBase<ElementData, ElementPropertyMetaData> {
+
+        @Override
+        protected Class<ElementData> getDataType() {
+            return ElementData.class;
+        }
+        private final String key;
+
+        GroupMember(String key) {
+            super(LoggerFactory.getLogger(GroupMember.class), null);
+            this.key = key;
+        }
+
+        @Override
+        protected void processInternal(FlowData data) {
+        }
+
+        @Override
+        public String getElementDataKey() {
+            return key;
+        }
+
+        @Override
+        public EvidenceKeyFilter getEvidenceKeyFilter() {
+            return new EvidenceKeyFilterWhitelist(new ArrayList<String>());
+        }
+
+        @Override
+        public List<ElementPropertyMetaData> getProperties() {
+            return Collections.emptyList();
+        }
+
+        @Override
+        protected void managedResourcesCleanup() {
+        }
+
+        @Override
+        protected void unmanagedResourcesCleanup() {
+        }
+    }
+
+    private static class FirstGroupMember extends GroupMember {
+        FirstGroupMember() {
+            super("first");
+        }
+    }
+
+    private static class SecondGroupMember extends GroupMember {
+        SecondGroupMember() {
+            super("second");
+        }
+    }
+
+    /**
+     * A Flow Element in a parallel group is in use as much as one the
+     * Pipeline lists itself, so the packages are asked for with its class
+     * too. The specification's Package element is written "for every
+     * 51Degrees package in use, being the package that holds the Pipeline,
+     * the package that holds each FlowElement in the Pipeline, and every
+     * 51Degrees package those depend on".
+     */
+    @Test
+    public void ShareUsageElement_Packages_IncludeParallelGroupMembers() throws Exception {
+        pipeline.close();
+        pipeline = new PipelineBuilder()
+            .addFlowElementsParallel(new FlowElement<?, ?>[] {
+                new FirstGroupMember(),
+                new SecondGroupMember() })
+            .build();
+        createShareUsage(
+                1,
+                1,
+                1,
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>());
+        List<Collection<Class<?>>> asked = new ArrayList<>();
+        shareUsageElement.packageFinder = classes -> {
+            asked.add(new ArrayList<>(classes));
+            return new TreeMap<>();
+        };
+
+        shareUsageElement.getPackages();
+
+        assertEquals(1, asked.size(), "The packages are found once");
+        assertTrue(asked.get(0).contains(FirstGroupMember.class),
+            "The first member of the group is among the classes in use");
+        assertTrue(asked.get(0).contains(SecondGroupMember.class),
+            "The second member of the group is among the classes in use");
+    }
+
+    private static Node previousElement(Node node) {
+        Node sibling = node.getPreviousSibling();
+        while (sibling != null && sibling.getNodeType() != Node.ELEMENT_NODE) {
+            sibling = sibling.getPreviousSibling();
+        }
+        return sibling;
+    }
+
+    private static Node nextElement(Node node) {
+        Node sibling = node.getNextSibling();
+        while (sibling != null && sibling.getNodeType() != Node.ELEMENT_NODE) {
+            sibling = sibling.getNextSibling();
+        }
+        return sibling;
     }
 
     // duplicate above test, only using legacy HttpClient approach
@@ -514,7 +709,7 @@ public class ShareUsageElementTests {
         request.put("header.X-Blocked", "blocked");
         request.put("cookie.51D_Profile", "123456");
         request.put("cookie.other", "not-shared");
-        request.put("query.secret", "not-shared");
+        request.put("query.campaign", "shared-query");
         request.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
         request.put("server.request-method", "GET");
         request.put("server.request-path", "/a%2Fb/c");
@@ -554,9 +749,14 @@ public class ShareUsageElementTests {
                 "//cookie[@Name='51D_Profile']", doc),
                 "A 51D_ cookie from the web request was not shared.");
             assertEquals(0, ((NodeList) xpath.evaluate(
-                "//cookie[@Name='other'] | //query[@Name='secret']", doc,
+                "//cookie[@Name='other']", doc,
                 XPathConstants.NODESET)).getLength(),
-                "A cookie or query string parameter the rules leave out was shared.");
+                "A cookie the rules leave out was shared.");
+            assertEquals(0, ((NodeList) xpath.evaluate(
+                "//query[@Name='campaign']", doc,
+                XPathConstants.NODESET)).getLength(),
+                "A query string parameter that no Flow Element accepts " +
+                "was shared.");
             assertEquals("1.2.3.4", xpath.evaluate("//ClientIP", doc),
                 "The client IP from the web request was not shared.");
             assertEquals("GET", xpath.evaluate(
@@ -861,20 +1061,17 @@ public class ShareUsageElementTests {
                 names.add(child.getNodeName());
             }
         }
-        String[] expected = {"SessionId", "Sequence", "DateSent", "Version",
+        String[] expected = {"ProcessId", "SessionId", "Sequence", "DateSent", "Version",
             "Product", "FlowElement", "Language", "LanguageVersion",
             "ClientIP", "ServerIP", "Platform"};
-        List<String> required = Arrays.asList("SessionId", "Sequence",
-            "DateSent", "Product", "Language", "LanguageVersion");
+        // Every element is always written, empty when there is no value.
+        // FlowElement is written once for each element of the Pipeline, so
+        // not at all here, where the test's Pipeline holds no elements.
         int last = -1;
         for (String name : expected) {
             int index = names.indexOf(name);
-            if (!required.contains(name)) {
-                // Only present when the Pipeline, the request and the
-                // platform give one.
-                if (index < 0) {
-                    continue;
-                }
+            if (index < 0 && name.equals("FlowElement")) {
+                continue;
             }
             assertTrue(index >= 0, name + " missing from " + names);
             assertTrue(index > last, name + " out of order in " + names);
@@ -920,7 +1117,7 @@ public class ShareUsageElementTests {
         Map<String, Object> evidenceData = new HashMap<>();
         evidenceData.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
 
-        try (FlowData data = pipeline.createFlowData()) {
+        try (FlowData data = sequencePipeline().createFlowData()) {
             data.addEvidence(evidenceData);
 
             // Act
@@ -966,7 +1163,7 @@ public class ShareUsageElementTests {
         evidenceData.put(Constants.EVIDENCE_SESSIONID, "abcdefg-hijklmn-opqrst-uvwxyz");
         evidenceData.put(Constants.EVIDENCE_SEQUENCE, 2);
 
-        try (FlowData data = pipeline.createFlowData()) {
+        try (FlowData data = sequencePipeline().createFlowData()) {
             data.addEvidence(evidenceData);
 
             // Act
@@ -1260,10 +1457,10 @@ public class ShareUsageElementTests {
     }
 
     /**
-     * Default settings share headers other than Cookie, the 51Degrees cookies
-     * and query string parameters, and other evidence, and leave out ordinary
-     * cookies, other parameters, session values and the evidence that is
-     * never shared.
+     * Default settings share headers other than Cookie, the 51Degrees cookies,
+     * the 51Degrees query string parameters and those the Pipeline uses, and
+     * other evidence, and leave out ordinary cookies, other parameters,
+     * session values and the evidence that is never shared.
      */
     @Test
     public void ShareUsageElement_DefaultSharesOnlyAcceptedEvidence() throws Exception {
@@ -1307,8 +1504,9 @@ public class ShareUsageElementTests {
             "some user agent", "screen width", "fiftyone parameter")) {
             assertTrue(output.contains(shared), shared);
         }
+        // A parameter no Flow Element accepts is not shared.
         for (String withheld : Arrays.asList(
-            "sessionid cookie", "cookie header", "password parameter",
+            "password parameter", "sessionid cookie", "cookie header",
             "email parameter", "email header", "salt value",
             "whole query string", "request path", "session attribute")) {
             assertFalse(output.contains(withheld), withheld);
@@ -1351,6 +1549,79 @@ public class ShareUsageElementTests {
         NodeList devices = (NodeList) xpath.compile("//Device")
             .evaluate(doc, XPathConstants.NODESET);
         assertEquals(1, devices.getLength(), "1 device expected");
+    }
+
+    /**
+     * Within one session, a request that differs from one already shared
+     * only in its sequence number is not shared again, and a later request
+     * with a 51D_ value changed is, with the same SessionId and its own
+     * Sequence. The session id and the sequence never enter the repeat
+     * comparison and are always written to the record.
+     */
+    @Test
+    public void ShareUsageElement_OneSession_ChangedValueSharedWithItsSequence()
+        throws Exception {
+        // Arrange
+        tracker = null;
+        createShareUsage(
+            1,
+            3,
+            1,
+            new ArrayList<>(),
+            new ArrayList<>(),
+            new ArrayList<>());
+        String[] screenWidths = { "1920", "1920", "1024" };
+
+        // Act
+        for (int sequence = 1; sequence <= screenWidths.length; sequence++) {
+            Map<String, Object> evidenceData = new HashMap<>();
+            evidenceData.put(EVIDENCE_CLIENTIP_KEY, "1.2.3.4");
+            evidenceData.put("header.user-agent", "one session user agent");
+            evidenceData.put(
+                "cookie.51D_ScreenPixelsWidth",
+                screenWidths[sequence - 1]);
+            evidenceData.put(Constants.EVIDENCE_SESSIONID, "one session");
+            evidenceData.put(Constants.EVIDENCE_SEQUENCE, sequence);
+            try (FlowData data = sequencePipeline().createFlowData()) {
+                data.addEvidence(evidenceData);
+                shareUsageElement.process(data);
+            }
+        }
+        shareUsageElement.close();
+
+        // Assert
+        Document doc = docBuilderFactory.newDocumentBuilder().parse(
+            new ByteArrayInputStream(connector.getBaos().toByteArray()));
+        NodeList devices = (NodeList) xpath.compile("//Device")
+            .evaluate(doc, XPathConstants.NODESET);
+        assertEquals(2, devices.getLength(),
+            "Only the first request and the one with a changed value " +
+                "should be shared");
+        assertEquals("one session", xpath.evaluate("SessionId", devices.item(0)));
+        assertEquals("1", xpath.evaluate("Sequence", devices.item(0)));
+        assertEquals("1920", cookieValue(devices.item(0), "51D_ScreenPixelsWidth"));
+        assertEquals("one session", xpath.evaluate("SessionId", devices.item(1)));
+        assertEquals("3", xpath.evaluate("Sequence", devices.item(1)));
+        assertEquals("1024", cookieValue(devices.item(1), "51D_ScreenPixelsWidth"));
+    }
+
+    /**
+     * The value a record gives for the named cookie, or null when it gives
+     * none. Names are compared without regard to case.
+     */
+    private static String cookieValue(Node device, String name) {
+        NodeList children = device.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node child = children.item(i);
+            Node nameAttribute = child.getAttributes() == null ?
+                null : child.getAttributes().getNamedItem("Name");
+            if ("cookie".equals(child.getNodeName()) &&
+                nameAttribute != null &&
+                name.equalsIgnoreCase(nameAttribute.getNodeValue())) {
+                return child.getTextContent();
+            }
+        }
+        return null;
     }
 
     /**

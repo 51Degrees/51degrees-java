@@ -28,49 +28,41 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
 import static fiftyone.devicedetection.examples.web.GettingStartedWebOnPrem.resourceBase;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 /**
- * Checks the order in which the on-premise web example picks its data file,
- * being _51DEGREES_DD_PATH first, then TestDataFile, then the Lite file.
- * System properties stand in for the environment variables, because the
- * lookup reads either and a test cannot set an environment variable.
+ * Checks where the on-premise web example takes its data file from, being
+ * _51DEGREES_DD_PATH when it is set and the Lite file otherwise. A system
+ * property stands in for the environment variable, because the lookup reads
+ * either and a test cannot set an environment variable.
  */
 public class OnPremDataFileOptionTest {
     private static final String DD_PATH = "_51DEGREES_DD_PATH";
-    private static final String OLD_DD_PATH = "51DEGREES_DD_PATH";
-    private static final String TEST_DATA_FILE = "TestDataFile";
     private static final String LITE =
             "cxx/data/device-detection/51Degrees-LiteV4.1.hash";
 
     private String savedDdPath;
-    private String savedOldDdPath;
-    private String savedTestDataFile;
 
     @Before
     public void saveProperties() {
-        // An environment variable of either name would take precedence over
-        // the system properties set here, so the test cannot run.
+        // An environment variable of this name would take precedence over
+        // the system property set here, so the test cannot run.
         assumeTrue(System.getenv(DD_PATH) == null);
-        assumeTrue(System.getenv(OLD_DD_PATH) == null);
-        assumeTrue(System.getenv(TEST_DATA_FILE) == null);
-        assumeTrue(System.getenv(TEST_DATA_FILE.toUpperCase()) == null);
         savedDdPath = System.getProperty(DD_PATH);
-        savedOldDdPath = System.getProperty(OLD_DD_PATH);
-        savedTestDataFile = System.getProperty(TEST_DATA_FILE);
         System.clearProperty(DD_PATH);
-        System.clearProperty(OLD_DD_PATH);
-        System.clearProperty(TEST_DATA_FILE);
     }
 
     @After
     public void restoreProperties() {
         restore(DD_PATH, savedDdPath);
-        restore(OLD_DD_PATH, savedOldDdPath);
-        restore(TEST_DATA_FILE, savedTestDataFile);
     }
 
     @Test
@@ -79,30 +71,20 @@ public class OnPremDataFileOptionTest {
     }
 
     @Test
-    public void usesTestDataFileWhenOnlyThatIsSet() throws Exception {
-        System.setProperty(TEST_DATA_FILE, "from-test-data-file.hash");
-        assertEquals("from-test-data-file.hash", dataFile());
-    }
-
-    @Test
-    public void prefersDdPathOverTestDataFile() throws Exception {
-        System.setProperty(TEST_DATA_FILE, "from-test-data-file.hash");
+    public void usesDdPathWhenItIsSet() throws Exception {
         System.setProperty(DD_PATH, "from-dd-path.hash");
         assertEquals("from-dd-path.hash", dataFile());
     }
 
     @Test
-    public void usesOldDdPathWhenNewIsNotSet() throws Exception {
-        System.setProperty(TEST_DATA_FILE, "from-test-data-file.hash");
-        System.setProperty(OLD_DD_PATH, "from-old-dd-path.hash");
-        assertEquals("from-old-dd-path.hash", dataFile());
-    }
-
-    @Test
-    public void prefersDdPathOverOldDdPath() throws Exception {
-        System.setProperty(OLD_DD_PATH, "from-old-dd-path.hash");
-        System.setProperty(DD_PATH, "from-dd-path.hash");
-        assertEquals("from-dd-path.hash", dataFile());
+    public void namesOnlyDdPath() throws Exception {
+        String xml = new String(Files.readAllBytes(Paths.get(
+                getFilePath(resourceBase) + "/WEB-INF/51Degrees-OnPrem.xml")),
+                StandardCharsets.UTF_8);
+        assertTrue("51Degrees-OnPrem.xml should take its data file from " +
+                DD_PATH + " and otherwise use the Lite file",
+                xml.contains("<DataFile>${" + DD_PATH + ":-" + LITE +
+                        "}</DataFile>"));
     }
 
     private static String dataFile() throws Exception {

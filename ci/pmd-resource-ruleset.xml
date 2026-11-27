@@ -12,17 +12,19 @@
         Java never frees the native results by itself.
 
         Where something is closed by its owner elsewhere, such as the FlowData
-        the web integration closes at the end of a request, the code says so
-        with @SuppressWarnings and a comment naming the owner.
+        the web integration closes at the end of a request, the code that
+        makes it closes it in a finally block if it fails before handing it
+        over, and a comment names the owner.
     </description>
 
     <rule name="FlowDataInTryWithResources"
           language="java"
-          message="Create the FlowData in a try-with-resources statement, so its native results are freed on every path"
+          message="Create the FlowData in a try-with-resources statement, or close it in a finally block, so its native results are freed on every path"
           class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
         <description>
-            Every FlowData created is closed by a try-with-resources statement,
-            unless it is returned to the caller or kept in a field.
+            Every FlowData created is closed by a try-with-resources statement
+            or, held in a local variable, in a finally block of the same
+            method, unless it is returned to the caller or kept in a field.
         </description>
         <priority>3</priority>
         <properties>
@@ -34,6 +36,14 @@
     [not(ancestor::Resource)]
     [not(parent::ReturnStatement)]
     [not(parent::AssignmentExpression)]
+    [not(parent::VariableDeclarator/VariableId[
+        let $name := @Name,
+            $body := ancestor::*[self::MethodDeclaration
+                or self::ConstructorDeclaration
+                or self::Initializer
+                or self::LambdaExpression][1]
+        return $body//FinallyClause//MethodCall[@MethodName = 'close']
+                        /VariableAccess[@Name = $name]])]
 ]]>
                 </value>
             </property>
@@ -42,12 +52,13 @@
 
     <rule name="CloseableIterableInTryWithResources"
           language="java"
-          message="Use the metadata collection in a try-with-resources statement, so it releases the data set on every path"
+          message="Use the metadata collection in a try-with-resources statement, or close it in a finally block, so it releases the data set on every path"
           class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
         <description>
             Every CloseableIterable a method returns, such as the profiles or
             the components of an engine, is closed by a try-with-resources
-            statement, unless it is returned to the caller.
+            statement or, held in a local variable, in a finally block of the
+            same method, unless it is returned to the caller.
         </description>
         <priority>3</priority>
         <properties>
@@ -57,6 +68,14 @@
 //MethodCall[pmd-java:typeIs('fiftyone.pipeline.engines.fiftyone.data.CloseableIterable')]
     [not(ancestor::Resource)]
     [not(parent::ReturnStatement)]
+    [not(parent::VariableDeclarator/VariableId[
+        let $name := @Name,
+            $body := ancestor::*[self::MethodDeclaration
+                or self::ConstructorDeclaration
+                or self::Initializer
+                or self::LambdaExpression][1]
+        return $body//FinallyClause//MethodCall[@MethodName = 'close']
+                        /VariableAccess[@Name = $name]])]
 ]]>
                 </value>
             </property>

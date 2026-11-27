@@ -90,10 +90,10 @@ The tables below describe the examples available in this repository.
 
 ### Cloud
 
-Cloud examples require a resource key, supplied via the `TestResourceKey`
-environment variable, system property, or command line argument. Resource keys
+Cloud examples require a resource key, supplied via the `_51DEGREES_RESOURCE_KEY`
+environment variable or system property, or a command line argument. Resource keys
 for IP Intelligence are not yet generally available, so these examples can also
-be pointed at a custom hosted cloud endpoint using the `TestCloudEndPoint`
+be pointed at a custom hosted cloud endpoint using the `_51DEGREES_CLOUD_ENDPOINT`
 environment variable or system property.
 
 | Example                  | Description                                                                                                                                 |
@@ -104,8 +104,8 @@ environment variable or system property.
 | MetadataCloud            | How to access the meta-data that relates to the properties available from the cloud IP intelligence service.                                 |
 
 Cloud examples need a resource key. The key is read from the
-`_51DEGREES_RESOURCE_KEY` environment variable or system property first. The
-legacy `TestResourceKey` name is still supported and is checked second.
+`_51DEGREES_RESOURCE_KEY` environment variable or system property, and no
+other name.
 
 The cloud property tiers changed in May 2026. The examples and this
 documentation now reflect what is free and what needs a paid subscription.
@@ -117,9 +117,9 @@ documentation now reflect what is free and what needs a paid subscription.
   and AccuracyRadiusMin.
 
 A free resource key selecting the free tier properties can be created at
-https://configure.51degrees.com/Wkqxf3Bs?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon. A resource key that also includes
+https://51degrees.com/configure/Wkqxf3Bs?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon. A resource key that also includes
 the paid properties used by the examples can be created at
-https://configure.51degrees.com/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon. See https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon
+https://51degrees.com/configure/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon. See https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon
 to get a paid subscription with more properties.
 
 ### On-Premise
@@ -185,11 +185,16 @@ Web examples:
 mvn compile exec:java -pl web/getting-started.onprem -Dexec.mainClass="fiftyone.ipintelligence.examples.web.GettingStartedWebOnPrem"
 ```
 
-The web example will start a Jetty server on port 8081. Access it at: `http://localhost:8081`
+The web example will start a Jetty server on port 5151. Access it at: `http://localhost:5151`
 
 ### Running Examples from Packaged JARs
 
 Alternatively, you can build "fat" JARs and run examples from the command line.
+
+Build the examples with JDK 17. They compile for Java 8 and treat every
+compiler warning as an error, and javac 21 and later warn that Java 8 is
+obsolete, so the build fails on JDK 21 and later. The JARs it makes run on
+Java 8 or later.
 
 First, build the packages:
 
@@ -199,8 +204,22 @@ mvn package
 
 This will produce JARs with dependencies inside `target` subfolders.
 
-Then run examples using the JAR:
+Then run examples using the JAR, from this folder. The version in the name is
+the one in this folder's `pom.xml`, which is not the version of the packages
+the examples use.
 
 ```bash
-java -cp .\console\target\ip-intelligence-java-examples.console-4.4.19-jar-with-dependencies.jar fiftyone.ipintelligence.examples.console.OfflineProcessing
+java -cp ./console/target/ip-intelligence-java-examples.console-4.5.127-SNAPSHOT-jar-with-dependencies.jar fiftyone.ipintelligence.examples.console.OfflineProcessing
 ```
+
+## Flow Data and threads
+
+A Flow Data cannot be used by two threads at once. The web examples handle
+each request on one thread, and read the Flow Data there. An application that
+hands work from a request to another thread or task reads the values that
+work needs from the Flow Data on the request's thread, into its own
+variables, and passes those values, not the Flow Data. The Flow Data is
+closed when the request ends, so work that outlives the request must not
+keep it either. The
+[pipeline README](../../pipeline/README.md#flow-data-and-threads)
+shows such a hand-off.

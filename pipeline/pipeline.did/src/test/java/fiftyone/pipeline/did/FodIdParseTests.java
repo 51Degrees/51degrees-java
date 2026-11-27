@@ -492,6 +492,47 @@ public class FodIdParseTests {
     }
 
     /**
+     * The version is read from the first byte, before the layout that sets
+     * the header's length, so a payload too short for that header is still
+     * refused naming the version it gives. A short payload of version 0 is
+     * too short.
+     */
+    @Test
+    public void version_ShortPayload_IsRefusedNamingTheVersion()
+            throws Exception {
+        for (int length = 1; length < FodId.HEADER_LENGTH; length++) {
+            byte[] shortPayload = Arrays.copyOf(canonicalPayload(), length);
+
+            assertEquals("length " + length + " version 0",
+                FodIdParseStatus.PAYLOAD_TOO_SHORT,
+                FodId.tryFromBase64(factory
+                    .signedOwidAt(withVersion(shortPayload, 0), DATE)
+                    .asBase64()).getStatus());
+
+            for (int version : new int[] { 1, 2, 3 }) {
+                String base64 = factory
+                    .signedOwidAt(withVersion(shortPayload, version), DATE)
+                    .asBase64();
+                String label = "length " + length + " version " + version;
+
+                FodIdParseResult result = FodId.tryFromBase64(base64);
+                assertEquals(label,
+                    FodIdParseStatus.UNSUPPORTED_PAYLOAD_VERSION,
+                    result.getStatus());
+                assertEquals(label, version, result.getPayloadVersion());
+                assertNull(label, result.getValue());
+                try {
+                    FodId.fromBase64(base64);
+                    fail(label + " should have been refused");
+                } catch (IllegalArgumentException thrown) {
+                    assertTrue(label + ": " + thrown.getMessage(),
+                        thrown.getMessage().contains("version " + version));
+                }
+            }
+        }
+    }
+
+    /**
      * The throwing readers name the version they found, so whoever reads
      * the message knows which layout the identifier claims rather than only
      * that some version was refused.

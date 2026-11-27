@@ -22,6 +22,7 @@
 
 package fiftyone.ipintelligence.examples.web;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
 import org.eclipse.jetty.server.Server;
 import org.junit.AfterClass;
@@ -69,14 +70,14 @@ public class GettingStartedWebMixedTest {
         assumeTrue("Skipping test, no device detection data file found at " +
                         GettingStartedWebMixed.DD_DATA_FILE_DEFAULT,
                 ddDataFilePath != null);
-        System.setProperty("TestDeviceDetectionDataFile", ddDataFilePath);
+        System.setProperty("_51DEGREES_DD_PATH", ddDataFilePath);
 
         // Use the enterprise data file when present, otherwise fall back to
         // the free Lite or ASN file so the test can run from a fresh clone.
         String ipiDataFilePath = DataFileHelper.findAvailableDataFile();
         assumeTrue("Skipping test, no IP Intelligence data file found",
                 ipiDataFilePath != null);
-        System.setProperty("TestDataFile", ipiDataFilePath);
+        System.setProperty("_51DEGREES_IPI_PATH", ipiDataFilePath);
 
         // Bind an OS-assigned ephemeral port (0) to avoid intermittent
         // "Address already in use" failures from a fixed port not yet released.
@@ -117,6 +118,9 @@ public class GettingStartedWebMixedTest {
 
         assertEquals("Expected HTTP 200 OK response", 200, code);
         assertTrue("Response should not be empty", responseBody.length() > 0);
+        assertTrue("The page should end with the '" + FindOutMore.HEADING +
+                "' section", responseBody.contains(
+                        "<h2>" + FindOutMore.HEADING + "</h2>"));
     }
 
     @AfterClass

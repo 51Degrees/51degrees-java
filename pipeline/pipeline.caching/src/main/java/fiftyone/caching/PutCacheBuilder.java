@@ -22,6 +22,7 @@
 
 package fiftyone.caching;
 
+/** Builds caches that values can be put into. */
 public interface PutCacheBuilder extends CacheBuilder {
     /**
      * Set whether or not an existing item in the cache should be updated

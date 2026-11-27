@@ -43,10 +43,21 @@ import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
+import static fiftyone.pipeline.cloudrequestengine.Constants.Messages.NoCloudResponse;
+
 import java.util.*;
 import org.json.JSONArray;
 
+/**
+ * Engine that reads the location results from the response of the Cloud Request
+ * Engine.
+ */
 public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> {
+
+    @Override
+    protected Class<CloudGeoData> getDataType() {
+        return CloudGeoData.class;
+    }
 
     private CloudRequestEngine cloudRequestEngine = null;
     private volatile List<AspectPropertyMetaData> properties;
@@ -106,10 +117,22 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
         return elementDataKey;
     }
 
+    /**
+     * The prefix the cloud service gives the properties of the chosen provider.
+     *
+     * @return the provider's property prefix
+     */
     public String getDataProviderPrefix() {
         return dataProviderPrefix;
     }
 
+    /**
+     * Create a new instance.
+     *
+     * @param logger used for logging
+     * @param aspectDataFactory creates the element data this engine returns
+     * @param provider the location data provider whose results the engine reads
+     */
     public GeoLocationCloudEngine(
         Logger logger,
         ElementDataFactory<CloudGeoData> aspectDataFactory,
@@ -135,7 +158,19 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
     protected void processEngine(FlowData data, CloudGeoData aspectData) {
         if (cloudRequestEngine != null) {
             CloudRequestData requestData = data.getFromElement(cloudRequestEngine);
-            String json = requestData.getJsonResponse();
+            String json = getJsonResponse(
+                data,
+                aspectData,
+                requestData,
+                cloudRequestEngine);
+
+            // A failed cloud request leaves no response. The Cloud Request
+            // Engine reports why, so this engine adds no error of its own.
+            if (json == null || json.isEmpty()) {
+                logger.warn(String.format(
+                    NoCloudResponse, getClass().getSimpleName()));
+                return;
+            }
 
             JSONObject jsonObj = new JSONObject(json);
             JSONObject geoObj = getElementJson(jsonObj);
@@ -143,7 +178,7 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
             Map<String, Object> methodData = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
             for (AspectPropertyMetaData property : getProperties()) {
-                String key = property.getName().toLowerCase();
+                String key = property.getName().toLowerCase(Locale.ROOT);
                 // A property the response leaves out has no entry, so
                 // reading it throws a PropertyMissingException.
                 if (geoObj.has(key) == false) {
@@ -180,6 +215,13 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
         }
     }
 
+    /**
+     * Get the reason the response gives for a property having no value.
+     *
+     * @param jsonObj the JSON object holding the property
+     * @param key the property name
+     * @return the reason, or null if the response gives none
+     */
     public static Object tryToGet(JSONObject jsonObj, String key) {
         return jsonObj.opt(key + "nullreason");
     }
@@ -256,8 +298,10 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
                     new ArrayList<String>(),
                     true,
                     null,
-                    item.delayExecution,
-                    item.evidenceProperties);
+                    item.delayExecution != null ?
+                        item.delayExecution : false,
+                    item.evidenceProperties != null ?
+                        item.evidenceProperties : new ArrayList<String>());
                 
                 loaded.add(property);
             }

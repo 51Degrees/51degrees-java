@@ -24,7 +24,7 @@ The cloud service for IP Intelligence is currently in development.
 
 You will require [resource keys](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon)
 to use the Cloud API, as described on our website. Get resource keys from
-our [configurator](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon), see our [documentation](https://51degrees.com/documentation/_services__configurator.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon) on 
+our [configuration page](https://51degrees.com/configure/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon), see our [documentation](https://51degrees.com/documentation/_services__configurator.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-coming-soon) on 
 how to use this.
 
 #### On-Premise
@@ -110,20 +110,18 @@ repository.
 You will need [resource keys](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=tests)
 (see above) to complete the tests and run examples which include exercising the cloud API.
 
-The tests look for a resource key in the following order:
+The tests read a resource key from `_51DEGREES_RESOURCE_KEY_BESPOKE`, set as
+an environment variable or as a system property, and no other name. A cloud
+test with no key is skipped.
 
-1. The aligned `_51DEGREES_RESOURCE_KEY` name, set as an environment variable
-   or as a system property.
-2. The legacy `TestResourceKey` name, which is still supported and is checked
-   after the aligned name.
-
-To verify the code:
+To verify the code, set the `_51DEGREES_RESOURCE_KEY_BESPOKE` environment
+variable to the resource key and run:
 
 ```
-mvn clean test -DTestResourceKey=[Resource Key]
+mvn clean test
 ```
-For tests and examples that require a license key add the following option:
-- `-DLicenseKey=[License Key]`
+For tests and examples that require a license key, set the
+`_51DEGREES_LICENSE_KEY` environment variable.
 
 ## Projects
 

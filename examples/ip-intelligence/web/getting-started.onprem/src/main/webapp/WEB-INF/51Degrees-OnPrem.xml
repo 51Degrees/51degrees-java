@@ -28,8 +28,8 @@
                 <AutoUpdate>false</AutoUpdate>
                 <CreateTempDataCopy>false</CreateTempDataCopy>
                 <!-- specify path to 51Degrees IPI Data File -->
-                <!-- Uses TestDataFile system property if set, otherwise defaults to relative path -->
-                <DataFile>${TestDataFile:-cxx/data/ip-intelligence/51Degrees-EnterpriseIpiV41.ipi}</DataFile>
+                <!-- Uses _51DEGREES_IPI_PATH, an environment variable or system property, if set, otherwise defaults to relative path -->
+                <DataFile>${_51DEGREES_IPI_PATH:-cxx/data/ip-intelligence/51Degrees-LiteV41.ipi}</DataFile>
                 <PerformanceProfile>LowMemory</PerformanceProfile>
             </BuildParameters>
             <BuilderName>IPIntelligenceOnPremiseEngine</BuilderName>

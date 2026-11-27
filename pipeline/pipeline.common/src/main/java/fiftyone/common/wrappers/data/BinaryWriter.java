@@ -26,6 +26,7 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+/** Writes little-endian values to an output stream. */
 public class BinaryWriter implements AutoCloseable {
 
     /**
@@ -58,6 +59,12 @@ public class BinaryWriter implements AutoCloseable {
         stream = new WritableSeekable.File(outputStream);
     }
 
+    /**
+     * Construct a new instance of the binary writer that writes to the byte
+     * array output stream given.
+     *
+     * @param outputStream where the data should be written
+     */
     public BinaryWriter(ByteArrayOutputStream outputStream) {
         this();
         stream = new WritableSeekable.Memory(outputStream);
@@ -120,6 +127,13 @@ public class BinaryWriter implements AutoCloseable {
         }
     }
 
+    /**
+     * Write the first bytes of an array.
+     *
+     * @param value the bytes
+     * @param length how many bytes to write
+     * @throws IOException if the stream fails
+     */
     public void writeBytes(byte[] value, int length) throws IOException {
         buffer.clear();
         if (buffer.limit() < value.length) {

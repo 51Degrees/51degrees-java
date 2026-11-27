@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.engines.fiftyone.flowelements;
 
+import fiftyone.pipeline.annotations.DefaultValue;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
 import fiftyone.pipeline.engines.services.HttpClientDefault;
@@ -33,7 +34,7 @@ import org.slf4j.ILoggerFactory;
  */
 public class FiftyOnePipelineBuilder extends PipelineBuilder {
 
-    private boolean shareUsageEnabled = true;
+    private boolean shareUsageEnabled = Constants.SHARE_USAGE_DEFAULT_ENABLED;
 
     /**
      * Construct a new builder.
@@ -57,18 +58,18 @@ public class FiftyOnePipelineBuilder extends PipelineBuilder {
      * @param enabled true to enable usage sharing, false to disable
      * @return this builder
      */
+    @DefaultValue(booleanValue = Constants.SHARE_USAGE_DEFAULT_ENABLED)
     public FiftyOnePipelineBuilder setShareUsage(boolean enabled) {
         this.shareUsageEnabled = enabled;
         return this;
     }
 
-    @SuppressWarnings("rawtypes")
     @Override
     protected void onPreBuild() {
         
         // Add the sequence element if it does not exist
         boolean containsSequence = false;
-        for (FlowElement element : getFlowElements()) {
+        for (FlowElement<?, ?> element : getFlowElements()) {
             if (element instanceof SequenceElement) {
                 containsSequence = true;
                 break;
@@ -86,7 +87,7 @@ public class FiftyOnePipelineBuilder extends PipelineBuilder {
         // Add the share usage element if it does not exist in the list.
         if (shareUsageEnabled) {
             boolean containsShareUsage = false;
-            for (FlowElement element : getFlowElements()) {
+            for (FlowElement<?, ?> element : getFlowElements()) {
                 if (element instanceof ShareUsageElement) {
                     containsShareUsage = true;
                     break;

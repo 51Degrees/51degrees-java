@@ -25,35 +25,82 @@ package fiftyone.pipeline.developerexamples.clientsideelement.data;
 import java.util.Calendar;
 
 //! [class]
+/** A star sign and the days of the year it covers. */
 public class StarSign {
     private final Calendar end;
     private final Calendar start;
     private final String name;
 
+    /**
+     * Create a new instance.
+     *
+     * @param name the name of the star sign
+     * @param start the first day, as dd/mm
+     * @param end the last day, as dd/mm
+     */
     public StarSign(String name, String start, String end) {
         this.name = name;
-        this.start = Calendar.getInstance();
-        String[] startDate = start.split("/");
-        this.start.set(
-            0,
-            Integer.parseInt(startDate[1]) - 1,
-            Integer.parseInt(startDate[0]));
-        this.end = Calendar.getInstance();
-        String[] endDate = end.split("/");
-        this.end.set(
-            0,
-            Integer.parseInt(endDate[1]) - 1,
-            Integer.parseInt(endDate[0]));
+        this.start = dayOfYear(start);
+        this.end = dayOfYear(end);
     }
 
+    /**
+     * The day and month of a "dd/mm" or "dd/mm/yyyy" date, in year 0 at
+     * midnight, so that two dates compare by day and month alone.
+     * @param date the date
+     * @return the day and month
+     */
+    public static Calendar dayOfYear(String date) {
+        String[] sections = date.split("/");
+        Calendar calendar = Calendar.getInstance();
+        // Clear the time of day the calendar was made with, which would
+        // otherwise decide the comparison of two dates on the same day.
+        calendar.clear();
+        calendar.set(
+            0,
+            Integer.parseInt(sections[1]) - 1,
+            Integer.parseInt(sections[0]));
+        return calendar;
+    }
+
+    /**
+     * True if the day and month fall within this sign, including its first
+     * and last days. A sign that runs over the end of the year, as
+     * Capricorn does, holds the days from its start to the end of December
+     * and from the start of January to its end.
+     * @param day a day and month from {@link #dayOfYear(String)}
+     * @return true if the day falls within this sign
+     */
+    public boolean contains(Calendar day) {
+        if (start.compareTo(end) <= 0) {
+            return day.compareTo(start) >= 0 && day.compareTo(end) <= 0;
+        }
+        return day.compareTo(start) >= 0 || day.compareTo(end) <= 0;
+    }
+
+    /**
+     * The name of the star sign.
+     *
+     * @return the name
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * The first day of the star sign. Only the day and month are used.
+     *
+     * @return the first day
+     */
     public Calendar getStart() {
         return start;
     }
 
+    /**
+     * The last day of the star sign. Only the day and month are used.
+     *
+     * @return the last day
+     */
     public Calendar getEnd() {
         return end;
     }

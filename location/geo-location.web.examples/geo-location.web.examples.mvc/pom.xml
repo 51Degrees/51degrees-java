@@ -95,12 +95,11 @@
                     <version>${maven-war-plugin.version}</version>
                     <configuration>
                         <warSourceDirectory>src/main/webapp</warSourceDirectory>
-                        <warName>GeoLocationWebMVCExample</warName>
                         <failOnMissingWebXml>false</failOnMissingWebXml>
                     </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>
-        <finalName>PipelineWebMVCExample</finalName>
+        <finalName>GeoLocationWebMVCExample</finalName>
     </build>
 </project>

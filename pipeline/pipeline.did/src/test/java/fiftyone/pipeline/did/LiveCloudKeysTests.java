@@ -22,84 +22,157 @@
 
 package fiftyone.pipeline.did;
 
-import org.junit.After;
-import org.junit.Before;
+import org.json.JSONObject;
 import org.junit.Test;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.Assert.assertTrue;
 
 /**
- * Tests which names {@link LiveCloudKeys} reads a key from. System
- * properties stand in for the environment variables, because the lookup
- * reads either and a test cannot set an environment variable.
+ * The live 51Did tests run once for each resource key, and each key is read
+ * under its own _51DEGREES_ name and no other.
  */
 public class LiveCloudKeysTests {
 
-    private static final String RESOURCE_KEY_NAME = "_51DEGREES_RESOURCE_KEY";
-    private static final String OLD_RESOURCE_KEY_NAME = "RESOURCE_KEY";
-    private static final String LICENCE_KEY_NAME = "_51DEGREES_LICENSE_KEY";
-    private static final String OLD_LICENCE_KEY_NAME = "LICENSE_KEY";
-    private static final String OTHER_NAME = "TestResourceKey";
+    /**
+     * A name nothing else sets, for the tests of the read.
+     */
+    private static final String SAMPLE = "_51DEGREES_LIVE_CLOUD_KEYS_SAMPLE";
 
-    private static final String[] NAMES = {
-        RESOURCE_KEY_NAME, OLD_RESOURCE_KEY_NAME,
-        LICENCE_KEY_NAME, OLD_LICENCE_KEY_NAME, OTHER_NAME,
-    };
+    /**
+     * A sealed verdict is redeemed only with the license key of the account
+     * the resource key belongs to. So the 51Did resource key runs with the
+     * 51Did license key, and the Bespoke resource key runs with none.
+     * _51DEGREES_LICENSE_KEY holds the data file license, so it is not read.
+     */
+    @Test
+    public void passes_PairEachResourceKeyWithItsOwnLicenseOrNone() {
+        assertEquals(2, LiveCloudKeys.PASSES.length);
+        assertArrayEquals(new String[]{
+            "_51DEGREES_RESOURCE_KEY_51DID",
+            "_51DEGREES_LICENSE_KEY_51DID"}, LiveCloudKeys.PASSES[0]);
+        assertArrayEquals(new String[]{
+            "_51DEGREES_RESOURCE_KEY_BESPOKE",
+            null}, LiveCloudKeys.PASSES[1]);
+    }
 
-    private final String[] saved = new String[NAMES.length];
-
-    @Before
-    public void clearNames() {
-        for (int i = 0; i < NAMES.length; i++) {
-            // An environment variable would answer before the system
-            // properties set here, so the test cannot run.
-            assumeTrue(System.getenv(NAMES[i]) == null);
-            saved[i] = System.clearProperty(NAMES[i]);
+    @Test
+    public void read_GivesTheTrimmedSystemProperty() {
+        System.setProperty(SAMPLE, " value ");
+        try {
+            assertEquals("value", LiveCloudKeys.read(SAMPLE));
+        } finally {
+            System.clearProperty(SAMPLE);
         }
     }
 
-    @After
-    public void restoreNames() {
-        for (int i = 0; i < NAMES.length; i++) {
-            if (saved[i] == null) {
-                System.clearProperty(NAMES[i]);
-            } else {
-                System.setProperty(NAMES[i], saved[i]);
-            }
+    @Test
+    public void read_GivesNullForABlankValue() {
+        System.setProperty(SAMPLE, "  ");
+        try {
+            assertNull(LiveCloudKeys.read(SAMPLE));
+        } finally {
+            System.clearProperty(SAMPLE);
         }
     }
 
     @Test
-    public void resourceKey_OldNameWhenNewIsNotSet() {
-        System.setProperty(OLD_RESOURCE_KEY_NAME, "old-name-key");
-
-        assertEquals("old-name-key",
-            LiveCloudKeys.find(new String[] {RESOURCE_KEY_NAME}));
+    public void read_GivesNullWhenNothingIsSet() {
+        assertNull(LiveCloudKeys.read(SAMPLE));
     }
 
     @Test
-    public void licenceKey_OldNameWhenNewIsNotSet() {
-        System.setProperty(OLD_LICENCE_KEY_NAME, "old-name-licence");
-
-        assertEquals("old-name-licence",
-            LiveCloudKeys.find(new String[] {LICENCE_KEY_NAME}));
+    public void read_GivesNullForNoName() {
+        assertNull(LiveCloudKeys.read(null));
     }
 
     @Test
-    public void newNameWinsOverOld() {
-        System.setProperty(RESOURCE_KEY_NAME, "new-name-key");
-        System.setProperty(OLD_RESOURCE_KEY_NAME, "old-name-key");
+    public void noResourceKey_NamesTheVariable() {
+        String message = LiveCloudKeys.noResourceKey(SAMPLE);
+        assertTrue(message, message.contains(SAMPLE + " is not set"));
+    }
 
-        assertEquals("new-name-key",
-            LiveCloudKeys.find(new String[] {RESOURCE_KEY_NAME}));
+    /**
+     * A license key with no resource key of its own account means a key is
+     * missing, and the tests that redeem would never run.
+     */
+    @Test
+    public void missingResourceKey_NamesBothVariables() {
+        String message = LiveCloudKeys.missingResourceKey(
+            SAMPLE, "_51DEGREES_LIVE_CLOUD_KEYS_LICENSE");
+        assertTrue(message, message.contains(SAMPLE + " is not set"));
+        assertTrue(message,
+            message.contains("_51DEGREES_LIVE_CLOUD_KEYS_LICENSE"));
     }
 
     @Test
-    public void oldNameIsReadOnlyForItsNewName() {
-        System.setProperty(OLD_RESOURCE_KEY_NAME, "old-name-key");
+    public void noLicenseKey_NamesTheVariableToSet() {
+        String message = LiveCloudKeys.noLicenseKey(SAMPLE);
+        assertTrue(message, message.contains("Set " + SAMPLE));
+    }
 
-        assertNull(LiveCloudKeys.find(new String[] {OTHER_NAME}));
+    @Test
+    public void noLicenseKey_SaysWhenThePassHasNone() {
+        String message = LiveCloudKeys.noLicenseKey(null);
+        assertTrue(message, message.contains("no license key"));
+    }
+
+    /**
+     * The reason the production cloud service gives a key without the
+     * marketing product, so a failure on such a key says why.
+     */
+    private static final String REFUSED = "Can not form IdProbGlobal. For "
+        + "marketing (personalized or standard) usages a CloudV5FODiD "
+        + "product needs to be a part of the license.";
+
+    @Test
+    public void nullReason_GivesTheGlobalReason() {
+        JSONObject fodid = new JSONObject()
+            .put("idprobglobal", JSONObject.NULL)
+            .put("idprobglobalnullreason", REFUSED);
+        assertEquals(REFUSED, LiveCloudKeys.nullReason(fodid));
+    }
+
+    @Test
+    public void nullReason_GivesTheLicensedReasonWhenTheGlobalHasNone() {
+        JSONObject fodid = new JSONObject()
+            .put("idprobglobalnullreason", " ")
+            .put("idproblicnullreason", REFUSED);
+        assertEquals(REFUSED, LiveCloudKeys.nullReason(fodid));
+    }
+
+    @Test
+    public void nullReason_GivesNullWhenTheServiceGaveNone() {
+        assertNull(LiveCloudKeys.nullReason(new JSONObject()));
+    }
+
+    @Test
+    public void nullReason_GivesNullWithNoFodidSection() {
+        assertNull(LiveCloudKeys.nullReason(null));
+    }
+
+    /**
+     * The reason travels into the message, so a key without the marketing
+     * product reads as that and not as a fault in the service.
+     */
+    @Test
+    public void notEntitled_CarriesTheReasonAndNamesTheProduct() {
+        String message = LiveCloudKeys.notEntitled(
+            "id.usage=standard", REFUSED, LiveCloudKeys.MARKETING);
+        assertTrue(message, message.contains("id.usage=standard"));
+        assertTrue(message, message.contains("(" + REFUSED + ")"));
+        assertTrue(message,
+            message.contains("does not carry the CloudV5FODiD product"));
+    }
+
+    @Test
+    public void notEntitled_SaysWhenTheServiceGaveNoReason() {
+        String message = LiveCloudKeys.notEntitled(
+            "id.usage=non-marketing", null, LiveCloudKeys.FODID);
+        assertTrue(message, message.contains("(no reason given)"));
+        assertTrue(message,
+            message.contains("does not carry the FODid product"));
     }
 }

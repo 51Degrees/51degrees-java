@@ -49,7 +49,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @Ignore
-@SuppressWarnings({"rawtypes", "deprecation"})
 public class IPIntelligenceOnPremisePipelineBuilderTest {
 
     private static final String IPI_DATA_FILE_NAME = FileUtils.getHashFileName();
@@ -104,7 +103,7 @@ public class IPIntelligenceOnPremisePipelineBuilderTest {
             builder.setFilename(IPI_DATA_FILE_NAME.replace(".ipi", ".dat"), true);
             fail();
         } catch (Exception e) {
-            assertTrue(e.getMessage().contains("Unrecognised filename."));
+            assertTrue(e.getMessage().contains("Unrecognized filename."));
         }
     }
 
@@ -114,7 +113,7 @@ public class IPIntelligenceOnPremisePipelineBuilderTest {
             builder.setFilename(IPI_DATA_FILE_NAME.replace(".ipi", ".any"), true);
             fail();
         } catch (Exception e) {
-            assertTrue(e.getMessage().contains("Unrecognised filename."));
+            assertTrue(e.getMessage().contains("Unrecognized filename."));
         }
     }
 
@@ -125,7 +124,7 @@ public class IPIntelligenceOnPremisePipelineBuilderTest {
                 .setAutoUpdate(false)
                 .setShareUsage(false)
                 .build()) {
-            List<FlowElement> flowElements = pipeline.getFlowElements();
+            List<FlowElement<?, ?>> flowElements = pipeline.getFlowElements();
             assertEquals(1, flowElements.size());
             assertFalse(flowElements.get(0) instanceof ShareUsageElement);
         }
@@ -138,9 +137,11 @@ public class IPIntelligenceOnPremisePipelineBuilderTest {
                 .setAutoUpdate(false)
                 .setShareUsage(true)
                 .build()) {
-            List<FlowElement> flowElements = pipeline.getFlowElements();
+            List<FlowElement<?, ?>> flowElements = pipeline.getFlowElements();
             assertEquals(2, flowElements.size());
-            assertTrue(flowElements.get(0) instanceof ShareUsageElement);
+            // Usage sharing is the last Flow Element.
+            assertTrue(flowElements.get(flowElements.size() - 1)
+                instanceof ShareUsageElement);
         }
     }
 
@@ -168,13 +169,13 @@ public class IPIntelligenceOnPremisePipelineBuilderTest {
     @Test
     public void setDataUpdateService_RegisterDataFileTriggered() throws Exception {
         DataUpdateServiceDefault dataUpdateServiceDefault = mock(DataUpdateServiceDefault.class);
-        try (Pipeline ignored = builder
-                .setAutoUpdate(true)
-                .setDataUpdateLicenseKey("licence_key")
-                .setDataUpdateService(dataUpdateServiceDefault)
-                .build()) {
-            verify(dataUpdateServiceDefault).registerDataFile(any());
-        }
+        builder
+            .setAutoUpdate(true)
+            .setDataUpdateLicenseKey("licence_key")
+            .setDataUpdateService(dataUpdateServiceDefault)
+            .build()
+            .close();
+        verify(dataUpdateServiceDefault).registerDataFile(any());
     }
 
     @Test

@@ -40,6 +40,18 @@ import java.util.Map;
 public interface Pipeline extends AutoCloseable {
 
     /**
+     * Close the Pipeline and, if it was built to, its Flow Elements and the
+     * services added to it. It throws no checked exception, so a
+     * try-with-resources block needs no catch for it.
+     * @throws fiftyone.pipeline.core.exceptions.CloseException if closing a
+     * Flow Element or service threw. Every Flow Element and service is
+     * closed first, and the first failure is the cause, with any others
+     * suppressed in it.
+     */
+    @Override
+    void close();
+
+    /**
      * Create a new {@link FlowData} instance linked to this Pipeline. The
      * resulting FlowData's {@link FlowData#process()} method will cause
      * the FlowData to be processed.
@@ -62,6 +74,24 @@ public interface Pipeline extends AutoCloseable {
     boolean isConcurrent();
 
     /**
+     * True if exceptions that happen while processing are recorded in
+     * {@link FlowData#getErrors()} and logged, rather than thrown once
+     * processing is complete. A wrapper of the Pipeline, such as the web
+     * integration, can read it to decide whether to suppress and log an
+     * exception of its own. See the
+     * <a href="https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/features/exception-handling.md#L42">exception handling specification</a>.
+     * <p>
+     * The default gives the builder's default, so that an implementation
+     * written before this method was added still compiles. Override it to
+     * give the real setting.
+     * @return true if exceptions during processing are suppressed
+     */
+    default boolean isSuppressProcessExceptions() {
+        return fiftyone.pipeline.core.Constants
+            .DEFAULT_SUPPRESS_PROCESS_EXCEPTIONS;
+    }
+
+    /**
      * Indicates whether the Pipeline has been closed using the {@link #close()}
      * method, either explicitly or as a result of a 'try with resource'.
      * @return true if the Pipeline has been closed
@@ -72,7 +102,7 @@ public interface Pipeline extends AutoCloseable {
      * Add a service to be used by this Pipeline. If the service supports 
      * Closeable or AutoCloseable, it will be closed automatically when the
      * pipeline is closed.
-     * @param service
+     * @param service the service to add
      */
     void addService(PipelineService service);
     
@@ -101,15 +131,13 @@ public interface Pipeline extends AutoCloseable {
      * contains one. Null is returned if there is no such instance or there are
      * multiple instances of that type.
      */
-    @SuppressWarnings("rawtypes")
-    <T extends FlowElement> T getElement(Class<T> type);
+    <T extends FlowElement<?, ?>> T getElement(Class<T> type);
 
     /**
      * Get list of the flow elements that are part of this pipeline.
      * @return an immutable list of the flow elements
      */
-    @SuppressWarnings("rawtypes")
-    List<FlowElement> getFlowElements();
+    List<FlowElement<?, ?>> getFlowElements();
     /**
      * Get the map of available properties for an
      * {@link FlowElement#getElementDataKey()}. The map returned contains the

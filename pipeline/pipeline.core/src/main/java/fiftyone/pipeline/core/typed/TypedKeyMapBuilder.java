@@ -27,6 +27,7 @@ import fiftyone.pipeline.core.exceptions.PipelineDataException;
 
 import java.io.Closeable;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -36,7 +37,6 @@ import static fiftyone.pipeline.util.StringManipulation.stringJoin;
  * Public builder for instances of {@link TypedKeyMap}. This follows the fluent
  * builder pattern.
  */
-@SuppressWarnings({"unchecked", "rawtypes"})
 public class TypedKeyMapBuilder {
 
     private final TypedKeyMap _map;
@@ -78,14 +78,11 @@ public class TypedKeyMapBuilder {
      * Extends the internal implementation to add thread-safety to the
      * {@link #get(Object)} and {@link #put(String, Object)} methods.
      */
+    /**
+     * Adds with compare and swap, so members of a parallel group add without
+     * a lock, and reads take none. Removal is rare and keeps its lock.
+     */
     private static class TypedKeyMapConcurrent extends TypedKeyMapInternal {
-        @Override
-        public <T> void put(TypedKey<T> typedKey, T value) {
-            synchronized (this) {
-                super.put(typedKey, value);
-            }
-        }
-
         @Override
         public <T> T removeIfExists(TypedKey<T> typedKey) {
             synchronized (this) {
@@ -101,16 +98,56 @@ public class TypedKeyMapBuilder {
     private static class TypedKeyMapInternal implements TypedKeyMap, Map<String, Object>, Closeable {
 
         private static final Entry[] emptyEntryPair = new Entry[]{null, null};
-        private Entry _head = null;
+
+        /**
+         * The newest entry. A new entry is linked to the current head and
+         * swapped in with one compare and swap, retrying if another thread
+         * added first, so readers follow the links with no lock.
+         */
+        private volatile Entry _head = null;
+
+        private static final AtomicReferenceFieldUpdater<TypedKeyMapInternal, Entry>
+            HEAD = AtomicReferenceFieldUpdater.newUpdater(
+                TypedKeyMapInternal.class, Entry.class, "_head");
+
+        /**
+         * Find the entry for a name in the list starting at head.
+         */
+        private static Entry findFrom(Entry head, String typedKeyName) {
+            Entry current = head;
+            while (current != null) {
+                if (current._key.getName().equalsIgnoreCase(typedKeyName)) {
+                    return current;
+                }
+                current = current._next;
+            }
+            return null;
+        }
+
+        @Override
+        public <T> T putIfAbsent(TypedKey<T> typedKey, T value) {
+            while (true) {
+                Entry head = _head;
+                Entry existing = findFrom(head, typedKey.getName());
+                if (existing != null) {
+                    return typedKey.getType().cast(existing._value);
+                }
+                Entry first = new Entry(typedKey, value);
+                first._next = head;
+                if (HEAD.compareAndSet(this, head, first)) {
+                    return value;
+                }
+            }
+        }
 
         private Entry[] findWithPrevious(String typedKeyName) {
             Entry current = _head;
             if (current != null) {
-                if (current._key.getName().equals(typedKeyName)) {
+                if (current._key.getName().equalsIgnoreCase(typedKeyName)) {
                     return new Entry[]{null, current};
                 }
                 while (current._next != null) {
-                    if (current._next._key.getName().equals(typedKeyName)) {
+                    if (current._next._key.getName().equalsIgnoreCase(typedKeyName)) {
                         return new Entry[]{current, current._next};
                     }
                     current = current._next;
@@ -203,10 +240,10 @@ public class TypedKeyMapBuilder {
                 if (current[1] == _head) {
                     _head = current[1]._next;
                 }
-                T value = (T) current[1]._value;
+                Object value = current[1]._value;
                 current[1].closeValue();
                 current[1]._value = null;
-                return value;
+                return typedKey.getType().cast(value);
             }
             return null;
         }
@@ -223,10 +260,11 @@ public class TypedKeyMapBuilder {
                 current._value = value;
             } else {
                 // The key does not exist so add it to the head of the linked
-                // list.
-                Entry<T> first = new Entry<>(typedKey, value);
-                first._next = _head;
-                _head = first;
+                // list, or overwrite the value another thread added first.
+                T held = putIfAbsent(typedKey, value);
+                if (held != value) {
+                    put(typedKey, value);
+                }
             }
         }
 
@@ -362,12 +400,12 @@ public class TypedKeyMapBuilder {
             }
         }
 
-        private static class Entry<T> {
-            final TypedKey<T> _key;
-            T _value;
-            Entry _next = null;
+        private static class Entry {
+            final TypedKey<?> _key;
+            volatile Object _value;
+            volatile Entry _next = null;
 
-            Entry(TypedKey<T> key, T value) {
+            Entry(TypedKey<?> key, Object value) {
                 _key = key;
                 _value = value;
             }

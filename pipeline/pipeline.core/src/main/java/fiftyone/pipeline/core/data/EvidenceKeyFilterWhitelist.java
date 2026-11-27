@@ -30,19 +30,20 @@ import java.util.*;
  */
 public class EvidenceKeyFilterWhitelist implements EvidenceKeyFilter {
 
+    /** The keys to include, each with its order of importance. */
     protected final Map<String, Integer> whitelist;
 
+    /** Compares keys, for example ignoring case. */
     protected final Comparator<String> comparator;
 
     /**
      * Construct a new instance using the list of evidence keys provided.
+     * Keys are compared ignoring case, as Evidence keys are.
      * By default, all keys will have the same order of precedence.
      * @param whitelist evidence keys to add to the whitelist
      */
     public EvidenceKeyFilterWhitelist(List<String> whitelist) {
-        this.whitelist = new TreeMap<>();
-        addValues(whitelist);
-        this.comparator = null;
+        this(whitelist, String.CASE_INSENSITIVE_ORDER);
     }
 
     /**
@@ -66,12 +67,11 @@ public class EvidenceKeyFilterWhitelist implements EvidenceKeyFilter {
      * precedence provided.
      * The order of precedence of each key is given by the value of the
      * key/value pair.
+     * Keys are compared ignoring case, as Evidence keys are.
      * @param whitelist evidence keys to add to the whitelist
      */
     public EvidenceKeyFilterWhitelist(Map<String, Integer> whitelist) {
-        this.whitelist = new TreeMap<>();
-        addValues(whitelist);
-        this.comparator = null;
+        this(whitelist, String.CASE_INSENSITIVE_ORDER);
     }
 
     /**

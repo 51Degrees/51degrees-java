@@ -44,6 +44,11 @@ import java.util.List;
 public class StubIpEngine
     extends FlowElementBase<IPIntelligenceData, ElementPropertyMetaData> {
 
+    @Override
+    protected Class<IPIntelligenceData> getDataType() {
+        return IPIntelligenceData.class;
+    }
+
     private final AspectPropertyValue<List<IWeightedValue<String>>>
         geographical;
     private final AspectPropertyValue<List<IWeightedValue<String>>> population;

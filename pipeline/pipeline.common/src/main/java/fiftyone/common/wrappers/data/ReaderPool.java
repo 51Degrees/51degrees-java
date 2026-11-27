@@ -27,6 +27,9 @@ import java.io.IOException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * A pool of readers, each with exclusive use of the source while it is taken.
+ */
 public class ReaderPool implements Closeable {
 
     /**
@@ -46,6 +49,11 @@ public class ReaderPool implements Closeable {
      */
     private final AtomicInteger readerCount = new AtomicInteger(0);
 
+    /**
+     * Create a pool which creates its readers from the source given.
+     *
+     * @param source creates the buffers the readers read
+     */
     public ReaderPool(Source source) {
         this.source = source;
     }

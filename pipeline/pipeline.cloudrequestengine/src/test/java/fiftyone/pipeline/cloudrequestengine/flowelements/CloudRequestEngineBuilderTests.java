@@ -22,41 +22,33 @@
 
 package fiftyone.pipeline.cloudrequestengine.flowelements;
 
-import fiftyone.common.testhelpers.TestLogger;
 import fiftyone.pipeline.cloudrequestengine.CloudRequestException;
+import fiftyone.pipeline.core.configuration.ElementOptions;
+import fiftyone.pipeline.core.configuration.PipelineOptions;
 import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
+import fiftyone.pipeline.core.flowelements.Pipeline;
+import fiftyone.pipeline.core.flowelements.PipelineBuilder;
 import fiftyone.pipeline.engines.services.HttpClientDefault;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.MalformedURLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.net.URL;
 import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.verify;
 
 public class CloudRequestEngineBuilderTests extends CloudRequestEngineTestsBase {
     private final String testResourceKey = "resource_key";
 	private final String testEndpoint = "https://testEndpoint/";
 	private final String testEnvVarEndpoint = "https://testEnvVarEndpoint/";
-	private final String testOldEnvVarEndpoint =
-		"https://testOldEnvVarEndpoint/";
 
-	// The deprecated name of the end point variable, which is also the
-	// name of the constant that holds it.
-	private static final String OLD_ENDPOINT_VARIABLE = "FOD_CLOUD_API_URL";
-
-	// The old name is logged as deprecated once in a process, so what was
-	// logged is carried from one test of this class to the next.
-	private static final List<String> deprecationsInEarlierTests =
-		new ArrayList<>();
 	
 	public CloudRequestEngineBuilderTests() throws MalformedURLException {
         super();
@@ -67,13 +59,8 @@ public class CloudRequestEngineBuilderTests extends CloudRequestEngineTestsBase 
     	configureMockedClient();
     }
 
-    @AfterEach
-    public void countDeprecations() {
-        deprecationsInEarlierTests.addAll(deprecationsLogged());
-    }
     
     @Test
-    @SuppressWarnings("unused")
     public void BuildEngine_ResourceKey_NotSet() {
         assertThrows(PipelineConfigurationException.class, () -> {
             CloudRequestEngine cloudRequestsEngine =
@@ -146,124 +133,94 @@ public class CloudRequestEngineBuilderTests extends CloudRequestEngineTestsBase 
     }
 
     /**
-     * Gives the builder an environment holding only the variables in the
-     * map, so that a test chooses which of the two names is set.
+     * A variable that is set but empty counts as not set, so the default
+     * is used.
      */
-    private void setEnvironment(
-        CloudRequestEngineBuilder builder,
-        Map<String, String> environment) throws Exception {
-        Field getEnvVarField = builder.getClass().getDeclaredField("getEnvVar");
-        getEnvVarField.setAccessible(true);
-        getEnvVarField.set(
-            builder,
-            (Function<String, String>)(name) -> environment.get(name));
-    }
-
-    /**
-     * A builder that finds the old name in the environment, and the new
-     * name only where a value is given for it.
-     */
-    private CloudRequestEngineBuilder builderWithOldName(
-        String newNameValue) throws Exception {
-        Map<String, String> environment = new HashMap<>();
-        environment.put(OLD_ENDPOINT_VARIABLE, testOldEnvVarEndpoint);
-        if (newNameValue != null) {
-            environment.put(Constants.CLOUD_ENDPOINT_VARIABLE, newNameValue);
-        }
+    @Test
+    public void CloudEndPoint_Blank_Environment_Setting() throws Exception {
         CloudRequestEngineBuilder builder =
             new CloudRequestEngineBuilder(loggerFactory, httpClient);
-        setEnvironment(builder, environment);
-        return builder.setResourceKey(testResourceKey);
+        setExpectedEnvVarValue(builder, "");
+
+        builder.setResourceKey(testResourceKey)
+            .build();
+        assertEquals(
+            Constants.END_POINT_DEFAULT + "/", getEndpointValue(builder));
     }
 
     /**
-     * The warnings this test's loggers hold that name the old variable.
+     * With no address given, the engine uses the address the environment
+     * this test runs in gives, which is what {@link ExpectedEndpoint}
+     * expects for the other tests.
      */
-    private List<String> deprecationsLogged() {
-        List<String> result = new ArrayList<>();
-        for (TestLogger logger : loggerFactory.loggers) {
-            for (String warning : logger.warningsLogged) {
-                if (warning.contains(OLD_ENDPOINT_VARIABLE)) {
-                    result.add(warning);
-                }
-            }
-        }
-        return result;
-    }
-
     @Test
-    public void CloudEndPoint_Old_Environment_Name() throws Exception {
-        CloudRequestEngineBuilder builder = builderWithOldName(null);
-
-        builder.build();
-
-        assertEquals(testOldEnvVarEndpoint, getEndpointValue(builder));
-        assertEquals(
-            testOldEnvVarEndpoint + "accessibleproperties",
-            getPropertiesEndpointValue(builder));
-    }
-
-    @Test
-    public void CloudEndPoint_Old_Environment_Name_When_New_Is_Empty()
-        throws Exception {
-        CloudRequestEngineBuilder builder = builderWithOldName("");
-
-        builder.build();
-
-        assertEquals(testOldEnvVarEndpoint, getEndpointValue(builder));
-    }
-
-    @Test
-    public void CloudEndPoint_New_Environment_Name_Wins() throws Exception {
+    public void CloudEndPoint_Matches_Expected() throws Exception {
         CloudRequestEngineBuilder builder =
-            builderWithOldName(testEnvVarEndpoint);
+            new CloudRequestEngineBuilder(loggerFactory, httpClient);
 
-        builder.build();
-
-        assertEquals(testEnvVarEndpoint, getEndpointValue(builder));
-        assertEquals(
-            testEnvVarEndpoint + "accessibleproperties",
-            getPropertiesEndpointValue(builder));
-        assertEquals(0, deprecationsLogged().size());
-    }
-
-    @Test
-    public void CloudEndPoint_Explicit_Setting_Beats_Old_Name()
-        throws Exception {
-        CloudRequestEngineBuilder builder = builderWithOldName(null);
-
-        builder.setEndpoint(testEndpoint).build();
-
-        assertEquals(testEndpoint, getEndpointValue(builder));
-        assertEquals(0, deprecationsLogged().size());
+        builder.setResourceKey(testResourceKey)
+            .build();
+        assertEquals(ExpectedEndpoint.root(), getEndpointValue(builder));
     }
 
     /**
-     * Two engines built from the old name log one warning between them,
-     * however many of this class's tests read the old name before this one.
+     * With no address given, the engine uses the address
+     * {@link ExpectedEndpoint} works out from the variable, when the
+     * variable is missing, empty, an address without a trailing slash or
+     * an address with one.
      */
     @Test
-    public void CloudEndPoint_Old_Environment_Name_Logged_Once()
+    public void CloudEndPoint_Matches_Expected_For_Each_Variable()
         throws Exception {
-        builderWithOldName(null).build();
-        builderWithOldName(null).build();
+        String[] values = {
+            null,
+            "",
+            "https://a.example/api/v4",
+            "https://a.example/api/v4/"
+        };
+        for (String value : values) {
+            CloudRequestEngineBuilder builder =
+                new CloudRequestEngineBuilder(loggerFactory, httpClient);
+            setExpectedEnvVarValue(builder, value);
 
-        List<String> logged = new ArrayList<>(deprecationsInEarlierTests);
-        logged.addAll(deprecationsLogged());
-        assertEquals(1, logged.size(), logged.toString());
-        String warning = logged.get(0);
-        assertTrue(
-            warning.contains(Constants.CLOUD_ENDPOINT_VARIABLE), warning);
-        assertTrue(warning.contains("deprecated"), warning);
+            builder.setResourceKey(testResourceKey)
+                .build();
+            assertEquals(
+                ExpectedEndpoint.root(value),
+                getEndpointValue(builder),
+                String.valueOf(value));
+        }
     }
 
+    /**
+     * An address given in configuration is used over the environment
+     * variable, so every request goes to that address.
+     */
     @Test
-    public void CloudEndPoint_Old_Constant_Is_Kept() throws Exception {
-        Field old = Constants.class.getField(OLD_ENDPOINT_VARIABLE);
+    public void CloudEndPoint_Configuration_Setting() throws Exception {
+        CloudRequestEngineBuilder builder =
+            new CloudRequestEngineBuilder(loggerFactory, httpClient);
+        setExpectedEnvVarValue(builder, testEnvVarEndpoint);
 
-        assertEquals(OLD_ENDPOINT_VARIABLE, old.get(null));
-        assertTrue(old.isAnnotationPresent(Deprecated.class));
-        assertEquals(
-            "_51DEGREES_CLOUD_ENDPOINT", Constants.CLOUD_ENDPOINT_VARIABLE);
+        ElementOptions element = new ElementOptions();
+        element.builderName = "CloudRequestEngineBuilder";
+        element.buildParameters.put("ResourceKey", testResourceKey);
+        element.buildParameters.put("Endpoint", testEndpoint);
+        PipelineOptions options = new PipelineOptions();
+        options.elements.add(element);
+
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+            .addElementBuilder(builder)
+            .buildFromConfiguration(options)) {
+            assertNotNull(pipeline.getElement(CloudRequestEngine.class));
+        }
+        assertEquals(testEndpoint, getEndpointValue(builder));
+
+        ArgumentCaptor<URL> urls = ArgumentCaptor.forClass(URL.class);
+        verify(httpClient, atLeastOnce()).connect(urls.capture());
+        for (URL url : urls.getAllValues()) {
+            assertTrue(url.toString().startsWith(testEndpoint),
+                url.toString());
+        }
     }
 }

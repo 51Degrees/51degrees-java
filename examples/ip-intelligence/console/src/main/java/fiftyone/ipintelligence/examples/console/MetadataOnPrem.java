@@ -21,6 +21,7 @@
  * ********************************************************************* */
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
@@ -61,6 +62,12 @@ import static fiftyone.ipintelligence.examples.shared.DataFileHelper.LITE_DATA_F
  * [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metadataonprem.java&utm_term=header).
  */
 public class MetadataOnPrem {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-ipintelligence-examples-console-metadataonprem.java";
+
     private static final Logger logger = LoggerFactory.getLogger(GettingStartedOnPrem.class);
 
     /* In this example, by default, the free 51degrees Lite IP Intelligence data file is used from
@@ -79,6 +86,8 @@ public class MetadataOnPrem {
         configureLogback(getFilePath("logback.xml"));
         String dataFile = args.length > 0 ? args[0] : LITE_DATA_FILE_REL_PATH;
         run(dataFile, System.out);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
 
@@ -98,8 +107,8 @@ public class MetadataOnPrem {
         // profile. There is no need to build a complete pipeline to read the
         // metadata. Code that already has a pipeline can get its engine with
         // pipeline.getElement(IPIntelligenceOnPremiseEngine.class).
-        try (IPIntelligenceOnPremiseEngine engine =
-                     new IPIntelligenceOnPremiseEngineBuilder(LoggerFactory.getILoggerFactory())
+        IPIntelligenceOnPremiseEngine engine =
+                new IPIntelligenceOnPremiseEngineBuilder(LoggerFactory.getILoggerFactory())
                 // We use the low memory profile to minimize memory usage for this
                 // metadata example, which is memory-intensive.
                 .setPerformanceProfile(Constants.PerformanceProfiles.LowMemory)
@@ -107,7 +116,8 @@ public class MetadataOnPrem {
                 .setAutoUpdate(false)
                 .setDataFileSystemWatcher(false)
                 .setDataUpdateOnStartup(false)
-                .build(dataFileLocation, false)){
+                .build(dataFileLocation, false);
+        try {
 
             PrintWriter writer = new PrintWriter(output);
             logger.info("Listing Components");
@@ -129,6 +139,8 @@ public class MetadataOnPrem {
             if (DataFileHelper.isFreeDataFile(engine)) {
                 DataFileHelper.writeEnterpriseOffer(writer, CONTACT_US);
             }
+        } finally {
+            engine.close();
         }
     }
 
@@ -165,16 +177,19 @@ public class MetadataOnPrem {
         // materializing them all just to call size() exhausts the heap
         // (OutOfMemoryError). counting() retains only the per-group total.
         //
-        // A try-with-resource block MUST be used for the collections of
-        // metadata returned by the engine. Each one holds a reference to the
+        // The collections of metadata returned by the engine MUST be closed
+        // in a finally block. Each one holds a reference to the
         // engine's data set until it is closed, so if it is left open the
         // data set cannot be freed when the engine is closed.
         Map<String, Long> groups;
-        try (CloseableIterable<ProfileMetaData> profiles = engine.getProfiles()) {
+        CloseableIterable<ProfileMetaData> profiles = engine.getProfiles();
+        try {
             groups = StreamSupport.stream(profiles.spliterator(), false)
                     .collect(Collectors.groupingBy(
                             p -> p.getComponent().getName(),
                             Collectors.counting()));
+        } finally {
+            profiles.close();
         }
         groups.forEach((k,v)->output.format("%s Profiles: %d\n", k , v));
     }
@@ -184,12 +199,15 @@ public class MetadataOnPrem {
     // more readable.
     private static void outputComponents(IPIntelligenceOnPremiseEngine engine, PrintWriter output)
             throws Exception {
-        // See outputProfileDetails for why this is a try-with-resource block.
-        try (CloseableIterable<ComponentMetaData> components = engine.getComponents()) {
+        // See outputProfileDetails for why this is closed in a finally block.
+        CloseableIterable<ComponentMetaData> components = engine.getComponents();
+        try {
             for (ComponentMetaData c : components) {
                 output.println("Component - "+ c.getName());
                 outputProperties(c, output);
             }
+        } finally {
+            components.close();
         }
     }
 
@@ -197,8 +215,9 @@ public class MetadataOnPrem {
             throws Exception {
         // The properties of a component, and the values of a property, are
         // collections that are closed in the same way.
-        try (CloseableIterable<FiftyOneAspectPropertyMetaData> properties =
-                     component.getProperties()) {
+        CloseableIterable<FiftyOneAspectPropertyMetaData> properties =
+                component.getProperties();
+        try {
             if (properties.iterator().hasNext() == false) {
                 output.println("    ... no properties");
                 return;
@@ -220,8 +239,9 @@ public class MetadataOnPrem {
                 if (property.getCategory().equals("Metrics")==false) {
                     StringBuilder values = new StringBuilder("        Possible " +
                             "values: ");
-                    try (CloseableIterable<ValueMetaData> propertyValues =
-                                 property.getValues()) {
+                    CloseableIterable<ValueMetaData> propertyValues =
+                            property.getValues();
+                    try {
                         Spliterator<ValueMetaData> spliterator2 =
                                 propertyValues.spliterator();
                         StreamSupport.stream(spliterator2, false)
@@ -242,10 +262,14 @@ public class MetadataOnPrem {
                         if (spliterator2.estimateSize() > 20) {
                             values.append(" +  more ...");
                         }
+                    } finally {
+                        propertyValues.close();
                     }
                     output.println(values);
                 }
             }
+        } finally {
+            properties.close();
         }
     }
 

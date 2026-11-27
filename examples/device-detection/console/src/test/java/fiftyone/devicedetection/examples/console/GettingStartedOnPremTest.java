@@ -22,17 +22,53 @@
 
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import fiftyone.devicedetection.examples.shared.EvidenceHelper;
-import fiftyone.devicedetection.shared.testhelpers.FileUtils;
+import fiftyone.devicedetection.examples.shared.ExampleProcess;
 import org.junit.Test;
+
+import java.io.File;
+import java.util.Collections;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class GettingStartedOnPremTest {
 
     @Test
     public void gettingStartedOnPremTest() throws Exception {
-        GettingStartedOnPrem.run(FileUtils.getHashFileName() == null
-                        ? FileUtils.LITE_HASH_DATA_FILE_PATH
-                        : FileUtils.getHashFileName(),
+        GettingStartedOnPrem.run(DataFileHelper.getDataFileLocation(null),
                 EvidenceHelper.setUpEvidence(), System.out);
+    }
+
+    /**
+     * A data file given as an argument is the one the example uses, when
+     * _51DEGREES_DD_PATH names another. The variable here names a file that
+     * is not there, so the example ends well only if it left it alone.
+     */
+    @Test
+    public void main_UsesTheDataFileGivenAsAnArgument() throws Exception {
+        String dataFile = DataFileHelper.getDataFileLocation(null);
+        ExampleProcess.Result result = ExampleProcess.runWith(
+                GettingStartedOnPrem.class,
+                Collections.singletonMap("_51DEGREES_DD_PATH",
+                        new File("not-there.hash").getAbsolutePath()),
+                dataFile);
+        assertEquals(result.output, 0, result.exitCode);
+        assertTrue(result.output, result.output.contains(
+                "from location '" + dataFile + "'"));
+    }
+
+    /**
+     * The example gives the data file to its options itself, and sets no
+     * system property, so that a later run in the same process finds its
+     * own file.
+     */
+    @Test
+    public void run_LeavesTheDataFilePropertyAsItWas() throws Exception {
+        String before = System.getProperty("_51DEGREES_DD_PATH");
+        GettingStartedOnPrem.run(DataFileHelper.getDataFileLocation(null),
+                EvidenceHelper.setUpEvidence(), System.out);
+        assertEquals(before, System.getProperty("_51DEGREES_DD_PATH"));
     }
 }

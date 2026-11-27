@@ -23,7 +23,7 @@ Each product is a separate Maven Central package. For Device Detection, cloud or
 
 The product guides below list the other packages. To build from source, see [Getting the code](#getting-the-code).
 
-Try the [User-Agent tester](https://51degrees.com/developers/user-agent-tester?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=install) and [IP tester](https://51degrees.com/developers/ip-tester?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=install). For cloud use, [create a Resource Key](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=install).
+Try the [User-Agent tester](https://51degrees.com/developers/user-agent-tester?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=install) and [IP tester](https://51degrees.com/developers/ip-tester?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=install). For cloud use, [create a Resource Key](https://51degrees.com/configure/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=install).
 
 Created from `pipeline-java`, `device-detection-java`, `ip-intelligence-java`, `location-java`, `device-detection-java-examples`, and `ip-intelligence-java-examples`, this repository continues their work.
 
@@ -72,10 +72,20 @@ longer includes them, because Git leaves a removed submodule's folder on disk.
 
 ## Building
 
-You need a JDK (8 or later) and either Maven 3.8 or later or the `mvnw`
-wrapper in this folder. The two on-premise engines compile their native
-library during the build, which needs CMake 3.10 or later and a C++ toolchain:
+You need JDK 17 and either Maven 3.8 or later or the `mvnw` wrapper in this
+folder. The build compiles for Java 8, and javac 21 and later warn that Java 8
+is obsolete, so JDK 17 is the one to build with. The packages it makes run on
+Java 8 or later. The two on-premise engines compile their native library
+during the build, which needs CMake 3.24 or later and a C++ toolchain:
 Visual Studio with the C++ workload on Windows, GCC or Clang elsewhere.
+
+The build shows every warning from the C and C++ compilers, the linker, javac
+and PMD, and does not stop on one. The builds 51Degrees runs set the
+environment variable `_51DEGREES_WARNINGS_AS_ERRORS` to `true`, in any case,
+and there each of those warnings is an error. Set it to build the
+same way. The two engine `CMakeLists.txt` files also take
+`-D_51DEGREES_WARNINGS_AS_ERRORS=ON` or `OFF`, which takes the place of the
+variable for the native build.
 
 From this folder:
 
@@ -98,12 +108,31 @@ mvn install -DskipTests -pl device-detection -am
 mvn surefire:test
 ```
 
-The cloud tests need a Resource Key, passed as `-DTestResourceKey=<key>`. The
+The cloud tests need a Resource Key with every property, in the
+`_51DEGREES_RESOURCE_KEY_BESPOKE` environment variable, and are skipped
+without one. A test that runs an example gives the example that key as
+`_51DEGREES_RESOURCE_KEY`, which is the name the examples read. The
 on-premise tests need the free data files, which the script in
 [Getting the code](#getting-the-code) downloads. For the Enterprise IP
 Intelligence data file, see `ip-intelligence/README.md`.
+
+Every environment variable name that the packages, tests, examples and CI
+scripts define starts `_51DEGREES_`, apart from the few that only CI uses,
+which
+[`ci/check-environment-variable-names.ps1`](ci/check-environment-variable-names.ps1)
+lists and checks.
 Tests find data files by searching from the root of this repository, so run
 Maven from here rather than from inside a package folder.
+
+On JDK 9 and later the build compiles against the Java 8 API, so the packages
+run on Java 8. To run the tests on another JDK than the one Maven runs on,
+give Surefire its `java` with `-Djvm=<path to java>`, and add
+`-Dfiftyone.testJava=8` when that is Java 8, which leaves out the browser
+tests that need Java 11:
+
+```
+mvn surefire:test -Djvm=/path/to/jdk-8/bin/java -Dfiftyone.testJava=8
+```
 
 ## Examples
 
@@ -119,22 +148,30 @@ mvn install -DskipTests -Pdev
 
 The C++ wrappers `Java_Hash_Engine.cpp` and `Java_Ipi_Engine.cpp` are
 generated and must not be edited by hand. They include the C++ headers through
-`cxx/`, so SWIG needs the root of this repository on its include path. With
-SWIG 4.0 or later, from this folder:
+`cxx/`, so SWIG needs the root of this repository on its include path. Build
+either engine with SWIG 4.5.1 and `-DRebuildSwig=ON`, from this folder:
 
 ```
-cd device-detection/device-detection.hash.engine.on-premise/src/main/cxx
-swig -c++ -java -I../../../../.. -package fiftyone.devicedetection.hash.engine.onpremise.interop.swig -outdir ../java/fiftyone/devicedetection/hash/engine/onpremise/interop/swig -o Java_Hash_Engine.cpp hash_java.i
+cmake -S device-detection/device-detection.hash.engine.on-premise/src/main/cxx -B build-swig -DRebuildSwig=ON
 ```
 
-The IP Intelligence engine has `RegenSwig.ps1` beside its interface file that
-does the same.
+Every SWIG warning is an error. After SWIG runs, the build replaces each base
+class conversion SWIG writes in the wrapper with one that copies the pointer
+with `memcpy`. The vector proxies are final, so the `this-escape` annotation
+SWIG's own `std_vector.i` puts on two of their constructors is removed, and
+the build stops if any proxy still turns a javac warning off. The committed
+files are replaced only when all of that succeeds. The IP Intelligence
+engine also has `RegenSwig.ps1` beside its interface file, which does the
+same.
 
 ## Versions
 
-The repository has one version, and every package is released with it. CI
-sets the version on each package tree before a release and tags the commit
-with the plain version, such as `4.5.127`.
+Each package has its own version, and a release publishes only the packages
+that changed since their last release and the packages that depend on them.
+A change only to documentation, tests, examples or the descriptive parts of a
+`pom.xml`, such as its links, releases nothing.
+Each is tagged with its name and version, such as `pipeline.core/4.5.131`.
+[ci/README.md](ci/README.md) describes how CI works out what to release.
 
 ## History
 

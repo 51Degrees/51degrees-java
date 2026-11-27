@@ -28,6 +28,9 @@ package fiftyone.pipeline.core.data;
  * @param <T> the type of value contained in the result
  */
 public class TryGetResult<T> {
+    /** Create a new instance. */
+    public TryGetResult() {
+    }
 
     private T value = null;
 

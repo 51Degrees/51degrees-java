@@ -47,6 +47,7 @@
 
 package fiftyone.ipintelligence.examples.web;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
 import fiftyone.devicedetection.shared.DeviceData;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
@@ -88,7 +89,17 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * By default the free Lite data files are used.
  */
 public class GettingStartedWebMixed extends HttpServlet {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "web-getting-started.mixed-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedwebmixed.java";
+
     private static final long serialVersionUID = 1734154705981153541L;
+    /**
+     * The port the example listens on.
+     */
+    public static final int DEFAULT_PORT = 5151;
     public static Logger logger = LoggerFactory.getLogger(GettingStartedWebMixed.class);
 
     public static final String DD_DATA_FILE_DEFAULT = "device-detection/51Degrees-LiteV4.1.hash";
@@ -104,7 +115,7 @@ public class GettingStartedWebMixed extends HttpServlet {
         // Set Device Detection data file location
         try {
             String ddPath = resolveDataFile(ddDataFile);
-            System.setProperty("TestDeviceDetectionDataFile", ddPath);
+            System.setProperty("_51DEGREES_DD_PATH", ddPath);
             logger.info("Using Device Detection data file: {}", ddPath);
         } catch (Exception e) {
             logger.warn("Device Detection data file not found at: {}", ddDataFile);
@@ -115,7 +126,7 @@ public class GettingStartedWebMixed extends HttpServlet {
         // Set IP Intelligence data file location
         try {
             String ipiPath = DataFileHelper.getDataFileLocation(ipiDataFile);
-            System.setProperty("TestDataFile", ipiPath);
+            System.setProperty("_51DEGREES_IPI_PATH", ipiPath);
             logger.info("Using IP Intelligence data file: {}", ipiPath);
         } catch (Exception e) {
             logger.warn("IP Intelligence data file not found at: {}. " +
@@ -126,7 +137,7 @@ public class GettingStartedWebMixed extends HttpServlet {
         }
 
         // Start Jetty with this WebApp
-        EmbedJetty.runWebApp(getResourceBase(), 8081);
+        EmbedJetty.runWebApp(getResourceBase(), DEFAULT_PORT);
     }
 
     public static String getResourceBase() {
@@ -136,7 +147,8 @@ public class GettingStartedWebMixed extends HttpServlet {
         return configXml.getParentFile().getParent();
     }
 
-    FlowDataProviderCore flowDataProvider = new FlowDataProviderCore.Default();
+    // HttpServlet is Serializable, but this servlet is never serialized.
+    transient FlowDataProviderCore flowDataProvider = new FlowDataProviderCore.Default();
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws Exception {
@@ -147,6 +159,9 @@ public class GettingStartedWebMixed extends HttpServlet {
         // The detection has already been carried out by the PipelineFilter,
         // which closes the FlowData at the end of the request, so it is not
         // closed here.
+        // A Flow Data cannot be used by two threads at once. Work handed to
+        // another thread or task gets the values it needs, read here on the
+        // request's thread, not the Flow Data.
         FlowData flowData = flowDataProvider.getFlowData(request);
 
         // Determine target IP for display.
@@ -228,6 +243,8 @@ public class GettingStartedWebMixed extends HttpServlet {
                 escapeForJs(asString(ipiData.getAreas())) : "")
             .replace("${ACCURACY_RADIUS}", value(ipiEngine, "AccuracyRadiusMin", ipiData::getAccuracyRadiusMin))
             .replace("${TIME_ZONE_OFFSET}", value(ipiEngine, "TimeZoneOffset", ipiData::getTimeZoneOffset))
+            .replace("${FIND_OUT_MORE}", FindOutMore.html(EXAMPLE_TAG,
+                    FindOutMore.ON_PREMISE_REPOSITORIES))
             .replace("${EVIDENCE_ROWS}", buildEvidenceRows(flowData))
             .replace("${LocationConfidence}", value(ipiEngine, "LocationConfidence", ipiData::getLocationConfidence))
             .replace("${ConnectionType}", value(ipiEngine, "ConnectionType", ipiData::getConnectionType))

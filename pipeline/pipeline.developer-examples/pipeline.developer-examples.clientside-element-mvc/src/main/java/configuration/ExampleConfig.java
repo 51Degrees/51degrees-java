@@ -38,11 +38,13 @@ import javax.servlet.ServletContext;
 
 import static fiftyone.pipeline.web.mvc.components.FiftyOneInterceptor.enableClientsideProperties;
 
+/** Configures Spring MVC and the 51Degrees interceptor for the example. */
 @EnableWebMvc
 @Configuration
 @ComponentScan({"controller","fiftyone.pipeline.web.mvc"})
 public class ExampleConfig implements WebMvcConfigurer {
 
+    /** Create a new instance. */
     public ExampleConfig() {
         super();
     }
@@ -55,6 +57,11 @@ public class ExampleConfig implements WebMvcConfigurer {
     @Autowired
     ServletContext servletContext;
 
+    /**
+     * Configure the interceptor from the Pipeline options file.
+     *
+     * @return the interceptor configuration
+     */
     @Bean
     public FiftyOneInterceptorConfig fiftyOneInterceptorConfig() {
         final FiftyOneInterceptorConfigDefault bean = new FiftyOneInterceptorConfigDefault();
@@ -65,6 +72,11 @@ public class ExampleConfig implements WebMvcConfigurer {
         return bean;
     }
 
+    /**
+     * Resolve views to the JSP files in WEB-INF/views.
+     *
+     * @return the view resolver
+     */
     @Bean
     public ViewResolver viewResolver() {
         final InternalResourceViewResolver bean = new InternalResourceViewResolver();

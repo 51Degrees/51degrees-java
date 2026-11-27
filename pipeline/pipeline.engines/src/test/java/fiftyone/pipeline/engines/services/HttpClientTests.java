@@ -25,6 +25,7 @@ package fiftyone.pipeline.engines.services;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeFalse;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -45,6 +46,8 @@ import org.junit.Test;
  * origin, which is what gives the two answers these tests need from one
  * address, being 401 with no Origin header and 200 with one. A key without
  * that restriction would answer 200 to both.
+ * <p>
+ * They are skipped when LIVE_CLOUD_TESTS is false.
  */
 public class HttpClientTests {
   private HttpClient client;
@@ -53,6 +56,10 @@ public class HttpClientTests {
 
   @Before
   public void Initialize() {
+      // CI sets LIVE_CLOUD_TESTS to false on the entries that leave the
+      // live cloud tests to another entry of the same operating system.
+      assumeFalse("LIVE_CLOUD_TESTS is false, so this live cloud test is "
+          + "skipped.", "false".equals(System.getenv("LIVE_CLOUD_TESTS")));
       client = new HttpClientDefault();
   }
 

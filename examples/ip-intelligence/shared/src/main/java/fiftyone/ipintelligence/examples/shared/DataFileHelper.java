@@ -25,6 +25,7 @@ package fiftyone.ipintelligence.examples.shared;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngineBuilder;
 import fiftyone.ipintelligence.shared.testhelpers.FileUtils;
+import fiftyone.pipeline.core.configuration.PipelineOptions;
 import fiftyone.pipeline.engines.Constants;
 import fiftyone.pipeline.engines.data.AspectEngineDataFile;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
@@ -47,7 +48,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
@@ -136,18 +136,6 @@ public class DataFileHelper {
      */
     public static final String IPI_PATH_VARIABLE = "_51DEGREES_IPI_PATH";
 
-    /**
-     * The old name of {@link #IPI_PATH_VARIABLE}, read only when that one
-     * is not set.
-     * @deprecated use {@link #IPI_PATH_VARIABLE}, and set the variable it
-     * names in place of this one.
-     */
-    @Deprecated
-    public static final String IPI_PATH_ENV_VAR = "51DEGREES_IPI_PATH";
-
-    // Set once the use of the deprecated name has been logged.
-    private static final AtomicBoolean OLD_NAME_LOGGED =
-            new AtomicBoolean(false);
 
     /**
      * The value of the environment variable of this name, or of the system
@@ -197,12 +185,15 @@ public static class DatafileInfo {
      * @throws Exception if the data file cannot be opened
      */
     public static DatafileInfo getDatafileMetaData(String dataFileLocation) throws Exception {
-        try(IPIntelligenceOnPremiseEngine ddhe = new IPIntelligenceOnPremiseEngineBuilder()
+        IPIntelligenceOnPremiseEngine ddhe = new IPIntelligenceOnPremiseEngineBuilder()
                 .setPerformanceProfile(Constants.PerformanceProfiles.LowMemory)
                 .setAutoUpdate(false)
-                .build(dataFileLocation,false)) {
+                .build(dataFileLocation,false);
+        try {
             return new DatafileInfo((FiftyOneDataFile) ddhe.getDataFileMetaData(),
                     ddhe.getDataSourceTier(), isFreeDataFile(ddhe));
+        } finally {
+            ddhe.close();
         }
     }
 
@@ -279,12 +270,15 @@ public static class DatafileInfo {
                                                     List<String> properties,
                                                     PrintWriter output,
                                                     String contactUs) throws Exception {
-        try (IPIntelligenceOnPremiseEngine engine = new IPIntelligenceOnPremiseEngineBuilder()
+        IPIntelligenceOnPremiseEngine engine = new IPIntelligenceOnPremiseEngineBuilder()
                 .setPerformanceProfile(Constants.PerformanceProfiles.LowMemory)
                 .setAutoUpdate(false)
-                .build(dataFile, false)) {
+                .build(dataFile, false);
+        try {
             return lacksEnterpriseProperties(
                     engine, purpose, properties, output, contactUs);
+        } finally {
+            engine.close();
         }
     }
 
@@ -399,7 +393,6 @@ public static class DatafileInfo {
      * @throws Exception if the file was not found
      */
 
-    @SuppressWarnings("RedundantThrows")
     public static File getEvidenceFile(String evidenceFilename) throws Exception {
         if (Objects.isNull(evidenceFilename)) {
             evidenceFilename = FileUtils.EVIDENCE_FILE_NAME;
@@ -420,14 +413,11 @@ public static class DatafileInfo {
      * An absolute path supplied by the caller is used as is. Otherwise an
      * explicit path supplied via the {@link #IPI_PATH_VARIABLE} environment
      * variable or system property is checked before the folder hierarchy is
-     * searched for the passed filename. When neither is set the deprecated
-     * {@link #IPI_PATH_ENV_VAR} is read, and its first use is logged as a
-     * warning.
+     * searched for the passed filename.
      * @param dataFilename a filename to find (can be absolute or relative path)
      * @return a full pathname
      * @throws Exception if the file was not found
      */
-    @SuppressWarnings("RedundantThrows")
     public static String getDataFileLocation(String dataFilename) throws Exception {
         // an explicit path supplied via the aligned environment variable or
         // system property is checked before any search for the filename
@@ -435,19 +425,6 @@ public static class DatafileInfo {
                 Paths.get(dataFilename).isAbsolute() == false) {
             String envName = IPI_PATH_VARIABLE;
             String envDataFile = environmentOrProperty(envName);
-            if (Objects.isNull(envDataFile)) {
-                envName = IPI_PATH_ENV_VAR;
-                envDataFile = environmentOrProperty(envName);
-                if (Objects.nonNull(envDataFile)
-                        && OLD_NAME_LOGGED.compareAndSet(false, true)) {
-                    logger.warn(
-                            "The environment variable " + IPI_PATH_ENV_VAR
-                            + " is deprecated and " + IPI_PATH_VARIABLE
-                            + " replaces it. Set " + IPI_PATH_VARIABLE
-                            + " to the same value, as a later release may no longer "
-                            + "read " + IPI_PATH_ENV_VAR + ".");
-                }
-            }
             if (Objects.nonNull(envDataFile)) {
                 if (Files.exists(Paths.get(envDataFile))) {
                     return envDataFile;
@@ -639,5 +616,26 @@ public static class DatafileInfo {
             }
         }
         return WINDOWS_POWERSHELL;
+    }
+
+    /**
+     * Gives the named engine in the options the data file to use, in place
+     * of the one the options file names.
+     * @param options the options loaded from the options file
+     * @param builderName the builder name of the engine in the options file
+     * @param dataFile the data file the engine is to use
+     * @throws IllegalArgumentException when the options have no engine with
+     * that builder name, so the data file would be dropped silently
+     */
+    public static void useDataFile(
+            PipelineOptions options,
+            String builderName,
+            String dataFile) {
+        if (options.replace(builderName, "DataFile", dataFile) == false) {
+            throw new IllegalArgumentException(
+                    "The options have no element with the builder name '" +
+                    builderName + "', so the data file '" + dataFile +
+                    "' cannot be given to it.");
+        }
     }
 }

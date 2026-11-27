@@ -22,26 +22,55 @@
 
 package fiftyone.devicedetection.shared.testhelpers;
 
+import org.snakeyaml.engine.v2.api.Load;
+import org.snakeyaml.engine.v2.api.LoadSettings;
+
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.regex.Pattern;
 
+/**
+ * Gives the tests User-Agent values from a YAML evidence file, which holds
+ * one record of evidence in each document.
+ */
 public class UserAgentGenerator {
+
+    /**
+     * The name a record of evidence gives its User-Agent under.
+     */
+    private static final String USER_AGENT_KEY = "header.user-agent";
 
     private final List<String> userAgents;
 
     private Random random = new Random();
 
-    public UserAgentGenerator(File userAgentFile) throws IOException {
-        userAgents = Files.readAllLines(
-            userAgentFile.toPath(),
-            Charset.defaultCharset());
+    /**
+     * Reads the User-Agent of every record that has one, in the order of the
+     * file.
+     * @param evidenceFile the YAML evidence file
+     * @throws IOException if the file cannot be read
+     */
+    public UserAgentGenerator(File evidenceFile) throws IOException {
+        userAgents = new ArrayList<>();
+        Load load = new Load(LoadSettings.builder().build());
+        try (Reader reader = Files.newBufferedReader(
+            evidenceFile.toPath(), StandardCharsets.UTF_8)) {
+            for (Object record : load.loadAllFromReader(reader)) {
+                if (record instanceof Map) {
+                    Object value = ((Map<?, ?>) record).get(USER_AGENT_KEY);
+                    if (value != null) {
+                        userAgents.add(value.toString());
+                    }
+                }
+            }
+        }
     }
 
     public String getRandomUserAgent(int randomness) {

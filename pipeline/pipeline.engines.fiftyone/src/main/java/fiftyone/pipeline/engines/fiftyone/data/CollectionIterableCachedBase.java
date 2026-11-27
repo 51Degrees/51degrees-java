@@ -25,10 +25,22 @@ package fiftyone.pipeline.engines.fiftyone.data;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * Iterates over a collection by index, keeping the items in a list after the
+ * first pass.
+ *
+ * @param <T> the type of the items
+ */
 public abstract class CollectionIterableCachedBase<T> extends CollectionIterableBase<T> {
 
     private final List<T> list;
 
+    /**
+     * Create a new instance.
+     *
+     * @param list holds the items once they have been read
+     * @param size the number of items
+     */
     public CollectionIterableCachedBase(List<T> list, long size) {
         super(size);
         this.list = list;

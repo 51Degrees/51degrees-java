@@ -73,6 +73,12 @@ public class CloudAspectEngineBaseTests {
     }
 
     private class TestInstance extends CloudAspectEngineBase<TestData> {
+
+        @Override
+        protected Class<TestData> getDataType() {
+            return TestData.class;
+        }
+
         public TestInstance() {
             super(loggerFactory.getLogger("TestInstance"), new ElementDataFactory<TestData>() {
                 @Override
@@ -131,8 +137,31 @@ public class CloudAspectEngineBaseTests {
         }
     }
 
+    /**
+     * A property keyed cloud engine that declares no Evidence of its own
+     * takes the base class's default, which accepts no Evidence.
+     */
+    @Test
+    public void propertyKeyedDefault_AcceptsNoEvidence() {
+        EvidenceKeyFilter filter = new TestKeyedInstance().getEvidenceKeyFilter();
+        for (String key : Arrays.asList(
+            "header.user-agent",
+            "query.client-ip",
+            "server.client-ip",
+            "cookie.51D_example")) {
+            assertFalse(filter.include(key),
+                "The default Evidence filter accepted '" + key + "'.");
+        }
+    }
+
     private class TestKeyedInstance
         extends PropertyKeyedCloudEngineBase<TestProfiles, TestData> {
+
+        @Override
+        protected Class<TestProfiles> getDataType() {
+            return TestProfiles.class;
+        }
+
         public TestKeyedInstance() {
             super(loggerFactory.getLogger("TestKeyedInstance"), new ElementDataFactory<TestProfiles>() {
                 @Override
@@ -160,6 +189,11 @@ public class CloudAspectEngineBaseTests {
 
     private class TestRequestEngine extends AspectEngineBase<CloudRequestData, AspectPropertyMetaData>
         implements CloudRequestEngine {
+
+        @Override
+        protected Class<CloudRequestData> getDataType() {
+            return CloudRequestData.class;
+        }
 
         public TestRequestEngine() {
             super(loggerFactory.getLogger("TestRequestEngine"), new ElementDataFactory<CloudRequestData>() {

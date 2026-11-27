@@ -33,11 +33,22 @@ import org.springframework.stereotype.Service;
 @Service
 public interface PipelineResultService extends PipelineResultServiceCore {
 
+    /**
+     * Set the Pipeline each request is processed with.
+     *
+     * @param pipeline the Pipeline
+     */
     void setPipeline(Pipeline pipeline);
 
+    /** Default implementation of {@link PipelineResultService}. */
     @Service
     class Default extends PipelineResultServiceCore.Default implements PipelineResultService {
 
+        /**
+         * Create a new instance.
+         *
+         * @param evidenceService adds the evidence from each request
+         */
         @Autowired
         public Default(WebRequestEvidenceService evidenceService) {
             super(evidenceService, null);

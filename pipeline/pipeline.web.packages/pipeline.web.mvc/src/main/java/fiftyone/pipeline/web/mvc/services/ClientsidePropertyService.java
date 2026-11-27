@@ -37,7 +37,21 @@ import java.io.IOException;
  */
 @Service
 public interface ClientsidePropertyService extends ClientsidePropertyServiceCore {
+    /**
+     * Set the Pipeline whose results are served.
+     *
+     * @param pipeline the Pipeline
+     */
     void setPipeline(Pipeline pipeline);
+
+    /**
+     * Set how many seconds a browser may keep a good response before it
+     * asks again, the max-age of the Cache-Control header. An
+     * implementation that sets no Cache-Control header ignores it.
+     * @param seconds the max-age, 0 or more
+     */
+    default void setCacheMaxAge(int seconds) {
+    }
     void serveJavascript(
         HttpServletRequest request,
         HttpServletResponse response) throws IOException;
@@ -45,8 +59,14 @@ public interface ClientsidePropertyService extends ClientsidePropertyServiceCore
         HttpServletRequest request,
         HttpServletResponse response) throws IOException;
 
+    /** Default implementation of {@link ClientsidePropertyService}. */
     @Service
     class Default extends ClientsidePropertyServiceCore.Default implements ClientsidePropertyService {
+        /**
+         * Create a new instance.
+         *
+         * @param flowDataProvider gives the Flow Data for each request
+         */
         @Autowired
         public Default(FlowDataProvider flowDataProvider) {
             super(flowDataProvider, null);

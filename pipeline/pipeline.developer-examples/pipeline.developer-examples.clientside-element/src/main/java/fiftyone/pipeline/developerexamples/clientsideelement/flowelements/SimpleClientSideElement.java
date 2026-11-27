@@ -41,6 +41,17 @@ import java.util.*;
 //! [constructor]
 public class SimpleClientSideElement extends FlowElementBase<StarSignData, ElementPropertyMetaData> {
 
+    @Override
+    protected Class<StarSignData> getDataType() {
+        return StarSignData.class;
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param logger used for logging
+     * @param elementDataFactory creates the element data this element returns
+     */
     public SimpleClientSideElement(
         Logger logger,
         ElementDataFactory<StarSignData> elementDataFactory) {
@@ -87,16 +98,12 @@ public class SimpleClientSideElement extends FlowElementBase<StarSignData, Eleme
         boolean validDateOfBirth = false;
 
         TryGetResult<String> dateString = data.tryGetEvidence("cookie.date-of-birth", String.class);
-        Calendar monthAndDay = Calendar.getInstance();
+        Calendar monthAndDay = null;
 
         if (dateString.hasValue()) {
-            // "date-of-birth" is there, so parse it.
-            String[] dateSections = dateString.getValue().split("/");
+            // "date-of-birth" is there, so parse its day and month.
             try {
-                monthAndDay.set(
-                    0,
-                    Integer.parseInt(dateSections[1]) - 1,
-                    Integer.parseInt(dateSections[0]));
+                monthAndDay = StarSign.dayOfYear(dateString.getValue());
                 validDateOfBirth = true;
             }
             catch (Exception e) {
@@ -106,8 +113,7 @@ public class SimpleClientSideElement extends FlowElementBase<StarSignData, Eleme
         if (validDateOfBirth) {
             // "date-of-birth" is valid, so set the star sign.
             for (StarSign starSign : starSigns) {
-                if (monthAndDay.compareTo(starSign.getStart()) >= 0 &&
-                    monthAndDay.compareTo(starSign.getEnd()) <= 0) {
+                if (starSign.contains(monthAndDay)) {
                     elementData.setStarSign(starSign.getName());
                     break;
                 }

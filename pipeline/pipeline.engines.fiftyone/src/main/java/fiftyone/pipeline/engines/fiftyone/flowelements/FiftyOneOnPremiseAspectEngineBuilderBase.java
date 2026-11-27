@@ -22,15 +22,19 @@
 
 package fiftyone.pipeline.engines.fiftyone.flowelements;
 
+import fiftyone.pipeline.annotations.BuildArg;
+import fiftyone.pipeline.annotations.DefaultValue;
 import fiftyone.pipeline.engines.configuration.DataFileConfiguration;
 import fiftyone.pipeline.engines.data.AspectEngineDataFile;
-import fiftyone.pipeline.engines.fiftyone.data.FiftyOneDataFile;
+import fiftyone.pipeline.engines.data.DataUpdateUrlFormatter;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneDataFileDefault;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneUrlFormatter;
 import fiftyone.pipeline.engines.flowelements.SingleFileAspectEngineBuilderBase;
 import fiftyone.pipeline.engines.services.DataUpdateService;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
+
+import java.util.function.Function;
 
 /**
  * Abstract base class that exposes the common options that all 51Degrees
@@ -39,15 +43,21 @@ import org.slf4j.LoggerFactory;
  *                  the fluent builder methods
  * @param <TEngine> the type of the engine that this builder will build
  */
-@SuppressWarnings("rawtypes")
 public abstract class FiftyOneOnPremiseAspectEngineBuilderBase<
     TBuilder extends FiftyOneOnPremiseAspectEngineBuilderBase<TBuilder, TEngine>,
-    TEngine extends FiftyOneAspectEngine> extends
+    TEngine extends FiftyOneAspectEngine<?, ?>> extends
     SingleFileAspectEngineBuilderBase<TBuilder, TEngine> {
 
+    /** The default address new data files are downloaded from. */
     public static final String DATA_UPDATE_URL =
             "https://distributor.51degrees.com/api/v2/download";
     private String dataDownloadType;
+
+    /** Whether the data update URL has been set on this builder. */
+    private boolean dataUpdateUrlSet = false;
+
+    /** Whether the data update URL formatter has been set on this builder. */
+    private boolean dataUpdateUrlFormatterSet = false;
     
     /**
      * Default constructor which uses the {@link ILoggerFactory} implementation
@@ -72,13 +82,54 @@ public abstract class FiftyOneOnPremiseAspectEngineBuilderBase<
      * @param dataUpdateService the {@link DataUpdateService} to use when
      *                          automatic updates happen on the data file
      */
-    @SuppressWarnings("this-escape")
     public FiftyOneOnPremiseAspectEngineBuilderBase(
         ILoggerFactory loggerFactory,
         DataUpdateService dataUpdateService) {
         super(loggerFactory, dataUpdateService);
-        setDataUpdateUrl(DATA_UPDATE_URL);
-        setDataUpdateUrlFormatter(new FiftyOneUrlFormatter());
+    }
+
+    @DefaultValue("51Degrees default, set by subclass")
+    @Override
+    public TBuilder setDataUpdateUrl(String url) {
+        dataUpdateUrlSet = true;
+        return super.setDataUpdateUrl(url);
+    }
+
+    @DefaultValue("51Degrees default, set by subclass")
+    @Override
+    public TBuilder setDataUpdateUrlFormatter(DataUpdateUrlFormatter formatter) {
+        dataUpdateUrlFormatterSet = true;
+        return super.setDataUpdateUrlFormatter(formatter);
+    }
+
+    @Override
+    public TEngine build(
+        @BuildArg("dataFile") String dataFile,
+        @BuildArg("createTempDataCopy") boolean createTempDataCopy)
+        throws Exception {
+        setDataUpdateDefaults();
+        return super.build(dataFile, createTempDataCopy);
+    }
+
+    @Override
+    public TEngine build(byte[] data) throws Exception {
+        setDataUpdateDefaults();
+        return super.build(data);
+    }
+
+    /**
+     * Use the Distributor's URL and formatter for any of them not set on
+     * this builder. This is done when the engine is built rather than in the
+     * constructor, so the constructor does not call methods a subclass can
+     * override.
+     */
+    private void setDataUpdateDefaults() {
+        if (dataUpdateUrlSet == false) {
+            super.setDataUpdateUrl(DATA_UPDATE_URL);
+        }
+        if (dataUpdateUrlFormatterSet == false) {
+            super.setDataUpdateUrlFormatter(new FiftyOneUrlFormatter());
+        }
     }
 
     /**
@@ -99,9 +150,23 @@ public abstract class FiftyOneOnPremiseAspectEngineBuilderBase<
      */
     @Override
     protected AspectEngineDataFile newAspectEngineDataFile() {
-        FiftyOneDataFile dataFile = new FiftyOneDataFileDefault();
+        FiftyOneDataFileDefault dataFile = new FiftyOneDataFileDefault();
         dataFile.setDataUpdateDownloadType(dataDownloadType != null ? dataDownloadType : getDefaultDataDownloadType());
+        dataFile.setProductReader(getProductReader());
         return dataFile; 
+    }
+
+    /**
+     * The function that reads the product of a data file from its header
+     * without loading it, given the path of the file. The data file uses it
+     * to find the product to ask the data update service for until the
+     * engine has loaded the file, as the update on start-up needs. Engines
+     * whose native library can read the header override this.
+     * @return the function, or null if the product cannot be read from the
+     * file
+     */
+    protected Function<String, String> getProductReader() {
+        return null;
     }
 
     /**
@@ -131,9 +196,8 @@ public abstract class FiftyOneOnPremiseAspectEngineBuilderBase<
      * @param typeName The download type to use. For example 'HashV4'.
      * @return This builder.
      */
-    @SuppressWarnings("unchecked")
     protected TBuilder setDefaultDataDownloadType(String typeName){
         dataDownloadType = typeName;
-        return (TBuilder)this;
+        return self();
     }
 }

@@ -41,12 +41,21 @@ import java.util.Set;
  *                  the fluent builder methods
  * @param <TEngine> the type of the engine that this builder will build
  */
-@SuppressWarnings("rawtypes")
 public abstract class AspectEngineBuilderBase<
     TBuilder extends AspectEngineBuilderBase<TBuilder, TEngine>,
-    TEngine extends AspectEngine> {
+    TEngine extends AspectEngine<?, ?>> {
+
+    /**
+     * This builder as its own type, returned by the fluent setters so that a
+     * chain of calls keeps the type of the builder in use.
+     * @return this builder
+     */
+    protected abstract TBuilder self();
+
+    /** Creates the loggers the engine uses. */
     protected final ILoggerFactory loggerFactory;
     private final List<String> properties = new ArrayList<>();
+    /** The results cache settings, or null for no cache. */
     protected CacheConfiguration cacheConfig = null;
     private LazyLoadingConfiguration lazyLoadingConfig = null;
 
@@ -95,12 +104,12 @@ public abstract class AspectEngineBuilderBase<
      * @param set The properties that we want the engine to populate
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
+    @DefaultValue("All properties")
     public TBuilder setProperties(Set<AspectPropertyMetaData> set) {
         for (AspectPropertyMetaData property : set) {
             tryAddProperty(property.getName());
         }
-        return (TBuilder) this;
+        return self();
     }
 
     /**
@@ -112,10 +121,9 @@ public abstract class AspectEngineBuilderBase<
      * @return this builder
      */
     @DefaultValue("All properties")
-    @SuppressWarnings("unchecked")
     public TBuilder setProperty(String s) {
         tryAddProperty(s);
-        return (TBuilder) this;
+        return self();
     }
 
     /**
@@ -124,28 +132,32 @@ public abstract class AspectEngineBuilderBase<
      * @param properties The properties that we want the engine to populate
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
+    @DefaultValue("All properties")
     public TBuilder setProperties(List<String> properties) {
         for (String property : properties) {
             tryAddProperty(property);
         }
-        return (TBuilder) this;
+        return self();
     }
 
     /**
      * Configure the properties that the engine will populate in the response.
      * <p>
      * By default, all properties will be populated.
-     * @param properties The properties that we want the engine to populate
+     * @param properties The properties that we want the engine to populate,
+     *                   separated by commas as a configuration file gives a
+     *                   list, with any spaces round each name ignored
      * @return this builder
      */
     @DefaultValue("All properties")
-    @SuppressWarnings("unchecked")
     public TBuilder setProperties(String properties) {
-        for (String property : properties.split("\\s,\\s")) {
-            tryAddProperty(property);
+        for (String property : properties.split(",")) {
+            String name = property.trim();
+            if (name.isEmpty() == false) {
+                tryAddProperty(name);
+            }
         }
-        return (TBuilder) this;
+        return self();
     }
     
     /**
@@ -154,21 +166,24 @@ public abstract class AspectEngineBuilderBase<
      * @param aspectProperty the property that we want the engine to populate
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
+    @DefaultValue("All properties")
     public TBuilder setProperty(AspectPropertyMetaData aspectProperty) {
         tryAddProperty(aspectProperty.getName());
-        return (TBuilder) this;
+        return self();
     }
 
     /**
-     * Configure lazy loading of results.
-     * @param configuration the configuration to use
+     * Deprecated, and has no effect. The Engine processes on the thread that
+     * processes the Flow Data, whether this is set or not. Long-running work
+     * is a lazy property of the Engine's own Element Data instead.
+     * @param configuration kept, but not used
      * @return this builder
+     * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/advanced-features/lazy-loading.md">Specification</a>
      */
-    @SuppressWarnings("unchecked")
+    @DefaultValue("No lazy loading")
     public TBuilder setLazyLoading(LazyLoadingConfiguration configuration) {
         this.lazyLoadingConfig = configuration;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -177,10 +192,10 @@ public abstract class AspectEngineBuilderBase<
      * @param cacheConfiguration the cache configuration to use
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
+    @DefaultValue("No results cache")
     public TBuilder setCache(CacheConfiguration cacheConfiguration) {
         this.cacheConfig = cacheConfiguration;
-        return (TBuilder) this;
+        return self();
     }
 
     /**

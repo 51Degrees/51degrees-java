@@ -21,6 +21,7 @@
  * ********************************************************************* */
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.pipeline.engines.fiftyone.data.FiftyOneAspectPropertyMetaData;
 import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
@@ -45,6 +46,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
 
 public class MetadataOnPrem {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-devicedetection-examples-console-metadataonprem.java";
+
     private static final Logger logger = LoggerFactory.getLogger(GettingStartedOnPrem.class);
 
     /* In this example, by default, the 51degrees "Lite" file is used from the data repository in
@@ -65,6 +72,8 @@ public class MetadataOnPrem {
         configureLogback(getFilePath("logback.xml"));
         String dataFile = args.length > 0 ? args[0] : LITE_V_4_1_HASH;
         run(dataFile, System.out);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
 
@@ -83,8 +92,8 @@ public class MetadataOnPrem {
         // the meta-data.
         // If you already have a pipeline and just want to get a reference to the engine 
         // then you can use `var engine = pipeline.GetElement<DeviceDetectionHashEngine>();`
-        try (DeviceDetectionHashEngine ddEngine =
-                     new DeviceDetectionHashEngineBuilder(LoggerFactory.getILoggerFactory())
+        DeviceDetectionHashEngine ddEngine =
+                new DeviceDetectionHashEngineBuilder(LoggerFactory.getILoggerFactory())
                 // We use the low memory profile as its performance is sufficient for this
                 // example. See the documentation for more detail on this and other
                 // configuration options:
@@ -95,7 +104,8 @@ public class MetadataOnPrem {
                 .setAutoUpdate(false)
                 .setDataFileSystemWatcher(false)
                 .setDataUpdateOnStartup(false)
-                .build(dataFileLocation, false)){
+                .build(dataFileLocation, false);
+        try {
 
             PrintWriter writer = new PrintWriter(output);
             logger.info("Listing Components");
@@ -117,6 +127,8 @@ public class MetadataOnPrem {
             if (DataFileHelper.isLiteDataFile(ddEngine)) {
                 DataFileHelper.writeEnterpriseOffer(writer, CONTACT_US);
             }
+        } finally {
+            ddEngine.close();
         }
     }
 
@@ -149,16 +161,19 @@ public class MetadataOnPrem {
         // Group the profiles by component and then output the number of profiles
         // for each component.
         //
-        // A try-with-resource block MUST be used for the collections of
-        // metadata returned by the engine. Each one holds a reference to the
+        // The collections of metadata returned by the engine MUST be closed
+        // in a finally block. Each one holds a reference to the
         // engine's data set until it is closed, so if it is left open the
         // data set cannot be freed when the engine is closed.
         Map<String, Long> groups;
-        try (CloseableIterable<ProfileMetaData> profiles = ddEngine.getProfiles()) {
+        CloseableIterable<ProfileMetaData> profiles = ddEngine.getProfiles();
+        try {
             groups = StreamSupport.stream(profiles.spliterator(), false)
                     .collect(Collectors.groupingBy(
                             p -> p.getComponent().getName(),
                             Collectors.counting()));
+        } finally {
+            profiles.close();
         }
         groups.forEach((k,v)->output.format("%s Profiles: %d\n", k , v));
     }
@@ -168,12 +183,15 @@ public class MetadataOnPrem {
     // more readable.
     private static void outputComponents(DeviceDetectionHashEngine ddEngine, PrintWriter output)
             throws Exception {
-        // See outputProfileDetails for why this is a try-with-resource block.
-        try (CloseableIterable<ComponentMetaData> components = ddEngine.getComponents()) {
+        // See outputProfileDetails for why this is closed in a finally block.
+        CloseableIterable<ComponentMetaData> components = ddEngine.getComponents();
+        try {
             for (ComponentMetaData c : components) {
                 output.println("Component - "+ c.getName());
                 outputProperties(c, output);
             }
+        } finally {
+            components.close();
         }
     }
 
@@ -181,8 +199,9 @@ public class MetadataOnPrem {
             throws Exception {
         // The properties of a component, and the values of a property, are
         // collections that are closed in the same way.
-        try (CloseableIterable<FiftyOneAspectPropertyMetaData> properties =
-                     component.getProperties()) {
+        CloseableIterable<FiftyOneAspectPropertyMetaData> properties =
+                component.getProperties();
+        try {
             if (properties.iterator().hasNext() == false) {
                 output.println("    ... no properties");
                 return;
@@ -204,8 +223,9 @@ public class MetadataOnPrem {
                 if (property.getCategory().equals("Device Metrics")==false) {
                     StringBuilder values = new StringBuilder("        Possible " +
                             "values: ");
-                    try (CloseableIterable<ValueMetaData> propertyValues =
-                                 property.getValues()) {
+                    CloseableIterable<ValueMetaData> propertyValues =
+                            property.getValues();
+                    try {
                         Spliterator<ValueMetaData> spliterator2 =
                                 propertyValues.spliterator();
                         StreamSupport.stream(spliterator2, false)
@@ -226,10 +246,14 @@ public class MetadataOnPrem {
                         if (spliterator2.estimateSize() > 20) {
                             values.append(" +  more ...");
                         }
+                    } finally {
+                        propertyValues.close();
                     }
                     output.println(values);
                 }
             }
+        } finally {
+            properties.close();
         }
     }
 

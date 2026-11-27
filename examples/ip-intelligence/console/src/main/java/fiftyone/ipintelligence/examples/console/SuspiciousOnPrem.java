@@ -45,6 +45,7 @@
 
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.IPIntelligencePipelineBuilder;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
@@ -80,6 +81,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * in production without further testing and tuning.
  */
 public class SuspiciousOnPrem {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java";
+
     private static final Logger logger = LoggerFactory.getLogger(SuspiciousOnPrem.class);
 
     /* In this example, by default, the free 51degrees Lite IP Intelligence data file is used from
@@ -90,7 +97,7 @@ public class SuspiciousOnPrem {
     For testing, contact us to obtain an enterprise data file: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=contact-us */
 
     /**
-     * The properties the judgement uses, which only the Enterprise data file
+     * The properties the judgment uses, which only the Enterprise data file
      * has.
      */
     public static final List<String> ENTERPRISE_PROPERTIES = Arrays.asList(
@@ -116,6 +123,8 @@ public class SuspiciousOnPrem {
         // prepare 'evidence' for use in pipeline (see below)
         List<Map<String, String>> evidence = EvidenceHelper.setUpEvidence();
         run(dataFile, evidence, System.out);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     /**
@@ -140,7 +149,7 @@ public class SuspiciousOnPrem {
             throw e;
         }
 
-        // The judgement needs properties only the Enterprise data file has.
+        // The judgment needs properties only the Enterprise data file has.
         if (DataFileHelper.lacksEnterpriseProperties(dataFileLocation,
                 "Judging whether an IP address is suspicious",
                 ENTERPRISE_PROPERTIES,
@@ -154,8 +163,8 @@ public class SuspiciousOnPrem {
         For more information about builders in general see the documentation at
         https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=configuration-builders
 
-        Note that we wrap the creation of a pipeline in a try/resources to control its lifecycle */
-        try (Pipeline pipeline = new IPIntelligencePipelineBuilder()
+        Note that we close the pipeline in a finally block to control its lifecycle */
+        Pipeline pipeline = new IPIntelligencePipelineBuilder()
                 .useOnPremise(dataFileLocation, false)
                 // We use the low memory profile, because this example needs
                 // properties only the Enterprise data file has, and that file
@@ -166,13 +175,16 @@ public class SuspiciousOnPrem {
                 // https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=automatic-datafile-updates
                 // https://51degrees.com/documentation/_pipeline_api__features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-suspiciousonprem.java&utm_term=usage-sharing
                 .setPerformanceProfile(Constants.PerformanceProfiles.LowMemory)
-                // inhibit sharing usage for this example, usually this should be set to "true"
+                // Usage sharing is off because this example's evidence is already
+                // known to 51Degrees. In production, leave usage sharing on, which adds
+                // a Usage Sharing Element to the Pipeline and helps improve the service.
                 .setShareUsage(false)
                 // inhibit auto-update of the data file for this example
                 .setAutoUpdate(false)
                 .setDataUpdateOnStartup(false)
                 .setDataFileSystemWatcher(false)
-                .build()) {
+                .build();
+        try {
 
             // carry out some sample detections
             for (Map<String, String> evidence : evidenceList) {
@@ -184,6 +196,8 @@ public class SuspiciousOnPrem {
             DataFileHelper.logDataFileInfo(engine);
 
             logger.info("All done");
+        } finally {
+            pipeline.close();
         }
     }
 
@@ -198,7 +212,8 @@ public class SuspiciousOnPrem {
                                         Pipeline pipeline,
                                         OutputStream out) throws Exception {
         PrintWriter writer = new PrintWriter(out);
-        try (FlowData data = pipeline.createFlowData()) {
+        FlowData data = pipeline.createFlowData();
+        try {
 
             // Add the evidence values to the flow data and process it
             data.addEvidence(evidence);
@@ -207,18 +222,18 @@ public class SuspiciousOnPrem {
 
             /* In this example we use the following properties to make some basic assumptions
             about the likelihood of an IP being a source of suspicious activity. */
-            Boolean isCellularValue = firstValue(tryGet(ipData::getIsCellular));
+            Boolean isCellularValue = firstValue(tryGet(ipData::getIsCellular), Boolean.class);
             boolean isCellular = isCellularValue != null && isCellularValue;
-            Integer hardwareDiversityValue = firstValue(tryGet(ipData::getHardwareDiversity));
+            Integer hardwareDiversityValue = firstValue(tryGet(ipData::getHardwareDiversity), Integer.class);
             int hardwareDiversity = hardwareDiversityValue != null ? hardwareDiversityValue : 0;
-            Integer browserDiversityValue = firstValue(tryGet(ipData::getBrowserDiversity));
+            Integer browserDiversityValue = firstValue(tryGet(ipData::getBrowserDiversity), Integer.class);
             int browserDiversity = browserDiversityValue != null ? browserDiversityValue : 0;
-            String locationConfidence = firstValue(tryGet(ipData::getLocationConfidence));
-            Boolean hostedValue = firstValue(tryGet(ipData::getIsHosted));
+            String locationConfidence = firstValue(tryGet(ipData::getLocationConfidence), String.class);
+            Boolean hostedValue = firstValue(tryGet(ipData::getIsHosted), Boolean.class);
             boolean hosted = hostedValue != null && hostedValue;
-            String country = firstValue(tryGet(ipData::getCountryCode));
-            String registeredCountry = firstValue(tryGet(ipData::getRegisteredCountry));
-            Integer humanValue = firstValue(tryGet(ipData::getHumanProbability));
+            String country = firstValue(tryGet(ipData::getCountryCode), String.class);
+            String registeredCountry = firstValue(tryGet(ipData::getRegisteredCountry), String.class);
+            Integer humanValue = firstValue(tryGet(ipData::getHumanProbability), Integer.class);
             int human = humanValue != null ? humanValue : 0;
 
             /* Calculating a simple "suspicious" score based on the properties above.
@@ -265,6 +280,8 @@ public class SuspiciousOnPrem {
             writer.println("\tRegisteredCountry: " + registeredCountry);
             writer.println("\tHumanProbability: " + human);
             writer.println("\tIsSuspicious: " + isSuspicious);
+        } finally {
+            data.close();
         }
         writer.println();
         writer.flush();

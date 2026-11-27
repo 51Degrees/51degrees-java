@@ -125,6 +125,9 @@ public class LruLoadingCache<K, V>
      * Implementation of {@link CacheBuilder} for {@link LruLoadingCache} caches.
      */
     public static class Builder implements LoadingCacheBuilder {
+        /** Create a new instance. */
+        public Builder() {
+        }
 
         @Override
         public <K, V> Cache<K, V> build(Cache<K, V> c, int cacheSize) {

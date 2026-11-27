@@ -31,8 +31,6 @@ import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
-import fiftyone.pipeline.core.typed.TypedKey;
-import fiftyone.pipeline.core.typed.TypedKeyDefault;
 import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
 import fiftyone.pipeline.translation.data.ITranslationData;
 import fiftyone.pipeline.translation.data.Languages;
@@ -46,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -68,6 +67,10 @@ import java.util.regex.Pattern;
  * Only string based types are supported for translation (string, list of
  * strings, weighted list of strings and the {@code AspectPropertyValue}
  * wrappers); the output type matches the input.
+ * <p>
+ * Make a translation engine through its builder, as every Flow Element is
+ * made. The class stays concrete with a public constructor because released
+ * code may make one directly.
  *
  * @param <T> the type of element data the engine writes
  */
@@ -117,8 +120,8 @@ public class TranslationEngineBase<T extends ITranslationData>
     /**
      * Create a new translation engine.
      * @param sourceElementDataKey element data key of the source flow element
-     * @param translations the translations to execute (source -> destination
-     *                     property name pairs)
+     * @param translations the translations to execute, as pairs of source
+     *                     and destination property names
      * @param sources the YAML translation sources, keyed on file name
      * @param fixedLanguage fixed language to translate to. If set, the engine
      *                     always translates to this language; otherwise the
@@ -179,11 +182,8 @@ public class TranslationEngineBase<T extends ITranslationData>
     }
 
     @Override
-    public TypedKey<T> getTypedDataKey() {
-        if (typedKey == null) {
-            typedKey = new TypedKeyDefault<>(getElementDataKey(), dataType);
-        }
-        return typedKey;
+    protected Class<T> getDataType() {
+        return dataType;
     }
 
     /**
@@ -206,7 +206,7 @@ public class TranslationEngineBase<T extends ITranslationData>
             Set<String> seen = new LinkedHashSet<>();
             for (TranslationProperty translation : translationProperties) {
                 String name = translation.getDestinationProperty();
-                if (seen.add(name.toLowerCase())) {
+                if (seen.add(name.toLowerCase(Locale.ROOT))) {
                     result.add(new ElementPropertyMetaDataDefault(
                         name, this, "", Object.class, true));
                 }

@@ -46,54 +46,34 @@ import static org.junit.Assert.assertTrue;
  */
 public class DidClientEnvironmentTests {
 
-    private static final String NEW_NAME = "_51DEGREES_CLOUD_ENDPOINT";
-    private static final String OLD_NAME = "FOD_CLOUD_API_URL";
+    private static final String NAME = "_51DEGREES_CLOUD_ENDPOINT";
 
-    private static final String NEW_ENDPOINT = "https://new.example/api/v4/";
-    private static final String OLD_ENDPOINT = "https://old.example/api/v4/";
+    private static final String ENDPOINT = "https://other.example/api/v4/";
 
     private static final int PROBE_TIMEOUT_SECONDS = 120;
 
     @Test
-    public void oldNameAlone_GivesItsEndpoint() throws Exception {
-        List<String> output = probe(null, OLD_ENDPOINT);
+    public void variable_GivesItsEndpoint() throws Exception {
+        List<String> output = probe(ENDPOINT);
 
         assertEquals(
-            Arrays.asList(OLD_ENDPOINT, OLD_ENDPOINT), endpoints(output));
-    }
-
-    @Test
-    public void oldNameAlone_IsLoggedAsDeprecatedOnce() throws Exception {
-        List<String> logged = logged(probe(null, OLD_ENDPOINT));
-
-        assertEquals(logged.toString(), 1, logged.size());
-        String record = logged.get(0);
-        assertTrue(record, record.startsWith("WARNING "));
-        assertTrue(record, record.contains(OLD_NAME));
-        assertTrue(record, record.contains(NEW_NAME));
-        assertTrue(record, record.contains("deprecated"));
-    }
-
-    @Test
-    public void newNameBlank_OldNameIsRead() throws Exception {
-        List<String> output = probe(" ", OLD_ENDPOINT);
-
-        assertEquals(
-            Arrays.asList(OLD_ENDPOINT, OLD_ENDPOINT), endpoints(output));
-    }
-
-    @Test
-    public void bothNames_NewNameWins() throws Exception {
-        List<String> output = probe(NEW_ENDPOINT, OLD_ENDPOINT);
-
-        assertEquals(
-            Arrays.asList(NEW_ENDPOINT, NEW_ENDPOINT), endpoints(output));
+            Arrays.asList(ENDPOINT, ENDPOINT), endpoints(output));
         assertEquals(output.toString(), 0, logged(output).size());
     }
 
     @Test
-    public void neitherName_GivesTheDefault() throws Exception {
-        List<String> output = probe(null, null);
+    public void variableBlank_GivesTheDefault() throws Exception {
+        List<String> output = probe(" ");
+
+        assertEquals(
+            Arrays.asList(
+                DidClient.DEFAULT_ENDPOINT, DidClient.DEFAULT_ENDPOINT),
+            endpoints(output));
+    }
+
+    @Test
+    public void variableUnset_GivesTheDefault() throws Exception {
+        List<String> output = probe(null);
 
         assertEquals(
             Arrays.asList(
@@ -102,22 +82,11 @@ public class DidClientEnvironmentTests {
         assertEquals(output.toString(), 0, logged(output).size());
     }
 
-    @Test
-    @SuppressWarnings("deprecation")
-    public void oldConstant_KeepsItsNameAndValue() throws Exception {
-        assertEquals(OLD_NAME, DidClient.ENDPOINT_VARIABLE);
-        assertTrue(DidClient.class.getField("ENDPOINT_VARIABLE")
-            .isAnnotationPresent(Deprecated.class));
-        assertEquals(
-            NEW_NAME,
-            DidClient.class.getField("CLOUD_ENDPOINT_VARIABLE").get(null));
-    }
-
     /**
-     * Runs the probe with each variable set to the value given, or absent
+     * Runs the probe with the variable set to the value given, or absent
      * where the value is null, and returns the lines it printed.
      */
-    private static List<String> probe(String newValue, String oldValue)
+    private static List<String> probe(String value)
         throws Exception {
         String java = Paths.get(
             System.getProperty("java.home"), "bin", "java").toString();
@@ -125,8 +94,7 @@ public class DidClientEnvironmentTests {
             new ProcessBuilder(java, EndpointProbe.class.getName());
         Map<String, String> environment = builder.environment();
         environment.put("CLASSPATH", classPath());
-        set(environment, NEW_NAME, newValue);
-        set(environment, OLD_NAME, oldValue);
+        set(environment, NAME, value);
         builder.redirectErrorStream(true);
 
         Process process = builder.start();

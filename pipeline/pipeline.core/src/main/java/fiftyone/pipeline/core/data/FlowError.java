@@ -29,7 +29,6 @@ import static fiftyone.pipeline.util.Check.getNotNull;
 /**
  * An error that occurred during the processing of an element
  */
-@SuppressWarnings("rawtypes")
 public interface FlowError {
     /**
      * The {@link Throwable} (if any) that caused the error.
@@ -41,16 +40,22 @@ public interface FlowError {
      * The {@link FlowElement} at which the error occurred.
      * @return offending element
      */
-    FlowElement getFlowElement();
+    FlowElement<?, ?> getFlowElement();
 
     /**
      * Default class for {@link FlowError}.
      */
     class Default implements FlowError {
         private final Throwable throwable;
-        private final FlowElement flowElement;
+        private final FlowElement<?, ?> flowElement;
 
-        public Default(Throwable throwable, FlowElement flowElement) {
+        /**
+         * Create a new instance.
+         *
+         * @param throwable the error
+         * @param flowElement the element where it happened
+         */
+        public Default(Throwable throwable, FlowElement<?, ?> flowElement) {
             this.throwable = throwable;
             this.flowElement = getNotNull(flowElement, "Flow element can't be null");
         }
@@ -61,7 +66,7 @@ public interface FlowError {
         }
 
         @Override
-        public FlowElement getFlowElement() {
+        public FlowElement<?, ?> getFlowElement() {
             return flowElement;
         }
     }

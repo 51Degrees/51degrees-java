@@ -36,6 +36,10 @@ import java.util.concurrent.ScheduledFuture;
  * Default implementation of the {@link AspectEngineDataFile} interface.
  */
 public class AspectEngineDataFileDefault implements AspectEngineDataFile {
+    /** Create a new instance. */
+    public AspectEngineDataFileDefault() {
+    }
+
     private String identifier;
     private OnPremiseAspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine;
     private DataFileConfiguration configuration;
@@ -182,36 +186,72 @@ public class AspectEngineDataFileDefault implements AspectEngineDataFile {
 
     private long lastUpdateFileCreateTime;
 
+    /**
+     * The modified time of the file last applied, so one change is applied
+     * once.
+     *
+     * @return the time in milliseconds since the epoch
+     */
     public long getLastUpdateFileCreateTime() {
         return lastUpdateFileCreateTime;
     }
 
+    /**
+     * Set the modified time of the file last applied.
+     *
+     * @param createTime the time in milliseconds since the epoch
+     */
     public void setLastUpdateFileCreateTime(long createTime) {
         lastUpdateFileCreateTime = createTime;
     }
 
     private final Object syncLock = new Object();
 
+    /**
+     * The lock held while a changed file is applied.
+     *
+     * @return the lock
+     */
     public Object getUpdateSyncLock() {
         return syncLock;
     }
 
     private ScheduledFuture<?> future;
 
+    /**
+     * The scheduled check for a new data file.
+     *
+     * @return the scheduled task, or null if none
+     */
     public ScheduledFuture<?> getFuture() {
         return future;
     }
 
+    /**
+     * Set the scheduled check for a new data file.
+     *
+     * @param future the scheduled task
+     */
     public void setFuture(ScheduledFuture<?> future) {
         this.future = future;
     }
 
     private ScheduledFuture<?> pollFuture;
 
+    /**
+     * The scheduled task that polls the file for changes.
+     *
+     * @return the scheduled task, or null if none
+     */
     public ScheduledFuture<?> getPollFuture() {
         return pollFuture;
     }
 
+    /**
+     * Set the scheduled task that polls the file for changes.
+     *
+     * @param future the scheduled task
+     */
     public void setPollFuture(ScheduledFuture<?> future) {
         this.pollFuture = future;
     }

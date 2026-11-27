@@ -81,6 +81,8 @@
         </div>
     </div>
 
+    ${FIND_OUT_MORE}
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/wellknown@0.5.0/wellknown.js"></script>
 
@@ -114,9 +116,9 @@
             // Initialize the map
             var map = L.map('map');
             
-            // Add CartoDB Positron tile layer - shows all place names in English
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '© OpenStreetMap contributors © CARTO',
+            // Add the OpenStreetMap standard tile layer
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                 subdomains: 'abcd',
                 maxZoom: 19
             }).addTo(map);
@@ -166,8 +168,8 @@
             if (!isNaN(lat) && !isNaN(lng)) {
                 var map = L.map('map').setView([lat, lng], 10);
                 
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '© OpenStreetMap contributors © CARTO',
+                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                     subdomains: 'abcd',
                     maxZoom: 19
                 }).addTo(map);

@@ -22,6 +22,7 @@
 
 package fiftyone.devicedetection.examples.console.comparison;
 
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -140,12 +141,26 @@ public interface Detection {
     /**
      * The thing that actually does the detection
      */
-    interface Solution extends AutoCloseable {
+    interface Solution {
 
         void initialise(int numberOfThreads) throws Exception;
 
         Properties detect(Detection.Request request) throws Exception;
 
         String getVendorId();
+
+        /**
+         * Writes anything the reader should know about how the solution
+         * ran, after the report. Nothing by default.
+         * @param writer where to write
+         */
+        default void writeNote(PrintWriter writer) {
+        }
+
+        /**
+         * Frees what the solution holds.
+         * @throws Exception if what it holds could not be closed
+         */
+        void close() throws Exception;
     }
 }

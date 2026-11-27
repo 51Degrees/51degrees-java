@@ -47,6 +47,7 @@
 
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.devicedetection.cloud.flowelements.DeviceDetectionCloudEngine;
 import fiftyone.devicedetection.cloud.flowelements.DeviceDetectionCloudEngineBuilder;
 import fiftyone.devicedetection.shared.DeviceData;
@@ -85,11 +86,17 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * <p>
  * Access to the Cloud service is configured using a "resource key". The resource key can be
  * supplied as a command line argument, or via the environment variable or system property
- * "TestResourceKey". An optional second command line argument, or the environment variable or
- * system property "TestCloudEndPoint", can be used to direct the example at a custom hosted
+ * "_51DEGREES_RESOURCE_KEY". An optional second command line argument, or the environment variable or
+ * system property "_51DEGREES_CLOUD_ENDPOINT", can be used to direct the example at a custom hosted
  * Cloud service.
  */
 public class GettingStartedCloudMixed {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedcloudmixed.java";
+
     private static final Logger logger = LoggerFactory.getLogger(GettingStartedCloudMixed.class);
 
     public static void main(String[] args) throws Exception {
@@ -97,8 +104,14 @@ public class GettingStartedCloudMixed {
 
         // Use the resource key from the command line, environment variable or
         // system property.
-        String resourceKey = args.length > 0 ? args[0] :
-                KeyHelper.getOrSetTestResourceKey();
+        String resourceKey = KeyHelper.findResourceKey(
+                args.length > 0 ? args[0] : null);
+        if (resourceKey == null) {
+            KeyHelper.writeNoResourceKey(System.out, EXAMPLE_TAG);
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES);
+            return;
+        }
         // An optional custom endpoint for a self-hosted Cloud service.
         String endPoint = args.length > 1 ? args[1] :
                 KeyUtils.getNamedKey(GettingStartedCloud.CLOUD_END_POINT_NAME);
@@ -107,6 +120,8 @@ public class GettingStartedCloudMixed {
         // includes both a User-Agent header and an IP address.
         List<Map<String, String>> evidence = GettingStartedMixed.setUpCombinedEvidence();
         run(resourceKey, endPoint, evidence, System.out);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.CLOUD_REPOSITORIES);
     }
 
     /**
@@ -146,12 +161,13 @@ public class GettingStartedCloudMixed {
 
         // The engines are not closed anywhere else, so the pipeline is asked
         // to close them when it is closed.
-        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+        Pipeline pipeline = new PipelineBuilder(loggerFactory)
                 .addFlowElement(cloudRequestEngine)
                 .addFlowElement(deviceDetectionEngine)
                 .addFlowElement(ipIntelligenceEngine)
                 .setAutoCloseElements(true)
-                .build()) {
+                .build();
+        try {
 
             // carry out some sample detections
             for (Map<String, String> evidence : evidenceList) {
@@ -159,6 +175,8 @@ public class GettingStartedCloudMixed {
             }
 
             logger.info("All done");
+        } finally {
+            pipeline.close();
         }
     }
 
@@ -166,7 +184,8 @@ public class GettingStartedCloudMixed {
                                         Pipeline pipeline,
                                         OutputStream out) throws Exception {
         PrintWriter writer = new PrintWriter(out);
-        try (FlowData data = pipeline.createFlowData()) {
+        FlowData data = pipeline.createFlowData();
+        try {
 
             // List the evidence
             writer.println("===============================================================================");
@@ -214,6 +233,8 @@ public class GettingStartedCloudMixed {
             writer.println("\tIpRangeEnd: " + asIPAddressProperty(tryGet(ipData::getIpRangeEnd)));
             writer.println("\tAccuracyRadiusMin: " + asIntegerProperty(tryGet(ipData::getAccuracyRadiusMin)));
             writer.println("\tTimeZoneOffset: " + asIntegerProperty(tryGet(ipData::getTimeZoneOffset)));
+        } finally {
+            data.close();
         }
         writer.println();
         writer.flush();

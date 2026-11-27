@@ -25,10 +25,16 @@ package fiftyone.geolocation.examples;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
+/** Output helpers the examples share. */
 public class ExampleBase {
 
     private final boolean printOutput;
 
+    /**
+     * Create a new instance.
+     *
+     * @param printOutput false to print nothing, for example in tests
+     */
     public ExampleBase(boolean printOutput) {
         this.printOutput = printOutput;
     }
@@ -41,24 +47,46 @@ public class ExampleBase {
         message.append("\n");
     }
 
+    /**
+     * Print text when output is on.
+     *
+     * @param string the text
+     */
     protected void print(String string) {
         if (printOutput) {
             System.out.print(string);
         }
     }
 
+    /**
+     * Print a line when output is on.
+     *
+     * @param string the line
+     */
     protected void println(String string) {
         if (printOutput) {
             System.out.println(string);
         }
     }
 
+    /**
+     * Print formatted text when output is on.
+     *
+     * @param format the format string
+     * @param args the values to format
+     */
     protected void printf(String format, Object... args) {
         if (printOutput) {
             System.out.printf(format, args);
         }
     }
 
+    /**
+     * Print an exception and its causes when output is on.
+     *
+     * @param ex the exception
+     * @param depth how far to indent the output
+     */
     protected void outputException(Throwable ex, int depth) {
         StringBuilder message = new StringBuilder();
         addToMessage(message, ex.getClass().getSimpleName() + " - " + ex.getMessage(), depth);

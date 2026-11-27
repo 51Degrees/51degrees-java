@@ -39,14 +39,20 @@ import org.slf4j.ILoggerFactory;
 public class IPIntelligenceCloudPipelineBuilder
     extends CloudPipelineBuilderBase<IPIntelligenceCloudPipelineBuilder> {
 
+    @Override
+    protected IPIntelligenceCloudPipelineBuilder self() {
+        return this;
+    }
+
     private final HttpClient httpClient;
 
     /**
      * Internal Constructor.
      * This builder should only be created through the 
      * IPIntelligencePipelineBuilder
-     * @param loggerFactory
-     * @param httpClient 
+     * @param loggerFactory creates the loggers for the Pipeline and its
+     * elements
+     * @param httpClient used to make requests to the cloud service
      */
     public IPIntelligenceCloudPipelineBuilder(
         ILoggerFactory loggerFactory,
@@ -60,7 +66,7 @@ public class IPIntelligenceCloudPipelineBuilder
      * @return A new pipeline instance that contains a cloud request engine for 
      * making requests to the 51Degrees Cloud service and a 
      * IPIntelligenceCloudEngine to interpret the IP Intelligence results.
-     * @throws Exception 
+     * @throws Exception if the Pipeline could not be built
      */
     @Override
     public Pipeline build() throws Exception {
@@ -92,6 +98,10 @@ public class IPIntelligenceCloudPipelineBuilder
         }
         if (licenseKey != null && licenseKey.isEmpty() == false) {
             cloudRequestEngineBuilder.setLicenseKey(licenseKey);
+        }
+        if (requestedProperties.isEmpty() == false) {
+            cloudRequestEngineBuilder.setRequestedProperties(
+                requestedProperties);
         }
         if (cloudRequestOrigin != null && cloudRequestOrigin.isEmpty() == false) {
             cloudRequestEngineBuilder.setCloudRequestOrigin(cloudRequestOrigin);

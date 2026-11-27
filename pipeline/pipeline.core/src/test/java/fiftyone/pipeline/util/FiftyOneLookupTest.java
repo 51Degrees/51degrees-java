@@ -64,14 +64,14 @@ public class FiftyOneLookupTest {
             assertEquals("mickymouse",substitutor.replace("${sys:" + envvar + "}"));
             System.clearProperty(envvar);
 
-            // substitution in results: ${sys:myName} -> ${env:USER} -> username
-            System.setProperty("myName", "${env:"+envvar+"}");
-            assertEquals(envvalue,substitutor.replace("${sys:myName}"));
+            // substitution in results: ${sys:_51DEGREES_TEST_NAME} -> ${env:USER} -> username
+            System.setProperty("_51DEGREES_TEST_NAME", "${env:"+envvar+"}");
+            assertEquals(envvalue,substitutor.replace("${sys:_51DEGREES_TEST_NAME}"));
 
         }
-        assertEquals("chiswick",substitutor.replace("${env:hometown:-chiswick}"));
-        assertEquals("chiswick",substitutor.replace("${hometown:-chiswick}"));
-        assertEquals("${hometown}",substitutor.replace("${hometown}"));
+        assertEquals("chiswick",substitutor.replace("${env:_51DEGREES_TEST_HOMETOWN:-chiswick}"));
+        assertEquals("chiswick",substitutor.replace("${_51DEGREES_TEST_HOMETOWN:-chiswick}"));
+        assertEquals("${_51DEGREES_TEST_HOMETOWN}",substitutor.replace("${_51DEGREES_TEST_HOMETOWN}"));
 
         assertTrue(substitutor.replace("${filepath:filefinder-test.xml}").endsWith(
                 "filefinder-test.xml"));
@@ -79,8 +79,8 @@ public class FiftyOneLookupTest {
         // assertEquals("7",substitutor.replace("${script:javascript:3+4}"));
 
         // No substitution in results: (escape the $))
-        System.setProperty("myName", "$${env:USER}");
-        assertEquals("${env:USER}",substitutor.replace("${sys:myName}"));
+        System.setProperty("_51DEGREES_TEST_NAME", "$${env:USER}");
+        assertEquals("${env:USER}",substitutor.replace("${sys:_51DEGREES_TEST_NAME}"));
 
         // embed variables inside each other
         // file content

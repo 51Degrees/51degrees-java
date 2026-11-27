@@ -76,11 +76,14 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class SessionIdAndSequenceTests {
 
+    // The script is minified by default, so the patterns allow for the
+    // white space around '=' being taken out and for the rest of the
+    // script following on the same line.
     private static final Pattern SESSION_ID_LINE =
-        Pattern.compile("var sessionId = \"(.*)\";");
+        Pattern.compile("var sessionId\\s*=\\s*\"([^\"]*)\";");
 
     private static final Pattern SEQUENCE_LINE =
-        Pattern.compile("var sequence = (.*);");
+        Pattern.compile("var sequence\\s*=\\s*([^;]*);");
 
     private final TestLoggerFactory loggerFactory =
         new TestLoggerFactory(null);
@@ -91,6 +94,11 @@ public class SessionIdAndSequenceTests {
      */
     private static class JsonStandIn extends
         FlowElementBase<JsonBuilderDataInternal, ElementPropertyMetaData> {
+
+        @Override
+        protected Class<JsonBuilderDataInternal> getDataType() {
+            return JsonBuilderDataInternal.class;
+        }
 
         JsonStandIn(Logger logger) {
             super(logger, null);
@@ -136,6 +144,11 @@ public class SessionIdAndSequenceTests {
      */
     private static class SequenceStandIn extends
         FlowElementBase<SequenceData, ElementPropertyMetaData> {
+
+        @Override
+        protected Class<SequenceData> getDataType() {
+            return SequenceData.class;
+        }
 
         private final Object sessionId;
         private final Object sequence;

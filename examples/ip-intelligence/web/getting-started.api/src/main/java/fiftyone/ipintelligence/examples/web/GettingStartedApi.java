@@ -50,6 +50,7 @@ package fiftyone.ipintelligence.examples.web;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngineBuilder;
 import fiftyone.ipintelligence.examples.shared.DataFileHelper;
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.FlowElement;
@@ -74,6 +75,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
@@ -91,22 +94,37 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
 /**
  * Provides a local HTTP API for IP Intelligence lookups, mirroring the endpoints of the
  * 51Degrees Cloud service. The pipeline contains the on-premise IP Intelligence engine
- * and a JSON builder element which serialises the results.
+ * and a JSON builder element which serializes the results.
  * <p>
  * The data file can be supplied as a command line argument. When no argument is given
- * the enterprise data file is looked for in the cxx/data/ip-intelligence directory.
+ * the free Lite data file is used, and downloaded when it is missing.
+ * <p>
+ * The service answers in JSON, so when it starts it writes what the Enterprise data file
+ * adds, when the file in use is a free one, and the "Find out more" section.
  * <p>
  * Note that the .NET version of this example also includes a device detection engine
  * in the same pipeline. This Java version is IP Intelligence only.
  */
 public class GettingStartedApi extends HttpServlet {
     private static final long serialVersionUID = 1734154705981153543L;
+    // A local stand-in for the cloud service, not a web page, so it keeps
+    // 5225, as the .NET version does: a cloud example pointed at it can run
+    // beside a web example on 5151.
     public static final int DEFAULT_PORT = 5225;
     public static final String DATA_FILE_INIT_PARAM = "dataFile";
     public static Logger logger = LoggerFactory.getLogger(GettingStartedApi.class);
 
-    private Pipeline pipeline;
-    private IPIntelligenceOnPremiseEngine engine;
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "web-getting-started.api-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedapi.java";
+
+    private static final String CONTACT_US = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=web-getting-started.api-src-main-java-fiftyone-ipintelligence-examples-web-gettingstartedapi.java&utm_term=enterprise-data-file";
+
+    // HttpServlet is Serializable, but this servlet is never serialized.
+    private transient Pipeline pipeline;
+    private transient IPIntelligenceOnPremiseEngine engine;
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
@@ -153,6 +171,25 @@ public class GettingStartedApi extends HttpServlet {
             throw new ServletException("Failed to create pipeline from data file '" +
                     dataFileLocation + "'", e);
         }
+        writeStartupNotes(System.out, engine);
+    }
+
+    /**
+     * Writes what the Enterprise data file adds, with the link to the
+     * contact page, when the engine uses a free data file, then the "Find
+     * out more" section.
+     * @param output where to write
+     * @param engine the engine the service uses
+     */
+    static void writeStartupNotes(
+            PrintStream output,
+            IPIntelligenceOnPremiseEngine engine) {
+        if (DataFileHelper.isFreeDataFile(engine)) {
+            DataFileHelper.writeEnterpriseOffer(
+                    new PrintWriter(output), CONTACT_US);
+        }
+        FindOutMore.write(output, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     @Override
@@ -228,7 +265,11 @@ public class GettingStartedApi extends HttpServlet {
             }
         }
 
-        try (FlowData flowData = pipeline.createFlowData()) {
+        // A Flow Data cannot be used by two threads at once. Work handed to
+        // another thread or task gets the values it needs, read here on the
+        // request's thread, not the Flow Data.
+        FlowData flowData = pipeline.createFlowData();
+        try {
             flowData.addEvidence(evidence);
             flowData.process();
 
@@ -241,6 +282,8 @@ public class GettingStartedApi extends HttpServlet {
             }
             response.setContentType("application/json");
             response.getWriter().write(jsonData.getJson());
+        } finally {
+            flowData.close();
         }
     }
 

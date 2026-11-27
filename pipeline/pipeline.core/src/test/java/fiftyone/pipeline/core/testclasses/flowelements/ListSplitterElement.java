@@ -44,6 +44,11 @@ import static org.mockito.Mockito.mock;
 public class ListSplitterElement
     extends FlowElementBase<ListSplitterElementData, ElementPropertyMetaData> {
 
+    @Override
+    protected Class<ListSplitterElementData> getDataType() {
+        return ListSplitterElementData.class;
+    }
+
     public List<String> evidenceKeys = Arrays.asList("list-to-split");
     private EvidenceKeyFilterWhitelist evidenceKeyFilter;
     private String delimiter;

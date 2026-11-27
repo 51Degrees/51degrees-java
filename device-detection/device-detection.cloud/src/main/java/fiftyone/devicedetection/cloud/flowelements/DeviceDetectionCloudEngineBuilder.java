@@ -43,6 +43,11 @@ public class DeviceDetectionCloudEngineBuilder
             DeviceDetectionCloudEngineBuilder,
             DeviceDetectionCloudEngine> {
 
+    @Override
+    protected DeviceDetectionCloudEngineBuilder self() {
+        return this;
+    }
+
     /**
      * Construct a new instance using the {@link ILoggerFactory} supplied.
      * @param loggerFactory the logger factory to use
@@ -61,6 +66,7 @@ public class DeviceDetectionCloudEngineBuilder
     /**
      * Build an engine using the current options.
      * @return new instance
+     * @throws Exception if the engine could not be created
      */
     public DeviceDetectionCloudEngine build() throws Exception {
         return buildEngine();

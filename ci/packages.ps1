@@ -2,10 +2,12 @@
 # relative to the repository root.
 
 # The package trees in this repository. The root pom.xml builds them all in
-# one reactor but is not their parent, so a version change has to be made in
-# each of them. Publish says whether the tree's packages go to Maven Central;
-# the examples are built and tested but never published.
-$Packages = @(
+# one reactor but is not their parent. Publish says whether the tree's
+# packages go to Maven Central. The examples are built and tested but never
+# published. Each published module is a package of its own in packages.json.
+# The example modules inside the published trees are packages too, and give
+# an Ignore glob over their whole folder, so a change to one releases nothing.
+$Trees = @(
     @{ Path = 'pipeline'; Publish = $true }
     @{ Path = 'device-detection'; Publish = $true }
     @{ Path = 'ip-intelligence'; Publish = $true }
@@ -38,5 +40,191 @@ $Accessors = @(
     }
 )
 
+# Every compiler, linker and tool warning is an error in the builds 51Degrees
+# runs, and only there, so a build from a clone anywhere else shows its
+# warnings and does not stop on one. The native CMake files and the Maven
+# poms read this variable. Every script here that runs Maven or CMake
+# dot-sources this file, so the builds CI runs set it.
+$env:_51DEGREES_WARNINGS_AS_ERRORS = 'true'
+
 # Arguments every Maven call in these scripts passes.
 $MavenOptions = '--batch-mode', '--no-transfer-progress'
+
+# Every Maven call that compiles runs on this JDK, which compiles for Java 8
+# through each tree's java-8-api profile. The tests still run on each entry's
+# own JDK. javac 21 warns that release 8 is obsolete, which -Werror makes an
+# error, and javac 17 does not.
+$CompileJdkVersion = 17
+
+# The home of the JDK that compiles. The runner names each JDK it has in a
+# variable such as JAVA_HOME_8_X64, so the one that compiles is found from the
+# entry's variable with the version changed, for the same architecture. With
+# no entry variable, as in the publish build, it is the runner's own
+# architecture.
+function Get-CompileJavaHome([string]$JavaSDKEnvVar) {
+    if (-not $JavaSDKEnvVar) {
+        $arm = [Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -eq
+            [Runtime.InteropServices.Architecture]::Arm64
+        $JavaSDKEnvVar = "JAVA_HOME_$($CompileJdkVersion)_$(if ($arm) { 'arm64' } else { 'X64' })"
+    }
+    if ($JavaSDKEnvVar -notmatch '^JAVA_HOME_\d+_([A-Za-z0-9]+)$') {
+        throw "'$JavaSDKEnvVar' is not a runner JDK variable such as JAVA_HOME_8_X64."
+    }
+    $name = "JAVA_HOME_$($CompileJdkVersion)_$($Matches[1])"
+    $javaHome = [Environment]::GetEnvironmentVariable($name)
+    if (-not $javaHome) {
+        throw "$name is not set, so this runner has no JDK $CompileJdkVersion to compile with."
+    }
+    return $javaHome
+}
+
+# Runs the script block with JAVA_HOME and PATH set to the JDK given, so Maven
+# runs on it, and puts both back afterwards.
+function Invoke-WithJavaHome([string]$JavaHome, [scriptblock]$Block) {
+    $saved = $env:JAVA_HOME, $env:PATH
+    $env:JAVA_HOME = $JavaHome
+    $env:PATH = "$(Join-Path $JavaHome 'bin')$([IO.Path]::PathSeparator)$env:PATH"
+    try {
+        & $Block
+    } finally {
+        $env:JAVA_HOME, $env:PATH = $saved
+    }
+}
+
+# The Surefire argument that runs the tests on the entry's JDK, which
+# setup-environment.ps1 made JAVA_HOME, when Maven runs on another to compile.
+function Get-TestJvmArgument {
+    $java = Join-Path $env:JAVA_HOME 'bin' "java$(if ($IsWindows) { '.exe' })"
+    return "-Djvm=$java"
+}
+
+$PomNamespace = 'http://maven.apache.org/POM/4.0.0'
+
+# The packages in packages.json that are published, one per Maven module,
+# each named by its artifactId.
+function Get-PublishedPackages([string]$RepoPath) {
+    return @(Get-Content -Raw (Join-Path $RepoPath 'ci/packages.json') |
+        ConvertFrom-Json | Where-Object { $_.Publish -eq $true })
+}
+
+# A parent's Path is its pom.xml alone, because its folder also holds its
+# modules, whose changes are not changes to the parent.
+function Get-PomPath($Package) {
+    if ($Package.Path.EndsWith('/pom.xml') -eq $true) {
+        return $Package.Path
+    }
+    return "$($Package.Path)/pom.xml"
+}
+
+# The folder Maven builds a package in.
+function Get-ModulePath($Package) {
+    return (Get-PomPath $Package) -replace '/pom\.xml$', ''
+}
+
+# A pom.xml read with its whitespace kept, so that writing it back changes
+# only what was set.
+function Read-Pom([string]$Path) {
+    # .NET resolves a relative path from the process's folder, which is not
+    # the folder PowerShell is in after a Set-Location.
+    $Path = (Resolve-Path -LiteralPath $Path).ProviderPath
+    $xml = [Xml.XmlDocument]::new()
+    $xml.PreserveWhitespace = $true
+    $xml.Load($Path)
+    $namespaces = [Xml.XmlNamespaceManager]::new($xml.NameTable)
+    $namespaces.AddNamespace('m', $PomNamespace)
+    return [pscustomobject]@{ Path = $Path; Xml = $xml; Ns = $namespaces }
+}
+
+function Save-Pom($Pom) {
+    $settings = [Xml.XmlWriterSettings]::new()
+    $settings.Encoding = [Text.UTF8Encoding]::new($false)
+    $settings.NewLineHandling = [Xml.NewLineHandling]::None
+    $writer = [Xml.XmlWriter]::Create($Pom.Path, $settings)
+    try {
+        $Pom.Xml.Save($writer)
+    } finally {
+        $writer.Dispose()
+    }
+}
+
+function Get-PomText($Node, [string]$Name, $Ns) {
+    $child = $Node.SelectSingleNode("m:$Name", $Ns)
+    if ($null -eq $child) {
+        return $null
+    }
+    return $child.InnerText.Trim()
+}
+
+# The other packages a pom.xml refers to, being its parent and its
+# dependencies on them in any scope, wherever they are declared. Version is the element that
+# holds the version, or $null where a parent pom manages it.
+function Get-PomReferences($Pom, [string[]]$Names) {
+    $self = Get-PomText $Pom.Xml.DocumentElement 'artifactId' $Pom.Ns
+    $parent = $Pom.Xml.SelectSingleNode('/m:project/m:parent', $Pom.Ns)
+    if ($null -ne $parent) {
+        $name = Get-PomText $parent 'artifactId' $Pom.Ns
+        if ($Names -contains $name) {
+            [pscustomobject]@{
+                Name = $name
+                Version = $parent.SelectSingleNode('m:version', $Pom.Ns)
+            }
+        }
+    }
+    foreach ($dependency in $Pom.Xml.SelectNodes('//m:dependency', $Pom.Ns)) {
+        $name = Get-PomText $dependency 'artifactId' $Pom.Ns
+        $group = Get-PomText $dependency 'groupId' $Pom.Ns
+        if ($Names -contains $name -and $name -ne $self -and
+                $group -in 'com.51degrees', '${project.groupId}') {
+            [pscustomobject]@{
+                Name = $name
+                Version = $dependency.SelectSingleNode('m:version', $Pom.Ns)
+            }
+        }
+    }
+}
+
+# The modules of the published trees, as folders, read from each pom's
+# modules.
+function Get-PublishedModules([string]$RepoPath) {
+    $folders = [Collections.Generic.Queue[string]]::new()
+    foreach ($tree in $Trees | Where-Object { $_.Publish -eq $true }) {
+        $folders.Enqueue($tree.Path)
+    }
+    while ($folders.Count -gt 0) {
+        $folder = $folders.Dequeue()
+        $folder
+        $pom = Read-Pom (Join-Path $RepoPath $folder 'pom.xml')
+        foreach ($module in $pom.Xml.SelectNodes('/m:project/m:modules/m:module', $pom.Ns)) {
+            $folders.Enqueue("$folder/$($module.InnerText.Trim())")
+        }
+    }
+}
+
+# What packages.json leaves out, as one line each. Every published module must
+# be a package, named by its artifactId, and each package's DependsOn must name
+# every other package its pom.xml refers to. A dependency it leaves out would
+# not be released when the package it depends on is, so its users would not
+# get the fix.
+function Get-PackagesJsonGaps([string]$RepoPath) {
+    $packages = Get-PublishedPackages $RepoPath
+    $names = @($packages.Name)
+    $folders = @($packages | ForEach-Object { Get-ModulePath $_ })
+    foreach ($folder in Get-PublishedModules $RepoPath) {
+        if ($folders -notcontains $folder) {
+            "$folder/pom.xml is a published module with no entry in ci/packages.json"
+        }
+    }
+    foreach ($package in $packages) {
+        $pom = Read-Pom (Join-Path $RepoPath (Get-PomPath $package))
+        $artifactId = Get-PomText $pom.Xml.DocumentElement 'artifactId' $pom.Ns
+        if ($artifactId -ne $package.Name) {
+            "$(Get-PomPath $package) is $artifactId, but ci/packages.json names it $($package.Name)"
+        }
+        $missing = @(Get-PomReferences $pom $names |
+            Where-Object { $package.DependsOn -notcontains $_.Name } |
+            ForEach-Object Name | Select-Object -Unique)
+        foreach ($name in $missing) {
+            "$(Get-PomPath $package) refers to $name, which the DependsOn of $($package.Name) in ci/packages.json does not name"
+        }
+    }
+}

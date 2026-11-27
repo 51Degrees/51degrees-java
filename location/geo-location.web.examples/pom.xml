@@ -51,9 +51,7 @@
 
         <maven-war-plugin.version>3.3.2</maven-war-plugin.version>
         <maven-dependency-plugin.version>3.2.0</maven-dependency-plugin.version>
-        <javaee-endorsed-api.version>7.0</javaee-endorsed-api.version>
 
-        <endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 

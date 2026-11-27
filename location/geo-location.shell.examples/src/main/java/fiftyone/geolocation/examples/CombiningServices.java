@@ -41,14 +41,13 @@ import fiftyone.pipeline.engines.services.HttpClient;
 import fiftyone.pipeline.engines.services.HttpClientDefault;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
-import java.util.concurrent.Future;
 
 import static fiftyone.geolocation.core.Constants.EVIDENCE_GEO_LAT_PARAM_KEY;
 import static fiftyone.geolocation.core.Constants.EVIDENCE_GEO_LON_PARAM_KEY;
 import static fiftyone.pipeline.core.Constants.EVIDENCE_HEADER_USERAGENT_KEY;
 
 /**
- *  @example CombiningServices.java
+ *  \example CombiningServices.java
  *
  * Getting started example of using 51Degrees geo-location alongside 51Degrees
  * device detection.
@@ -111,12 +110,15 @@ import static fiftyone.pipeline.core.Constants.EVIDENCE_HEADER_USERAGENT_KEY;
  * ```
  *
  * 5. Extract the value of a property as a string from the results.
- * ```
+ * <pre>{@code
  * AspectPropertyValue<Boolean> isMobile = data.get(Device.class).getIsMobile();
  * AspectPropertyValue<String> country = data.get(GeoData.class).getCountry();
- * ```
+ * }</pre>
  */
 public class CombiningServices {
+    /** Create a new instance. */
+    public CombiningServices() {
+    }
 
     private static ILoggerFactory loggerFactory = LoggerFactory.getILoggerFactory();
 
@@ -127,15 +129,26 @@ public class CombiningServices {
             "AppleWebKit/537.51.2 (KHTML, like Gecko) Version/7.0 Mobile" +
             "/11D167 Safari/9537.53";
 
+    /**
+     * Run the example.
+     *
+     * @param args not used
+     * @throws Exception if the example fails
+     */
     public static void main(String[] args) throws Exception {
-        // Obtain a resource key for free at https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-src-main-java-fiftyone-geolocation-examples-combiningservices.java&utm_term=main
+        // Obtain a resource key for free at https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-src-main-java-fiftyone-geolocation-examples-combiningservices.java&utm_term=main
         // Make sure to include the 'Country' and 'IsMobile' properties as they
         // are used by this example.
-        String resourceKey = "!!Your resource license key!!";
+        String resourceKey = ResourceKey.find(args);
 
-        if (resourceKey.startsWith("!!")) {
-            System.out.println("You need to create a resource key at " +
-                "https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-src-main-java-fiftyone-geolocation-examples-combiningservices.java&utm_term=resource-key-required and paste it into this example.");
+        if (resourceKey == null) {
+            System.out.println("This example calls the 51Degrees cloud " +
+                "service, which needs a resource key, and none is set.");
+            System.out.println("Set the " + ResourceKey.VARIABLE +
+                " environment variable to a resource key, or give the key " +
+                "as the first argument, and run the example again.");
+            System.out.println("Create a resource key at " +
+                "https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-src-main-java-fiftyone-geolocation-examples-combiningservices.java&utm_term=resource-key-required");
             System.out.println("Make sure to include the 'Country' and " +
                 "'IsMobile' properties as they are used by this example.");
         }
@@ -171,24 +184,13 @@ public class CombiningServices {
 
                 AspectPropertyValue<Boolean> isMobile = flowData.get(DeviceData.class).getIsMobile();
 
-                Future<?> future = flowData.get(GeoData.class).getProcessFuture();
-                System.out.print("Awaiting response");
-                outputUntilCancelled(".", 1000, future);
-                System.out.println();
                 System.out.println("Country: " + country.toString());
                 System.out.println("IsMobile: " + isMobile.toString());
             }
         }
-    }
-
-    private static void outputUntilCancelled(
-        String text,
-        int intervalMs,
-        Future<?> future) throws InterruptedException {
-        while (future.isDone() == false) {
-            System.out.print(text);
-            Thread.sleep(intervalMs);
-        }
-        future.cancel(true);
+        FindOutMore.write(
+            System.out,
+            "https://51degrees.com/documentation/_reverse_geocoding__examples__combining_services.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-combiningservices.java&utm_term=find-out-more",
+            "https://51degrees.com/location?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-combiningservices.java&utm_term=find-out-more");
     }
 }

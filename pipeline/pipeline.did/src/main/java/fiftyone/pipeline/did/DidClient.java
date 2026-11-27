@@ -59,9 +59,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Logger;
 
 /**
  * The client for everything a server does with a 51Did against the
@@ -120,16 +118,6 @@ public final class DidClient {
         "_51DEGREES_CLOUD_ENDPOINT";
 
     /**
-     * The old name of the environment variable read for the API base, read
-     * only when {@link #CLOUD_ENDPOINT_VARIABLE} is not set.
-     *
-     * @deprecated use {@link #CLOUD_ENDPOINT_VARIABLE}, and set the
-     *             environment variable it names in place of this one.
-     */
-    @Deprecated
-    public static final String ENDPOINT_VARIABLE = "FOD_CLOUD_API_URL";
-
-    /**
      * How old the whole held key list may be before a request for a key
      * fetches it again. A key may be replaced before its end if it is
      * compromised, and the client picks up the replacement on the first
@@ -148,13 +136,6 @@ public final class DidClient {
     static final Duration REFETCH_INTERVAL = Duration.ofMinutes(1);
 
     private static final String USER_AGENT = "pipeline.did/" + version();
-
-    /**
-     * Set once the use of {@link #ENDPOINT_VARIABLE} has been logged, so
-     * that a process creating many clients logs it once.
-     */
-    private static final AtomicBoolean OLD_VARIABLE_LOGGED =
-        new AtomicBoolean(false);
 
     /**
      * Longest encoded identifier this client will take from a caller. The
@@ -278,6 +259,7 @@ public final class DidClient {
         }
 
         /**
+         * Set a license key of the account, or null.
          * @param licenceKey a licence key of the account, or null
          * @return this builder
          */
@@ -287,6 +269,8 @@ public final class DidClient {
         }
 
         /**
+         * Set the API base including {@code /api/v4/}, or null to read {@value
+         * #CLOUD_ENDPOINT_VARIABLE} and fall back to {@link #DEFAULT_ENDPOINT}.
          * @param endpoint the API base including {@code /api/v4/}, or null
          *                 to read {@value #CLOUD_ENDPOINT_VARIABLE} and
          *                 fall back to {@link #DEFAULT_ENDPOINT}
@@ -298,6 +282,8 @@ public final class DidClient {
         }
 
         /**
+         * Set the HTTP transport to send through, or null for the default
+         * {@link java.net.HttpURLConnection} one.
          * @param transport the HTTP transport to send through, or null for
          *                  the default {@link java.net.HttpURLConnection}
          *                  one
@@ -324,6 +310,8 @@ public final class DidClient {
         }
 
         /**
+         * Set the clock the key list's age is measured by, or null for the
+         * system clock.
          * @param clock the clock the key list's age is measured by, or null
          *              for the system clock
          * @return this builder
@@ -333,23 +321,35 @@ public final class DidClient {
             return this;
         }
 
-        /** @return the client */
+        /**
+         * Returns the client.
+         * @return the client
+         */
         public DidClient build() {
             return new DidClient(this);
         }
     }
 
-    /** @return the resource key the client sends */
+    /**
+     * Returns the resource key the client sends.
+     * @return the resource key the client sends
+     */
     public String getResourceKey() {
         return resourceKey;
     }
 
-    /** @return the API base every request is made under, ending in a slash */
+    /**
+     * Returns the API base every request is made under, ending in a slash.
+     * @return the API base every request is made under, ending in a slash
+     */
     public String getEndpoint() {
         return endpoint;
     }
 
-    /** @return whether the client was given a licence key */
+    /**
+     * Returns whether the client was given a license key.
+     * @return whether the client was given a license key
+     */
     public boolean hasLicenceKey() {
         return licenceKey != null;
     }
@@ -1173,28 +1173,13 @@ public final class DidClient {
 
     /**
      * The API base to use: the argument, else
-     * {@value #CLOUD_ENDPOINT_VARIABLE}, else the deprecated
-     * {@value #ENDPOINT_VARIABLE}, else {@link #DEFAULT_ENDPOINT}, ending
-     * in exactly one slash so every route can be appended directly. The
-     * first use of the deprecated variable in the process is logged as a
-     * warning.
+     * {@value #CLOUD_ENDPOINT_VARIABLE}, else {@link #DEFAULT_ENDPOINT},
+     * ending in exactly one slash so every route can be appended directly.
      */
     static String resolveEndpoint(String endpoint) {
         String value = blankToNull(endpoint);
         if (value == null) {
             value = blankToNull(System.getenv(CLOUD_ENDPOINT_VARIABLE));
-        }
-        if (value == null) {
-            value = blankToNull(System.getenv(ENDPOINT_VARIABLE));
-            if (value != null
-                && OLD_VARIABLE_LOGGED.compareAndSet(false, true)) {
-                Logger.getLogger(DidClient.class.getName()).warning(
-                    "The environment variable " + ENDPOINT_VARIABLE
-                    + " is deprecated and " + CLOUD_ENDPOINT_VARIABLE
-                    + " replaces it. Set " + CLOUD_ENDPOINT_VARIABLE
-                    + " to the same value, as a later release may no "
-                    + "longer read " + ENDPOINT_VARIABLE + ".");
-            }
         }
         if (value == null) {
             value = DEFAULT_ENDPOINT;

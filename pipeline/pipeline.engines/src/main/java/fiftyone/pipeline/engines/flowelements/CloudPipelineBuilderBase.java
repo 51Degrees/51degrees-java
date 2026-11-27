@@ -22,7 +22,12 @@
 
 package fiftyone.pipeline.engines.flowelements;
 
+import fiftyone.pipeline.annotations.DefaultValue;
 import org.slf4j.ILoggerFactory;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Base class for pipeline builders that will produce a pipeline with specific
@@ -33,18 +38,33 @@ public abstract class CloudPipelineBuilderBase<
     TBuilder extends CloudPipelineBuilderBase<TBuilder>>
     extends PrePackagedPipelineBuilderBase<TBuilder> {
 
+    /** The cloud service endpoint, or empty for the default. */
     protected String url = "";
 
+    /** The data endpoint, or empty for the default. */
     protected String dataEndpoint = "";
 
+    /** The properties endpoint, or empty for the default. */
     protected String propertiesEndpoint = "";
 
+    /** The evidence keys endpoint, or empty for the default. */
     protected String evidenceKeysEndpoint = "";
 
+    /** The resource key sent with each request. */
     protected String resourceKey = "";
 
+    /** The license key sent with each request. */
     protected String licenseKey = "";
 
+    /**
+     * The properties to ask the cloud service for, or empty for all the key
+     * gives.
+     */
+    protected final List<String> requestedProperties = new ArrayList<>();
+
+    /**
+     * The value of the Origin header sent with each request, or empty for none.
+     */
     protected String cloudRequestOrigin = "";
 
     /**
@@ -64,13 +84,14 @@ public abstract class CloudPipelineBuilderBase<
      * @param url endpoint URL
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
+    @DefaultValue("https://cloud.51degrees.com/api/v4/, the Cloud Request " +
+        "Engine's default")
     public TBuilder setEndPoint(String url) {
         if (url.endsWith("/") == false) {
             url += '/';
         }
         this.url = url;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -78,10 +99,10 @@ public abstract class CloudPipelineBuilderBase<
      * @param url data URL
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
+    @DefaultValue("The endpoint followed by {resourcekey}.json")
     public TBuilder setDataEndpoint(String url) {
         this.dataEndpoint = url;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -90,10 +111,10 @@ public abstract class CloudPipelineBuilderBase<
      * @param propertiesEndpoint properties URL
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
+    @DefaultValue("The endpoint followed by accessibleproperties")
     public TBuilder setPropertiesEndpoint(String propertiesEndpoint) {
         this.propertiesEndpoint = propertiesEndpoint;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -102,10 +123,10 @@ public abstract class CloudPipelineBuilderBase<
      * @param evidenceKeysEndpoint evidence keys URL
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
+    @DefaultValue("The endpoint followed by evidencekeys")
     public TBuilder setEvidenceKeysEndpoint(String evidenceKeysEndpoint) {
         this.evidenceKeysEndpoint = evidenceKeysEndpoint;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -113,21 +134,59 @@ public abstract class CloudPipelineBuilderBase<
      * @param key resource key
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
+    @DefaultValue("No default - a resource key or a license key must be " +
+        "supplied")
     public TBuilder setResourceKey(String key) {
         this.resourceKey = key;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
-     * Set the license key to be used when calling the endpoints.
+     * Set the license key to be used when calling the endpoints. A license
+     * key used without a resource key needs the properties wanted, named
+     * with {@link #setRequestedProperties(List)}. Beside a resource key it
+     * adds the requested properties the license grants to what the resource
+     * key carries.
      * @param key license key
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
+    @DefaultValue("No default")
     public TBuilder setLicenseKey(String key) {
         this.licenseKey = key;
-        return (TBuilder)this;
+        return self();
+    }
+
+    /**
+     * Name the properties each request asks the cloud service for, as fully
+     * qualified names such as {@code device.ismobile}. Required with a
+     * license key alone. Beside a resource key the cloud service adds them
+     * to the properties the resource key carries.
+     * @param properties the fully qualified property names
+     * @return this builder
+     */
+    @DefaultValue("None - required with a license key alone")
+    public TBuilder setRequestedProperties(List<String> properties) {
+        if (properties == null) {
+            throw new IllegalArgumentException(
+                "properties must not be null");
+        }
+        requestedProperties.addAll(properties);
+        return self();
+    }
+
+    /**
+     * As {@link #setRequestedProperties(List)}, taking the names as one
+     * comma separated string.
+     * @param properties comma separated fully qualified property names
+     * @return this builder
+     */
+    @DefaultValue("None - required with a license key alone")
+    public TBuilder setRequestedProperties(String properties) {
+        if (properties == null) {
+            throw new IllegalArgumentException(
+                "properties must not be null");
+        }
+        return setRequestedProperties(Arrays.asList(properties.split(",")));
     }
 
     /**
@@ -141,9 +200,9 @@ public abstract class CloudPipelineBuilderBase<
      * @param cloudRequestOrigin the value to set the origin header to
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
+    @DefaultValue("None")
     public TBuilder setCloudRequestOrigin(String cloudRequestOrigin) {
         this.cloudRequestOrigin = cloudRequestOrigin;
-        return (TBuilder)this;
+        return self();
     }
 }

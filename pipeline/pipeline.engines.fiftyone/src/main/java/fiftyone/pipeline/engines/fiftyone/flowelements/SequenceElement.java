@@ -38,14 +38,24 @@ import org.slf4j.Logger;
 
 /**
  * Sequence element establishes session and sequence evidence in the pipeline.
+ * As it adds Evidence, it must not run in a parallel group. Add it on its
+ * own, before the elements that read the session and sequence. The Pipeline
+ * does not check this.
+ * @see <a href="https://github.com/51Degrees/specifications/blob/d79bbe3b2aef86273570742f6b660f29bfe72816/pipeline-specification/features/thread-safety.md#evidence">Specification, Evidence in a parallel group</a>
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/pipeline-elements/sequence-element.md">Specification</a>
  */
 public class SequenceElement 
     extends FlowElementBase<ElementData, ElementPropertyMetaData> {
 
+    @Override
+    protected Class<ElementData> getDataType() {
+        return ElementData.class;
+    }
+
     private static final Pattern DIGITS = Pattern.compile("[0-9]+");
 
-    private final List<ElementPropertyMetaData> properties;
+    private final Object propertiesLock = new Object();
+    private volatile List<ElementPropertyMetaData> properties = null;
 
     /**
      * The session id and sequence of a callback, which the specification
@@ -63,7 +73,6 @@ public class SequenceElement
      * Construct a new instance of the {@link FlowElement}.
      * @param logger logger instance to use for logging
      */
-    @SuppressWarnings("this-escape")
     public SequenceElement(final Logger logger) {
         super(logger, new ElementDataFactory<ElementData>() {
             @Override
@@ -73,19 +82,6 @@ public class SequenceElement
                 return new SequenceData(logger, flowData);
             }
         });
-        properties = new ArrayList<>();
-        properties.add(new ElementPropertyMetaDataDefault(
-            SequenceData.SESSION_ID_PROPERTY_NAME,
-            this,
-            "",
-            String.class,
-            true));
-        properties.add(new ElementPropertyMetaDataDefault(
-            SequenceData.SEQUENCE_PROPERTY_NAME,
-            this,
-            "",
-            Integer.class,
-            true));
     }
 
     @Override
@@ -163,9 +159,35 @@ public class SequenceElement
         return acceptedEvidence;
     }
 
+    /**
+     * The properties are created on first use rather than in the
+     * constructor, as each refers to this element.
+     */
     @Override
     public List<ElementPropertyMetaData> getProperties() {
-        return properties;
+        List<ElementPropertyMetaData> result = properties;
+        if (result == null) {
+            synchronized (propertiesLock) {
+                result = properties;
+                if (result == null) {
+                    result = new ArrayList<>();
+                    result.add(new ElementPropertyMetaDataDefault(
+                        SequenceData.SESSION_ID_PROPERTY_NAME,
+                        this,
+                        "",
+                        String.class,
+                        true));
+                    result.add(new ElementPropertyMetaDataDefault(
+                        SequenceData.SEQUENCE_PROPERTY_NAME,
+                        this,
+                        "",
+                        Integer.class,
+                        true));
+                    properties = result;
+                }
+            }
+        }
+        return result;
     }
 
     @Override

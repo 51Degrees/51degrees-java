@@ -58,7 +58,7 @@ public class ValueIterable
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         collection.delete();
     }
 }

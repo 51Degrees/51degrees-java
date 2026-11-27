@@ -22,18 +22,29 @@
 
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.ExampleProcess;
 import fiftyone.devicedetection.examples.shared.KeyHelper;
 import org.junit.Test;
 
-import java.util.Collections;
-
 public class TacCloudTest {
 
+    /**
+     * The example runs as a customer runs it, in a process of its own
+     * that reads its key from _51DEGREES_RESOURCE_KEY, and the cloud that
+     * _51DEGREES_CLOUD_ENDPOINT names when that is set. The test gives that
+     * process the key with every property, and fails unless the example
+     * lists a device with a vendor and a model for each TAC, so a key that
+     * does not include HardwarePlatform.Profiles fails it.
+     */
     @Test
     public void run() throws Exception {
         String resourceKey = KeyHelper.requireResourceKey(
-            Collections.singletonList(TacCloud.TAC_EXAMPLE_RESOURCE_KEY_NAME),
+            KeyHelper.BESPOKE_RESOURCE_KEY_VARIABLE,
             "the devices that match a TAC", "hardware");
-        TacCloud.run(resourceKey, System.out);
+        ExampleProcess.Result result =
+            ExampleProcess.runWithResourceKey(TacCloud.class, resourceKey);
+        System.out.println(result.output);
+        HardwareLookupOutput.requireDevices(TacCloud.class, result,
+            "TAC lookup", "the TAC", TacCloud.TAC_1, TacCloud.TAC_2);
     }
 }

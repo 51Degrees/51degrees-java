@@ -11,7 +11,7 @@
 
     <artifactId>device-detection.hash.engine.on-premise</artifactId>
     <name>51Degrees :: Device Detection :: Hash :: On Premise</name>
-	<description>High-performance on-premise hash-based device detection engine for Java, built for the 51Degrees Pipeline API. Parses HTTP headers locally to identify device hardware, operating systems, browsers, and crawlers, with no external service calls.</description>
+	<description>On-premise Device Detection engine and User-Agent parser for Java. Reads a 51Degrees Hash data file on your server to detect the device type and model, browser, operating system, and crawlers from the User-Agent and User-Agent Client Hints. Built on the 51Degrees Pipeline API. An alternative to UAParser.js, DeviceAtlas, and WURFL.</description>
     <url>https://github.com/51Degrees/51degrees-java</url>
 
     <dependencies>
@@ -119,6 +119,50 @@
             <properties>
                 <script.extension>.sh</script.extension>
             </properties>
+        </profile>
+        <!-- SWIG writes the classes in the package named below from
+             src/main/cxx/hash_java.i. The members SWIG adds have comments,
+             but the methods of the C++ API come from the declarations in
+             cxx's .i files, which have none, so javadoc does not check that
+             package until those declarations are documented. Every other
+             package of the module is checked. JDK 8's javadoc does not
+             accept -Xdoclint/package, so on JDK 8 the package is left out of
+             the javadoc instead. -->
+        <profile>
+            <id>javadoc-swig-doclint</id>
+            <activation>
+                <jdk>[9,)</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <configuration>
+                            <additionalOptions>
+                                <additionalOption>-Xdoclint/package:-fiftyone.devicedetection.hash.engine.onpremise.interop.swig</additionalOption>
+                            </additionalOptions>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>javadoc-swig-jdk8</id>
+            <activation>
+                <jdk>1.8</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <configuration>
+                            <excludePackageNames>fiftyone.devicedetection.hash.engine.onpremise.interop.swig</excludePackageNames>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
     <build>

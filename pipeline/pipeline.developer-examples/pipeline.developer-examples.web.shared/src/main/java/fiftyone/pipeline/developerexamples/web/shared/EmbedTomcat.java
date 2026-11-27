@@ -33,19 +33,27 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Scanner;
 
-/*
+/**
  * Create and start embedded Tomcat server for Servlet Web Examples
  */
 public class EmbedTomcat {
 
+    /** The running server. */
     public static Tomcat tomcat;
+
+    /** Create a new instance. Every member is static. */
+    public EmbedTomcat() {
+    }
 
     /**
      * Utility to start Tomcat with the servlet supplied
      * @param servletName a name
      * @param urlPattern a mapping for the addresses the servlet will respond to
      * @param servlet an instantiated servlet
+     * @param port the port to listen on
      * @return a server context
+     * @throws LifecycleException if Tomcat could not start
+     * @throws IOException if the temporary folder could not be created
      */
     public static Context startTomcat(String servletName, String urlPattern, HttpServlet servlet, int port) throws LifecycleException, IOException {
         tomcat = new Tomcat();
@@ -83,10 +91,12 @@ public class EmbedTomcat {
     }
 
     /**
-     * Utility to run a servlet in Tomcat at the server root address - wait and then shut down
+     * Utility to run a webapp in Tomcat at the server root address, wait
+     * and then shut down
      * @param pathname path to the webapp folder from project root
      * @param workingDir where Tomcat should put its temp files etc
      * @param port the port to listen on
+     * @throws LifecycleException if Tomcat could not start or stop
      */
     public static void runWebApp(String pathname, String workingDir, int port) throws LifecycleException {
         System.setProperty("logback.configurationFile", "./logback.xml");
@@ -107,11 +117,12 @@ public class EmbedTomcat {
     }
 
     /**
-     * Utility to run a webapp in Tomcat - wait and then shut down
+     * Utility to run a servlet in Tomcat - wait and then shut down
      * @param servlet a servlet
      * @param workingDir where Tomcat should put its temp files etc
-     * @param urlPattern where servlet should be releative to server root
+     * @param urlPattern where servlet should be relative to server root
      * @param port the port to listen on
+     * @throws LifecycleException if Tomcat could not start or stop
      */
     public static void runServlet(HttpServlet servlet, String workingDir, String urlPattern, int port) throws LifecycleException {
         System.setProperty("logback.configurationFile", "./logback.xml");

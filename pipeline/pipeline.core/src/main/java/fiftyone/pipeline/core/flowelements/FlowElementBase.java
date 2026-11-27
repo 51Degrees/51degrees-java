@@ -26,19 +26,20 @@ import fiftyone.pipeline.core.data.*;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.typed.TypedKey;
 import fiftyone.pipeline.core.typed.TypedKeyDefault;
-import fiftyone.pipeline.util.Types;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 /**
  * Provides a base class from which authors may create new FlowElements. The
  * {@link #process(FlowData)} method deals with {@link FlowData#isStopped()} and
  * any errors that may be thrown, and calls the abstract
  * {@link #processInternal(FlowData)} method to do the actual processing.
- * <p>
+ *
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/conceptual-overview.md#flow-element">Specification</a>
  *
  * @param <TData>     the type of element data that the flow element will write to
@@ -51,7 +52,9 @@ public abstract class FlowElementBase<
         TProperty extends ElementPropertyMetaData>
         implements FlowElement<TData, TProperty> {
 
+    /** Used for logging. */
     protected final Logger logger;
+    /** The key the element's data is stored under in the Flow Data. */
     protected TypedKey<TData> typedKey = null;
     private boolean closed = false;
     private final List<Pipeline> pipelines = new ArrayList<>();
@@ -64,13 +67,12 @@ public abstract class FlowElementBase<
      * @param elementDataFactory the factory to use when creating a
      *                           {@link ElementDataBase} instance
      */
-    @SuppressWarnings("this-escape")
     public FlowElementBase(
             Logger logger,
             ElementDataFactory<TData> elementDataFactory) {
         this.logger = logger;
-        logger.debug("FlowElement '" + getClass().getSimpleName() + "'-'" +
-                hashCode() + "' created.");
+        logger.debug("FlowElement '" + getClass().getSimpleName() +
+                "' created.");
         this.dataFactory = new DataFactoryInternal<>(elementDataFactory, this);
     }
 
@@ -118,15 +120,21 @@ public abstract class FlowElementBase<
         return null;
     }
 
+    /**
+     * The type of the element data this element adds to the Flow Data,
+     * which reads through {@link #getTypedDataKey()} are checked against.
+     * Usually the interface the element's data implements, for example
+     * {@code return MyData.class;}.
+     * @return the type of the element data
+     */
+    protected abstract Class<TData> getDataType();
+
     @Override
     public TypedKey<TData> getTypedDataKey() {
         if (typedKey == null) {
             typedKey = new TypedKeyDefault<>(
                     getElementDataKey(),
-                    Types.findSubClassParameterType(
-                            this,
-                            FlowElementBase.class,
-                            0));
+                    getDataType());
         }
         return typedKey;
     }
@@ -138,13 +146,62 @@ public abstract class FlowElementBase<
             logger.debug("FlowElement '{}-{}' started processing.", getClass().getSimpleName(), hashCode());
             startTime = System.currentTimeMillis();
         }
-        processInternal(data);
+        // A Flow Element that shares an instance another has finished with
+        // opens it for writing again, and every Flow Element closes its own
+        // Element Data to writes once it has finished, even if it threw.
+        ElementDataBase own = ownElementData(data);
+        if (own != null) {
+            own.startWriting();
+        }
+        try {
+            processInternal(data);
+        } finally {
+            own = ownElementData(data);
+            if (own != null) {
+                own.finishWriting();
+            }
+        }
 
         logger.debug("FlowElement '{}}-{}' finished processing. Elapsed time: {}ms",
                 getClass().getSimpleName(), hashCode(), (System.currentTimeMillis() - startTime));
 
     }
 
+
+    /**
+     * True once getting the typed key has failed, as it does for a Flow
+     * Element with no Element Data of its own, so it is not tried again.
+     */
+    private volatile boolean noOwnElementData = false;
+
+    /**
+     * Get the Element Data this Flow Element writes, if the Flow Data holds
+     * it yet.
+     * @param data the Flow Data being processed
+     * @return the Element Data, or null if there is none
+     */
+    private ElementDataBase ownElementData(FlowData data) {
+        if (noOwnElementData || this instanceof ParallelElements) {
+            return null;
+        }
+        TypedKey<TData> key;
+        try {
+            key = getTypedDataKey();
+        } catch (RuntimeException e) {
+            noOwnElementData = true;
+            return null;
+        }
+        if (key == null) {
+            return null;
+        }
+        TryGetResult<TData> result = data.tryGetValue(key);
+        if (result != null &&
+            result.hasValue() &&
+            result.getValue() instanceof ElementDataBase) {
+            return (ElementDataBase) result.getValue();
+        }
+        return null;
+    }
 
     @Override
     public DataFactory<TData> getDataFactory() {
@@ -175,6 +232,12 @@ public abstract class FlowElementBase<
      */
     protected abstract void unmanagedResourcesCleanup();
 
+    /**
+     * Release the element's resources.
+     *
+     * @param closing true to release managed resources as well as unmanaged
+     *    ones
+     */
     protected void close(boolean closing) {
         if (closed) {
             logger.debug("FlowElement '{}'-'{}' already closed.", getClass().getSimpleName(), hashCode());
@@ -190,7 +253,6 @@ public abstract class FlowElementBase<
     }
 
 /*
-    @SuppressWarnings("deprecation")
     @Override
     protected void finalize() throws Throwable {
         if (closed) {
@@ -210,7 +272,7 @@ public abstract class FlowElementBase<
 */
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         close(true);
     }
 
@@ -222,8 +284,23 @@ public abstract class FlowElementBase<
  */
 protected static class DataFactoryInternal<T extends ElementData>
         implements DataFactory<T> {
+    /**
+     * The most instances a pool keeps. More than run at once on most
+     * servers, so a busy server rarely allocates, and bounded so a burst
+     * does not hold memory for ever.
+     */
+    static final int POOL_SIZE =
+        Math.max(64, Runtime.getRuntime().availableProcessors() * 8);
+
     private final ElementDataFactory<T> elementDataFactory;
     private final FlowElement<T, ?> element;
+
+    /**
+     * Element Data given back when its Flow Data was closed, ready to be
+     * given out again. Only instances that can be pooled go in.
+     */
+    private final BlockingQueue<T> pool =
+        new ArrayBlockingQueue<>(POOL_SIZE);
 
     /**
      * Construct a new instance for the calling element.
@@ -240,7 +317,19 @@ protected static class DataFactoryInternal<T extends ElementData>
 
     @Override
     public T create(FlowData flowData) {
-        return elementDataFactory.create(flowData, element);
+        T result = pool.poll();
+        if (result != null) {
+            ((ElementDataBase) result).reuse(flowData);
+        } else {
+            result = elementDataFactory.create(flowData, element);
+        }
+        if (result instanceof ElementDataBase &&
+            ((ElementDataBase) result).canBePooled()) {
+            final T pooled = result;
+            // A full pool drops the instance for the garbage collector.
+            ((ElementDataBase) result).setOnRelease(() -> pool.offer(pooled));
+        }
+        return result;
     }
 }
 

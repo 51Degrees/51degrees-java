@@ -46,6 +46,7 @@
 
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.IPIntelligenceCloudPipelineBuilder;
 import fiftyone.ipintelligence.IPIntelligencePipelineBuilder;
 import fiftyone.ipintelligence.examples.shared.EvidenceHelper;
@@ -53,7 +54,9 @@ import fiftyone.ipintelligence.examples.shared.KeyHelper;
 import fiftyone.ipintelligence.shared.IPIntelligenceData;
 import fiftyone.ipintelligence.shared.testhelpers.KeyUtils;
 import fiftyone.pipeline.core.data.FlowData;
+import fiftyone.pipeline.core.data.IWeightedValue;
 import fiftyone.pipeline.core.flowelements.Pipeline;
+import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,12 +66,9 @@ import java.util.List;
 import java.util.Map;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
-import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asFloatProperty;
-import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asIPAddressProperty;
-import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asIntegerProperty;
-import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asStringProperty;
-import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asWktStringProperty;
+import static fiftyone.ipintelligence.examples.shared.PropertyHelper.asWeightedString;
 import static fiftyone.ipintelligence.examples.shared.PropertyHelper.tryGet;
+import static fiftyone.ipintelligence.examples.shared.PropertyHelper.weightedValues;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
 /**
@@ -78,28 +78,40 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * <p>
  * Access to the Cloud service is configured using a "resource key". The resource key can be
  * supplied as a command line argument, or via the environment variable or system property
- * "TestResourceKey". An optional second command line argument, or the environment variable or
- * system property "TestCloudEndPoint", can be used to direct the example at a custom hosted
+ * "_51DEGREES_RESOURCE_KEY". An optional second command line argument, or the environment variable or
+ * system property "_51DEGREES_CLOUD_ENDPOINT", can be used to direct the example at a custom hosted
  * Cloud service.
  * <p>
  * The concepts of "pipeline", "flow data", "evidence" and "results" are illustrated.
  */
 public class GettingStartedCloud {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedcloud.java";
+
     private static final Logger logger = LoggerFactory.getLogger(GettingStartedCloud.class);
 
     /**
      * Name of the environment variable or system property that can hold a
      * custom Cloud service endpoint URL.
      */
-    public static final String CLOUD_END_POINT_NAME = "TestCloudEndPoint";
+    public static final String CLOUD_END_POINT_NAME = "_51DEGREES_CLOUD_ENDPOINT";
 
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
 
         // Use the resource key from the command line, environment variable or
         // system property.
-        String resourceKey = args.length > 0 ? args[0] :
-                KeyHelper.getOrSetTestResourceKey();
+        String resourceKey = KeyHelper.findResourceKey(
+                args.length > 0 ? args[0] : null);
+        if (resourceKey == null) {
+            KeyHelper.writeNoResourceKey(System.out, EXAMPLE_TAG);
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES);
+            return;
+        }
         // An optional custom endpoint for a self-hosted Cloud service.
         String endPoint = args.length > 1 ? args[1] :
                 KeyUtils.getNamedKey(CLOUD_END_POINT_NAME);
@@ -107,6 +119,8 @@ public class GettingStartedCloud {
         // prepare 'evidence' for use in pipeline (see below)
         List<Map<String, String>> evidence = EvidenceHelper.setUpEvidence();
         run(resourceKey, endPoint, evidence, System.out);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.CLOUD_REPOSITORIES);
     }
 
     /**
@@ -127,7 +141,7 @@ public class GettingStartedCloud {
         For more information about pipelines in general see the documentation at
         https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedcloud.java&utm_term=configuration-builders
 
-        Note that we wrap the creation of a pipeline in a try/resources to control its lifecycle */
+        Note that we close the pipeline in a finally block to control its lifecycle */
         IPIntelligenceCloudPipelineBuilder builder = new IPIntelligencePipelineBuilder()
                 // Tell it that we want to use cloud and pass our resource key.
                 .useCloud(resourceKey);
@@ -136,7 +150,8 @@ public class GettingStartedCloud {
         if (endPoint != null && endPoint.isEmpty() == false) {
             builder.setEndPoint(endPoint);
         }
-        try (Pipeline pipeline = builder.build()) {
+        Pipeline pipeline = builder.build();
+        try {
 
             // carry out some sample lookups
             for (Map<String, String> evidence : evidenceList) {
@@ -144,6 +159,8 @@ public class GettingStartedCloud {
             }
 
             logger.info("All done");
+        } finally {
+            pipeline.close();
         }
     }
 
@@ -163,9 +180,10 @@ public class GettingStartedCloud {
         a lookup is called "evidence", in this case represented by a Map<String, String> of
         evidence key/value entries.
 
-        FlowData is wrapped in a try/resources block in order to ensure that the resources
+        FlowData is closed in a finally block in order to ensure that the resources
         are freed in a timely manner */
-        try (FlowData data = pipeline.createFlowData()) {
+        FlowData data = pipeline.createFlowData();
+        try {
 
             // list the evidence
             writer.println("Input values:");
@@ -190,24 +208,53 @@ public class GettingStartedCloud {
             /* Display the results of the lookup, which are called IP Intelligence properties.
             See the property dictionary at https://51degrees.com/developers/property-dictionary?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedcloud.java&utm_term=property-dictionary
             for details of all available properties. */
-            writer.println("\tRegisteredName: " + asStringProperty(tryGet(ipData::getRegisteredName)));
-            writer.println("\tRegisteredOwner: " + asStringProperty(tryGet(ipData::getRegisteredOwner)));
-            writer.println("\tRegisteredCountry: " + asStringProperty(tryGet(ipData::getRegisteredCountry)));
-            writer.println("\tIpRangeStart: " + asIPAddressProperty(tryGet(ipData::getIpRangeStart)));
-            writer.println("\tIpRangeEnd: " + asIPAddressProperty(tryGet(ipData::getIpRangeEnd)));
-            writer.println("\tCountry: " + asStringProperty(tryGet(ipData::getCountry)));
-            writer.println("\tCountryCode: " + asStringProperty(tryGet(ipData::getCountryCode)));
-            writer.println("\tCountryCode3: " + asStringProperty(tryGet(ipData::getCountryCode3)));
-            writer.println("\tRegion: " + asStringProperty(tryGet(ipData::getRegion)));
-            writer.println("\tState: " + asStringProperty(tryGet(ipData::getState)));
-            writer.println("\tTown: " + asStringProperty(tryGet(ipData::getTown)));
-            writer.println("\tLatitude: " + asFloatProperty(tryGet(ipData::getLatitude)));
-            writer.println("\tLongitude: " + asFloatProperty(tryGet(ipData::getLongitude)));
-            writer.println("\tAreas: " + asWktStringProperty(tryGet(ipData::getAreas)));
-            writer.println("\tAccuracyRadiusMin: " + asIntegerProperty(tryGet(ipData::getAccuracyRadiusMin)));
-            writer.println("\tTimeZoneOffset: " + asIntegerProperty(tryGet(ipData::getTimeZoneOffset)));
+            writeValue(writer, "RegisteredName", tryGet(ipData::getRegisteredName));
+            writeValue(writer, "RegisteredOwner", tryGet(ipData::getRegisteredOwner));
+            writeValue(writer, "RegisteredCountry", tryGet(ipData::getRegisteredCountry));
+            writeValue(writer, "IpRangeStart", tryGet(ipData::getIpRangeStart));
+            writeValue(writer, "IpRangeEnd", tryGet(ipData::getIpRangeEnd));
+            writeValue(writer, "Country", tryGet(ipData::getCountry));
+            writeValue(writer, "CountryCode", tryGet(ipData::getCountryCode));
+            writeValue(writer, "CountryCode3", tryGet(ipData::getCountryCode3));
+            writeValue(writer, "Region", tryGet(ipData::getRegion));
+            writeValue(writer, "State", tryGet(ipData::getState));
+            writeValue(writer, "Town", tryGet(ipData::getTown));
+            writeValue(writer, "Latitude", tryGet(ipData::getLatitude));
+            writeValue(writer, "Longitude", tryGet(ipData::getLongitude));
+            writeValue(writer, "Areas", tryGet(ipData::getAreas));
+            writeValue(writer, "AccuracyRadiusMin", tryGet(ipData::getAccuracyRadiusMin));
+            writeValue(writer, "TimeZoneOffset", tryGet(ipData::getTimeZoneOffset));
+        } finally {
+            data.close();
         }
         writer.println();
         writer.flush();
+    }
+
+    /**
+     * Writes each value of a property with its weighting, or why it has no
+     * value.
+     */
+    private static void writeValue(PrintWriter writer,
+                                   String property,
+                                   AspectPropertyValue<?> result) {
+        if (result.hasValue() == false) {
+            writer.println("\t" + property + ": " + asWeightedString(result));
+            return;
+        }
+        /* IP Intelligence properties return weighted values. Each value comes
+        with a weighting between 0 and 1, which says how much of the IP range
+        the value applies to, and a property with a single answer returns it
+        with a weighting of 1. */
+        StringBuilder line = new StringBuilder();
+        for (IWeightedValue<?> weighted : weightedValues(result)) {
+            if (line.length() > 0) {
+                line.append(", ");
+            }
+            line.append(asWeightedString(
+                    weighted.getValue(),
+                    weighted.getWeighting()));
+        }
+        writer.println("\t" + property + ": " + line);
     }
 }

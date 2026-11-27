@@ -25,7 +25,13 @@ package pipeline.developerexamples.cloudengine.data;
 import fiftyone.pipeline.engines.data.AspectData;
 
 //! [class]
+/** The star sign the element returns. */
 public interface StarSignData extends AspectData {
+    /**
+     * The star sign for the date of birth given.
+     *
+     * @return the name of the star sign
+     */
     String getStarSign();
 }
 //! [class]

@@ -11,15 +11,39 @@ repositories used to do for one package tree each.
   publish, the two on-premise engines that build a native library, and the
   generated accessors. The other scripts loop over it rather than naming
   folders themselves.
-- The root `pom.xml` builds every tree in one reactor but is not their parent,
-  so [build-package.ps1](build-package.ps1) has common-ci set the version in
-  each tree before it deploys from the root. The examples are built and tested
-  but left out of the deploy.
+- [packages.json](packages.json) lists every published module as a package,
+  named by its artifactId, with its folder, the other folders its build takes
+  files from, and the packages it depends on, its parent included. A parent's
+  folder is its `pom.xml` alone, because the rest of the folder is its
+  modules. [build-project.ps1](build-project.ps1) fails a pull request whose
+  poms refer to a package that `DependsOn` does not name, or add a module
+  that has no entry.
+- The root `pom.xml` builds every tree in one reactor but is not their parent.
+  [build-package.ps1](build-package.ps1) writes each published module's own
+  version into its `pom.xml`, with the versions of its parent and of the
+  packages it depends on, and deploys only the modules being released. The
+  examples are built and tested but left out of the deploy.
 - [build-project.ps1](build-project.ps1) and
   [run-unit-tests.ps1](run-unit-tests.ps1) use the `dev` profile, so a pull
   request tests the examples against the libraries it changes. The publish
   workflow instead tests the examples against the version it built, through
   [run-integration-tests.ps1](run-integration-tests.ps1).
+- [select-options.ps1](select-options.ps1) chooses the entries a pull request
+  runs. The standard set is JDK 17 and JDK 8 on Linux, without the three IP
+  Intelligence tests in [standard-excludes.txt](standard-excludes.txt) and
+  with the Selenium contract on JDK 17 alone. A change to a native module, IP
+  Intelligence, a `pom.xml` or a file outside the package trees adds to it.
+  macOS and performance run only when `rc` itself or the release pull request
+  is built, which
+  [release-pull-request.yml](../.github/workflows/release-pull-request.yml)
+  does on every entry. The Pester 5 tests of select-options.ps1 are
+  [select-options.Tests.ps1](select-options.Tests.ps1), which
+  [ci-script-tests.yml](../.github/workflows/ci-script-tests.yml) runs on
+  Linux and Windows for each pull request that changes this folder.
+- [options.json](options.json) tests on JDK 8, 11, 17 and 21 on Linux x64,
+  Linux ARM and Windows. The macOS entries test on JDK 11, 17 and 21 only,
+  because the GitHub macOS images (`macos-15` and `macos-15-intel`) have no
+  JDK 8, so no `JAVA_HOME_8_*` variable is set there.
 - [fetch-assets.ps1](fetch-assets.ps1) fetches every data file as one of
   common-ci's assets, which each run caches once, and links or copies it into
   `cxx/data/device-detection` or `cxx/data/ip-intelligence`, where the tests
@@ -28,47 +52,150 @@ repositories used to do for one package tree each.
   of cxx. No test job downloads a data file, so a file added to the data
   repository needs an entry in common-ci's `steps/fetch-assets.ps1` before CI
   can use it.
+- [run-fresh-clone-example.ps1](run-fresh-clone-example.ps1) runs a
+  product's console example jar from the repository root for
+  [examples-fresh-clone.yml](../.github/workflows/examples-fresh-clone.yml).
+  It fails unless the example exits with 0 and prints results, and unless it
+  downloads its free data file exactly when the job expects it to. That
+  workflow's Ubuntu job has each example download its free data file once a
+  run, as a test of the download. Given `-LinkFile` and `-ServeFile`, the
+  script serves the file common-ci's fetch-assets step fetched from a
+  stand-in on the runner, and points the data file's link at the stand-in
+  while the example runs, so the example downloads nothing from the
+  Distributor. The link is put back afterwards. The other jobs take the file
+  from the cache the Ubuntu job saves. To run it by hand, build the console
+  examples as [AGENTS.md](../AGENTS.md#build) says, then from the repository
+  root give
+  `-ExpectDownload` when the free data file is only a link, and leave it out
+  when the file is there.
+
+  ```
+  pwsh -File ./ci/run-fresh-clone-example.ps1 -Product device-detection -Example fiftyone.devicedetection.examples.console.GettingStartedOnPrem -ExpectDownload
+  ```
+
+  [run-fresh-clone-example.Tests.ps1](run-fresh-clone-example.Tests.ps1)
+  tests it with `pwsh -File` and with the workflow's own calls.
 - [run-performance-tests.ps1](run-performance-tests.ps1) measures the Pipeline
   API, Device Detection and IP Intelligence and writes one results file per
   configuration. The Device Detection and IP Intelligence metrics are prefixed
   with the product, as both use the same names.
-- The repository has one version, tagged as a plain version such as `4.5.127`.
-  [get-next-package-version.ps1](get-next-package-version.ps1) moves only the
-  patch number.
+- Each package has its own version, tagged `<package>/<version>`, such as
+  `pipeline.core/4.5.131`. A publish releases a package when a file under its
+  folders changed since its last tag, and every package that depends on it,
+  each at its last tag with the patch number moved. Changes only to Markdown,
+  `LICENSE` files, or files under folders named `docs`, `tests`, `test` or
+  `examples`, which takes in each module's `src/test`, release nothing, and
+  [release-plan-filter.ps1](release-plan-filter.ps1) leaves out a `pom.xml`
+  whose only change is to its `name`, `description`, `url`, `licenses`,
+  `developers`, `scm` or `issueManagement`, or to its comments and layout.
+  Its Pester 5 tests are
+  [release-plan-filter.Tests.ps1](release-plan-filter.Tests.ps1), which
+  [ci-script-tests.yml](../.github/workflows/ci-script-tests.yml) runs on
+  Linux and Windows for each pull request that changes this folder.
+  [release.ps1](release.ps1) takes that plan from common-ci's
+  `steps/release-plan.ps1`, and the publish scripts build, check and tag from
+  it. [check-version-bump.ps1](check-version-bump.ps1) and
+  [check-release-interval.ps1](check-release-interval.ps1) check each package
+  against its own tags, for a major or minor move and for a release less than
+  a week after its last.
+- [publish-package.ps1](publish-package.ps1) uploads the one publishing
+  bundle, then pushes every package's tag in one atomic push, so a publish
+  that stops leaves every package tagged or none, and then makes one GitHub
+  release per tag. Maven Central refuses a version it already has, so when
+  the push fails after the upload, push the tags the log names by hand
+  rather than running the publish again. When `gh release create` fails
+  part way, every tag is pushed but the packages after the failure have no
+  GitHub release, and a publish run again plans nothing and so makes none.
+  Make each missing release by hand. For each tag the log names after
+  "Pushing" for which `gh release view <tag>` finds no release, run
+  `gh release create <tag> --verify-tag --title "<package> <version>"
+  --notes "<package> <version>: <reason>."`, with the reason the Configure
+  job's plan gives for that package, as the script does. Its Pester 5
+  tests are [publish-package.Tests.ps1](publish-package.Tests.ps1), which the
+  same workflow runs.
 
-## Secrets
+## Secrets and variables
 
 Required:
 
-- `ACCESS_TOKEN`: GitHub
+- `CI_ACCESS_TOKEN`: GitHub
   [access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#about-personal-access-tokens)
-  for cloning repositories and creating pull requests.
+  for cloning repositories and creating pull requests. It is an organization
+  secret that only CI uses, so it has no `_51DEGREES_` prefix.
+
+The workflows pass the secrets to common-ci with `secrets: inherit`, and
+common-ci exports each `_51DEGREES_` secret and variable, and the CI secrets
+on its own list, under its own name before the scripts here run. The tests
+read these names, apart from the Human Confidence live tests below, which
+read two names that common-ci does not export.
 
 To run the on-premise tests:
 
-- `DEVICE_DETECTION_KEY`: [license key](https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=ci-readme.md&utm_term=secrets)
-  for the Device Detection TAC data file and the data file update example.
-- `IP_INTELLIGENCE_KEY`: license key for the IP Intelligence Enterprise data
-  file.
-- `IPI_DATA_FILE_URL`: URL of the IP Intelligence Enterprise data file. The
-  IP Intelligence examples and benchmark are skipped without it.
-- `DEVICE_DETECTION_URL` (optional): URL of the Device Detection TAC data file.
+- `_51DEGREES_LICENSE_KEY`: [license key](https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=ci-readme.md&utm_term=secrets)
+  for the data files. common-ci downloads the Device Detection TAC and the IP
+  Intelligence Enterprise data files from the Distributor with it. The data
+  file update example tests do not use it: they give the example a made-up
+  key and a stand-in for the Distributor on the runner.
 
-To run the cloud tests:
+To run the cloud tests, the resource keys and the license keys are
+organization secrets:
 
 - `_51DEGREES_RESOURCE_KEY_BESPOKE`: [resource key](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=ci-readme.md&utm_term=secrets)
-  passed to the tests as `TestResourceKey` and `SuperResourceKey`.
+  with every property, which the cloud tests read. `_51DEGREES_RESOURCE_KEY`
+  is the name a person running an example sets, so it has no secret, and a
+  test of an example sets it to the key it checks.
+- `_51DEGREES_LICENSE_KEY_BESPOKE`: license key for the cloud products, for
+  the Cloud Request Engine's test on a license key alone.
+- `_51DEGREES_RESOURCE_KEY_51DID`: resource key for the 51Did cloud tests.
+  It has to belong to the same account as `_51DEGREES_LICENSE_KEY_51DID`,
+  or the licensed redeem comes back unreadable.
 - `_51DEGREES_LICENSE_KEY_51DID`: license key for the 51Did cloud tests,
-  together with the `_51DEGREES_RESOURCE_KEY_BASIC` and
-  `_51DEGREES_RESOURCE_KEY_51DID` variables.
+  which use it only with `_51DEGREES_RESOURCE_KEY_51DID`. They run again
+  with `_51DEGREES_RESOURCE_KEY_BESPOKE` and no license key.
+- `_51DEGREES_RESOURCE_KEY_BASIC`: resource key whose products don't offer
+  `HumanConfidenceSource`.
+  [cloud-human-confidence.yml](../.github/workflows/cloud-human-confidence.yml)
+  runs the Human Confidence example's live test of a key outside Bespoke
+  with it, on the staging cloud, expecting the cloud to answer the source as
+  null and the example's answer to carry none.
+- `_51DEGREES_CLOUD_ENDPOINT`: an organization variable naming the cloud
+  service the cloud tests and examples call, the API base including
+  `/api/v4/`. They call the public service when it is not set.
 
-To publish to Maven Central (51Degrees only):
+The production cloud does not serve `HumanConfidenceSource` yet, so the
+Human Confidence example's live tests run against the staging cloud, with
+two names that only CI uses and so have no `_51DEGREES_` prefix:
+
+- `CLOUD_STAGING_ENDPOINT`: an organization variable naming the staging
+  cloud, the API base including `/api/v4/`.
+- `RESOURCE_KEY_BESPOKE_STAGING`: an organization secret holding a Bespoke
+  resource key the staging cloud resolves.
+  [cloud-human-confidence.yml](../.github/workflows/cloud-human-confidence.yml)
+  runs the live test of the Bespoke key with it, expecting `Passive`.
+
+A cloud test with no key is skipped, naming the variable it reads.
+
+Live cloud tests run once for each operating system. The Intel macOS
+entries in [options.json](options.json) set `LiveCloudTests` to false, as
+the arm64 entries run them for macOS. On those entries
+[setup-environment.ps1](setup-environment.ps1) removes every
+`_51DEGREES_RESOURCE_KEY` name, the license key of the same account and
+`RESOURCE_KEY_BESPOKE_STAGING`, so the tests that read a key skip. It also
+sets `LIVE_CLOUD_TESTS`, a name only CI uses, to false, and the tests that
+call the cloud with a fixed key skip when it is. Every other test still runs
+there.
+
+To publish to Maven Central (51Degrees only), these organization secrets,
+which only CI uses and so have no `_51DEGREES_` prefix. common-ci reads them
+and gives them only to the jobs that sign or publish:
 
 - `MAVEN_SETTINGS`: Central Portal token.
-- `JAVA_GPG_KEY_PASSPHRASE` and `JAVA_KEY_PGP_FILE`: the key the packages are
-  signed with.
-- `CODE_SIGNING_KEY_VAULT_NAME`, `CODE_SIGNING_KEY_VAULT_URL`,
-  `CODE_SIGNING_KEY_VAULT_CLIENT_ID`, `CODE_SIGNING_KEY_VAULT_TENANT_ID`,
+- `JAVA_GPG_KEY_PASSPHRASE` and `JAVA_KEY_PGP_FILE`: the key the packages
+  are signed with.
+- `CODE_SIGNING_KEY_VAULT_NAME`,
+  `CODE_SIGNING_KEY_VAULT_URL`,
+  `CODE_SIGNING_KEY_VAULT_CLIENT_ID`,
+  `CODE_SIGNING_KEY_VAULT_TENANT_ID`,
   `CODE_SIGNING_KEY_VAULT_CLIENT_SECRET`,
   `CODE_SIGNING_KEY_VAULT_CERTIFICATE_NAME` and
   `CODE_SIGNING_KEY_VAULT_CERTIFICATE_DATA`: the key vault that signs the

@@ -58,12 +58,18 @@ public interface WebRequestEvidenceServiceCore {
      * service.
      */
     class Default implements WebRequestEvidenceServiceCore {
+        /** Create a new instance. */
+        public Default() {
+        }
 
         private static final String EVIDENCE_REQUEST_METHOD =
             EVIDENCE_SERVER_PREFIX + EVIDENCE_SEPERATOR + "request-method";
 
         private static final String EVIDENCE_REQUEST_PATH =
             EVIDENCE_SERVER_PREFIX + EVIDENCE_SEPERATOR + "request-path";
+
+        private static final String EVIDENCE_REQUEST_QUERY =
+            EVIDENCE_SERVER_PREFIX + EVIDENCE_SEPERATOR + "request-query";
 
         @Override
         public void addEvidenceFromRequest(
@@ -127,12 +133,20 @@ public interface WebRequestEvidenceServiceCore {
             
             checkAndAdd(flowData, EVIDENCE_PROTOCOL, request.getScheme());
 
-            // The method and the path of the request line, as sent.
+            // The method, the path and the query string of the request line,
+            // as sent. The query string is empty when the request has none,
+            // so an absent key means only that the request line is not
+            // supplied.
             checkAndAdd(flowData, EVIDENCE_REQUEST_METHOD, request.getMethod());
             checkAndAdd(
                 flowData,
                 EVIDENCE_REQUEST_PATH,
                 request.getRequestURI());
+            String query = request.getQueryString();
+            checkAndAdd(
+                flowData,
+                EVIDENCE_REQUEST_QUERY,
+                query == null ? "" : query);
         }
 
         /**

@@ -35,12 +35,10 @@ import java.util.List;
 @ElementBuilder
 public class RecordingElementBuilder {
 
-    @SuppressWarnings("rawtypes")
-    public static final List<FlowElement> BUILT = new ArrayList<>();
+    public static final List<FlowElement<?, ?>> BUILT = new ArrayList<>();
 
-    @SuppressWarnings("rawtypes")
-    public FlowElement build() {
-        FlowElement element = new ListSplitterElement(",", 100000);
+    public FlowElement<?, ?> build() {
+        FlowElement<?, ?> element = new ListSplitterElement(",", 100000);
         BUILT.add(element);
         return element;
     }

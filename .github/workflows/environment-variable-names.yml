@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   environment-variable-names:
-    name: No tracked file names a variable starting with a digit or an old name
+    name: Every variable name is a 51Degrees or platform name
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

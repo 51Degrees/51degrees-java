@@ -45,8 +45,7 @@ public interface ElementPropertyMetaData {
      *
      * @return {@link FlowElement} instance
      */
-    @SuppressWarnings("rawtypes")
-    FlowElement getElement();
+    FlowElement<?, ?> getElement();
 
     /**
      * The category the property belongs to.

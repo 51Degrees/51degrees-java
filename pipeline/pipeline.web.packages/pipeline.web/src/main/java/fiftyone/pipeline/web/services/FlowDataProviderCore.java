@@ -31,6 +31,11 @@ import static fiftyone.pipeline.web.Constants.HTTPCONTEXT_FLOWDATA;
 /**
  * Provider to be injected into controllers to get the pre-processed
  * {@link FlowData} for the request being serviced.
+ * <p>
+ * A Flow Data cannot be used by two threads at once. Application code reads
+ * the values it needs from the Flow Data on the request's thread, and hands
+ * those values, not the Flow Data, to any other thread or task. The Flow
+ * Data is closed when the request ends.
  */
 public interface FlowDataProviderCore {
 
@@ -47,6 +52,9 @@ public interface FlowDataProviderCore {
      * Default implementation of the {@link FlowDataProviderCore} service.
      */
     class Default implements FlowDataProviderCore {
+        /** Create a new instance. */
+        public Default() {
+        }
 
         @Override
         public FlowData getFlowData(HttpServletRequest request) {

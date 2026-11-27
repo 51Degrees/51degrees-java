@@ -35,6 +35,9 @@ import java.util.Map;
  * {@link XmlAdapter#marshal(Object)} as this is only ever used to unmarshal.
  */
 public class MapAdapter extends XmlAdapter<Object, Map<String, Object>> {
+    /** Create a new instance. */
+    public MapAdapter() {
+    }
 
     @Override
     public Map<String, Object> unmarshal(Object v) throws Exception {

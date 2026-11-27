@@ -316,7 +316,9 @@ public class JavaScriptObjectNameTests {
 
         String script = render(element);
 
-        assertTrue(script.contains("var " + name + " = new"),
+        assertTrue(Pattern.compile(
+                "var " + Pattern.quote(name) + "\\s*=\\s*new")
+                .matcher(script).find(),
             "the script should declare '" + name + "'");
         assertEquals(0, warnings().size());
     }
@@ -356,16 +358,20 @@ public class JavaScriptObjectNameTests {
     }
 
     private void assertWorkingObject(String script, String name) {
+        // The script is minified by default, so the patterns allow for the
+        // white space around '=' being taken out.
         assertTrue(Pattern.compile(
                 "var " + Pattern.quote(name) +
-                " = new fiftyoneDegreesManager\\(\\);")
+                "\\s*=\\s*new fiftyoneDegreesManager\\(\\);")
                 .matcher(script).find(),
             "the script should declare var " + name);
         if (name.equals("fod") == false) {
             assertFalse(Pattern.compile("var fod\\b").matcher(script).find(),
                 "the script should not declare var fod");
         }
-        assertTrue(script.contains("var sessionKey = \"" + name + "\";"),
+        assertTrue(Pattern.compile(
+                "var sessionKey\\s*=\\s*\"" + Pattern.quote(name) + "\";")
+                .matcher(script).find(),
             "the storage key should be " + name);
         assertTrue(script.contains("window[\"" + name + "Evidence\"]"),
             "the evidence lookup should use " + name);
@@ -406,25 +412,27 @@ public class JavaScriptObjectNameTests {
     }
 
     /**
-     * The script with the line that assigns its request parameters taken
-     * out. The script sends the page's query evidence, the requested object
-     * name included, back with its own request. The builder url encodes
-     * each value and the line holds them as JSON strings, so the requested
-     * name there is data and not code, and it is left out of the checks
-     * that the name was not written into the code. The line is found as the
-     * existing tests find it, by the word and a brace, because the template
-     * has named the declaration differently over time.
+     * The script with the object holding its request parameters taken out.
+     * The script sends the page's query evidence, the requested object name
+     * included, back with its own request. The builder url encodes each
+     * value, so no value holds a brace, and the object holds them as JSON
+     * strings, so the requested name there is data and not code, and it is
+     * left out of the checks that the name was not written into the code.
+     * The object is found by the word parameters and a brace, because the
+     * template has named the declaration differently over time, and not by
+     * line, because the script is minified by default.
      */
+    private static final Pattern PARAMETERS = Pattern.compile(
+        "(?i)\\w*parameters\\s*=\\s*" +
+        "(?:function\\s*\\(\\)\\s*\\{\\s*return\\s*)?\\{[^}]*\\}");
+
     private static String withoutParameters(String script) {
-        StringBuilder rest = new StringBuilder();
-        for (String line : script.split("\\r?\\n")) {
-            if (line.toLowerCase().contains("parameters =") &&
-                line.contains("{")) {
-                continue;
-            }
-            rest.append(line).append('\n');
-        }
-        return rest.toString();
+        Matcher matcher = PARAMETERS.matcher(script);
+        assertTrue(matcher.find(), "the script should assign its parameters");
+        String rest = matcher.replaceFirst("");
+        assertFalse(PARAMETERS.matcher(rest).find(),
+            "the script should assign its parameters once");
+        return rest;
     }
 
     private static int count(String text, String find) {
@@ -441,7 +449,6 @@ public class JavaScriptObjectNameTests {
      * and the evidence, and returns the script. No host or endpoint is set,
      * so the script makes no requests when it runs.
      */
-    @SuppressWarnings("unchecked")
     private String render(JavaScriptBuilderElement element) {
         FlowData flowData = mock(FlowData.class);
 
@@ -452,7 +459,7 @@ public class JavaScriptObjectNameTests {
         Evidence evidenceObj = mock(Evidence.class);
         when(evidenceObj.asKeyMap()).thenReturn(evidence);
         when(flowData.getEvidence()).thenReturn(evidenceObj);
-        when(flowData.tryGetEvidence(anyString(), any(Class.class)))
+        when(flowData.tryGetEvidence(anyString(), any()))
             .thenAnswer(invocation -> {
                 TryGetResult<Object> getResult = new TryGetResult<>();
                 String key = invocation.getArgument(0);
@@ -470,7 +477,7 @@ public class JavaScriptObjectNameTests {
             return result;
         }).when(flowData).getOrAdd(
             anyString(),
-            any(FlowElement.DataFactory.class));
+            any());
 
         try {
             element.process(flowData);

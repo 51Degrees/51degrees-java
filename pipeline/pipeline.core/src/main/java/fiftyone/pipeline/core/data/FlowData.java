@@ -22,9 +22,11 @@
 
 package fiftyone.pipeline.core.data;
 
+import fiftyone.pipeline.core.exceptions.PipelineDataException;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.typed.TypedKey;
+import fiftyone.pipeline.exceptions.AggregateException;
 
 import java.util.Collection;
 import java.util.List;
@@ -33,15 +35,41 @@ import java.util.Map;
 /**
  * A closeable structure to contain the inputs and outputs of {@link Pipeline}
  * processing.
+ * <p>
+ * A Flow Data is used by one thread at a time. It is not safe to use from
+ * several threads at once, even once processing has finished, and a caller
+ * that shares one across threads is responsible for any locking.
+ * <p>
+ * Closing a Flow Data may return its Element Data to an object pool, from
+ * which another request can take it. Keeping a reference to Element Data
+ * after its Flow Data is closed is not supported.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/conceptual-overview.md#flow-data">Specification</a>
+ * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/thread-safety.md#flow-data">Thread safety</a>
  */
 public interface FlowData extends AutoCloseable {
 
     /**
+     * Close the Element Data that needs it and give pooled Element Data back
+     * to its pool. It throws no checked exception, so a try-with-resources
+     * block needs no catch for it.
+     * @throws fiftyone.pipeline.core.exceptions.CloseException if closing
+     * Element Data threw a checked exception, which is the cause
+     */
+    @Override
+    void close();
+
+    /**
      * Process this FlowData via the owning Pipeline. Once this method returns
      * the FlowData will not be changed further and cannot be processed again.
+     * It is read only from then on, apart from lazy properties, so adding
+     * Evidence, Element Data or errors throws an
+     * {@link IllegalStateException}.
+     * @throws IllegalStateException if this FlowData has already been
+     * processed, or its Pipeline has been closed
+     * @throws AggregateException if a Flow Element failed and the Pipeline
+     * does not suppress process exceptions, holding each failure
      */
-    void process();
+    void process() throws IllegalStateException, AggregateException;
 
     /**
      * If this flag is set to true, future FlowElements will not process this
@@ -80,8 +108,7 @@ public interface FlowData extends AutoCloseable {
      * @param e error which was thrown
      * @param element the {@link FlowElement} which threw the error
      */
-    @SuppressWarnings("rawtypes")
-    void addError(Throwable e, FlowElement element);
+    void addError(Throwable e, FlowElement<?, ?> element);
 
     /**
      * Get an {@link Evidence} collection. Evidence should only be added via the
@@ -128,26 +155,37 @@ public interface FlowData extends AutoCloseable {
      * Get the {@link ElementData} for the requested aspect.
      * @param key the aspect to get
      * @param <T> type type of the aspect
-     * @return aspect's {@link ElementData} or null if not present
+     * @return aspect's {@link ElementData}
+     * @throws IllegalStateException if this FlowData has not been processed
+     * @throws IllegalArgumentException if the key is null
+     * @throws java.util.NoSuchElementException if no element added data
+     * under the key
      */
-    <T extends ElementData> T get(TypedKey<T> key);
+    <T extends ElementData> T get(TypedKey<T> key)
+        throws IllegalStateException, IllegalArgumentException,
+        java.util.NoSuchElementException;
 
     /**
      * Get the {@link ElementData} for the requested data key.
      * @param key to the aspect to get
-     * @return aspect's {@link ElementData} or null if not present
+     * @return aspect's {@link ElementData}
+     * @throws IllegalStateException if this FlowData has not been processed
+     * @throws java.util.NoSuchElementException if no element added data
+     * under the key
      */
-    ElementData get(String key);
+    ElementData get(String key)
+        throws IllegalStateException, java.util.NoSuchElementException;
 
     /**
      * Get the {@link ElementData} for the requested {@link ElementData}
-     * implementation. If multiple instances of the type exist then an exception
-     * is thrown.
+     * implementation.
      * @param type the type of {@link ElementData} to return
      * @param <T> the type of {@link ElementData} to return
-     * @return aspect's {@link ElementData} or null if the type is not present
+     * @return aspect's {@link ElementData}
+     * @throws PipelineDataException if no data of the type is present, or
+     * more than one instance is
      */
-    <T extends ElementData> T get(Class<T> type);
+    <T extends ElementData> T get(Class<T> type) throws PipelineDataException;
 
     /**
      * Get the ElementData for the requested {@link FlowElement}. This method
@@ -157,8 +195,11 @@ public interface FlowData extends AutoCloseable {
      * @param element {@link FlowElement} to get the data for
      * @param <T>     {@link ElementData} stored by the element
      * @return element data stored by the element
+     * @throws IllegalStateException if this FlowData has not been processed
+     * @throws IllegalArgumentException if the element is null
      */
-    <T extends ElementData> T getFromElement(FlowElement<T, ?> element);
+    <T extends ElementData> T getFromElement(FlowElement<T, ?> element)
+        throws IllegalStateException, IllegalArgumentException;
 
     /**
      * Get the specified property as the specified type.
@@ -166,8 +207,12 @@ public interface FlowData extends AutoCloseable {
      * @param key the name of the property to get
      * @param type the type to return the property value as
      * @return the property value
+     * @throws PipelineDataException if this FlowData has not been processed,
+     * or no element of the Pipeline has a property of that name
+     * @throws ClassCastException if the value is not of the type given
      */
-    <T> T getAs(String key, Class<T> type);
+    <T> T getAs(String key, Class<T> type)
+        throws PipelineDataException, ClassCastException;
 
     /**
      * Check if the flow data contains an item with the specified key name and
@@ -183,56 +228,83 @@ public interface FlowData extends AutoCloseable {
      * Get the specified property as a string.
      * @param propertyName the name of the property to get
      * @return the property value
+     * @throws PipelineDataException if this FlowData has not been processed,
+     * or no element of the Pipeline has a property of that name
+     * @throws ClassCastException if the value is not a string
      */
-    String getAsString(String propertyName);
+    String getAsString(String propertyName)
+        throws PipelineDataException, ClassCastException;
 
     /**
      * Get the specified property as a boolean.
      * @param propertyName the name of the property to get
      * @return the property value
+     * @throws PipelineDataException if this FlowData has not been processed,
+     * or no element of the Pipeline has a property of that name
+     * @throws ClassCastException if the value is not a boolean
      */
-    Boolean getAsBool(String propertyName);
+    Boolean getAsBool(String propertyName)
+        throws PipelineDataException, ClassCastException;
 
     /**
      * Get the specified property as an integer.
      * @param propertyName the name of the property to get
      * @return the property value
+     * @throws PipelineDataException if this FlowData has not been processed,
+     * or no element of the Pipeline has a property of that name
+     * @throws ClassCastException if the value is not an integer
      */
-    Integer getAsInt(String propertyName);
+    Integer getAsInt(String propertyName)
+        throws PipelineDataException, ClassCastException;
 
     /**
      * Get the specified property as a long.
      * @param propertyName the name of the property to get
      * @return the property value
+     * @throws PipelineDataException if this FlowData has not been processed,
+     * or no element of the Pipeline has a property of that name
+     * @throws ClassCastException if the value is not a long
      */
-    Long getAsLong(String propertyName);
+    Long getAsLong(String propertyName)
+        throws PipelineDataException, ClassCastException;
 
     /**
      * Get the specified property as a float.
      * @param propertyName the name of the property to get
      * @return the property value
+     * @throws PipelineDataException if this FlowData has not been processed,
+     * or no element of the Pipeline has a property of that name
+     * @throws ClassCastException if the value is not a float
      */
-    Float getAsFloat(String propertyName);
+    Float getAsFloat(String propertyName)
+        throws PipelineDataException, ClassCastException;
 
     /**
      * Get the specified property as a double.
      * @param propertyName the name of the property to get
      * @return the property value
+     * @throws PipelineDataException if this FlowData has not been processed,
+     * or no element of the Pipeline has a property of that name
+     * @throws ClassCastException if the value is not a double
      */
-    Double getAsDouble(String propertyName);
+    Double getAsDouble(String propertyName)
+        throws PipelineDataException, ClassCastException;
 
     /**
      * Get or add the specified element data to the internal map.
-     * @param <T> the type of the data being stored
+     * <p>
+     * As the key has no type, the data is returned as {@link ElementData}.
+     * Use {@link #getOrAdd(TypedKey, FlowElement.DataFactory)} to get the
+     * data as its own type.
      * @param elementDataKey the name of the element to store the data under
      * @param dataFactory the {@link fiftyone.pipeline.core.flowelements.FlowElement.DataFactory}
      *                    to use to create a new data to store if one does not
      *                    already exist
      * @return existing data matching the key, or newly added data
      */
-    <T extends ElementData> T getOrAdd(
+    ElementData getOrAdd(
         String elementDataKey,
-        FlowElement.DataFactory<T> dataFactory);
+        FlowElement.DataFactory<? extends ElementData> dataFactory);
 
     /**
      * Get or add the specified element data to the internal map.
@@ -260,12 +332,16 @@ public interface FlowData extends AutoCloseable {
     Iterable<ElementData> elementDataAsIterable();
 
     /**
-     * Get all element data values that match the specified predicate.
+     * Get all element data values that match the specified predicate. The
+     * properties of an element that added no data, and properties with no
+     * value, are left out.
      * @param matcher if a property passed to this matcher returns true then it
      *                will be included in the results
      * @return all the element data values that match the matcher
+     * @throws IllegalStateException if this FlowData has not been processed
      */
-    Map<String, String> getWhere(PropertyMatcher matcher);
+    Map<String, String> getWhere(PropertyMatcher matcher)
+        throws IllegalStateException;
 
     /**
      * Generate a {@link DataKey} that contains the evidence data from this

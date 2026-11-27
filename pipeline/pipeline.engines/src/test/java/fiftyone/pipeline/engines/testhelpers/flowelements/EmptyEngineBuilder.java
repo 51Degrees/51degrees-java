@@ -36,6 +36,11 @@ import org.slf4j.ILoggerFactory;
 import java.util.List;
 
 public class EmptyEngineBuilder extends AspectEngineBuilderBase<EmptyEngineBuilder, EmptyEngine> {
+
+    @Override
+    protected EmptyEngineBuilder self() {
+        return this;
+    }
     private long processCostTicks = 0;
 
     public EmptyEngineBuilder(ILoggerFactory loggerFactory) {
@@ -51,7 +56,6 @@ public class EmptyEngineBuilder extends AspectEngineBuilderBase<EmptyEngineBuild
         EmptyEngine engine = new EmptyEngine(
             loggerFactory.getLogger(EmptyEngine.class.getName()),
             new ElementDataFactory<EmptyEngineData>() {
-                @SuppressWarnings("unchecked")
                 @Override
                 public EmptyEngineData create(FlowData flowData, FlowElement<EmptyEngineData, ?> flowElement) {
                     return new EmptyEngineData(

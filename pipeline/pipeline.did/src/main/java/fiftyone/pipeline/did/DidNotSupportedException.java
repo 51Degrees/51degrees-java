@@ -33,6 +33,7 @@ public class DidNotSupportedException extends DidHttpException {
     private static final long serialVersionUID = 1L;
 
     /**
+     * Create a new instance.
      * @param endpoint the API base the client was pointed at
      * @param body     the body the host answered with
      */

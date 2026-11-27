@@ -37,6 +37,7 @@ import static fiftyone.pipeline.util.Check.getNotNull;
  */
 public abstract class DataBase implements Data {
 
+    /** Used for logging. */
     protected final Logger logger;
 
     private final Map<String, Object> data;
@@ -78,6 +79,14 @@ public abstract class DataBase implements Data {
             }
         }
         data.put(key, value);
+    }
+
+    /**
+     * Remove every value, so a pooled instance holds nothing of the request
+     * it served before.
+     */
+    protected void clearValues() {
+        data.clear();
     }
 
     @Override

@@ -22,26 +22,55 @@
 
 package fiftyone.ipintelligence.shared.testhelpers;
 
+import org.snakeyaml.engine.v2.api.Load;
+import org.snakeyaml.engine.v2.api.LoadSettings;
+
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.regex.Pattern;
 
+/**
+ * Gives the tests IP addresses from a YAML evidence file, which holds one
+ * record of evidence in each document.
+ */
 public class IpAddressGenerator {
+
+    /**
+     * The name a record of evidence gives its IP address under.
+     */
+    private static final String IP_ADDRESS_KEY = "server.client-ip";
 
     private final List<String> ipAddresses;
 
     private Random random = new Random();
 
-    public IpAddressGenerator(File ipAddressFile) throws IOException {
-        ipAddresses = Files.readAllLines(
-            ipAddressFile.toPath(),
-            Charset.defaultCharset());
+    /**
+     * Reads the IP address of every record that has one, in the order of
+     * the file.
+     * @param evidenceFile the YAML evidence file
+     * @throws IOException if the file cannot be read
+     */
+    public IpAddressGenerator(File evidenceFile) throws IOException {
+        ipAddresses = new ArrayList<>();
+        Load load = new Load(LoadSettings.builder().build());
+        try (Reader reader = Files.newBufferedReader(
+            evidenceFile.toPath(), StandardCharsets.UTF_8)) {
+            for (Object record : load.loadAllFromReader(reader)) {
+                if (record instanceof Map) {
+                    Object value = ((Map<?, ?>) record).get(IP_ADDRESS_KEY);
+                    if (value != null) {
+                        ipAddresses.add(value.toString());
+                    }
+                }
+            }
+        }
     }
 
     public String getRandomIpAddress(int randomness) {

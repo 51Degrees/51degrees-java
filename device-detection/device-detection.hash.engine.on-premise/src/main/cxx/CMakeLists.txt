@@ -1,17 +1,23 @@
-cmake_minimum_required(VERSION 3.0...3.10 FATAL_ERROR)
+# 3.24 or later, as cxx needs. From 3.15 CMake puts no warning level in the
+# default MSVC flags, so the level set below is the only one.
+cmake_minimum_required(VERSION 3.24)
 set (CMAKE_C_STANDARD 11)
-set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD 17)
 
 # Include the C API
 project(DeviceDetectionHashEngine VERSION 4.3.0 LANGUAGES CXX C)
 
-if (MSVC)
-    add_compile_options(/wd5105 /wd4100)
-else()
-    add_compile_options(-fPIC)
-#    if (NOT Apple)
-#    endif()
-endif()
+# Every target here, the wrapper and the cxx libraries alike, warns at /W4
+# with MSVC and at -Wall -Wextra with gcc and clang. Warnings are errors only
+# in the builds 51Degrees runs, which set the environment variable
+# _51DEGREES_WARNINGS_AS_ERRORS to true, in any case. A build anywhere else
+# shows its warnings and does not stop on one. The option can also be given
+# with -D, which takes the place of the variable.
+string(TOLOWER "$ENV{_51DEGREES_WARNINGS_AS_ERRORS}" FIFTYONE_WARNINGS_AS_ERRORS_ENV)
+string(COMPARE EQUAL "${FIFTYONE_WARNINGS_AS_ERRORS_ENV}" "true" FIFTYONE_WARNINGS_AS_ERRORS_DEFAULT)
+option(_51DEGREES_WARNINGS_AS_ERRORS
+    "Make every compiler and linker warning an error"
+    ${FIFTYONE_WARNINGS_AS_ERRORS_DEFAULT})
 
 if (MSVC)
     if (CMAKE_GENERATOR_PLATFORM)
@@ -36,7 +42,7 @@ else()
     elseif (${CMAKE_SYSTEM_PROCESSOR} MATCHES ^arm64)
         set(ARCH aarch64)
     elseif (${CMAKE_SYSTEM_PROCESSOR} MATCHES .*64.*)
-        if (32bit)
+        if (_51DEGREES_32BIT)
             set (ARCH x86)
         else()
             set (ARCH x64)
@@ -59,7 +65,7 @@ message(STATUS "OS name: ${OS}")
 # The C and C++ code is the 51degrees-cxx submodule at the root of this
 # repository. Only Device Detection is built here, without its tests.
 get_filename_component(FIFTYONE_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../../../.." ABSOLUTE)
-set(FIFTYONE_BUILD_IP_INTELLIGENCE OFF CACHE BOOL "" FORCE)
+set(_51DEGREES_BUILD_IP_INTELLIGENCE OFF CACHE BOOL "" FORCE)
 set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 include(${FIFTYONE_ROOT}/cxx/CMakeLists.txt NO_POLICY_SCOPE)
 
@@ -72,12 +78,53 @@ option(RebuildSwig "RebuildSwig" OFF)
 if (RebuildSwig)
     find_package(SWIG 4.0 COMPONENTS java)
     if (NOT SWIG_FOUND)
-        message(WARNING "SWIG executable cannot be found so will not be run")
+        message(FATAL_ERROR "RebuildSwig is on, and SWIG cannot be found")
     elseif (NOT SWIG_java_FOUND)
-        message(WARNING "SWIG does not include Java support so will not be run")
+        message(FATAL_ERROR "RebuildSwig is on, and SWIG has no Java support")
     else()
         message(STATUS "Rebuilding SWIG interfaces")
-        execute_process(COMMAND ${SWIG_EXECUTABLE} -c++ -java -I${FIFTYONE_ROOT} -package fiftyone.devicedetection.hash.engine.onpremise.interop.swig -outdir ${SRCOUT}/interop/swig -o ${CMAKE_CURRENT_LIST_DIR}/Java_Hash_Engine.cpp ${CMAKE_CURRENT_LIST_DIR}/hash_java.i)
+        # SWIG writes into the build folder, and the committed wrapper and Java
+        # proxies are replaced only when it succeeds, as a failed run removes
+        # its output files. It runs from this folder and finds cxx by a
+        # relative path, so the wrapper names no folder of this machine.
+        set(SWIGOUT ${CMAKE_CURRENT_BINARY_DIR}/swig)
+        file(REMOVE_RECURSE ${SWIGOUT})
+        file(MAKE_DIRECTORY ${SWIGOUT}/java)
+        execute_process(COMMAND ${SWIG_EXECUTABLE} -Wall -Werror -c++ -java -I../../../../.. -package fiftyone.devicedetection.hash.engine.onpremise.interop.swig -outdir ${SWIGOUT}/java -o ${SWIGOUT}/Java_Hash_Engine.cpp hash_java.i WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR} COMMAND_ERROR_IS_FATAL ANY)
+        file(GLOB NEW_PROXIES ${SWIGOUT}/java/*.java)
+        # SWIG's own std_vector.i puts a this-escape annotation on the vector
+        # constructors that take an array or an Iterable. hash_java.i makes
+        # the vector proxies final, so javac has no escape to report, and the
+        # annotation is removed from final classes only. The run stops if any
+        # proxy still turns a javac warning off.
+        foreach (PROXY ${NEW_PROXIES})
+            file(READ ${PROXY} JAVA)
+            if ("${JAVA}" MATCHES "\npublic final class ")
+                string(REGEX REPLACE "  @SuppressWarnings\\(\"this-escape\"\\)\n(  public [A-Za-z0-9_]+\\()" "\\1" JAVA "${JAVA}")
+                file(WRITE ${PROXY} "${JAVA}")
+            endif()
+            if ("${JAVA}" MATCHES "@SuppressWarnings")
+                message(FATAL_ERROR "${PROXY} turns a warning off")
+            endif()
+        endforeach()
+        file(GLOB OLD_PROXIES ${SRCOUT}/interop/swig/*.java)
+        file(REMOVE ${OLD_PROXIES})
+        file(COPY ${NEW_PROXIES} DESTINATION ${SRCOUT}/interop/swig)
+        # SWIG converts a derived class pointer to its base class through a
+        # jlong read as a pointer of another type, with no typemap to change
+        # it. Each conversion is replaced with the functions hash_java.i
+        # defines, and the run stops if one is left.
+        file(READ ${SWIGOUT}/Java_Hash_Engine.cpp WRAPPER)
+        string(REGEX REPLACE
+            "\\*\\(([^\n]+) \\*\\*\\)&baseptr = \\*\\(([^\n]+) \\*\\*\\)&jarg1;"
+            "baseptr = fiftyoneToJlong< \\1 * >(fiftyoneFromJlong< \\2 * >(jarg1));"
+            WRAPPER "${WRAPPER}")
+        string(FIND "${WRAPPER}" "&baseptr" PUNNED)
+        if (NOT PUNNED EQUAL -1)
+            message(FATAL_ERROR "A base class conversion in the SWIG wrapper was not replaced")
+        endif()
+        file(WRITE ${SWIGOUT}/Java_Hash_Engine.cpp "${WRAPPER}")
+        file(COPY_FILE ${SWIGOUT}/Java_Hash_Engine.cpp ${CMAKE_CURRENT_LIST_DIR}/Java_Hash_Engine.cpp)
     endif()
 endif()
 message(STATUS "Done SWIG interfaces")
@@ -106,10 +153,15 @@ if (NOT MSVC)
     target_compile_options(fiftyone-hash-java INTERFACE "-static-libgcc -static-libstdc++")
 endif()
 
+# The SWIG wrapper turns some MSVC warnings off unless these are defined.
+target_compile_definitions(fiftyone-hash-java PRIVATE
+    SWIG_MSC_UNSUPPRESS_4505
+    SWIG_NO_CRT_SECURE_NO_DEPRECATE
+    SWIG_NO_SCL_SECURE_NO_DEPRECATE)
 if (MSVC)
-	target_compile_options(fiftyone-hash-java PRIVATE "/D_CRT_SECURE_NO_WARNINGS" "/W4" "/WX")
+	target_compile_options(fiftyone-hash-java PRIVATE "/W4")
 else()
-	target_compile_options(fiftyone-hash-java PRIVATE ${COMPILE_OPTION_DEBUG} "-Werror")
+	target_compile_options(fiftyone-hash-java PRIVATE ${COMPILE_OPTION_DEBUG} "-Wall" "-Wextra")
 endif()
 
 # The wrapper includes through cxx/, so the folder that holds it is on the path.
@@ -124,3 +176,48 @@ endif()
 if(UNIX AND NOT APPLE)
     target_include_directories(fiftyone-hash-java PUBLIC ${JAVA_INCLUDE_PATH}/linux)
 endif()
+
+# cxx turns warnings into errors on its own libraries whatever the build. Each
+# target here, cxx's and the wrapper, follows _51DEGREES_WARNINGS_AS_ERRORS
+# instead. When it is on, the linker and the MSVC librarian stop on a warning
+# too.
+function(fiftyone_follow_warnings_switch DIR)
+	get_property(TARGETS DIRECTORY ${DIR} PROPERTY BUILDSYSTEM_TARGETS)
+	foreach (TARGET ${TARGETS})
+		get_target_property(TYPE ${TARGET} TYPE)
+		if (NOT TYPE MATCHES "_LIBRARY$|^EXECUTABLE$" OR TYPE STREQUAL "INTERFACE_LIBRARY")
+			continue()
+		endif()
+		# Set on each target rather than for the directory, as CMake 4.5
+		# warns about directory-wide commands such as add_compile_options.
+		if (MSVC)
+			target_compile_options(${TARGET} BEFORE PRIVATE /W4)
+		else()
+			target_compile_options(${TARGET} BEFORE PRIVATE -Wall -Wextra -fPIC)
+		endif()
+		set_property(TARGET ${TARGET}
+			PROPERTY COMPILE_WARNING_AS_ERROR ${_51DEGREES_WARNINGS_AS_ERRORS})
+		get_target_property(OPTIONS ${TARGET} COMPILE_OPTIONS)
+		if (OPTIONS)
+			list(REMOVE_ITEM OPTIONS "-Werror" "/WX")
+			set_property(TARGET ${TARGET} PROPERTY COMPILE_OPTIONS ${OPTIONS})
+		endif()
+		if (_51DEGREES_WARNINGS_AS_ERRORS)
+			if (MSVC AND TYPE STREQUAL "STATIC_LIBRARY")
+				set_property(TARGET ${TARGET} APPEND PROPERTY STATIC_LIBRARY_OPTIONS "/WX")
+			elseif (MSVC)
+				target_link_options(${TARGET} PRIVATE "/WX")
+			elseif (APPLE AND NOT TYPE STREQUAL "STATIC_LIBRARY")
+				target_link_options(${TARGET} PRIVATE "LINKER:-fatal_warnings")
+			elseif (NOT TYPE STREQUAL "STATIC_LIBRARY")
+				target_link_options(${TARGET} PRIVATE "LINKER:--fatal-warnings")
+			endif()
+		endif()
+	endforeach()
+	get_property(SUBDIRECTORIES DIRECTORY ${DIR} PROPERTY SUBDIRECTORIES)
+	foreach (SUBDIRECTORY ${SUBDIRECTORIES})
+		fiftyone_follow_warnings_switch(${SUBDIRECTORY})
+	endforeach()
+endfunction()
+fiftyone_follow_warnings_switch(${CMAKE_CURRENT_SOURCE_DIR})
+message(STATUS "Warnings as errors: ${_51DEGREES_WARNINGS_AS_ERRORS}")

@@ -34,15 +34,32 @@ import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
+import static fiftyone.pipeline.cloudrequestengine.Constants.Messages.NoCloudResponse;
+
 import java.util.ArrayList;
 import java.util.List;
 
 //! [class]
 //! [constructor]
+/**
+ * A cloud engine that reads the star sign from the cloud service's response.
+ */
 public class SimpleCloudEngine extends CloudAspectEngineBase<StarSignData> {
+
+    @Override
+    protected Class<StarSignData> getDataType() {
+        return StarSignData.class;
+    }
+
     private List<AspectPropertyMetaData> aspectProperties;
     private String dataSourceTier;
 
+    /**
+     * Create a new instance.
+     *
+     * @param logger used for logging
+     * @param dataFactory creates the element data this engine returns
+     */
     public SimpleCloudEngine(
         Logger logger,
         ElementDataFactory<StarSignData> dataFactory) {
@@ -88,7 +105,24 @@ public class SimpleCloudEngine extends CloudAspectEngineBase<StarSignData> {
         }
 
         CloudRequestData requestData = data.getFromElement(cloudRequestEngine);
-        String json = requestData.getJsonResponse();
+        // Wait for the cloud response. A failed request is recorded as the
+        // Cloud Request Engine's error and leaves no response to read.
+        String json = getJsonResponse(
+            data,
+            aspectData,
+            requestData,
+            cloudRequestEngine);
+        if (json == null) {
+            return;
+        }
+
+        // A failed cloud request leaves no response. The Cloud Request
+        // Engine reports why, so this engine adds no error of its own.
+        if (json == null || json.isEmpty()) {
+            logger.warn(String.format(
+                NoCloudResponse, getClass().getSimpleName()));
+            return;
+        }
 
         // Extract data from json to the aspectData instance. A cloud
         // service answers only for the products the resource key covers,

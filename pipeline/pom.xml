@@ -54,6 +54,7 @@
         <module>pipeline.cloudrequestengine</module>
         <module>pipeline.engines.fiftyone</module>
         <module>pipeline.translation</module>
+        <module>pipeline.derivedproperty</module>
         <module>pipeline.javascriptbuilder</module>
         <module>pipeline.jsonbuilder</module>
         <module>pipeline.web.packages</module>
@@ -74,12 +75,14 @@
         <org.json.version>20231013</org.json.version>
         <reflections8.version>0.11.7</reflections8.version>
         <commons-text.version>1.10.0</commons-text.version>
+        <snakeyaml-engine.version>2.7</snakeyaml-engine.version>
 
         <jakarta.xml.bind-api.version>3.0.1</jakarta.xml.bind-api.version>
         <jaxb-runtime.version>3.0.2</jaxb-runtime.version>
         <jaxb-impl.version>3.0.2</jaxb-impl.version>
 
         <mustache-compiler.version>0.9.14</mustache-compiler.version>
+        <minifier.version>1.0</minifier.version>
         <graal-js-scriptengine.version>22.0.0.2</graal-js-scriptengine.version>
         <graal-js.version>22.0.0.2</graal-js.version>
 
@@ -95,11 +98,53 @@
         <maven-project-info-reports-plugin.version>2.6</maven-project-info-reports-plugin.version>
         <maven-site-plugin.version>3.7</maven-site-plugin.version>
         <central-publishing-maven-plugin.version>0.7.0</central-publishing-maven-plugin.version>
-        <maven-pmd-plugin.version>3.26.0</maven-pmd-plugin.version>
+        <maven-pmd-plugin.version>3.28.0</maven-pmd-plugin.version>
 
         <skippackagesign>true</skippackagesign>
         <skipPublishing>false</skipPublishing>
+
+        <!-- Whether a compiler or tool warning stops the build. The
+             warnings-as-errors profile below sets it. -->
+        <fiftyone.warningsAsErrors>false</fiftyone.warningsAsErrors>
     </properties>
+
+    <profiles>
+        <!-- On JDK 9 and later, compile against the Java 8 API itself, which
+             these packages target, rather than against the newer JDK's own
+             classes with only the source and target set to 8. javac then
+             links every call to a method Java 8 has, as Java 8 users will run
+             the code. Without it, a call such as ByteBuffer.clear() links to
+             the override that JDK 9 added, which Java 8 does not have. JDK 8
+             has no release option and compiles against its own API. -->
+        <profile>
+            <id>java-8-api</id>
+            <activation>
+                <jdk>[9,)</jdk>
+            </activation>
+            <properties>
+                <maven.compiler.release>8</maven.compiler.release>
+            </properties>
+        </profile>
+        <!-- javac's warnings and PMD's findings are shown in every build,
+             and stop it only in the builds 51Degrees runs, which set the
+             environment variable _51DEGREES_WARNINGS_AS_ERRORS to true. A
+             build from a clone anywhere else does not stop on a warning.
+             Maven reads failOnWarning and failOnViolation as true only for
+             the word true, in any case, so any other value leaves warnings
+             as warnings. -->
+        <profile>
+            <id>warnings-as-errors</id>
+            <activation>
+                <property>
+                    <name>env._51DEGREES_WARNINGS_AS_ERRORS</name>
+                </property>
+            </activation>
+            <properties>
+                <fiftyone.warningsAsErrors>${env._51DEGREES_WARNINGS_AS_ERRORS}</fiftyone.warningsAsErrors>
+            </properties>
+        </profile>
+    
+    </profiles>
 
     <dependencyManagement>
         <dependencies>
@@ -114,6 +159,11 @@
                 <groupId>org.json</groupId>
                 <artifactId>json</artifactId>
                 <version>${org.json.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.snakeyaml</groupId>
+                <artifactId>snakeyaml-engine</artifactId>
+                <version>${snakeyaml-engine.version}</version>
             </dependency>
 
             <!-- test dependencies -->
@@ -171,9 +221,9 @@
                         <source>${maven.compiler.source}</source>
                         <target>${maven.compiler.target}</target>
                         <showWarnings>true</showWarnings>
+                        <failOnWarning>${fiftyone.warningsAsErrors}</failOnWarning>
                         <compilerArgs>
-                            <arg>-Xlint:all,-try,-options</arg>
-                            <arg>-Werror</arg>
+                            <arg>-Xlint:all</arg>
                         </compilerArgs>
                     </configuration>
                 </plugin>
@@ -240,7 +290,7 @@
                         <logback.configurationFile>${maven.multiModuleProjectDirectory}/logback.xml</logback.configurationFile>
                         <!-- this sets the scope of file search (inter alia in Utils.getFilePath) to the project directory-->
                         <!--suppress UnresolvedMavenProperty -->
-                        <project.root>${maven.multiModuleProjectDirectory}</project.root>
+                        <_51DEGREES_PROJECT_ROOT>${maven.multiModuleProjectDirectory}</_51DEGREES_PROJECT_ROOT>
                         <!-- for JavaScriptBuilderTests -->
                         <polyglot.engine.WarnInterpreterOnly>false</polyglot.engine.WarnInterpreterOnly>
                     </systemPropertyVariables>
@@ -272,24 +322,16 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>${maven-javadoc-plugin.version}</version>
                 <configuration>
-                    <doclint>none</doclint>
-                    <quiet>true</quiet>
-<!--                    <tags>
-                        &lt;!&ndash; Parse DoxyGen tags cleanly. &ndash;&gt;
-                        <tag>
-                            <name>example</name>
-                            <placement>t</placement>
-                            <head>Example</head>
-                        </tag>
-                        <tag>
-                            <name>include</name>
-                            <placement>t</placement>
-                        </tag>
-                        <tag>
-                            <name>include{doc}</name>
-                            <placement>t</placement>
-                        </tag>
-                    </tags>-->
+                    <!-- Every javadoc check is on, and any warning fails the
+                         build. A module that leaves a check out says why in
+                         its own pom. -->
+                    <doclint>all</doclint>
+                    <failOnWarnings>${fiftyone.warningsAsErrors}</failOnWarnings>
+                    <!-- Maven would link each module's javadoc to the other
+                         modules' under the project URL, which is the repository
+                         and serves no javadoc, and fails to find one for
+                         pipeline.aggregate, which has no sources. -->
+                    <detectOfflineLinks>false</detectOfflineLinks>
                 </configuration>
                 <executions>
                     <execution>
@@ -369,12 +411,9 @@
                         <ruleset>${maven.multiModuleProjectDirectory}/ci/pmd-resource-ruleset.xml</ruleset>
                     </rulesets>
                     <includeTests>true</includeTests>
-                    <failOnViolation>true</failOnViolation>
+                    <failOnViolation>${fiftyone.warningsAsErrors}</failOnViolation>
                     <printFailingErrors>true</printFailingErrors>
                     <linkXRef>false</linkXRef>
-                    <excludes>
-                        <exclude>**/interop/swig/*.java</exclude>
-                    </excludes>
                 </configuration>
                 <executions>
                     <execution>
@@ -406,9 +445,12 @@
         </license>
     </licenses>
 
-    <scm>
-        <url>https://github.com/51Degrees/pipeline-java</url>
-        <connection>scm:git:git://github.com/51Degrees/pipeline-java.git</connection>
-        <developerConnection>scm:git:info@51degrees.com:51Degrees/pipeline-java.git</developerConnection>
+    <scm child.scm.connection.inherit.append.path="false"
+         child.scm.developerConnection.inherit.append.path="false"
+         child.scm.url.inherit.append.path="false">
+        <url>https://github.com/51Degrees/51degrees-java</url>
+        <connection>scm:git:https://github.com/51Degrees/51degrees-java.git</connection>
+        <developerConnection>scm:git:https://github.com/51Degrees/51degrees-java.git</developerConnection>
     </scm>
+
 </project>

@@ -22,30 +22,28 @@
 
 package fiftyone.pipeline.engines.flowelements;
 
+import fiftyone.pipeline.core.data.ElementDataBase;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
-import fiftyone.pipeline.core.typed.TypedKey;
-import fiftyone.pipeline.core.typed.TypedKeyDefault;
 import fiftyone.pipeline.engines.caching.FlowCache;
 import fiftyone.pipeline.engines.configuration.LazyLoadingConfiguration;
 import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectDataBase;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
-import fiftyone.pipeline.engines.data.ProcessCallable;
 import fiftyone.pipeline.engines.services.MissingPropertyService;
-import fiftyone.pipeline.util.Types;
 import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Base class for {@link AspectEngine}s to extend. This implements the data
  * update service and missing property service along with everything
  * already implemented by {@link FlowElementBase}.
+ * @param <TData> the type of element data the engine returns
+ * @param <TProperty> the type of the property metadata
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/conceptual-overview.md#aspect-engine">Specification</a>
  */
 public abstract class AspectEngineBase<
@@ -56,10 +54,10 @@ public abstract class AspectEngineBase<
 
     private LazyLoadingConfiguration lazyLoadingConfiguration = null;
 
-    private ExecutorService executor = null;
-
+    /** Explains why a property has no value. */
     protected MissingPropertyService missingPropertyService;
 
+    /** Caches results, or null when there is no cache. */
     protected FlowCache cache = null;
 
     /**
@@ -75,17 +73,6 @@ public abstract class AspectEngineBase<
     }
 
     @Override
-    public TypedKey<TData> getTypedDataKey() {
-        if (typedKey == null) {
-            typedKey = new TypedKeyDefault<>(
-                getElementDataKey(),
-                Types.findSubClassParameterType(this, AspectEngineBase.class, 0));
-        }
-        return typedKey;
-
-    }
-
-    @Override
     public abstract List<TProperty> getProperties();
 
     @Override
@@ -97,10 +84,17 @@ public abstract class AspectEngineBase<
         cache.setFlowElement(this);
     }
 
+    /**
+     * Deprecated, and has no effect. The configuration is kept so that it can
+     * be read back, but the Engine always processes on the thread that
+     * processes the Flow Data, and no executor is created. Long-running work
+     * is a lazy property of the Engine's own Element Data instead.
+     * @param configuration ignored apart from being kept
+     * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/advanced-features/lazy-loading.md">Specification</a>
+     */
     @Override
     public void setLazyLoading(LazyLoadingConfiguration configuration) {
         this.lazyLoadingConfiguration = configuration;
-        this.executor = lazyLoadingConfiguration.getExecutorService();
     }
 
     @Override
@@ -108,9 +102,13 @@ public abstract class AspectEngineBase<
         return lazyLoadingConfiguration;
     }
 
+    /**
+     * Deprecated. Lazy loading has no effect, so no executor is created.
+     * @return always null
+     */
     @Override
     public ExecutorService getExecutor() {
-        return executor;
+        return null;
     }
 
     /**
@@ -136,6 +134,38 @@ public abstract class AspectEngineBase<
     }
 
     /**
+     * Whether a processed result may be stored in the cache. A result that
+     * holds a value created for the one request that asked for it, such as a
+     * 51Did, must be neither stored nor served. See the
+     * <a href="https://github.com/51Degrees/specifications/blob/d79bbe3b2aef86273570742f6b660f29bfe72816/pipeline-specification/features/caching.md#L151-L156">caching specification</a>:
+     * "A cache MUST NOT store a result that holds such a value, and MUST NOT
+     * serve one that it finds."
+     * <p>
+     * It is asked about a processed result before it is stored.
+     * {@link #isServable} is asked about a result found in the cache before
+     * it is served.
+     * @param data the result to check
+     * @return true, unless an engine overrides this to keep a result out of
+     * the cache
+     */
+    protected boolean isCacheable(TData data) {
+        return true;
+    }
+
+    /**
+     * Whether a result found in the cache may be served. By default the
+     * answer is {@link #isCacheable}'s. An engine whose result is still being
+     * worked out by a lazy task when it is stored overrides this, so that a
+     * result is served only once its task has finished and the finished
+     * result may be served.
+     * @param data the result found in the cache
+     * @return true if the result may be served
+     */
+    protected boolean isServable(TData data) {
+        return isCacheable(data);
+    }
+
+    /**
      * Private method that checks if the result is already in the cache or not.
      * If it is then the result is added to 'data', if not then
      * {@link #processEngine(FlowData, AspectData)}is called to do so.
@@ -143,18 +173,17 @@ public abstract class AspectEngineBase<
      *                 and holds the result.
      * @throws Exception if there was an exception during processing
      */
-    @SuppressWarnings("unchecked")
     private void processWithCache(final FlowData flowData) throws Exception {
         TData cacheResult = null;
 
         if (cache != null) {
             Object cacheResultsObject = cache.get(flowData);
-            if (cacheResultsObject != null &&
-                getTypedDataKey().getType().isAssignableFrom(
-                    cacheResultsObject.getClass())) {
-                // This is checked.
-                //noinspection unchecked
-                cacheResult = (TData)cacheResultsObject;
+            Class<TData> type = getTypedDataKey().getType();
+            if (type.isInstance(cacheResultsObject)) {
+                TData cached = type.cast(cacheResultsObject);
+                if (isServable(cached)) {
+                    cacheResult = cached;
+                }
             }
         }
         // If we don't have a result from the cache then
@@ -169,34 +198,30 @@ public abstract class AspectEngineBase<
                 ((AspectDataBase) aspectData).addEngine(this);
             }
 
-            // Start the engine processing
-            if (lazyLoadingConfiguration != null) {
-                // If lazy loading is configured then create a task
-                // to do the processing and assign the task to the
-                // aspect data property.
-                ((AspectDataBase) aspectData).addProcessCallable(
-                    new ProcessCallable(this) {
-                        @Override
-                        public Void call() throws Exception {
-                            processEngine(flowData, aspectData);
-                            return null;
-                        }
-                    }
-                );
-            }
-            else {
-                // If not lazy loading, just start processing.
-                processEngine(flowData, aspectData);
-            }
-            // If there is a cache then add the result
-            // of processing to the cache.
-            if (cache != null) {
-                cache.put(flowData, flowData.getFromElement(this));
-            }
+            // Process on this thread, whether or not the deprecated lazy
+            // loading option is set, then cache the result if it may be.
+            processEngine(flowData, aspectData);
+            putInCache(flowData, aspectData);
         } else {
             // We have a result from the cache so add it
             // into the flow data.
             flowData.getOrAdd(getTypedDataKey(), new DataFactorySimple<>(cacheResult));
+        }
+    }
+
+    /**
+     * Add a processed result to the cache, if there is one and the result
+     * may be cached. A result that is stored is kept out of its pool,
+     * because the cache holds it after this Flow Data is closed.
+     * @param flowData the {@link FlowData} whose Evidence makes the key
+     * @param aspectData the processed result
+     */
+    private void putInCache(FlowData flowData, TData aspectData) {
+        if (cache != null && isCacheable(aspectData)) {
+            if (aspectData instanceof ElementDataBase) {
+                ((ElementDataBase) aspectData).keepFromPool();
+            }
+            cache.put(flowData, aspectData);
         }
     }
 
@@ -207,18 +232,6 @@ public abstract class AspectEngineBase<
                 cache.close();
             } catch (IOException e) {
                 logger.warn("Exception closing the cache", e);
-            }
-        }
-        if (executor != null) {
-            executor.shutdown();
-            try {
-                if (executor.awaitTermination(
-                    lazyLoadingConfiguration.getPropertyTimeoutMillis(),
-                    TimeUnit.MILLISECONDS) == false) {
-                    executor.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                executor.shutdownNow();
             }
         }
     }

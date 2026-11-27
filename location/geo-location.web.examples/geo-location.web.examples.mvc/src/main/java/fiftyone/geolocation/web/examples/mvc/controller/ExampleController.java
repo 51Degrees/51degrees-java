@@ -33,19 +33,35 @@ import fiftyone.pipeline.web.mvc.components.FlowDataProvider;
 
 import javax.servlet.http.HttpServletRequest;
 
+/** Shows the location of the request on the example page. */
 @Controller
 @RequestMapping("/")
 public class ExampleController {
 
     private FlowDataProvider flowDataProvider;
 
+    /**
+     * Create a new instance.
+     *
+     * @param flowDataProvider gives the Flow Data for each request
+     */
     @Autowired
     public ExampleController(FlowDataProvider flowDataProvider) {
         this.flowDataProvider = flowDataProvider;
     }
 
+    /**
+     * Show the location of the request.
+     *
+     * @param model holds the values the page shows
+     * @param request the request to find the location of
+     * @return the name of the view
+     */
     @RequestMapping(method = RequestMethod.GET)
     public String get(ModelMap model, HttpServletRequest request) {
+        // A Flow Data cannot be used by two threads at once. Work handed to
+        // another thread or task gets the values it needs, read here on the
+        // request's thread, not the Flow Data.
         FlowData data = flowDataProvider.getFlowData(request);
         GeoData geo = data.get(GeoData.class);
 

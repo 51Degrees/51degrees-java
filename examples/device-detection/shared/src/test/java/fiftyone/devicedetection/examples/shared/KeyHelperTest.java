@@ -22,13 +22,16 @@
 
 package fiftyone.devicedetection.examples.shared;
 
+import org.junit.AssumptionViolatedException;
 import org.junit.Test;
 
-import java.util.Collections;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
@@ -51,8 +54,7 @@ public class KeyHelperTest {
         // A test can clear a system property but not an environment
         // variable.
         assumeTrue(name + " is set in the environment",
-            System.getenv(name) == null &&
-                System.getenv(name.toUpperCase()) == null);
+            System.getenv(name) == null);
         String saved = System.clearProperty(name);
         try {
             assertNull(KeyHelper.getOrSetTestResourceKey(false));
@@ -64,60 +66,108 @@ public class KeyHelperTest {
         }
     }
 
+    /**
+     * A key is read from the environment under the name given, and from
+     * the system property of that name when the environment has none.
+     */
     @Test
-    public void requireResourceKey_NoKey_FailsNamingEveryName() {
-        AssertionError error = assertThrows(AssertionError.class, () ->
-            KeyHelper.requireResourceKey(name -> null,
-                Collections.singletonList(KeyHelper.TEST_RESOURCE_KEY),
-                "whether a device is mobile", "device"));
+    public void readKey_ReadsTheEnvironmentThenTheSystemProperty() {
+        String name = "Key_Helper_Test_Name";
+        Map<String, String> environment = new HashMap<>();
+        environment.put("KEY_HELPER_TEST_NAME", KEY_A);
+        assertNull(KeyHelper.readKey(name, environment::get));
+        assertNull(KeyHelper.getNamedKey(name, environment::get));
+        System.setProperty(name, KEY_B);
+        try {
+            assertEquals(KEY_B, KeyHelper.readKey(name, environment::get));
+            assertEquals(KEY_B,
+                KeyHelper.getNamedKey(name, environment::get));
+            environment.put(name, KEY_A);
+            assertEquals(KEY_A, KeyHelper.readKey(name, environment::get));
+            assertEquals(KEY_A,
+                KeyHelper.getNamedKey(name, environment::get));
+        } finally {
+            System.clearProperty(name);
+        }
+    }
+
+    @Test
+    public void testResourceKey_IsTheSharedName() {
+        assertEquals("_51DEGREES_RESOURCE_KEY", KeyHelper.TEST_RESOURCE_KEY);
+    }
+
+    /**
+     * A test with no key is skipped, naming the variable to set, rather
+     * than failed.
+     */
+    @Test
+    public void requireResourceKey_NoKey_SkipsNamingTheVariable() {
+        AssumptionViolatedException skipped = assertThrows(
+            AssumptionViolatedException.class, () ->
+                KeyHelper.requireResourceKey(name -> null,
+                    KeyHelper.TEST_RESOURCE_KEY,
+                    "whether a device is mobile", "device"));
         assertEquals("This test calls the live 51Degrees cloud service, so " +
-                "it needs a resource key and there is nothing to fall back " +
-                "on. None of _51DEGREES_RESOURCE_KEY, " +
-                "_51DEGREES_RESOURCE_KEY_BESPOKE, TestResourceKey is set, as " +
-                "an environment variable or as a system property, tried in " +
-                "that order. The key has to carry the device product, " +
-                "because the test asks the service for whether a device is " +
-                "mobile. To see the products a key carries, open " +
+                "it needs a resource key, and it is skipped because " +
+                "_51DEGREES_RESOURCE_KEY is not set as an environment " +
+                "variable or as a system property. The key has to carry the " +
+                "device product, because the test asks the service for " +
+                "whether a device is mobile. To see the products a key " +
+                "carries, open " +
                 "https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>. " +
                 "Create a key at " + KeyHelper.CREATE_KEY_URL + ".",
-            error.getMessage());
+            skipped.getMessage());
+    }
+
+    @Test
+    public void bespokeResourceKeyVariable_IsTheEveryPropertyName() {
+        assertEquals("_51DEGREES_RESOURCE_KEY_BESPOKE",
+            KeyHelper.BESPOKE_RESOURCE_KEY_VARIABLE);
     }
 
     @Test
     public void requireResourceKey_TwoProducts_NamesBoth() {
-        AssertionError error = assertThrows(AssertionError.class, () ->
-            KeyHelper.requireResourceKey(name -> null,
-                Collections.singletonList("SuperResourceKey"),
-                "the devices that match a TAC", "hardware", "device"));
-        assertTrue(error.getMessage(), error.getMessage().contains(
-            "None of _51DEGREES_RESOURCE_KEY, " +
-                "_51DEGREES_RESOURCE_KEY_BESPOKE, SuperResourceKey is set"));
-        assertTrue(error.getMessage(), error.getMessage().contains(
+        AssumptionViolatedException skipped = assertThrows(
+            AssumptionViolatedException.class, () ->
+                KeyHelper.requireResourceKey(name -> null,
+                    KeyHelper.BESPOKE_RESOURCE_KEY_VARIABLE,
+                    "the devices that match a TAC", "hardware", "device"));
+        assertTrue(skipped.getMessage(), skipped.getMessage().contains(
+            "skipped because _51DEGREES_RESOURCE_KEY_BESPOKE is not set"));
+        assertTrue(skipped.getMessage(), skipped.getMessage().contains(
             "carry the hardware and device products, because"));
     }
 
     /**
-     * A name holding something that is not a key, such as the empty
-     * string the example poms pass for a key that is not set, is passed
-     * over.
+     * Only the name the test gives is read. A key under another name,
+     * such as the one every cloud example reads, does not stand in for the
+     * key with every property.
      */
     @Test
-    public void requireResourceKey_FirstValidNameWins() {
+    public void requireResourceKey_ReadsOnlyTheNameGiven() {
         Map<String, String> values = new HashMap<>();
-        values.put("_51DEGREES_RESOURCE_KEY", "");
-        values.put("_51DEGREES_RESOURCE_KEY_BESPOKE", KEY_A);
-        values.put(KeyHelper.TEST_RESOURCE_KEY, KEY_B);
-        assertEquals(KEY_A, KeyHelper.requireResourceKey(values::get,
-            Collections.singletonList(KeyHelper.TEST_RESOURCE_KEY),
-            "whether a device is mobile", "device"));
+        values.put(KeyHelper.TEST_RESOURCE_KEY, KEY_A);
+        assertThrows(AssumptionViolatedException.class, () ->
+            KeyHelper.requireResourceKey(values::get,
+                KeyHelper.BESPOKE_RESOURCE_KEY_VARIABLE,
+                "the devices that match a TAC", "hardware", "device"));
     }
 
+    /**
+     * A name holding something that is not a key, such as an empty string,
+     * is passed over.
+     */
     @Test
-    public void requireResourceKey_ExampleNameAfterSharedNames() {
+    public void requireResourceKey_ValueThatIsNotAKey_IsPassedOver() {
         Map<String, String> values = new HashMap<>();
+        values.put(KeyHelper.TEST_RESOURCE_KEY, "");
+        assertThrows(AssumptionViolatedException.class, () ->
+            KeyHelper.requireResourceKey(values::get,
+                KeyHelper.TEST_RESOURCE_KEY,
+                "whether a device is mobile", "device"));
         values.put(KeyHelper.TEST_RESOURCE_KEY, KEY_B);
         assertEquals(KEY_B, KeyHelper.requireResourceKey(values::get,
-            Collections.singletonList(KeyHelper.TEST_RESOURCE_KEY),
+            KeyHelper.TEST_RESOURCE_KEY,
             "whether a device is mobile", "device"));
     }
 
@@ -132,5 +182,85 @@ public class KeyHelperTest {
                 "the device product gets.",
             KeyHelper.answeredWithout("BrowserName",
                 "BrowserName is a paid feature", "device"));
+    }
+
+    /**
+     * A test of a cloud example reads the key with every property. A key
+     * under the name the example reads does not stand in for it.
+     */
+    @Test
+    public void requireTestResourceKey_ReadsTheKeyWithEveryProperty() {
+        String example = "_51DEGREES_RESOURCE_KEY";
+        String bespoke = "_51DEGREES_RESOURCE_KEY_BESPOKE";
+        // A test can set a system property but not an environment
+        // variable.
+        assumeTrue(System.getenv(example) == null &&
+            System.getenv(bespoke) == null);
+        String savedExample = System.getProperty(example);
+        String savedBespoke = System.clearProperty(bespoke);
+        try {
+            System.setProperty(example, KEY_A);
+            AssumptionViolatedException skipped = assertThrows(
+                AssumptionViolatedException.class, () ->
+                    KeyHelper.requireTestResourceKey(
+                        "whether a device is mobile", "device"));
+            assertTrue(skipped.getMessage(),
+                skipped.getMessage().contains(bespoke + " is not set"));
+            System.setProperty(bespoke, KEY_B);
+            assertEquals(KEY_B, KeyHelper.requireTestResourceKey(
+                "whether a device is mobile", "device"));
+        } finally {
+            putBack(example, savedExample);
+            putBack(bespoke, savedBespoke);
+        }
+    }
+
+    private static void putBack(String name, String value) {
+        if (value == null) {
+            System.clearProperty(name);
+        } else {
+            System.setProperty(name, value);
+        }
+    }
+
+    /**
+     * A cloud example runs as an application, with no test library on its
+     * class path, and reads its key with KeyHelper. So KeyHelper has to
+     * load, and find a key, where JUnit cannot be found.
+     */
+    @Test
+    public void findResourceKey_NoJUnitOnTheClassPath_FindsTheKey()
+        throws Exception {
+        try (URLClassLoader loader = withoutJUnit()) {
+            Class<?> helper = Class.forName(KeyHelper.class.getName(), true,
+                loader);
+            assertNotSame(KeyHelper.class, helper);
+            String key = (String) helper
+                .getMethod("findResourceKey", String.class, String.class)
+                .invoke(null, KEY_A, KeyHelper.TEST_RESOURCE_KEY);
+            assertEquals(KEY_A, key);
+        }
+    }
+
+    /**
+     * A class loader with KeyHelper's own class files, that cannot see
+     * JUnit.
+     */
+    private static URLClassLoader withoutJUnit() {
+        String helpers = KeyHelper.class.getPackage().getName() + ".";
+        ClassLoader parent = new ClassLoader(
+            KeyHelper.class.getClassLoader()) {
+            @Override
+            protected Class<?> loadClass(String name, boolean resolve)
+                throws ClassNotFoundException {
+                if (name.startsWith("org.junit.") ||
+                    name.startsWith(helpers)) {
+                    throw new ClassNotFoundException(name);
+                }
+                return super.loadClass(name, resolve);
+            }
+        };
+        return new URLClassLoader(new URL[]{KeyHelper.class
+            .getProtectionDomain().getCodeSource().getLocation()}, parent);
     }
 }

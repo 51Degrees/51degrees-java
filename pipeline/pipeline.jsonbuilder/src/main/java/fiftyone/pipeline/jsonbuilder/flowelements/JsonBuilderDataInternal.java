@@ -28,10 +28,26 @@ import fiftyone.pipeline.jsonbuilder.data.JsonBuilderData;
 import org.slf4j.Logger;
 
 //! [class]
+/** Default implementation of {@link JsonBuilderData}. */
 public class JsonBuilderDataInternal extends ElementDataBase implements JsonBuilderData {
     
+    /**
+     * Create a new instance.
+     *
+     * @param logger used for logging
+     * @param flowData the Flow Data this element data belongs to
+     */
     public JsonBuilderDataInternal(Logger logger, FlowData flowData) {
         super(logger, flowData);
+    }
+
+    /**
+     * Holds only its values, so it is reused through its Flow Element's
+     * pool once the Flow Data that holds it is closed.
+     */
+    @Override
+    protected boolean isPoolable() {
+        return true;
     }
 
     @Override

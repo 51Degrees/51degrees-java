@@ -35,16 +35,34 @@ import org.slf4j.ILoggerFactory;
 import java.util.List;
 
 
+/** Builder for the {@link HardwareProfileCloudEngine}. */
 @ElementBuilder
 public class HardwareProfileCloudEngineBuilder extends AspectEngineBuilderBase<
     HardwareProfileCloudEngineBuilder,
     HardwareProfileCloudEngine> {
+
+    @Override
+    protected HardwareProfileCloudEngineBuilder self() {
+        return this;
+    }
+
     private final ILoggerFactory loggerFactory;
 
+    /**
+     * Create a new builder.
+     *
+     * @param loggerFactory creates the loggers the engine uses
+     */
     public HardwareProfileCloudEngineBuilder(ILoggerFactory loggerFactory) {
         this.loggerFactory = loggerFactory;
     }
 
+    /**
+     * Build an engine using the current options.
+     *
+     * @return a new engine
+     * @throws Exception if the engine could not be created
+     */
     public HardwareProfileCloudEngine build() throws Exception {
         return buildEngine();
     }

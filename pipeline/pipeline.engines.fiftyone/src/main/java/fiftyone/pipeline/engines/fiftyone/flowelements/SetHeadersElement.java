@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -56,6 +57,11 @@ import static fiftyone.pipeline.engines.fiftyone.data.SetHeadersData.*;
  */
 public class SetHeadersElement
 	extends FlowElementBase<SetHeadersData, ElementPropertyMetaData> {
+
+    @Override
+    protected Class<SetHeadersData> getDataType() {
+        return SetHeadersData.class;
+    }
 	/**
 	 * The element data key.
 	 */
@@ -72,23 +78,22 @@ public class SetHeadersElement
 	public static final String SET_HEADER_PREFIX_LOWER_CASE = "setheader";
 	
 	private final EvidenceKeyFilter evidenceKeyFilter;
-	private final List<ElementPropertyMetaData> properties;
+	private final Object propertiesLock = new Object();
+	private volatile List<ElementPropertyMetaData> properties = null;
 	private final Hashtable<Pipeline, PipelineConfig> pipelineConfigs;
 
-	@SuppressWarnings("this-escape")
+	/**
+	 * Create a new instance.
+	 *
+	 * @param logger used for logging
+	 * @param elementDataFactory creates the element data this element returns
+	 */
 	public SetHeadersElement(
 		Logger logger,
 		ElementDataFactory<SetHeadersData> elementDataFactory) {
 		super(logger, elementDataFactory);
 		evidenceKeyFilter =
 			new EvidenceKeyFilterWhitelist(new ArrayList<String>());
-		properties = Collections.singletonList(
-			(ElementPropertyMetaData)new ElementPropertyMetaDataDefault(
-				RESPONSE_HEADER_PROPERTY_NAME,
-				this,
-				"",
-				HashMap.class,
-				true));
 		pipelineConfigs = new Hashtable<Pipeline, PipelineConfig>();
 	}
 //! [constructor]
@@ -119,7 +124,7 @@ public class SetHeadersElement
 		}
 		
 		SetHeadersData elementData = data.getOrAdd(
-			getElementDataKey(),
+			getTypedDataKey(),
 			getDataFactory());
 		
 		HashMap<String, String> responseHeaders =
@@ -137,9 +142,30 @@ public class SetHeadersElement
 		return evidenceKeyFilter;
 	}
 
+	/**
+	 * The properties are created on first use rather than in the
+	 * constructor, as each refers to this element.
+	 */
 	@Override
 	public List<ElementPropertyMetaData> getProperties() {
-		return properties;
+		List<ElementPropertyMetaData> result = properties;
+		if (result == null) {
+			synchronized (propertiesLock) {
+				result = properties;
+				if (result == null) {
+					result = Collections.singletonList(
+						(ElementPropertyMetaData)
+							new ElementPropertyMetaDataDefault(
+								RESPONSE_HEADER_PROPERTY_NAME,
+								this,
+								"",
+								HashMap.class,
+								true));
+					properties = result;
+				}
+			}
+		}
+		return result;
 	}
 	
 	@Override
@@ -157,9 +183,8 @@ public class SetHeadersElement
 	 * @return true if every element of the Pipeline has loaded its
 	 * properties
 	 */
-	@SuppressWarnings("rawtypes")
 	private static boolean allPropertiesLoaded(Pipeline pipeline) {
-		for (FlowElement element : pipeline.getFlowElements()) {
+		for (FlowElement<?, ?> element : pipeline.getFlowElements()) {
 			if (element.hasLoadedProperties() == false) {
 				return false;
 			}
@@ -235,7 +260,7 @@ public class SetHeadersElement
 		PipelineConfig config = new PipelineConfig();
 		pipeline.getElementAvailableProperties().forEach((k, v) -> {
 			v.forEach((p, m) -> {
-				if (p.toLowerCase()
+				if (p.toLowerCase(Locale.ROOT)
 					.startsWith(SET_HEADER_PREFIX_LOWER_CASE)) {
 					PropertyDetails details = new PropertyDetails();
 					details.propertyMetaData = m;
@@ -277,6 +302,11 @@ public class SetHeadersElement
 	 * Internal class to hold 'SetHeader' properties available per pipeline.
 	 */
 	protected class PipelineConfig {
+	    /** Create a new instance. */
+	    protected PipelineConfig() {
+	    }
+
+		/** The SetHeader properties, by name. */
 		public Map<String, PropertyDetails> setHeaderProperties =
 			new HashMap<String, PropertyDetails>();
 	}
@@ -286,7 +316,13 @@ public class SetHeadersElement
 	 * header to set.
 	 */
 	protected class PropertyDetails {
+	    /** Create a new instance. */
+	    protected PropertyDetails() {
+	    }
+
+		/** The property that gives the header value. */
 		public ElementPropertyMetaData propertyMetaData;
+		/** The name of the response header to set. */
 		public String responseHeaderName;
 	}
 }

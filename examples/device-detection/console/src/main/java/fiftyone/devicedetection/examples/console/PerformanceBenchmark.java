@@ -22,6 +22,7 @@
 
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.common.testhelpers.LogbackHelper;
 import fiftyone.devicedetection.DeviceDetectionOnPremisePipelineBuilder;
 import fiftyone.devicedetection.DeviceDetectionPipelineBuilder;
@@ -46,7 +47,7 @@ import java.util.concurrent.*;
 
 import static fiftyone.devicedetection.examples.shared.DataFileHelper.getDataFileLocation;
 import static fiftyone.devicedetection.examples.shared.DataFileHelper.getEvidenceFile;
-import static fiftyone.devicedetection.shared.testhelpers.FileUtils.LITE_HASH_DATA_FILE_PATH;
+import static fiftyone.devicedetection.examples.shared.DataFileHelper.LITE_HASH_DATA_FILE_PATH;
 import static fiftyone.pipeline.engines.Constants.PerformanceProfiles.*;
 
 /**
@@ -58,6 +59,12 @@ import static fiftyone.pipeline.engines.Constants.PerformanceProfiles.*;
  * for more information about adjusting performance.
  */
 public class PerformanceBenchmark {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-devicedetection-examples-console-performancebenchmark.java";
+
     // the default number of threads if one is not provided.
     public static final int DEFAULT_NUMBER_OF_THREADS = 4;
     // the number of tests to execute.
@@ -106,6 +113,8 @@ public class PerformanceBenchmark {
                 evidenceFilename,
                 numberOfThreads,
                 new PrintWriter(System.out,true));
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     /**
@@ -320,7 +329,7 @@ public class PerformanceBenchmark {
 
         BenchmarkRunnable(Pipeline pipeline, List<Map<String, String>> evidence) {
             this.testList = evidence;
-            // initialise the benchmark variables
+            // initialize the benchmark variables
             this.pipeline = pipeline;
             this.result = new BenchmarkResult();
 
@@ -337,28 +346,33 @@ public class PerformanceBenchmark {
             for (Map<String, String> evidence : testList) {
                 // the benchmark is for detection time only
 
-                // A try-with-resource block MUST be used for the
-                // FlowData instance. This ensures that native resources
+                // The FlowData instance MUST be closed in a finally
+                // block. This ensures that native resources
                 // created by the device detection engine are freed.
-                try (FlowData flowData = pipeline.createFlowData()) {
-                    flowData
-                            .addEvidence(evidence)
-                            .process();
+                try {
+                    FlowData flowData = pipeline.createFlowData();
+                    try {
+                        flowData
+                                .addEvidence(evidence)
+                                .process();
 
-                    // Calculate a checksum to compare different runs on
-                    // the same data.
-                    DeviceData device = flowData.get(DeviceData.class);
-                    if (device != null) {
-                        if (device.getIsMobile().hasValue()) {
-                            Object value = device.getIsMobile().getValue();
-                            if (value != null) {
-                                result.checkSum += value.hashCode();
+                        // Calculate a checksum to compare different runs on
+                        // the same data.
+                        DeviceData device = flowData.get(DeviceData.class);
+                        if (device != null) {
+                            if (device.getIsMobile().hasValue()) {
+                                Object value = device.getIsMobile().getValue();
+                                if (value != null) {
+                                    result.checkSum += value.hashCode();
+                                }
                             }
                         }
-                    }
-                    result.count++;
-                    if (result.count >= TESTS_PER_THREAD) {
-                        break;
+                        result.count++;
+                        if (result.count >= TESTS_PER_THREAD) {
+                            break;
+                        }
+                    } finally {
+                        flowData.close();
                     }
                 } catch (Exception e) {
                     logger.error("Exception getting flow data", e);
@@ -378,7 +392,7 @@ public class PerformanceBenchmark {
         // processing time in millis this thread
         private long elapsedMillis;
 
-        // used to ensure compiler optimiser doesn't optimise out the very
+        // used to ensure compiler optimizer doesn't optimize out the very
         // method that the benchmark is testing.
         private int checkSum;
 

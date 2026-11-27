@@ -32,13 +32,19 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
-@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+/** Finds the data and evidence files the tests use. */
 public class FileUtils {
+
+    /**
+     * Makes an instance. Every member is static, so an instance is not
+     * needed, and the constructor is public for code that makes one.
+     */
+    public FileUtils() {
+    }
     /**
      * Name of the aligned environment variable or system property which can
      * supply an explicit path to the IPI data file. When set and the file
@@ -47,24 +53,17 @@ public class FileUtils {
     public static final String IPI_PATH_VARIABLE = "_51DEGREES_IPI_PATH";
 
     /**
-     * The old name of {@link #IPI_PATH_VARIABLE}, read only when that one
-     * is not set.
-     * @deprecated use {@link #IPI_PATH_VARIABLE}, and set the variable it
-     * names in place of this one.
+     * Name of an Enterprise data file, searched for when
+     * {@link #ENTERPRISE_IPI_V41_DATA_FILE_NAME} is not found.
      */
-    @Deprecated
-    public static final String IPI_PATH_ENV_VAR = "51DEGREES_IPI_PATH";
-
-    // Set once the use of the deprecated name has been reported.
-    private static final AtomicBoolean OLD_NAME_REPORTED =
-        new AtomicBoolean(false);
-
     public static final String ENTERPRISE_IPI_DATA_FILE_NAME = "Enterprise-IpIntelligenceV41.ipi";
 
+    /** Name of the Enterprise data file, searched for first. */
     public static final String ENTERPRISE_IPI_V41_DATA_FILE_NAME = "51Degrees-EnterpriseIpiV41.ipi";
+    /** Name of the free Lite data file. */
     public static final String LITE_IPI_DATA_FILE_NAME = "51Degrees-LiteV41.ipi";
     private static  Optional<File> IPI_DATA_FILE;
-    public static final String IP_ADDRESSES_FILE_NAME = "evidence.csv";
+    /** Name of the evidence file the tests use. */
     public static final String EVIDENCE_FILE_NAME = "evidence.yml";
     private static Optional<File> EVIDENCE_FILE;
 
@@ -114,26 +113,12 @@ public class FileUtils {
 
     /**
      * Check the aligned {@link #IPI_PATH_VARIABLE} environment variable and
-     * system property for an explicit path to the IPI data file, and when
-     * neither is set the deprecated {@link #IPI_PATH_ENV_VAR}, whose first
-     * use is reported on standard error.
+     * system property for an explicit path to the IPI data file.
      *
      * @return a file if the path is set and the file exists, otherwise null
      */
     private static File getExplicitHashFile() {
         String explicitPath = environmentOrProperty(IPI_PATH_VARIABLE);
-        if (Objects.isNull(explicitPath)) {
-            explicitPath = environmentOrProperty(IPI_PATH_ENV_VAR);
-            if (Objects.nonNull(explicitPath)
-                && OLD_NAME_REPORTED.compareAndSet(false, true)) {
-                System.err.println(
-                    "The environment variable " + IPI_PATH_ENV_VAR
-                    + " is deprecated and " + IPI_PATH_VARIABLE
-                    + " replaces it. Set " + IPI_PATH_VARIABLE
-                    + " to the same value, as a later release may no longer "
-                    + "read " + IPI_PATH_ENV_VAR + ".");
-            }
-        }
         if (Objects.nonNull(explicitPath)) {
             File explicitFile = new File(explicitPath);
             if (explicitFile.exists()) {
@@ -156,6 +141,12 @@ public class FileUtils {
         return Objects.isNull(value) || value.isEmpty() ? null : value;
     }
 
+    /**
+     * Find the evidence file the tests use, searching once and keeping the
+     * result.
+     *
+     * @return the file, or null if it was not found
+     */
     public static File getEvidenceFile() {
         if (Objects.nonNull(EVIDENCE_FILE)) {
             return EVIDENCE_FILE.orElse(null);

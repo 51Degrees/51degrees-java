@@ -40,10 +40,27 @@ public interface FileWrapperFactory {
      */
     FileWrapper build(String path);
 
+    /**
+     * Whether a file exists.
+     *
+     * @param path path of the file
+     * @return true if it exists
+     */
     boolean exists(String path);
 
+    /**
+     * Get the time a file was last modified.
+     *
+     * @param path path of the file
+     * @return the time in milliseconds since the epoch
+     */
     long getLastModified(String path);
 
+    /**
+     * Delete a file.
+     *
+     * @param path path of the file
+     */
     void delete(String path);
 
 }

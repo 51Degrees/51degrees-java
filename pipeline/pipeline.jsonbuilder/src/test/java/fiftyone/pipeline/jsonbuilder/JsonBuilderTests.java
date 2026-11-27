@@ -64,7 +64,6 @@ import org.mockito.stubbing.Answer;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 
-@SuppressWarnings("unused")
 public class JsonBuilderTests {
     private TestLoggerFactory loggerFactory;
     private EmptyEngine testEngine;
@@ -73,7 +72,8 @@ public class JsonBuilderTests {
     private FlowData flowData;
     private JsonBuilderData result;
     private Pipeline pipeline;
-    
+    private List<FlowError> flowErrors;
+
     public JsonBuilderTests() {
         ILoggerFactory internalLogger = mock(ILoggerFactory.class);
         when(internalLogger.getLogger(anyString())).thenReturn(mock(Logger.class));
@@ -114,6 +114,81 @@ public class JsonBuilderTests {
         Map<String, Map<String, ElementPropertyMetaData>> propertyMetaData =
             new HashMap<>();
         when(pipeline.getElementAvailableProperties()).thenReturn(propertyMetaData);
+
+        flowErrors = new ArrayList<>();
+    }
+
+    /**
+     * The errors are a list of their messages under the top-level key
+     * errors, in the order the Flow Data holds them, whichever element
+     * recorded each. See the Process section of the JSON Builder
+     * specification.
+     */
+    @Test
+    public void JsonBuilder_Errors_ListOfMessages() throws Exception {
+        FlowElement<?, ?> first = mock(FlowElement.class);
+        when(first.getElementDataKey()).thenReturn("first");
+        FlowElement<?, ?> second = mock(FlowElement.class);
+        when(second.getElementDataKey()).thenReturn("second");
+        flowErrors.add(new FlowError.Default(
+            new Exception("first element, one"), first));
+        flowErrors.add(new FlowError.Default(
+            new Exception("second element"), second));
+        flowErrors.add(new FlowError.Default(
+            new Exception("first element, two"), first));
+
+        String json = testIteration(1);
+
+        JSONArray errors = new JSONObject(json).getJSONArray("errors");
+        assertEquals(
+            Arrays.asList(
+                "first element, one",
+                "second element",
+                "first element, two"),
+            errors.toList(),
+            json);
+    }
+
+    /**
+     * An error whose throwable has no message is written as the throwable's
+     * type, so the list holds only text.
+     */
+    @Test
+    public void JsonBuilder_Errors_NoMessage_WritesType() throws Exception {
+        FlowElement<?, ?> element = mock(FlowElement.class);
+        when(element.getElementDataKey()).thenReturn("element");
+        flowErrors.add(new FlowError.Default(
+            new IllegalStateException(), element));
+
+        String json = testIteration(1);
+
+        JSONArray errors = new JSONObject(json).getJSONArray("errors");
+        assertEquals(
+            Collections.singletonList(IllegalStateException.class.getName()),
+            errors.toList(),
+            json);
+    }
+
+    /**
+     * An error with no throwable has no message to write, so it is left out,
+     * and with no messages at all the key errors is left out too.
+     */
+    @Test
+    public void JsonBuilder_Errors_NoThrowable_LeftOut() throws Exception {
+        FlowElement<?, ?> element = mock(FlowElement.class);
+        flowErrors.add(new FlowError.Default(null, element));
+
+        String json = testIteration(1);
+        assertFalse(new JSONObject(json).has("errors"), json);
+
+        flowErrors.add(new FlowError.Default(
+            new Exception("the message"), element));
+
+        json = testIteration(1);
+        assertEquals(
+            Collections.singletonList("the message"),
+            new JSONObject(json).getJSONArray("errors").toList(),
+            json);
     }
 
     /**
@@ -125,6 +200,35 @@ public class JsonBuilderTests {
         String json = testIteration(1);
 
         assertTrue(isExpectedJson(json));
+    }
+
+    /**
+     * Element and property names are lower cased in the root locale, so a
+     * capital I keeps its dot under a Turkish default locale, which would
+     * otherwise lower it to a dotless i that the client script never reads.
+     */
+    @Test
+    public void JsonBuilder_TurkishLocale_NamesLowerCasedInRootLocale()
+        throws Exception {
+        Map<String, Object> values = new HashMap<>();
+        values.put("IsMobile", "True");
+        ElementData element = mock(ElementData.class);
+        doReturn(values).when(element).asKeyMap();
+        Map<String, Object> data = new HashMap<>();
+        data.put("IpData", element);
+
+        Locale original = Locale.getDefault();
+        Locale.setDefault(Locale.forLanguageTag("tr-TR"));
+        String json;
+        try {
+            json = testIteration(1, data);
+        } finally {
+            Locale.setDefault(original);
+        }
+
+        JSONObject obj = new JSONObject(json);
+        assertTrue(obj.has("ipdata"), json);
+        assertEquals("True", obj.getJSONObject("ipdata").opt("ismobile"), json);
     }
 
     /**
@@ -208,18 +312,18 @@ public class JsonBuilderTests {
      * Check that nested properties are serialised as expected
      * @throws Exception
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void JsonBuilder_NestedProperties() throws Exception {
 
         Map<String, Object> map = new HashMap<>();
-        map.put("property", new ArrayList<NestedData>());
-        ((List<NestedData>)map.get("property")).add(new NestedData(
+        List<NestedData> nested = new ArrayList<>();
+        map.put("property", nested);
+        nested.add(new NestedData(
             loggerFactory.getLogger(NestedData.class.getSimpleName()),
             flowData,
             "abc",
             123));
-        ((List<NestedData>)map.get("property")).add(new NestedData(
+        nested.add(new NestedData(
             loggerFactory.getLogger(NestedData.class.getSimpleName()),
             flowData,
             "xyz",
@@ -551,6 +655,67 @@ public class JsonBuilderTests {
         }
     }
 
+    /**
+     * A Property assigned no value is written as null with its nullreason,
+     * and a Property whose value is null without being assigned no value has
+     * no entry and no nullreason. See the Process section of the JSON
+     * Builder specification.
+     */
+    @Test
+    public void JsonBuilder_NoValue_WrittenAsNullWithReason()
+            throws Exception {
+        AspectPropertyValueDefault<String> noValue =
+            new AspectPropertyValueDefault<>();
+        noValue.setNoValueMessage("There is no value.");
+        Map<String, Object> map = new HashMap<>();
+        map.put("novalue", noValue);
+        map.put("plainnull", null);
+        map.put("property", "thisIsAValue");
+        when(elementDataMock.asKeyMap()).thenReturn(map);
+
+        String json = testIteration(1);
+
+        JSONObject element = new JSONObject(json).getJSONObject("test");
+        assertTrue(element.has("novalue"), json);
+        assertTrue(element.isNull("novalue"), json);
+        assertEquals("There is no value.",
+            element.getString("novaluenullreason"), json);
+        assertFalse(element.has("plainnull"), json);
+        assertFalse(element.has("plainnullnullreason"), json);
+        assertEquals("thisIsAValue", element.getString("property"), json);
+    }
+
+    /**
+     * Each item of a list of Element Data follows the same rules, so an
+     * item's Property assigned no value is written as null with its
+     * nullreason.
+     */
+    @Test
+    public void JsonBuilder_ListOfElementData_NoValueWrittenAsNull()
+            throws Exception {
+        AspectPropertyValueDefault<String> noValue =
+            new AspectPropertyValueDefault<>();
+        noValue.setNoValueMessage("No value for this item.");
+        Map<String, Object> itemValues = new HashMap<>();
+        itemValues.put("value1", noValue);
+        itemValues.put("value2", "xyz");
+        ElementData item = mock(ElementData.class);
+        when(item.asKeyMap()).thenReturn(itemValues);
+        Map<String, Object> map = new HashMap<>();
+        map.put("items", Collections.singletonList(item));
+        when(elementDataMock.asKeyMap()).thenReturn(map);
+
+        String json = testIteration(1);
+
+        JSONObject first = new JSONObject(json).getJSONObject("test")
+            .getJSONArray("items").getJSONObject(0);
+        assertTrue(first.has("value1"), json);
+        assertTrue(first.isNull("value1"), json);
+        assertEquals("No value for this item.",
+            first.getString("value1nullreason"), json);
+        assertEquals("xyz", first.getString("value2"), json);
+    }
+
     private String testIteration(int iteration) throws Exception {
         return testIteration(iteration, null);
     }
@@ -561,7 +726,6 @@ public class JsonBuilderTests {
         return testIteration(iteration, data, null);
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     private String testIteration(
         int iteration,
         Map<String, Object> data,
@@ -586,18 +750,19 @@ public class JsonBuilderTests {
         session.setValue("somesessionid");
         TryGetResult<Integer> sequence = new TryGetResult<>();
         sequence.setValue(iteration);
-        when(flowData.tryGetEvidence(eq("query.session-id"), any(Class.class))).thenReturn(session);
-        when(flowData.tryGetEvidence(eq("query.sequence"), any(Class.class))).thenReturn(sequence);
+        doReturn(session).when(flowData).tryGetEvidence(eq("query.session-id"), any());
+        doReturn(sequence).when(flowData).tryGetEvidence(eq("query.sequence"), any());
         when(flowData.getWhere(any(PropertyMatcher.class))).thenReturn(jsPropertyNames);
 
         final JsonBuilderData[] result = {null};
-        when(flowData.getOrAdd(anyString(), any(FlowElement.DataFactory.class)))
+        when(flowData.getOrAdd(anyString(), any()))
             .thenAnswer((Answer<ElementData>) invocationOnMock -> {
-                FlowElement.DataFactory f = invocationOnMock.getArgument(1);
+                FlowElement.DataFactory<?> f = invocationOnMock.getArgument(1);
                 result[0] = (JsonBuilderData)f.create(flowData);
                 return result[0];
             });
         when(flowData.getPipeline()).thenReturn(pipeline);
+        when(flowData.getErrors()).thenReturn(flowErrors);
 
         jsonBuilderElement.process(flowData);
 

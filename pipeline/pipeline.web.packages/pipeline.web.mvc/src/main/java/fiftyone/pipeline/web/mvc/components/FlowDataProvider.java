@@ -27,11 +27,20 @@ import org.springframework.stereotype.Component;
 
 /**
  * Spring framework component for the {@link FlowDataProviderCore}.
+ * <p>
+ * A Flow Data cannot be used by two threads at once. Application code reads
+ * the values it needs from the Flow Data on the request's thread, and hands
+ * those values, not the Flow Data, to any other thread or task. The Flow
+ * Data is closed when the request ends.
  */
 @Component
 public interface FlowDataProvider extends FlowDataProviderCore {
 
+    /** Default implementation of {@link FlowDataProvider}. */
     @Component
     class Default extends FlowDataProviderCore.Default implements FlowDataProvider {
+        /** Create a new instance. */
+        public Default() {
+        }
     }
 }

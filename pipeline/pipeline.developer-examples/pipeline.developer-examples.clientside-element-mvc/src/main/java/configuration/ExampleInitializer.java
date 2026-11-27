@@ -24,7 +24,11 @@ package configuration;
 
 import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
 
+/** Sets up the Spring dispatcher servlet with {@link ExampleConfig}. */
 public class ExampleInitializer extends AbstractAnnotationConfigDispatcherServletInitializer {
+    /** Create a new instance. */
+    public ExampleInitializer() {
+    }
 
     @Override
     protected Class<?>[] getRootConfigClasses() {

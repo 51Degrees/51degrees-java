@@ -22,8 +22,10 @@
 
 package fiftyone.devicedetection.web;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.devicedetection.examples.shared.KeyHelper;
 import fiftyone.devicedetection.examples.web.EmbedJetty;
+import fiftyone.devicedetection.examples.web.GettingStartedWebCloud;
 import org.eclipse.jetty.server.Server;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -69,13 +71,16 @@ public class GettingStartedWebCloudTest {
             "the browser and platform of a known User-Agent", "device");
         // The example's configuration file reads the key from here.
         System.setProperty(KeyHelper.TEST_RESOURCE_KEY, resourceKey);
-        SERVER = EmbedJetty.startWebApp(getFilePath(resourceBase).getAbsolutePath(), 8081);
+        // Listen on the example's default port, so the request below to
+        // port 5151 checks that the example listens there.
+        SERVER = EmbedJetty.startWebApp(getFilePath(resourceBase).getAbsolutePath(),
+            GettingStartedWebCloud.DEFAULT_PORT);
     }
 
     @Test
     public void testWebCloud() throws Exception {
         HttpURLConnection connection =
-                (HttpURLConnection) new URL("http://localhost:8081/").openConnection();
+                (HttpURLConnection) new URL("http://localhost:5151/").openConnection();
         connection.setRequestProperty("User-Agent", USER_AGENT);
 
         int code = connection.getResponseCode();
@@ -90,6 +95,9 @@ public class GettingStartedWebCloudTest {
             body.contains("<strong>cloud device detection engine</strong>"));
         assertDetected(body, "Browser Name", "BrowserName", "Chrome");
         assertDetected(body, "Platform Name", "PlatformName", "Windows");
+        assertTrue("The page should end with the '" + FindOutMore.HEADING +
+                "' section. " + body, body.contains(
+                        "<h2>" + FindOutMore.HEADING + "</h2>"));
     }
 
     /**

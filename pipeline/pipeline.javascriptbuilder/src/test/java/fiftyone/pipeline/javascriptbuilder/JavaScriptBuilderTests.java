@@ -199,7 +199,6 @@ public class JavaScriptBuilderTests {
         }
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void Valid_Js() throws Exception {
         configureMocks();
@@ -209,7 +208,6 @@ public class JavaScriptBuilderTests {
         assertTrue(isValidFodObject(result.getJavaScript(), "device", "ismobile", true));
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void JavaScriptBuilder_NoJson() {
         configureMocks();
@@ -223,7 +221,6 @@ public class JavaScriptBuilderTests {
      * Verify that valid JavaScript is produced when there are delayed execution
      * properties in the payload.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void JavaScriptBuilderElement_DelayExecution() throws Exception {
         configureMocks();
@@ -252,12 +249,13 @@ public class JavaScriptBuilderTests {
      * Verify that the JavaScript contains the Session ID and Sequence
      */
     @Test
-    @SuppressWarnings("unchecked")
     public void JavaScriptBuilderElement_VerifySession() throws Exception {
         configureMocks();
 
+        // Not minified, so the declarations read as the template writes them.
         javaScriptBuilderElement =
                 new JavaScriptBuilderElementBuilder(loggerFactory)
+                        .setMinify(false)
                         .build();
         javaScriptBuilderElement.process(flowData);
 
@@ -270,7 +268,6 @@ public class JavaScriptBuilderTests {
      * Check that the callback URL is generated correctly.
      */
     @Test
-    @SuppressWarnings("unchecked")
     public void JavaScriptBuilderElement_VerifyUrl() throws Exception {
         configureMocks();
 
@@ -295,7 +292,6 @@ public class JavaScriptBuilderTests {
                     "Samsung,1.09199,2.1121121",
                     "Sony,3.123455,44.1123111"}
     )
-    @SuppressWarnings("unchecked")
     public void JavaScriptBuilderElement_VerifyParameters(String userAgent, String lat, String lon) throws Exception {
         this.userAgent = userAgent;
         latitude = lat;
@@ -326,8 +322,10 @@ public class JavaScriptBuilderTests {
             throws Exception {
         configureMocks();
 
+        // Not minified, so the script is read line by line as written.
         javaScriptBuilderElement =
                 new JavaScriptBuilderElementBuilder(loggerFactory)
+                        .setMinify(false)
                         .build();
         javaScriptBuilderElement.process(flowData);
         String javaScript = result.getJavaScript();
@@ -371,16 +369,17 @@ public class JavaScriptBuilderTests {
      * leaves the script with no parameters, and the URL is still built.
      */
     @Test
-    @SuppressWarnings("unchecked")
     public void JavaScriptBuilderElement_NoParameters() throws Exception {
         configureMocks();
         evidence.remove(EVIDENCE_QUERY_USERAGENT_KEY);
         evidence.remove("query.latitude");
         evidence.remove("query.longitude");
 
+        // Not minified, so the script is read line by line as written.
         javaScriptBuilderElement =
                 new JavaScriptBuilderElementBuilder(loggerFactory)
                         .setEndpoint("/json")
+                        .setMinify(false)
                         .build();
         javaScriptBuilderElement.process(flowData);
 
@@ -423,7 +422,6 @@ public class JavaScriptBuilderTests {
      */
     @ParameterizedTest
     @EnumSource(ExceptionCase.class)
-    @SuppressWarnings("unchecked")
     public void JavaScriptBuilderElement_Promise(ExceptionCase exceptionCase) {
         configureMocks();
 
@@ -463,7 +461,6 @@ public class JavaScriptBuilderTests {
      * Check that the JavaScript object name can be overridden successfully.
      */
     @Test
-    @SuppressWarnings("unchecked")
     public void JavaScriptBuilderElement_VerifyObjName() throws Exception {
         configureMocks();
         String jsonObjName = "testObj";
@@ -484,7 +481,6 @@ public class JavaScriptBuilderTests {
         return res.toString().equals(value.toString());
     }
 
-    @SuppressWarnings("unchecked")
     private void configureMocks() {
         if (json == null) {
             json = new JSONObject();
@@ -518,7 +514,7 @@ public class JavaScriptBuilderTests {
         Evidence evidenceObj = mock(Evidence.class);
         when(evidenceObj.asKeyMap()).thenReturn(evidence);
         when(flowData.getEvidence()).thenReturn(evidenceObj);
-        when(flowData.tryGetEvidence(anyString(), any(Class.class))).thenAnswer(
+        when(flowData.tryGetEvidence(anyString(), any())).thenAnswer(
                 invocation -> {
                     TryGetResult<Object> getResult = new TryGetResult<>();
                     if (evidence.containsKey((String) invocation.getArgument(0))) {
@@ -543,13 +539,14 @@ public class JavaScriptBuilderTests {
         when(flowData.get(SequenceElement.DEFAULT_ELEMENT_DATA_KEY))
             .thenReturn(sequenceData);
 
-        when(flowData.getAs(anyString(), any(Class.class))).thenReturn(new AspectPropertyValueDefault<>("None"));
+        doReturn(new AspectPropertyValueDefault<>("None"))
+            .when(flowData).getAs(anyString(), any());
 
         doAnswer((Answer<Object>) invocation -> {
             FlowElement.DataFactory<JavaScriptBuilderData> factory =
                     invocation.getArgument(1);
             result = factory.create(flowData);
             return result;
-        }).when(flowData).getOrAdd(anyString(), any(FlowElement.DataFactory.class));
+        }).when(flowData).getOrAdd(anyString(), any());
     }
 }

@@ -37,12 +37,18 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * Used for Interpolation of ${variable} in PipelineOptions and elsewhere
  */
 public class FiftyOneLookup {
+    /** Create a new instance. */
+    public FiftyOneLookup() {
+    }
 
     private static final Map<String, StringLookup> customLookups= new HashMap<>();
     static {
         customLookups.put("envsys", new EnvSysLookup());
         customLookups.put("filepath", new FilePathLookup());
     }
+    /**
+     * Resolves the envsys and filepath lookups as well as the standard ones.
+     */
     public static StringLookup FIFTYONE_LOOKUP =
             StringLookupFactory.INSTANCE.interpolatorStringLookup(customLookups,null,true);
     /**
@@ -79,6 +85,11 @@ public class FiftyOneLookup {
             }
         }
     }
+    /**
+     * Create a substitutor that uses {@link #FIFTYONE_LOOKUP}.
+     *
+     * @return a new substitutor
+     */
     public static StringSubstitutor  getSubstitutor() {
         return new FiftyOneStringSubstitutor(FIFTYONE_LOOKUP);
     }
@@ -90,8 +101,12 @@ public class FiftyOneLookup {
      * via envsys, which means that - for example - ${sys:USER} yields ${env:USER}
      * which is not what we want.
      */
-    public static class FiftyOneStringSubstitutor extends StringSubstitutor {
-        @SuppressWarnings("this-escape")
+    public static final class FiftyOneStringSubstitutor extends StringSubstitutor {
+        /**
+         * Create a new instance.
+         *
+         * @param variableResolver resolves each variable
+         */
         public FiftyOneStringSubstitutor(StringLookup variableResolver) {
             super(variableResolver);
             setEnableSubstitutionInVariables(true);

@@ -46,6 +46,7 @@
 
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.IPIntelligenceCloudPipelineBuilder;
 import fiftyone.ipintelligence.IPIntelligencePipelineBuilder;
 import fiftyone.ipintelligence.examples.shared.KeyHelper;
@@ -71,11 +72,17 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * <p>
  * Access to the Cloud service is configured using a "resource key". The resource key can be
  * supplied as a command line argument, or via the environment variable or system property
- * "TestResourceKey". An optional second command line argument, or the environment variable or
- * system property "TestCloudEndPoint", can be used to direct the example at a custom hosted
+ * "_51DEGREES_RESOURCE_KEY". An optional second command line argument, or the environment variable or
+ * system property "_51DEGREES_CLOUD_ENDPOINT", can be used to direct the example at a custom hosted
  * Cloud service.
  */
 public class GetAllPropertiesCloud {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-ipintelligence-examples-console-getallpropertiescloud.java";
+
     private static final Logger logger = LoggerFactory.getLogger(GetAllPropertiesCloud.class);
 
     /**
@@ -88,13 +95,21 @@ public class GetAllPropertiesCloud {
 
         // Use the resource key from the command line, environment variable or
         // system property.
-        String resourceKey = args.length > 0 ? args[0] :
-                KeyHelper.getOrSetTestResourceKey();
+        String resourceKey = KeyHelper.findResourceKey(
+                args.length > 0 ? args[0] : null);
+        if (resourceKey == null) {
+            KeyHelper.writeNoResourceKey(System.out, EXAMPLE_TAG);
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES);
+            return;
+        }
         // An optional custom endpoint for a self-hosted Cloud service.
         String endPoint = args.length > 1 ? args[1] :
                 KeyUtils.getNamedKey(GettingStartedCloud.CLOUD_END_POINT_NAME);
 
         run(resourceKey, endPoint, System.out);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.CLOUD_REPOSITORIES);
     }
 
     /**
@@ -118,10 +133,13 @@ public class GetAllPropertiesCloud {
         }
 
         // Create the pipeline
-        try (Pipeline pipeline = builder.build()) {
+        Pipeline pipeline = builder.build();
+        try {
             // Output details for the IP address
             analyzeEvidence(SOME_IP_ADDRESS, pipeline, outputStream);
             logger.info("All done");
+        } finally {
+            pipeline.close();
         }
     }
 
@@ -130,7 +148,8 @@ public class GetAllPropertiesCloud {
                                         OutputStream out) throws Exception {
         PrintWriter writer = new PrintWriter(out);
         // Create the FlowData instance.
-        try (FlowData data = pipeline.createFlowData()) {
+        FlowData data = pipeline.createFlowData();
+        try {
             // Add the client IP as evidence.
             data.addEvidence("query.client-ip", ipAddress);
             // Process the supplied evidence.
@@ -148,6 +167,8 @@ public class GetAllPropertiesCloud {
                         property.getKey(),
                         getValueToOutput(property.getValue()));
             }
+        } finally {
+            data.close();
         }
         writer.println();
         writer.flush();

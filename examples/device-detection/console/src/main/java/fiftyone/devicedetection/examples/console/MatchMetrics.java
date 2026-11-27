@@ -22,6 +22,7 @@
 
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.devicedetection.DeviceDetectionPipelineBuilder;
 import fiftyone.devicedetection.examples.shared.DataFileHelper;
 import fiftyone.devicedetection.examples.shared.EvidenceHelper;
@@ -45,7 +46,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
-import static fiftyone.devicedetection.shared.testhelpers.FileUtils.LITE_HASH_DATA_FILE_PATH;
+import static fiftyone.devicedetection.examples.shared.DataFileHelper.LITE_HASH_DATA_FILE_PATH;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 import static java.util.stream.Collectors.groupingBy;
 
@@ -61,6 +62,12 @@ import static java.util.stream.Collectors.groupingBy;
  * page.
  */
 public class MatchMetrics {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-devicedetection-examples-console-matchmetrics.java";
+
     private static final Logger logger = LoggerFactory.getLogger(MatchMetrics.class);
 
     /**
@@ -76,6 +83,8 @@ public class MatchMetrics {
         String dataFilename = DataFileHelper.getDataFileLocation(
                 args.length > 0 ? args[0] : LITE_HASH_DATA_FILE_PATH);
         run(dataFilename, EvidenceHelper.setUpEvidence(), false, System.out);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     /**
@@ -95,7 +104,7 @@ public class MatchMetrics {
 
         // Build a new Pipeline to use an on-premise Hash engine with the
         // low memory performance profile.
-        try (Pipeline pipeline = new DeviceDetectionPipelineBuilder()
+        Pipeline pipeline = new DeviceDetectionPipelineBuilder()
                 .useOnPremise(dataFile, true)
                 .setAutoUpdate(false)
                 // Prefer low memory profile where all data streamed from disk
@@ -127,14 +136,16 @@ public class MatchMetrics {
                 // https://51degrees.com/documentation/_device_detection__hash.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-matchmetrics.java&utm_term=run#DeviceDetection_Hash_DataSetProduction_Performance
                 .setUsePredictiveGraph(true)
                 .setUsePerformanceGraph(false)
-                .build()) {
+                .build();
+        try {
 
             DataFileHelper.logDataFileInfo(pipeline.getElement(DeviceDetectionHashEngine.class));
 
-            // A try-with-resource block MUST be used for the FlowData instance.
+            // The FlowData instance MUST be closed in a finally block.
             // This ensures that native resources created by the device
             // detection engine are freed.
-            try (FlowData data = pipeline.createFlowData()) {
+            FlowData data = pipeline.createFlowData();
+            try {
 
                 // Process a single evidence to retrieve the values
                 // associated with the user-agent and other evidence such as sec-ch-* for the
@@ -225,11 +236,15 @@ public class MatchMetrics {
                     });
                 });
                 writer.println();
+            } finally {
+                data.close();
             }
             if (DataFileHelper.isLiteDataFile(
                     pipeline.getElement(DeviceDetectionHashEngine.class))) {
                 DataFileHelper.writeEnterpriseOffer(writer, CONTACT_US);
             }
+        } finally {
+            pipeline.close();
         }
         logger.info("Finished Match Metrics Example");
     }

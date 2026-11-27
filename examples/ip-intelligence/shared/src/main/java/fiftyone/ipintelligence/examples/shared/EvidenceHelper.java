@@ -70,7 +70,6 @@ public class EvidenceHelper {
      * @return an Iterable
      * @throws IOException for file errors
      */
-    @SuppressWarnings("unchecked")
     public static Iterable<Map<String, String>> getEvidenceIterable(File yamlFile) throws IOException {
         final Iterator<Object> objectIterator =
                 new Yaml().loadAll(Files.newInputStream(yamlFile.toPath())).iterator();
@@ -82,7 +81,21 @@ public class EvidenceHelper {
 
             @Override
             public Map<String, String> next() {
-                return (Map<String, String>) objectIterator.next();
+                // Each YAML document is a map of evidence names to values,
+                // copied here with each name and value as a string. An
+                // entry with no name or no value is not evidence, so it is
+                // skipped.
+                Map<String, String> evidence = new HashMap<>();
+                for (Map.Entry<?, ?> entry :
+                        ((Map<?, ?>) objectIterator.next()).entrySet()) {
+                    if (entry.getKey() == null || entry.getValue() == null) {
+                        continue;
+                    }
+                    evidence.put(
+                            String.valueOf(entry.getKey()),
+                            String.valueOf(entry.getValue()));
+                }
+                return evidence;
             }
         };
     }

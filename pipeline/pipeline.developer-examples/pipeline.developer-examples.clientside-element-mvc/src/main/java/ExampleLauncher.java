@@ -24,11 +24,22 @@ import org.apache.catalina.LifecycleException;
 
 import static fiftyone.pipeline.developerexamples.web.shared.EmbedTomcat.runWebApp;
 
+/** Starts the Spring MVC example in an embedded Tomcat. */
 public class ExampleLauncher {
+    /** Create a new instance. */
+    public ExampleLauncher() {
+    }
+
+    /**
+     * Start the example in an embedded Tomcat.
+     *
+     * @param args not used
+     * @throws LifecycleException if Tomcat could not start
+     */
     public static void main(String[] args) throws LifecycleException {
         runWebApp(
                 "pipeline.developer-examples/pipeline.developer-examples.clientside-element-mvc/src/main/webapp",
                 "pipeline.developer-examples/pipeline.developer-examples.clientside-element-mvc/target",
-                8088);
+                5151);
     }
 }

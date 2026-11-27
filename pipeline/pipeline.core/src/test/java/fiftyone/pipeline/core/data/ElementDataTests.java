@@ -58,24 +58,22 @@ public class ElementDataTests {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void ElementData_ComplexValueType() {
         TestElementData data = new TestElementData(mock(Logger.class), flowData);
         String key = "key";
         data.put(key, new AbstractMap.SimpleEntry<>("test", 1));
-        Map.Entry<String, Integer> result = (Map.Entry<String, Integer>) data.get(key);
+        Map.Entry<?, ?> result = (Map.Entry<?, ?>) data.get(key);
 
         assertEquals("test", result.getKey());
-        assertEquals((Integer) 1, result.getValue());
+        assertEquals(1, result.getValue());
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void ElementData_ComplexReferenceType() {
         TestElementData data = new TestElementData(mock(Logger.class), flowData);
         String key = "key";
         data.put(key, Arrays.asList("a", "b"));
-        List<String> result = (List<String>) data.get(key);
+        List<?> result = (List<?>) data.get(key);
 
         assertTrue(result.contains("a"));
         assertTrue(result.contains("b"));

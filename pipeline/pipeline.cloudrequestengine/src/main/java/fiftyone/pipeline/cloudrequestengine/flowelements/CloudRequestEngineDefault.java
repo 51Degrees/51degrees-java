@@ -56,6 +56,9 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -69,6 +72,12 @@ import static fiftyone.pipeline.util.StringManipulation.stringJoin;
 public class CloudRequestEngineDefault
     extends AspectEngineBase<CloudRequestData, AspectPropertyMetaData>
     implements CloudRequestEngine {
+
+    @Override
+    protected Class<CloudRequestData> getDataType() {
+        return CloudRequestData.class;
+    }
+
     /**
      * The Evidence key of the whole web request, which the web integration
      * adds for usage sharing to read. It holds every header and cookie of
@@ -114,7 +123,7 @@ public class CloudRequestEngineDefault
      */
     private static final int HTTP_SERVER_ERROR_MIN = 500;
 
-    private List<AspectPropertyMetaData> propertyMetaData;
+    private volatile List<AspectPropertyMetaData> propertyMetaData;
 
     /**
      * The products the resource key gives access to, from the
@@ -148,6 +157,29 @@ public class CloudRequestEngineDefault
      */
     private final Object discoveryLock = new Object();
 
+    /**
+     * Runs the cloud requests started while processing, on daemon threads
+     * so an engine not closed does not keep the process alive.
+     */
+    private final ExecutorService requests =
+        Executors.newCachedThreadPool(runnable -> {
+            Thread thread = new Thread(runnable, "cloud-request");
+            thread.setDaemon(true);
+            return thread;
+        });
+
+    /**
+     * Create a new instance with a resource key.
+     *
+     * @param logger used for logging
+     * @param aspectDataFactory creates the element data this engine returns
+     * @param httpClient used to make requests to the cloud service
+     * @param endPoint the cloud service endpoint
+     * @param resourceKey the resource key, or null
+     * @param propertiesEndpoint the properties endpoint
+     * @param evidenceKeysEndpoint the evidence keys endpoint
+     * @param timeoutMillis the request timeout in milliseconds
+     */
     public CloudRequestEngineDefault(
         Logger logger,
         ElementDataFactory<CloudRequestData> aspectDataFactory,
@@ -169,6 +201,20 @@ public class CloudRequestEngineDefault
             timeoutMillis,
             null);
     }
+    /**
+     * Create a new instance with a resource key and Origin header.
+     *
+     * @param logger used for logging
+     * @param aspectDataFactory creates the element data this engine returns
+     * @param httpClient used to make requests to the cloud service
+     * @param endPoint the cloud service endpoint
+     * @param resourceKey the resource key, or null
+     * @param propertiesEndpoint the properties endpoint
+     * @param evidenceKeysEndpoint the evidence keys endpoint
+     * @param timeoutMillis the request timeout in milliseconds
+     * @param cloudRequestOrigin the value of the Origin header, or null for
+     *    none
+     */
     public CloudRequestEngineDefault(
         Logger logger,
         ElementDataFactory<CloudRequestData> aspectDataFactory,
@@ -192,6 +238,21 @@ public class CloudRequestEngineDefault
             cloudRequestOrigin);
     }
 
+    /**
+     * Create a new instance with a resource key or license key.
+     *
+     * @param logger used for logging
+     * @param aspectDataFactory creates the element data this engine returns
+     * @param httpClient used to make requests to the cloud service
+     * @param endPoint the cloud service endpoint
+     * @param resourceKey the resource key, or null
+     * @param licenseKey the license key, or null
+     * @param propertiesEndpoint the properties endpoint
+     * @param evidenceKeysEndpoint the evidence keys endpoint
+     * @param timeoutMillis the request timeout in milliseconds
+     * @param cloudRequestOrigin the value of the Origin header, or null for
+     *    none
+     */
     public CloudRequestEngineDefault(
         Logger logger,
         ElementDataFactory<CloudRequestData> aspectDataFactory,
@@ -219,11 +280,21 @@ public class CloudRequestEngineDefault
 
     /**
      * Constructor.
+     * @param logger used for logging
+     * @param aspectDataFactory creates the element data this engine returns
+     * @param httpClient used to make requests to the cloud service
+     * @param endPoint the cloud service endpoint
+     * @param resourceKey the resource key, or null
+     * @param licenseKey the license key, or null
+     * @param propertiesEndpoint the properties endpoint
+     * @param evidenceKeysEndpoint the evidence keys endpoint
+     * @param timeoutMillis the request timeout in milliseconds
+     * @param cloudRequestOrigin the value of the Origin header, or null for
+     *                           none
      * @param requestedProperties the fully qualified names of the
      *                            properties to ask for, sent as {@code values}
      *                            when the list is not empty
      */
-    @SuppressWarnings("this-escape")
     public CloudRequestEngineDefault(
         Logger logger,
         ElementDataFactory<CloudRequestData> aspectDataFactory,
@@ -253,27 +324,40 @@ public class CloudRequestEngineDefault
         } else {
             this.timeoutMillis = null;
         }
-
-        propertyMetaData = new ArrayList<>();
-        propertyMetaData.add(new AspectPropertyMetaDataDefault(
-                "json-response",
-                this,
-                "",
-                String.class,
-                new ArrayList<String>(),
-                true));
-        propertyMetaData.add(new AspectPropertyMetaDataDefault(
-                "process-started",
-                this,
-                "",
-                Boolean.class,
-                new ArrayList<String>(),
-                true));
     }
 
+    /**
+     * The property metadata of this engine, created on first use as it
+     * refers to the engine.
+     * @return the property metadata
+     */
     @Override
     public List<AspectPropertyMetaData> getProperties() {
-        return propertyMetaData;
+        List<AspectPropertyMetaData> localRef = propertyMetaData;
+        if (localRef == null) {
+            synchronized (this) {
+                localRef = propertyMetaData;
+                if (localRef == null) {
+                    localRef = new ArrayList<>();
+                    localRef.add(new AspectPropertyMetaDataDefault(
+                        "json-response",
+                        this,
+                        "",
+                        String.class,
+                        new ArrayList<String>(),
+                        true));
+                    localRef.add(new AspectPropertyMetaDataDefault(
+                        "process-started",
+                        this,
+                        "",
+                        Boolean.class,
+                        new ArrayList<String>(),
+                        true));
+                    propertyMetaData = localRef;
+                }
+            }
+        }
+        return localRef;
     }
 
     @Override
@@ -457,6 +541,67 @@ public class CloudRequestEngineDefault
         }
     }
 
+    /**
+     * A response whose JSON has a top-level member named fodid, in any case,
+     * holds a 51Did created for the one request, so it is never served from
+     * the cache, and the request goes to the cloud service instead. See the
+     * <a href="https://github.com/51Degrees/specifications/blob/706de1f0cb3edd560eb7fd7ef3bb19b93a4883dc/pipeline-specification/features/caching.md#L144">caching specification</a>:
+     * "A cache MUST NOT store a result that holds such a value, and MUST NOT
+     * serve one that it finds." A response that cannot be read as a JSON
+     * object is not cached either, as it cannot be checked.
+     * <p>
+     * The response is a lazy task that is usually still running when the
+     * result is offered to the cache, and this check never waits for it. A
+     * result whose request is still running is stored, because what its
+     * response holds is not known yet, and {@link #isServable} keeps it from
+     * being served unless its request finished with a response that may be
+     * served. A result whose request has finished is stored only if that
+     * response may be served.
+     * @param data the result to check
+     * @return false if the request has finished and its response may not be
+     * cached
+     */
+    @Override
+    protected boolean isCacheable(CloudRequestData data) {
+        if (((CloudRequestDataInternal)data).isRequestRunning()) {
+            return true;
+        }
+        return isServable(data);
+    }
+
+    /**
+     * A result found in the cache is served only once its cloud request has
+     * finished, without failing, with a response that has no top-level fodid
+     * member. Otherwise the request goes to the cloud service, so a request
+     * still running for another Flow Data, and one that failed, are never
+     * shared through the cache.
+     * @param data the result found in the cache
+     * @return true if the result may be served
+     */
+    @Override
+    protected boolean isServable(CloudRequestData data) {
+        String response =
+            ((CloudRequestDataInternal)data).getJsonResponseWithoutWaiting();
+        if (response == null) {
+            return false;
+        }
+        try {
+            for (String key : new JSONObject(response).keySet()) {
+                if (FODID.equalsIgnoreCase(key)) {
+                    return false;
+                }
+            }
+            return true;
+        } catch (JSONException e) {
+            return false;
+        }
+    }
+
+    /**
+     * The top-level member of a cloud response that holds a 51Did.
+     */
+    private static final String FODID = "fodid";
+
     @Override
     protected void processEngine(FlowData data, CloudRequestData aspectData) throws IOException {
         ((CloudRequestDataInternal)aspectData).setProcessStarted(true);
@@ -471,12 +616,29 @@ public class CloudRequestEngineDefault
         headers.put("Content-Type", "application/x-www-form-urlencoded");
         headers.put("Content-Length", Integer.toString(content.length));
 
-        String response = httpClient.postData(connection, headers, content);
+        // The request is built from the Flow Data above. The task holds only
+        // the request, and readers of the JSON response wait for it.
+        ((CloudRequestDataInternal)aspectData).setJsonResponseTask(
+            CompletableFuture.supplyAsync(
+                () -> send(connection, headers, content), requests));
+    }
 
-        ((CloudRequestDataInternal)aspectData).setJsonResponse(response);
-
-        validateResponse(response, connection);
-        reportPropertiesNotCovered(response);
+    /**
+     * Send a built request and check its response, as the task behind the
+     * JSON response. Never reads the Flow Data.
+     */
+    private String send(
+        HttpURLConnection connection,
+        Map<String, String> headers,
+        byte[] content) {
+        try {
+            String response = httpClient.postData(connection, headers, content);
+            validateResponse(response, connection);
+            reportPropertiesNotCovered(response);
+            return response;
+        } catch (IOException e) {
+            throw new CompletionException(e);
+        }
     }
 
     /**
@@ -794,6 +956,15 @@ public class CloudRequestEngineDefault
 
     @Override
     protected void unmanagedResourcesCleanup() {
+        // Wait for the requests already started, which the connection
+        // timeouts bound, so none outlives the engine and every reader
+        // still gets its response.
+        requests.shutdown();
+        try {
+            requests.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private void setCommonHeaders(Map<String, String> headers) {
@@ -975,6 +1146,17 @@ public class CloudRequestEngineDefault
                         .stream()
                         .map(Object::toString)
                         .collect(Collectors.toList()));
+            }
+
+            // Each warning is logged, whether or not the response also
+            // holds errors. The cloud's warnings can name the license key
+            // it was sent.
+            JSONArray warnings = jObj.optJSONArray("warnings");
+            if (warnings != null) {
+                for (Object warning : warnings.toList()) {
+                    logger.warn(LicenseKeyMask.maskIn(
+                        String.valueOf(warning), getLicenseKeys()));
+                }
             }
         }
 

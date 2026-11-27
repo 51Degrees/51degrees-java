@@ -22,7 +22,7 @@ The Java API can either use our cloud service to get its data or it can use a lo
 
 You will require [resource keys](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud)
 to use the Cloud API, as described on our website. Get resource keys from
-our [configurator](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud), see our [documentation](https://51degrees.com/documentation/_services__configurator.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud) on 
+our [configuration page](https://51degrees.com/configure/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud), see our [documentation](https://51degrees.com/documentation/_services__configurator.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud) on 
 how to use this.
 
 #### On-Premise
@@ -227,13 +227,16 @@ repository.
 You will need [resource keys](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=tests)
 (see above) to complete the tests and run examples which include exercising the cloud API.
 
-To verify the code:
+To verify the code, set the `_51DEGREES_RESOURCE_KEY_BESPOKE` environment
+variable to the resource key and run:
 
 ```
-mvn clean test -DTestResourceKey=[Resource Key]
+mvn clean test
 ```
-For tests and examples that require a license key add the following option:
-- `-DLicenseKey=[License Key]`
+The TAC and native model examples need a key with every property, which they
+read from `_51DEGREES_RESOURCE_KEY`, the name a person running an example
+sets. Their tests give them the key from `_51DEGREES_RESOURCE_KEY_BESPOKE`. For tests and examples that require a license
+key, set the `_51DEGREES_LICENSE_KEY` environment variable.
 
 ## Projects
 

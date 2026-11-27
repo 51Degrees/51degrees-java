@@ -21,6 +21,7 @@
  * ********************************************************************* */
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.devicedetection.DeviceDetectionPipelineBuilder;
 import fiftyone.devicedetection.cloud.flowelements.DeviceDetectionCloudEngine;
 import fiftyone.devicedetection.examples.shared.KeyHelper;
@@ -42,12 +43,36 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
 
 public class MetadataCloud {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-devicedetection-examples-console-metadatacloud.java";
+
     private static final Logger logger = LoggerFactory.getLogger(GettingStartedOnPrem.class);
 
+    /**
+     * The resource key can be supplied as an argument to this program, or
+     * as an environment variable or Java system property called
+     * "_51DEGREES_RESOURCE_KEY". With none,
+     * the example says how to get one and ends.
+     */
     public static void main(String[] args) throws Exception {
         configureLogback(getFilePath("logback.xml"));
-        String resourceKey = args.length > 0 ? args[0]: null;
+        String resourceKey = KeyHelper.findResourceKey(
+                args.length > 0 ? args[0] : null,
+                KeyHelper.RESOURCE_KEY_VARIABLE);
+        if (resourceKey == null) {
+            KeyHelper.writeNoResourceKey(System.out, EXAMPLE_TAG,
+                    KeyHelper.RESOURCE_KEY_VARIABLE,
+                    KeyHelper.FREE_PROPERTIES_CONFIGURATION);
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES);
+            return;
+        }
         run(resourceKey, System.out);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.CLOUD_REPOSITORIES);
     }
 
 
@@ -61,9 +86,10 @@ public class MetadataCloud {
         // the meta-data.
         // If you already have a pipeline and just want to get a reference to the engine 
         // then you can use `var engine = pipeline.GetElement<DeviceDetectionHashEngine>();`
-        try (Pipeline pipeline = new DeviceDetectionPipelineBuilder(LoggerFactory.getILoggerFactory())
+        Pipeline pipeline = new DeviceDetectionPipelineBuilder(LoggerFactory.getILoggerFactory())
                 .useCloud(resourceKey)
-                .build()) {
+                .build();
+        try {
 
             PrintWriter writer = new PrintWriter(output);
 
@@ -83,6 +109,8 @@ public class MetadataCloud {
             outputEvidenceKeyDetails(pipeline.getElement(CloudRequestEngine.class), writer);
             writer.println();
             writer.flush();
+        } finally {
+            pipeline.close();
         }
     }
 

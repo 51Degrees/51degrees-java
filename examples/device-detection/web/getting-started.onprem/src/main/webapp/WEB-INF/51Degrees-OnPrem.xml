@@ -28,12 +28,11 @@
                 <AutoUpdate>false</AutoUpdate>
                 <CreateTempDataCopy>false</CreateTempDataCopy>
                 <!--
-                The data file is taken from the _51DEGREES_DD_PATH environment
-                variable, then from its deprecated name 51DEGREES_DD_PATH,
-                then from TestDataFile (an environment variable or system
-                property), and otherwise the free Lite file is used.
+                The data file is taken from _51DEGREES_DD_PATH, an environment
+                variable or system property, and otherwise the free Lite file
+                is used.
                 -->
-                <DataFile>${_51DEGREES_DD_PATH:-${51DEGREES_DD_PATH:-${TestDataFile:-cxx/data/device-detection/51Degrees-LiteV4.1.hash}}}</DataFile>
+                <DataFile>${_51DEGREES_DD_PATH:-cxx/data/device-detection/51Degrees-LiteV4.1.hash}</DataFile>
                 <PerformanceProfile>LowMemory</PerformanceProfile>
             </BuildParameters>
             <BuilderName>DeviceDetectionHashEngine</BuilderName>
@@ -49,8 +48,9 @@
             <BuilderName>JavaScriptBuilderElement</BuilderName>
             <BuildParameters>
                 <!--
-                Set based on the origin being used. Remember in secure origins
-                won't be able to run some features like GetHighEntropyValues.
+                Set based on the origin being used. Browsers run some
+                features, such as getHighEntropyValues, only in a secure
+                (https) origin or on localhost.
                 -->
                 <Protocol>http</Protocol>
                 <!-- <Protocol>https</Protocol> -->

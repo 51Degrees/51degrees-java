@@ -1,10 +1,13 @@
 param(
     [Parameter(Mandatory)][string]$RepoName,
     [Parameter(Mandatory)][string]$Name,
-    # Set by the publish workflow to the version it built and installed. Not
-    # set when a pull request is tested, which builds the reactor itself.
+    # Set by the publish workflow, which built and installed the packages, to
+    # its label for the run. Not set when a pull request is tested, which
+    # builds the reactor itself.
     [string]$Version,
-    [string]$IpIntelligenceUrl
+    # The runner variable naming the entry's JDK, which the tests run on.
+    # Maven compiles with JDK 17 of the same architecture.
+    [Parameter(Mandatory)][string]$JavaSDKEnvVar
 )
 $ErrorActionPreference = "Stop"
 # Each product's exit code is checked below, so one failing product does not
@@ -20,11 +23,15 @@ $PSNativeCommandUseErrorActionPreference = $false
 $summary = @{ HigherIsBetter = [ordered]@{}; LowerIsBetter = [ordered]@{} }
 $results = "$RepoName/test-results/performance"
 $failed = @()
+$compileJavaHome = Get-CompileJavaHome $JavaSDKEnvVar
+$testJvm = Get-TestJvmArgument
 
-[string[]]$versionArgs = if ($Version) {
-    "-Ddevice-detection.version=$Version", "-Dip-intelligence.version=$Version"
+# A publish measures the versions it built, each package's own.
+if ($Version) {
+    . "$PSScriptRoot/release.ps1"
+    [string[]]$versionArgs = Get-ExampleVersionArguments $RepoName
 } else {
-    , '-Pdev'
+    [string[]]$versionArgs = '-Pdev'
 }
 
 # Pipeline API. The test writes its figures as JSON itself.
@@ -33,8 +40,10 @@ $pipelineResults = Join-Path $PWD "pipeline-performance-$Name.json"
 Remove-Item -Path $pipelineResults -Force -ErrorAction SilentlyContinue
 Push-Location "$RepoName/pipeline"
 try {
-    mvn test @MavenOptions -DfailIfNoTests=false "-Dsurefire.failIfNoSpecifiedTests=false" `
-        "-Dtest=*ShareUsageOverheadTests*" "-Dfiftyone.performance.json=$pipelineResults"
+    Invoke-WithJavaHome $compileJavaHome {
+        mvn test @MavenOptions $testJvm -DfailIfNoTests=false "-Dsurefire.failIfNoSpecifiedTests=false" `
+            "-Dtest=*ShareUsageOverheadTests*" "-D_51DEGREES_PERFORMANCE_JSON=$pipelineResults"
+    }
     if ($LASTEXITCODE -ne 0) { $failed += 'Pipeline API' }
 } finally {
     Pop-Location
@@ -103,7 +112,6 @@ $benchmarks = @(
         Output = 'console/target/surefire-reports/fiftyone.devicedetection.examples.console.PerformanceBenchmarkTest-output.txt'
         ProfileHeader = "MaxPerformance AllProperties: (true|false), performanceGraph: (true|false), predictiveGraph (true|false)"
         ProfileName = 'MaxPerformance-false-true-false'
-        Run = $true
     }
     @{
         Product = 'IpIntelligence'
@@ -111,21 +119,18 @@ $benchmarks = @(
         Output = 'console/target/surefire-reports/fiftyone.ipintelligence.examples.console.PerformanceBenchmarkTest-output.txt'
         ProfileHeader = "MaxPerformance AllProperties: (true|false)"
         ProfileName = 'MaxPerformance-false'
-        # Measured with the Enterprise data file, which is only fetched when
-        # its URL is given.
-        Run = [bool]$IpIntelligenceUrl
+        # Measured with the Enterprise data file, which common-ci fetches
+        # with _51DEGREES_LICENSE_KEY.
     }
 )
 
 foreach ($benchmark in $benchmarks) {
-    if (-not $benchmark.Run) {
-        Write-Host "::warning title=Performance skipped::Skipping the $($benchmark.Product) benchmark, as IpIntelligenceUrl was not provided."
-        continue
-    }
     Write-Host "::group::$($benchmark.Product)"
     Push-Location "$RepoName/$($benchmark.Path)"
     try {
-        mvn clean test @MavenOptions @versionArgs -DfailIfNoTests=false "-Dsurefire.failIfNoSpecifiedTests=false" "-Dtest=*Performance*"
+        Invoke-WithJavaHome $compileJavaHome {
+            mvn clean test @MavenOptions $testJvm @versionArgs -DfailIfNoTests=false "-Dsurefire.failIfNoSpecifiedTests=false" "-Dtest=*Performance*"
+        }
         if ($LASTEXITCODE -ne 0) { $failed += $benchmark.Product }
     } finally {
         Pop-Location

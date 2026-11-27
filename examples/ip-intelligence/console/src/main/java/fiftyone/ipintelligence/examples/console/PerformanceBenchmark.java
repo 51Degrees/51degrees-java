@@ -46,6 +46,7 @@
 
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.common.testhelpers.LogbackHelper;
 import fiftyone.ipintelligence.IPIntelligenceOnPremisePipelineBuilder;
 import fiftyone.ipintelligence.IPIntelligencePipelineBuilder;
@@ -81,6 +82,12 @@ import static fiftyone.pipeline.engines.Constants.PerformanceProfiles.*;
  * <p>
  */
 public class PerformanceBenchmark {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-ipintelligence-examples-console-performancebenchmark.java";
+
     // the default number of threads if one is not provided.
     public static final int DEFAULT_NUMBER_OF_THREADS = 4;
     // the number of tests to execute.
@@ -132,6 +139,8 @@ public class PerformanceBenchmark {
                 evidenceFilename,
                 numberOfThreads,
                 new PrintWriter(System.out,true));
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     /**
@@ -234,7 +243,9 @@ public class PerformanceBenchmark {
         builder.setPerformanceProfile(config.profile)
         // set this to false for testing
         .setAutoUpdate(false)
-        // set this to false for testing
+        // Usage sharing is off because this example's evidence is already
+        // known to 51Degrees. In production, leave usage sharing on, which adds
+        // a Usage Sharing Element to the Pipeline and helps improve the service.
         .setShareUsage(false)
         // hint for cache concurrency
         .setConcurrency(numberOfThreads);
@@ -265,14 +276,17 @@ public class PerformanceBenchmark {
      */
     static List<String> benchmarkProperties(String dataFileLocation)
             throws Exception {
-        try (IPIntelligenceOnPremiseEngine engine =
-                     new IPIntelligenceOnPremiseEngineBuilder()
-                             .setPerformanceProfile(LowMemory)
-                             .setAutoUpdate(false)
-                             .build(dataFileLocation, false)) {
+        IPIntelligenceOnPremiseEngine engine =
+                new IPIntelligenceOnPremiseEngineBuilder()
+                        .setPerformanceProfile(LowMemory)
+                        .setAutoUpdate(false)
+                        .build(dataFileLocation, false);
+        try {
             return Collections.singletonList(
                     DataFileHelper.hasProperty(engine, "RegisteredName") ?
                             "RegisteredName" : "AsnName");
+        } finally {
+            engine.close();
         }
     }
 
@@ -348,7 +362,7 @@ public class PerformanceBenchmark {
                           List<Map<String, String>> evidence,
                           boolean readRegisteredName) {
             this.testList = evidence;
-            // initialise the benchmark variables
+            // initialize the benchmark variables
             this.pipeline = pipeline;
             this.readRegisteredName = readRegisteredName;
             this.result = new BenchmarkResult();
@@ -366,33 +380,38 @@ public class PerformanceBenchmark {
             for (Map<String, String> evidence : testList) {
                 // the benchmark is for processing time only
 
-                // A try-with-resource block MUST be used for the
-                // FlowData instance. This ensures that native resources
+                // The FlowData instance MUST be closed in a finally
+                // block. This ensures that native resources
                 // created by the IP Intelligence engine are freed.
-                try (FlowData flowData = pipeline.createFlowData()) {
-                    flowData
-                            .addEvidence(evidence)
-                            .process();
+                try {
+                    FlowData flowData = pipeline.createFlowData();
+                    try {
+                        flowData
+                                .addEvidence(evidence)
+                                .process();
 
-                    // Calculate a checksum to compare different runs on
-                    // the same data.
-                    IPIntelligenceData ipData = flowData.get(IPIntelligenceData.class);
-                    if (ipData != null) {
-                        AspectPropertyValue<String> name = readRegisteredName ?
-                                ipData.getRegisteredName() : ipData.getAsnName();
-                        if (name.hasValue()) {
-                            String value = name.getValue();
-                            if (value != null) {
-                                result.checkSum += value.hashCode();
+                        // Calculate a checksum to compare different runs on
+                        // the same data.
+                        IPIntelligenceData ipData = flowData.get(IPIntelligenceData.class);
+                        if (ipData != null) {
+                            AspectPropertyValue<String> name = readRegisteredName ?
+                                    ipData.getRegisteredName() : ipData.getAsnName();
+                            if (name.hasValue()) {
+                                String value = name.getValue();
+                                if (value != null) {
+                                    result.checkSum += value.hashCode();
 //                                for (IWeightedValue<?> weightedValue : value) {
 //                                    result.checkSum += weightedValue.getValue().hashCode();
 //                                }
+                                }
                             }
                         }
-                    }
-                    result.count++;
-                    if (result.count >= TESTS_PER_THREAD) {
-                        break;
+                        result.count++;
+                        if (result.count >= TESTS_PER_THREAD) {
+                            break;
+                        }
+                    } finally {
+                        flowData.close();
                     }
                 } catch (Exception e) {
                     logger.error("Exception getting flow data", e);
@@ -412,7 +431,7 @@ public class PerformanceBenchmark {
         // processing time in millis this thread
         private long elapsedMillis;
 
-        // used to ensure compiler optimiser doesn't optimise out the very
+        // used to ensure compiler optimizer doesn't optimize out the very
         // method that the benchmark is testing.
         private int checkSum;
 

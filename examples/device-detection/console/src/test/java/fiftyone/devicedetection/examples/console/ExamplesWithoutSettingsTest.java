@@ -22,7 +22,11 @@
 
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.console.comparison.Comparer;
+import fiftyone.devicedetection.examples.console.comparison.DetectionImplBrowsCap;
+import fiftyone.devicedetection.examples.console.comparison.DetectionImplFiftyOneDegrees;
 import fiftyone.devicedetection.examples.shared.DataFileHelper;
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -33,7 +37,7 @@ import static org.junit.Assume.assumeTrue;
 
 /**
  * Runs each on-premise console example's main with no arguments and no
- * licence key, as someone who has just cloned the repository runs it, and
+ * license key, as someone who has just cloned the repository runs it, and
  * checks that it says what the Enterprise data file adds, with the link to
  * the contact page. The examples default to the free Lite data file. CI
  * gives the other tests the Enterprise data files, so nothing else tests
@@ -54,13 +58,12 @@ public class ExamplesWithoutSettingsTest {
     }
 
     /**
-     * Runs the example's main with no arguments and the licence key system
+     * Runs the example's main with no arguments and the license key system
      * property removed, and returns what it wrote to standard output.
      */
     private static String runWithoutSettings(Main main) throws Exception {
-        assumeTrue("Skipping, a licence key is set in the environment",
-                System.getenv(LICENSE_KEY) == null &&
-                        System.getenv(LICENSE_KEY.toUpperCase()) == null);
+        assumeTrue("Skipping, a license key is set in the environment",
+                System.getenv(LICENSE_KEY) == null);
         String licenseKey = System.clearProperty(LICENSE_KEY);
         PrintStream out = System.out;
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -75,12 +78,28 @@ public class ExamplesWithoutSettingsTest {
         }
         String output = buffer.toString("UTF-8");
         out.println(output);
+        assertFindOutMore(output);
         return output;
     }
 
     private static void assertContains(String output, String expected) {
         assertTrue("The output should contain '" + expected + "'",
                 output.contains(expected));
+    }
+
+    /**
+     * Checks that the output has the "Find out more" section after the last
+     * link to the contact page, and that the section closes with its rule.
+     * Log lines may still follow the section.
+     */
+    private static void assertFindOutMore(String output) {
+        int heading = output.lastIndexOf(FindOutMore.HEADING);
+        assertTrue("The output should have the '" + FindOutMore.HEADING +
+                "' section after the link to the contact page",
+                heading > output.lastIndexOf(CONTACT_US));
+        assertTrue("The '" + FindOutMore.HEADING +
+                "' section should end with its rule",
+                output.indexOf(FindOutMore.RULE, heading) > heading);
     }
 
     private static void assertOffer(String output) {
@@ -120,10 +139,32 @@ public class ExamplesWithoutSettingsTest {
     }
 
     @Test
+    public void manualDataUpdate() throws Exception {
+        String output = runWithoutSettings(ManualDataUpdate::main);
+        assertContains(output, "Hardware Vendor: " + DataFileHelper.NEEDS_ENTERPRISE);
+        assertContains(output, "The Enterprise data file adds daily automatic updates.");
+        assertContains(output, CONTACT_US);
+    }
+
+    @Test
     public void updateDataFile() throws Exception {
         String output = runWithoutSettings(UpdateDataFile::main);
         assertContains(output, "The data file in use is the 'Lite' file");
-        assertContains(output, "which needs a licence key");
+        assertContains(output, "which needs a license key");
         assertContains(output, CONTACT_US);
+    }
+
+    /**
+     * The comparison runs both solutions to the end on the free Lite data
+     * file and then says what the Enterprise data file adds.
+     */
+    @Test
+    public void comparer() throws Exception {
+        String output = runWithoutSettings(Comparer::main);
+        assertContains(output, "Vendor: " +
+                DetectionImplFiftyOneDegrees.FIFTY_ONE_DEGREES + ",");
+        assertContains(output, "Vendor: " +
+                DetectionImplBrowsCap.BROWS_CAP_BLUECONIC + ",");
+        assertOffer(output);
     }
 }

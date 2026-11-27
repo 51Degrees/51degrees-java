@@ -23,7 +23,9 @@
 package fiftyone.caching;
 
 import java.io.Closeable;
-import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -47,14 +49,13 @@ import java.util.concurrent.atomic.AtomicLong;
  * @param <K> key for the cache items
  * @param <V> value for the cache items
  */
-@SuppressWarnings("unused")
 public abstract class LruCacheBase<K, V> implements Cache<K,V>, Closeable {
 
     /**
      * A array of doubly linked lists. Not marked private so that the unit
      * test can guard the elements.
      */
-    final CacheLinkedList[] linkedLists;
+    final List<CacheLinkedList> linkedLists;
     /**
      * Random number generator used to select the linked list to use with
      * the new item being added to the cache.
@@ -86,15 +87,11 @@ public abstract class LruCacheBase<K, V> implements Cache<K,V>, Closeable {
         this.cacheSize = cacheSize;
         this.updateExisting = updateExisting;
         this.hashMap = new ConcurrentHashMap<>(cacheSize);
-        @SuppressWarnings("unchecked")
-        CacheLinkedList[] linkedListsUnchecked =
-            (CacheLinkedList[]) Array.newInstance(
-                CacheLinkedList.class,
-                concurrency);
-        linkedLists = linkedListsUnchecked;
-        for (int i = 0; i < linkedLists.length; i++) {
-            linkedLists[i] = new CacheLinkedList(this);
+        List<CacheLinkedList> lists = new ArrayList<>(concurrency);
+        for (int i = 0; i < concurrency; i++) {
+            lists.add(new CacheLinkedList(this));
         }
+        linkedLists = Collections.unmodifiableList(lists);
     }
 
     /**
@@ -107,6 +104,7 @@ public abstract class LruCacheBase<K, V> implements Cache<K,V>, Closeable {
     }
 
     /**
+     * Returns number of cache misses.
      * @return number of cache misses.
      */
     public long getCacheMisses() {
@@ -114,6 +112,7 @@ public abstract class LruCacheBase<K, V> implements Cache<K,V>, Closeable {
     }
 
     /**
+     * Returns number of requests received by the cache.
      * @return number of requests received by the cache.
      */
     public long getCacheRequests() {
@@ -121,6 +120,7 @@ public abstract class LruCacheBase<K, V> implements Cache<K,V>, Closeable {
     }
 
     /**
+     * Returns the percentage of times cache request did not return a result.
      * @return the percentage of times cache request did not return a result.
      */
     public double getPercentageMisses() {
@@ -145,6 +145,14 @@ public abstract class LruCacheBase<K, V> implements Cache<K,V>, Closeable {
         return node.value;
     }
 
+    /**
+     * Add a value, or move the existing item for the key to the head of its
+     * list. The existing value is replaced only when updateExisting is set.
+     *
+     * @param key the key
+     * @param value the value
+     * @return the item now held for the key
+     */
     protected CachedItem add(K key, V value) {
         // Get a randomly selected linked list to add
         // the item to.
@@ -165,8 +173,11 @@ public abstract class LruCacheBase<K, V> implements Cache<K,V>, Closeable {
         }
         else {
             if (updateExisting) {
-                newNode.list.replace(node, newNode);
-                node = newNode;
+                // The replacement takes the existing item's place in the
+                // existing item's list, so it must belong to that list.
+                CachedItem replacement = new CachedItem(node.list, key, value);
+                node.list.replace(node, replacement);
+                node = replacement;
             }
             // The item is in the dictionary.
             // Move the item to the head of it's LRU list.
@@ -188,7 +199,6 @@ public abstract class LruCacheBase<K, V> implements Cache<K,V>, Closeable {
     }
 
 /*
-    @SuppressWarnings("deprecation")
     @Override
     public void finalize() {
         close(false);
@@ -200,6 +210,11 @@ public abstract class LruCacheBase<K, V> implements Cache<K,V>, Closeable {
         close(true);
     }
 
+    /**
+     * Clear the cache once.
+     *
+     * @param closing true when called from {@link #close()}
+     */
     protected void close(boolean closing) {
         // Clear the map and linked lists.
         if (closed == false) {
@@ -219,7 +234,7 @@ public abstract class LruCacheBase<K, V> implements Cache<K,V>, Closeable {
      * Returns a random linked list.
      */
     private CacheLinkedList getRandomLinkedList() {
-        return linkedLists[random.nextInt(linkedLists.length)];
+        return linkedLists.get(random.nextInt(linkedLists.size()));
     }
 
     /**

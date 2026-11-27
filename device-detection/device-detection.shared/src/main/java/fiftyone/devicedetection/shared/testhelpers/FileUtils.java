@@ -36,23 +36,41 @@ import java.util.Optional;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
-@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+/**
+ * Finds the data and evidence files the tests use.
+ * @deprecated These are test helpers, which the published package should
+ * not hold. Example code takes the data file names from
+ * {@code fiftyone.devicedetection.examples.shared.DataFileHelper}, in the
+ * device-detection-java-examples.shared module.
+ */
+@Deprecated
 public class FileUtils {
+
+    /**
+     * Makes an instance. Every member is static, so an instance is not
+     * needed, and the constructor is public for code that makes one.
+     */
+    public FileUtils() {
+    }
+    /** Name of the Enterprise data file. */
     public static final String ENTERPRISE_HASH_DATA_FILE_NAME = "Enterprise-HashV41.hash";
 
+    /** Name of the TAC data file. */
     public static final String TAC_HASH_DATA_FILE_NAME = "TAC-HashV41.hash";
+    /** Name of the free Lite data file. */
     public static final String LITE_HASH_DATA_FILE_NAME = "51Degrees-LiteV4.1.hash";
     private static  Optional<File> HASH_DATA_FILE;
-    public static final String UA_FILE_NAME = "20000 User Agents.csv";
-    private static File UA_FILE;
+    /** Name of the evidence file the tests use. */
     public static final String EVIDENCE_FILE_NAME = "20000 Evidence Records.yml";
     private static Optional<File> EVIDENCE_FILE;
-    // Where each free file is in the data repository. A search for the path
-    // rather than the name does not stop at another file of the same name,
-    // such as a Git LFS pointer in an old device-detection-data folder.
+    /**
+     * Path of the Lite data file in the data repository. A search for the
+     * path rather than the name does not stop at another file of the same
+     * name, such as a Git LFS pointer in an old device-detection-data folder.
+     */
     public static final String LITE_HASH_DATA_FILE_PATH =
         "device-detection/" + LITE_HASH_DATA_FILE_NAME;
-    public static final String UA_FILE_PATH = "device-detection/" + UA_FILE_NAME;
+    /** Path of the evidence file in the data repository. */
     public static final String EVIDENCE_FILE_PATH =
         "device-detection/" + EVIDENCE_FILE_NAME;
 
@@ -96,6 +114,12 @@ public class FileUtils {
         }
     }
 
+    /**
+     * Find the evidence file the tests use, searching once and keeping the
+     * result.
+     *
+     * @return the file, or null if it was not found
+     */
     public static File getEvidenceFile() {
         if (Objects.nonNull(EVIDENCE_FILE)) {
             return EVIDENCE_FILE.orElse(null);

@@ -22,12 +22,15 @@
 
 package fiftyone.pipeline.core.flowelements;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import org.junit.Test;
 
+import fiftyone.pipeline.core.Constants;
 import fiftyone.pipeline.core.testclasses.services.TestAutoCloseableService;
 import fiftyone.pipeline.core.testclasses.services.TestCloseableService;
 
@@ -36,7 +39,11 @@ public class PipelineBuilderBaseTests {
 	// functionalities in PipelineBuilderBase
 	private static class TestPipelineBuilder extends 
 		PipelineBuilderBase<TestPipelineBuilder> {
-		
+
+		@Override
+		protected TestPipelineBuilder self() {
+			return this;
+		}
 	}
 	
 	@Test
@@ -48,9 +55,26 @@ public class PipelineBuilderBaseTests {
         TestAutoCloseableService service2 = mock(TestAutoCloseableService.class);
         builder.addService(service1);
         builder.addService(service2);
-        try (Pipeline pipeline = builder.build()) {}
+        builder.build().close();
         verify(service1, times(1)).close();
         verify(service2, times(1)).close();
+	}
+
+	/**
+	 * The builder's defaults come from {@link Constants} and keep the values
+	 * they have always had.
+	 */
+	@Test
+	public void PipelineBuilderBase_Defaults() {
+		TestPipelineBuilder builder = new TestPipelineBuilder();
+		assertEquals(
+			Constants.DEFAULT_AUTO_CLOSE_ELEMENTS,
+			builder.autoCloseElements);
+		assertEquals(
+			Constants.DEFAULT_SUPPRESS_PROCESS_EXCEPTIONS,
+			builder.suppressProcessExceptions);
+		assertFalse(Constants.DEFAULT_AUTO_CLOSE_ELEMENTS);
+		assertFalse(Constants.DEFAULT_SUPPRESS_PROCESS_EXCEPTIONS);
 	}
 
 }

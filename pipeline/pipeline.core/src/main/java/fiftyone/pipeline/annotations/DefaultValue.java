@@ -24,12 +24,36 @@ package fiftyone.pipeline.annotations;
 
 import java.lang.annotation.*;
 
+/**
+ * Gives the default value of a builder setting, which the builder listing
+ * shows. The first of the values that is set is used.
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 @Documented
 public @interface DefaultValue {
+    /**
+     * The default as text.
+     *
+     * @return the value, or empty when not set
+     */
     String value() default "";
+    /**
+     * The default as an integer.
+     *
+     * @return the value, or Integer.MIN_VALUE when not set
+     */
     int intValue() default Integer.MIN_VALUE;
+    /**
+     * The default as a double.
+     *
+     * @return the value, or Double.MIN_VALUE when not set
+     */
     double doubleValue() default Double.MIN_VALUE;
+    /**
+     * The default as a boolean, used when no other value is set.
+     *
+     * @return the value
+     */
     boolean booleanValue() default false;
 }

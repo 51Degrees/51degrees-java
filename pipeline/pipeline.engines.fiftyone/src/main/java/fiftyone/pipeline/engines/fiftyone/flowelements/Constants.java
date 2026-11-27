@@ -26,6 +26,9 @@ package fiftyone.pipeline.engines.fiftyone.flowelements;
  * Constants used by 51Degrees aspect engines.
  */
 public class Constants {
+    /** Create a new instance. */
+    public Constants() {
+    }
 
     /**
      * The maximum length, in characters, of a piece of evidence's value which
@@ -58,7 +61,18 @@ public class Constants {
         fiftyone.pipeline.core.Constants.EVIDENCE_QUERY_PREFIX +
             fiftyone.pipeline.core.Constants.EVIDENCE_SEPERATOR +
             EVIDENCE_SEQUENCE_SUFIX;
+
+    /**
+     * Whether a 51Degrees Pipeline builder adds the Usage Sharing Element,
+     * unless it is told otherwise.
+     */
+    public static final boolean SHARE_USAGE_DEFAULT_ENABLED = true;
+
+    /**
+     * Default for how long the same evidence is not shared again, in minutes.
+     */
     public static final int SHARE_USAGE_DEFAULT_REPEAT_EVIDENCE_MINUTES = 20;
+    /** Default proportion of requests shared, where 1.0 is all of them. */
     public static final double SHARE_USAGE_DEFAULT_SHARE_PERCENTAGE = 1.0;
 
     /**
@@ -90,6 +104,19 @@ public class Constants {
     static final int SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT = 5000;
 
     /**
+     * The most time closing the Usage Sharing Element may take, from its
+     * start, in milliseconds.
+     */
+    static final int SHARE_USAGE_CLOSE_LIMIT_MILLIS = 5000;
+
+    /**
+     * The part of the close limit, in milliseconds, kept for what closing
+     * does after it stops waiting for the data to be sent: discarding the
+     * rest, logging the warning and freeing the resources.
+     */
+    static final int SHARE_USAGE_CLOSE_RESERVE_MILLIS = 500;
+
+    /**
      * Default lost data count for share usage before it wraps
      */
     static final int LOST_DATA_RESET_DEFAULT = 5000000;
@@ -104,6 +131,13 @@ public class Constants {
      * The default URL to send usage data to.
      */
     static final String SHARE_USAGE_DEFAULT_URL = "https://devices-v4.51degrees.com/new.ashx";
+
+    /**
+     * Deprecated. The default of the share all query string parameters
+     * option, which has no effect.
+     */
+    public static final boolean
+        SHARE_USAGE_DEFAULT_SHARE_ALL_QUERY_STRING_PARAMETERS = true;
 
     /**
      * Constant Added to blocked HTTP Headers so that the cookie header is

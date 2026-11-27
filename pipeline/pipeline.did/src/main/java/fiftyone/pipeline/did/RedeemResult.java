@@ -28,6 +28,7 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -105,7 +106,10 @@ public final class RedeemResult {
             this.value = value;
         }
 
-        /** @return the word the cloud uses for this verdict */
+        /**
+         * Returns the word the cloud uses for this verdict.
+         * @return the word the cloud uses for this verdict
+         */
         public String getValue() {
             return value;
         }
@@ -187,7 +191,10 @@ public final class RedeemResult {
             this.value = value;
         }
 
-        /** @return the word the cloud uses for this outcome */
+        /**
+         * Returns the word the cloud uses for this outcome.
+         * @return the word the cloud uses for this outcome
+         */
         public String getValue() {
             return value;
         }
@@ -196,15 +203,17 @@ public final class RedeemResult {
          * Verified, misconfigured and notrecorded are each read on their own,
          * because none of them is a mismatch. Anything else, including a word
          * this client does not know, is a mismatch, so an unexpected value
-         * never reads as a pass.
+         * never reads as a pass. The comparison ignores case, so the word is
+         * lower-cased in the root locale first.
          *
          * @param value the factor's string from the cloud, or null
          * @return the matching outcome, or {@link #MISMATCH}
          */
         public static Factor fromValue(String value) {
             if (value != null) {
+                String word = value.toLowerCase(Locale.ROOT);
                 for (Factor factor : values()) {
-                    if (factor.value.equals(value)) {
+                    if (factor.value.equals(word)) {
                         return factor;
                     }
                 }
@@ -313,12 +322,18 @@ public final class RedeemResult {
             raw);
     }
 
-    /** @return the creator context verdict */
+    /**
+     * Returns the creator context verdict.
+     * @return the creator context verdict
+     */
     public Context getContext() {
         return context;
     }
 
     /**
+     * Returns the {@code context} word exactly as the cloud sent it, so an
+     * unrecognized word (mapped to {@link Context#UNREADABLE}) is still
+     * visible.
      * @return the {@code context} word exactly as the cloud sent it, so an
      *         unrecognised word (mapped to {@link Context#UNREADABLE}) is
      *         still visible; the verdict's own word when the cloud sent none
@@ -327,7 +342,10 @@ public final class RedeemResult {
         return contextValue;
     }
 
-    /** @return the signature outcome */
+    /**
+     * Returns the signature outcome.
+     * @return the signature outcome
+     */
     public Signature getSignature() {
         return signature;
     }
@@ -362,7 +380,10 @@ public final class RedeemResult {
         return factors;
     }
 
-    /** @return whether the cloud sent {@code factors} */
+    /**
+     * Returns whether the cloud sent {@code factors}.
+     * @return whether the cloud sent {@code factors}
+     */
     public boolean hasFactors() {
         return hasFactors;
     }
@@ -389,12 +410,18 @@ public final class RedeemResult {
         return secondsSinceVerified;
     }
 
-    /** @return the HTTP status the cloud answered with, 200 or 503 */
+    /**
+     * Returns the HTTP status the cloud answered with, 200 or 503.
+     * @return the HTTP status the cloud answered with, 200 or 503
+     */
     public int getStatusCode() {
         return statusCode;
     }
 
-    /** @return the response body as received */
+    /**
+     * Returns the response body as received.
+     * @return the response body as received
+     */
     public String getRaw() {
         return raw;
     }

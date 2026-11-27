@@ -1,0 +1,176 @@
+name: Examples from a fresh clone
+
+# Builds each product's console examples as AGENTS.md says, from a clone
+# with its submodules, against the packages published on Maven Central, with
+# the Maven the runner has on JDK 17, which compiles for Java 8 with no
+# warning. Then runs the getting started example
+# from the repository root with no settings. A fresh clone holds only a link
+# for each free data file. On Ubuntu the example downloads its file, which
+# tests the download, from a stand-in on the runner that serves the free file
+# common-ci's fetch-assets step fetched, so no run of an example downloads
+# from the Distributor. The job keeps the file in the cache, and the other
+# systems take it from there. The Ubuntu job also builds every example
+# module, with its tests compiled, against the published packages.
+
+on:
+  pull_request:
+    paths:
+      - 'examples/**'
+      - 'cxx'
+      - '.github/workflows/examples-fresh-clone.yml'
+      - 'ci/run-fresh-clone-example.ps1'
+  push:
+    branches:
+      - main
+      - rc
+  schedule:
+    - cron: '30 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Every compiler and tool warning is an error in the builds 51Degrees runs.
+# The poms and the native CMake files read this variable.
+env:
+  _51DEGREES_WARNINGS_AS_ERRORS: 'true'
+
+jobs:
+  download:
+    name: ${{ matrix.product }} on ubuntu-latest, downloading its data file
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - product: device-detection
+            example: fiftyone.devicedetection.examples.console.GettingStartedOnPrem
+            file: cxx/data/device-detection/51Degrees-LiteV4.1.hash
+            # The name common-ci's fetch-assets step gives the free file.
+            asset: 51Degrees-LiteV4.1.hash
+            expect: ''
+          - product: ip-intelligence
+            example: fiftyone.ipintelligence.examples.console.GettingStartedOnPrem
+            file: cxx/data/ip-intelligence/51Degrees-LiteV41.ipi
+            asset: 51Degrees-LiteIpiV41.ipi
+            # Each IP Intelligence value is printed with its weighting.
+            expect: '(weighting '
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone the repository with its submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # common-ci's fetch-assets step, which the builds use, puts the free
+      # file in the assets folder and keeps it in the cache for the day.
+      - name: Fetch the free data file the stand-in serves
+        uses: 51Degrees/common-ci/actions/fetch-assets@main
+        with:
+          assets: ${{ matrix.asset }}
+          cache: 'true'
+
+      - name: The runner's Java and Maven
+        shell: pwsh
+        run: |
+          java -version
+          mvn -v
+
+      - name: Build the console examples against the published packages
+        working-directory: examples/${{ matrix.product }}
+        shell: pwsh
+        run: mvn -B --no-transfer-progress -pl console -am package -DskipTests
+
+      # The example follows the data file's link, which names a stand-in on
+      # the runner while it runs.
+      - name: Run the getting started example from the repository root
+        shell: pwsh
+        run: >-
+          ./ci/run-fresh-clone-example.ps1 -Product '${{ matrix.product }}'
+          -Example '${{ matrix.example }}' -ExpectDownload
+          -Expect '${{ matrix.expect }}'
+          -LinkFile '${{ matrix.file }}.link' -ServeFile 'assets/${{ matrix.asset }}'
+
+      # The key follows the link, so a new free file gets a new entry, and
+      # the same file is kept once rather than once a run.
+      - name: Keep the data file for the other systems
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ matrix.file }}
+          key: fresh-clone-${{ matrix.product }}-${{ hashFiles(format('{0}.link', matrix.file)) }}
+          enableCrossOsArchive: true
+
+      # The console build above compiles the console examples and their
+      # tests. This builds every example module, the web examples too, with
+      # its tests compiled, against the published packages, so a test that
+      # uses a class the published packages lack fails here. It comes after
+      # the cache is saved, so the other systems still get the data file. The
+      # tests are not run here, as the pull request build runs them.
+      - name: Build every example and its tests against the published packages
+        working-directory: examples/${{ matrix.product }}
+        shell: pwsh
+        run: mvn -B --no-transfer-progress package -DskipTests
+
+  other-systems:
+    name: ${{ matrix.product }} on ${{ matrix.os }}
+    needs: download
+    strategy:
+      fail-fast: false
+      matrix:
+        # macOS runners are shared by the whole organisation, so pull
+        # requests leave them out and the pushes and the daily run use them.
+        os: ${{ fromJSON(github.event_name == 'pull_request' && '["windows-latest"]' || '["windows-latest", "macos-latest"]') }}
+        product: [device-detection, ip-intelligence]
+        include:
+          - product: device-detection
+            example: fiftyone.devicedetection.examples.console.GettingStartedOnPrem
+            file: cxx/data/device-detection/51Degrees-LiteV4.1.hash
+            expect: ''
+          - product: ip-intelligence
+            example: fiftyone.ipintelligence.examples.console.GettingStartedOnPrem
+            file: cxx/data/ip-intelligence/51Degrees-LiteV41.ipi
+            # Each IP Intelligence value is printed with its weighting.
+            expect: '(weighting '
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Clone the repository with its submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Take the data file the Ubuntu job downloaded
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ matrix.file }}
+          key: fresh-clone-${{ matrix.product }}-${{ hashFiles(format('{0}.link', matrix.file)) }}
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: The runner's Java and Maven
+        shell: pwsh
+        run: |
+          java -version
+          mvn -v
+
+      - name: Build the console examples against the published packages
+        working-directory: examples/${{ matrix.product }}
+        shell: pwsh
+        run: mvn -B --no-transfer-progress -pl console -am package -DskipTests
+
+      - name: Run the getting started example from the repository root
+        shell: pwsh
+        run: >-
+          ./ci/run-fresh-clone-example.ps1 -Product '${{ matrix.product }}'
+          -Example '${{ matrix.example }}' -ExpectDownload:$false
+          -Expect '${{ matrix.expect }}'

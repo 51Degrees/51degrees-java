@@ -23,16 +23,24 @@
 package fiftyone.pipeline.web.mvc.configuration;
 
 import javax.servlet.ServletContext;
+
+import static fiftyone.pipeline.web.Constants.DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Default implementation of the {@link FiftyOneInterceptorConfig} interface.
  */
 public class FiftyOneInterceptorConfigDefault implements FiftyOneInterceptorConfig {
+    /** Create a new instance. */
+    public FiftyOneInterceptorConfigDefault() {
+    }
 
     private String dataFilePath;
 
     private boolean clientsidePropertiesEnabled;
+
+    private int clientsideCacheMaxAge =
+        DEFAULT_CLIENTSIDE_CACHE_MAX_AGE_SECONDS;
 
     private String javaScriptPath;
 
@@ -42,29 +50,76 @@ public class FiftyOneInterceptorConfigDefault implements FiftyOneInterceptorConf
 
     private boolean setHeadersElementEnabled = true;
 
+    /** The servlet context of the application. */
     @Autowired
     public ServletContext servletContext;
     
+    /**
+     * Set the path of the Pipeline options file.
+     *
+     * @param dataFilePath the path, or empty for the default file
+     */
     public void setDataFilePath(String dataFilePath) {
         this.dataFilePath = dataFilePath;
     }
 
+    /**
+     * Set whether the client-side JavaScript and JSON are served.
+     *
+     * @param clientsidePropertiesEnabled true to serve them
+     */
     public void setClientsidePropertiesEnabled(boolean clientsidePropertiesEnabled) {
         this.clientsidePropertiesEnabled = clientsidePropertiesEnabled;
     }
 
+    /**
+     * Set how many seconds a browser may keep the client-side JavaScript or
+     * JSON before it asks again, the max-age of their Cache-Control header.
+     * @param seconds the max-age, 0 or more
+     * @throws IllegalArgumentException if seconds is negative
+     */
+    public void setClientsideCacheMaxAge(int seconds) {
+        if (seconds < 0) {
+            throw new IllegalArgumentException(
+                "The max-age of the client-side responses cannot be " +
+                    "negative, and was " + seconds + ".");
+        }
+        this.clientsideCacheMaxAge = seconds;
+    }
+
+    /**
+     * Set the path the JavaScript is served from.
+     *
+     * @param javaScriptPath the end of the request path, or empty for the
+     *    default
+     */
     public void setJavaScriptPath(String javaScriptPath) {
         this.javaScriptPath = javaScriptPath;
     }
 
+    /**
+     * Set the path the JSON is served from.
+     *
+     * @param jsonPath the end of the request path, or empty for the default
+     */
     public void setJsonPath(String jsonPath) {
         this.jsonPath = jsonPath;
     }
 
+    /**
+     * Set whether the Pipeline gets a Sequence Element.
+     *
+     * @param sequenceElementEnabled true to add one
+     */
     public void setSequenceElementEnabled(boolean sequenceElementEnabled) {
         this.sequenceElementEnabled = sequenceElementEnabled;
     }
 
+    /**
+     * Set whether the Pipeline gets a Set Headers Element.
+     *
+     * @param setHeadersElementEnabled true to add one
+     */
     public void setSetHeadersElementEnabled(boolean setHeadersElementEnabled) {
         this.setHeadersElementEnabled = setHeadersElementEnabled;
     }
@@ -97,5 +152,10 @@ public class FiftyOneInterceptorConfigDefault implements FiftyOneInterceptorConf
     @Override
     public boolean getClientsidePropertiesEnabled() {
         return clientsidePropertiesEnabled;
+    }
+
+    @Override
+    public int getClientsideCacheMaxAge() {
+        return clientsideCacheMaxAge;
     }
 }

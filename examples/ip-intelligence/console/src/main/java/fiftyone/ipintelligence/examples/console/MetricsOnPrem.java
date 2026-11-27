@@ -54,6 +54,7 @@
 
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.ipintelligence.IPIntelligencePipelineBuilder;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
 import fiftyone.ipintelligence.examples.console.areas.Calculations;
@@ -78,6 +79,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
@@ -105,6 +107,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * are output in CSV format.
  */
 public class MetricsOnPrem {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-ipintelligence-examples-console-metricsonprem.java";
+
     private static final Logger logger = LoggerFactory.getLogger(MetricsOnPrem.class);
 
     /**
@@ -325,6 +333,8 @@ public class MetricsOnPrem {
                         args[3], new PrintWriter(System.out)) :
                 DEFAULT_PERFORMANCE_PROFILE;
         if (profile == null) {
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.ON_PREMISE_REPOSITORIES);
             return;
         }
 
@@ -334,6 +344,8 @@ public class MetricsOnPrem {
                 Arrays.asList(PROPERTIES),
                 new PrintWriter(System.out),
                 CONTACT_US)) {
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.ON_PREMISE_REPOSITORIES);
             return;
         }
 
@@ -345,6 +357,8 @@ public class MetricsOnPrem {
             run(dataFile, samplePercentage, 0, condition, profile, writer);
         }
         logger.info("Output written to '{}'", outputFile);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     /**
@@ -407,7 +421,9 @@ public class MetricsOnPrem {
                         // configuration options.
                         // https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-ipintelligence-examples-console-metricsonprem.java&utm_term=automatic-datafile-updates
                         .setPerformanceProfile(profile)
-                        // inhibit sharing usage for this example
+                        // Usage sharing is off because this example's evidence is already
+                        // known to 51Degrees. In production, leave usage sharing on, which adds
+                        // a Usage Sharing Element to the Pipeline and helps improve the service.
                         .setShareUsage(false)
                         // inhibit auto-update of the data file for this example
                         .setAutoUpdate(false)
@@ -420,7 +436,8 @@ public class MetricsOnPrem {
             onPremiseBuilder.setProperty(property);
         }
 
-        try (Pipeline pipeline = onPremiseBuilder.build()) {
+        Pipeline pipeline = onPremiseBuilder.build();
+        try {
 
             IPIntelligenceOnPremiseEngine engine =
                     pipeline.getElement(IPIntelligenceOnPremiseEngine.class);
@@ -474,6 +491,8 @@ public class MetricsOnPrem {
 
             writeCsv(output, groups);
             logger.info("All done");
+        } finally {
+            pipeline.close();
         }
     }
 
@@ -493,15 +512,16 @@ public class MetricsOnPrem {
         int added = 0;
         // Find the Network component which contains the range properties.
         //
-        // A try-with-resource block MUST be used for the collections of
-        // metadata returned by the engine. Each one holds a reference to the
+        // The collections of metadata returned by the engine MUST be closed
+        // in a finally block. Each one holds a reference to the
         // engine's data set until it is closed. If it is left open, closing
         // the pipeline cannot free the data set, and with the max performance
         // profile that is the whole data file held in memory until the
         // garbage collector happens to finalize the collection.
         ComponentMetaData network = null;
-        try (CloseableIterable<ComponentMetaData> components =
-                     engine.getComponents()) {
+        CloseableIterable<ComponentMetaData> components =
+                engine.getComponents();
+        try {
             for (ComponentMetaData component : components) {
                 if (network == null &&
                         "Network".equalsIgnoreCase(component.getName())) {
@@ -510,6 +530,8 @@ public class MetricsOnPrem {
                     component.close();
                 }
             }
+        } finally {
+            components.close();
         }
         if (network == null) {
             logger.warn("No 'Network' component found in the data file. " +
@@ -518,29 +540,33 @@ public class MetricsOnPrem {
         }
         // The Network component is kept to compare each profile against, so
         // it is closed with the collection of profiles once that is done.
-        try (ComponentMetaData networkComponent = network;
-             CloseableIterable<ProfileMetaData> profiles =
-                     engine.getProfiles()) {
-            for (ProfileMetaData profile : profiles) {
-                try (ComponentMetaData component = profile.getComponent()) {
-                    if (networkComponent.equals(component) &&
-                            isRegisteredCountryValid(profile)) {
-                        String start = getValue(profile, "IpRangeStart");
-                        String end = getValue(profile, "IpRangeEnd");
-                        if (start != null && end != null) {
-                            String[] range = new String[]{start, end};
-                            if (condition == null || condition.test(range)) {
-                                ranges.put(range);
-                                added++;
-                                if (maxRanges > 0 && added >= maxRanges) {
-                                    break;
+        try (ComponentMetaData networkComponent = network) {
+            CloseableIterable<ProfileMetaData> profiles =
+                    engine.getProfiles();
+            try {
+                for (ProfileMetaData profile : profiles) {
+                    try (ComponentMetaData component = profile.getComponent()) {
+                        if (networkComponent.equals(component) &&
+                                isRegisteredCountryValid(profile)) {
+                            String start = getValue(profile, "IpRangeStart");
+                            String end = getValue(profile, "IpRangeEnd");
+                            if (start != null && end != null) {
+                                String[] range = new String[]{start, end};
+                                if (condition == null || condition.test(range)) {
+                                    ranges.put(range);
+                                    added++;
+                                    if (maxRanges > 0 && added >= maxRanges) {
+                                        break;
+                                    }
                                 }
                             }
                         }
+                    } finally {
+                        profile.close();
                     }
-                } finally {
-                    profile.close();
                 }
+            } finally {
+                profiles.close();
             }
         }
         return added;
@@ -569,13 +595,16 @@ public class MetricsOnPrem {
         String result = null;
         // Every value is closed, not only the first, as each one wraps a
         // native object of its own.
-        try (CloseableIterable<ValueMetaData> values = profile.getValues(name)) {
+        CloseableIterable<ValueMetaData> values = profile.getValues(name);
+        try {
             for (ValueMetaData value : values) {
                 if (result == null) {
                     result = value.getName();
                 }
                 value.close();
             }
+        } finally {
+            values.close();
         }
         return result;
     }
@@ -626,7 +655,8 @@ public class MetricsOnPrem {
                                   Map<Key, Metric> groups,
                                   InetAddress ipAddress) throws Exception {
         // Get the data for the IP address.
-        try (FlowData flowData = pipeline.createFlowData()) {
+        FlowData flowData = pipeline.createFlowData();
+        try {
             flowData.addEvidence("query.client-ip", ipAddress.getHostAddress());
             flowData.process();
             IPIntelligenceData data = flowData.get(IPIntelligenceData.class);
@@ -644,7 +674,7 @@ public class MetricsOnPrem {
 
             // Increase the total area and number of areas for the metric only
             // where a non zero area is available.
-            Object areas = firstValue(tryGet(data::getAreas));
+            Object areas = firstValue(tryGet(data::getAreas), Object.class);
             if (areas != null) {
                 Result result = wktAreas.computeIfAbsent(
                         areas.toString(),
@@ -662,6 +692,8 @@ public class MetricsOnPrem {
                     metric.areaCount++;
                 }
             }
+        } finally {
+            flowData.close();
         }
     }
 
@@ -670,14 +702,14 @@ public class MetricsOnPrem {
      */
     private static Key createKey(IPIntelligenceData data) {
         return new Key(
-                stringValue(firstValue(tryGet(data::getContinentName))),
-                stringValue(firstValue(tryGet(data::getCountry))),
-                stringValue(firstValue(tryGet(data::getLocationConfidence))),
-                stringValue(firstValue(tryGet(data::getConnectionType))),
-                stringValue(firstValue(tryGet(data::getIsVPN))),
-                stringValue(firstValue(tryGet(data::getIsProxy))),
-                stringValue(firstValue(tryGet(data::getIsTor))),
-                stringValue(firstValue(tryGet(data::getIsPublicRouter))));
+                stringValue(firstValue(tryGet(data::getContinentName), Object.class)),
+                stringValue(firstValue(tryGet(data::getCountry), Object.class)),
+                stringValue(firstValue(tryGet(data::getLocationConfidence), Object.class)),
+                stringValue(firstValue(tryGet(data::getConnectionType), Object.class)),
+                stringValue(firstValue(tryGet(data::getIsVPN), Object.class)),
+                stringValue(firstValue(tryGet(data::getIsProxy), Object.class)),
+                stringValue(firstValue(tryGet(data::getIsTor), Object.class)),
+                stringValue(firstValue(tryGet(data::getIsPublicRouter), Object.class)));
     }
 
     /**
@@ -736,9 +768,18 @@ public class MetricsOnPrem {
                     metric.areaCount + "," +
                     metric.getAverageAreaKm() + "," +
                     metric.getEquivalentRadiusKm() + "," +
-                    String.format("%.2f", metric.getAveragePolygons()));
+                    twoDecimalPlaces(metric.getAveragePolygons()));
         }
         output.flush();
+    }
+
+    /**
+     * A number to two decimal places with a full stop as the separator
+     * whatever the default locale, as a decimal comma would split the CSV
+     * column in two.
+     */
+    static String twoDecimalPlaces(double value) {
+        return String.format(Locale.ROOT, "%.2f", value);
     }
 
     /**

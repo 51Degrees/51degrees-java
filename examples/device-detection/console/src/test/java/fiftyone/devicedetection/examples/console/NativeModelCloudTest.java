@@ -22,19 +22,29 @@
 
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.ExampleProcess;
 import fiftyone.devicedetection.examples.shared.KeyHelper;
 import org.junit.Test;
 
-import java.util.Collections;
-
 public class NativeModelCloudTest {
+    /**
+     * The example runs as a customer runs it, in a process of its own
+     * that reads its key from _51DEGREES_RESOURCE_KEY, and the cloud that
+     * _51DEGREES_CLOUD_ENDPOINT names when that is set. The test gives that
+     * process the key with every property, and fails unless the example
+     * lists a device with a vendor and a model for each native model name,
+     * so a key that does not include HardwarePlatform.Profiles fails it.
+     */
     @Test
     public void run() throws Exception {
         String resourceKey = KeyHelper.requireResourceKey(
-            Collections.singletonList(
-                NativeModelCloud.NATIVE_MODEL_EXAMPLE_RESOURCE_KEY_NAME),
+            KeyHelper.BESPOKE_RESOURCE_KEY_VARIABLE,
             "the devices that match a native model name", "hardware");
-        NativeModelCloud.run(resourceKey, System.out);
-
+        ExampleProcess.Result result = ExampleProcess.runWithResourceKey(
+            NativeModelCloud.class, resourceKey);
+        System.out.println(result.output);
+        HardwareLookupOutput.requireDevices(NativeModelCloud.class, result,
+            "native model lookup", "the native model name",
+            NativeModelCloud.NATIVE_MODEL_1, NativeModelCloud.NATIVE_MODEL_2);
     }
 }

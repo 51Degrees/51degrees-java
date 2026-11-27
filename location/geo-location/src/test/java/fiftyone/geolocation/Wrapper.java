@@ -40,7 +40,6 @@ public interface Wrapper extends Closeable {
 
     Iterable<AspectPropertyMetaData> getProperties();
 
-    @SuppressWarnings("rawtypes")
-	AspectEngine getEngine();
+	AspectEngine<?, ?> getEngine();
   
 }

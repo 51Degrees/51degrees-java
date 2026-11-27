@@ -51,5 +51,10 @@ public class Constants {
     public static final String ChromeUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
             "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
-    public static final String RESOURCE_KEY_ENV_VAR = "TestResourceKey";
+    /**
+     * The name the live cloud tests read their resource key from. It holds
+     * the key with every property.
+     */
+    public static final String RESOURCE_KEY_ENV_VAR =
+        "_51DEGREES_RESOURCE_KEY_BESPOKE";
 }

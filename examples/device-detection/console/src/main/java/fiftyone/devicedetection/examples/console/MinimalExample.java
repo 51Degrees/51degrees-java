@@ -22,13 +22,15 @@
 
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
+import fiftyone.devicedetection.examples.shared.KeyHelper;
 import fiftyone.devicedetection.DeviceDetectionPipelineBuilder;
 import fiftyone.devicedetection.shared.DeviceData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 
 /**
- * This is the code for the minimal example displayed in the configurator. Please see
+ * This is the code for the minimal example displayed on the configuration page. Please see
  * <a href="https://51degrees.com/documentation/_device_detection__examples__getting_started__console__cloud.html?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-minimalexample.java&amp;utm_term=minimalexample">
  * Getting Started Console Cloud</a> for a fuller example.
  */
@@ -44,23 +46,43 @@ import fiftyone.pipeline.core.flowelements.Pipeline;
  */
 public class MinimalExample {
 
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-devicedetection-examples-console-minimalexample.java";
+
     public static void main(String[] args) throws Exception {
-        String resource = args.length > 0 ? args[0] : null;
-        run(resource);
+        String resourceKey = KeyHelper.findResourceKey(
+                args.length > 0 ? args[0] : null,
+                KeyHelper.RESOURCE_KEY_VARIABLE);
+        if (resourceKey == null) {
+            KeyHelper.writeNoResourceKey(System.out, EXAMPLE_TAG,
+                    KeyHelper.RESOURCE_KEY_VARIABLE,
+                    KeyHelper.FREE_PROPERTIES_CONFIGURATION);
+            FindOutMore.write(System.out, EXAMPLE_TAG,
+                    FindOutMore.CLOUD_REPOSITORIES);
+            return;
+        }
+        run(resourceKey);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.CLOUD_REPOSITORIES);
     }
 
     public static void run(String resource) throws Exception {
 
         // create a minimal pipeline to access the cloud engine
         // you only need one pipeline for multiple requests
-        // use try-with-resources to free the pipeline when done
-        try (Pipeline pipeline = new DeviceDetectionPipelineBuilder()
+        // close the pipeline in a finally block to free it when done
+        Pipeline pipeline = new DeviceDetectionPipelineBuilder()
                 .useCloud(resource)
-                .build()) {
+                .build();
+        try {
 
             /* get a flow data from the singleton pipeline for each detection */
             // it's important to free the flowdata when done
-            try (FlowData data = pipeline.createFlowData()) {
+            FlowData data = pipeline.createFlowData();
+            try {
                 // add user-agent and client hint headers (if any) from the HTTP request
                 data.addEvidence("header.user-agent",
                             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
@@ -78,7 +100,11 @@ public class MinimalExample {
                 DeviceData device = data.get(DeviceData.class);
 
                 System.out.println("device.IsMobile: " + device.getIsMobile().getValue());
+            } finally {
+                data.close();
             }
+        } finally {
+            pipeline.close();
         }
     }
 }

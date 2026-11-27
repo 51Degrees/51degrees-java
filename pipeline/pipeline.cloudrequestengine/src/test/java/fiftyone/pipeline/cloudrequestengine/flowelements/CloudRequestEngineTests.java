@@ -49,6 +49,7 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -143,8 +144,11 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
             data.addEvidence("query.User-Agent", "iPhone");
             data.process();
 
-            assertFalse(data.getErrors().isEmpty());
-            StringBuilder reported = new StringBuilder();
+            // The response is a lazy property, so once processing has
+            // finished its error reaches only the reader.
+            RuntimeException read = assertThrows(RuntimeException.class,
+                () -> data.getFromElement(engine).getJsonResponse());
+            StringBuilder reported = new StringBuilder(printed(read));
             for (FlowError error : data.getErrors()) {
                 reported.append(printed(error.getThrowable()));
             }
@@ -440,7 +444,6 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
         }
     }
 
-    @SuppressWarnings("serial")
     private static Stream<Arguments> getSelectedEvidenceArgs() {
         return Stream.of(
                 Arguments.of(
@@ -485,7 +488,6 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
         assertEquals(expectedValue, result);
     }
 
-    @SuppressWarnings("serial")
     private static Stream<Arguments> getFormDataArgs() {
         return Stream.of(
                 Arguments.of(
@@ -967,7 +969,6 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
      * the configured origin header value.
      */
     @Test
-    @SuppressWarnings("unchecked")
     public void OriginHeader() throws Exception {
         final String resourceKey = "resource_key";
         final String userAgent = "iPhone";
@@ -988,14 +989,18 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
             data.process();
         }
 
-        ArgumentCaptor<Map<String, String>> argumentsCaptured = ArgumentCaptor.forClass(Map.class);
+        AtomicReference<Map<String, String>> headersSent =
+            new AtomicReference<>();
 
         verify(httpClient, times(1)) // we expected a single external POST request
                 .postData(
                         argThat(c -> {
                             return c.getURL().equals(expectedUrl); // to this uri
                         }),
-                        argumentsCaptured.capture(),
+                        argThat(sent -> {
+                            headersSent.set(sent);
+                            return true;
+                        }),
                         argThat(bytes -> {
                             String string = new String(bytes);
                             return string.contains("resource=" + resourceKey) && // content contains resource key
@@ -1003,7 +1008,7 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
                         }));
 
         // Verify that the origin header has the expected value.
-        Map<String, String> headers = argumentsCaptured.getValue();
+        Map<String, String> headers = headersSent.get();
         assertTrue(headers.containsKey(Constants.OriginHeaderName));
         assertEquals(origin, headers.get(Constants.OriginHeaderName));
     }

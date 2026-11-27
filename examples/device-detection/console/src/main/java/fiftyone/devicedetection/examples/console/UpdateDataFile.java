@@ -22,10 +22,17 @@
 
 package fiftyone.devicedetection.examples.console;
 
+import fiftyone.devicedetection.examples.shared.FindOutMore;
 import fiftyone.devicedetection.DeviceDetectionPipelineBuilder;
 import fiftyone.devicedetection.examples.shared.DataFileHelper;
-import fiftyone.devicedetection.shared.testhelpers.KeyUtils;
+import fiftyone.devicedetection.examples.shared.KeyHelper;
+import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
 import fiftyone.pipeline.core.flowelements.Pipeline;
+import fiftyone.pipeline.engines.data.AspectData;
+import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
+import fiftyone.pipeline.engines.data.DataUpdateUrlFormatter;
+import fiftyone.pipeline.engines.fiftyone.data.FiftyOneUrlFormatter;
+import fiftyone.pipeline.engines.flowelements.OnPremiseAspectEngine;
 import fiftyone.pipeline.engines.services.DataUpdateService;
 import fiftyone.pipeline.engines.services.DataUpdateServiceDefault;
 import fiftyone.pipeline.engines.services.OnUpdateComplete;
@@ -37,13 +44,14 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.nio.file.*;
 import java.text.SimpleDateFormat;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Scanner;
 
 import static fiftyone.common.testhelpers.LogbackHelper.configureLogback;
 import static fiftyone.devicedetection.examples.shared.DataFileHelper.getDatafileMetaData;
-import static fiftyone.devicedetection.shared.testhelpers.FileUtils.ENTERPRISE_HASH_DATA_FILE_NAME;
-import static fiftyone.devicedetection.shared.testhelpers.FileUtils.LITE_HASH_DATA_FILE_PATH;
+import static fiftyone.devicedetection.examples.shared.DataFileHelper.ENTERPRISE_HASH_DATA_FILE_NAME;
+import static fiftyone.devicedetection.examples.shared.DataFileHelper.LITE_HASH_DATA_FILE_PATH;
 import static fiftyone.pipeline.util.FileFinder.getFilePath;
 
 /*!
@@ -52,16 +60,35 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * device detection engine, and controls when a new data file is sought and when it is loaded by
  * the device detection software.
  * <p>
- * Three main aspects are demonstrated:
+ * Four main aspects are demonstrated:
  * <ol>
  *     <li>Update on Start-Up</li>
  *     <li>Filesystem Watcher</li>
  *     <li>Daily auto-update</li>
+ *     <li>Programmatic update</li>
  * </ol>
  * ## License Key
- * Updating the data file needs a 51Degrees licence key for the Enterprise data file. Without
+ * Updating the data file needs a 51Degrees license key for the Enterprise data file. Without
  * one, the example shows the free Lite data file and says where to ask for a key. Contact us for
  * a key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&utm_term=updatedatafile
+ * ## Product
+ * A license key that holds one product needs nothing more, and the example then names no
+ * product. A license key can also hold several products, for example a Device Detection data
+ * file and an IP Intelligence data file. With such a key, an update asks for the product of
+ * the data file the example starts from. Update on start-up runs before the data file is
+ * loaded, so it reads the product from the header of the file. To download another product,
+ * give its name, for example V4TAC, as the third command line argument. The example then adds
+ * it to the URL of each request.
+ * ``` {java}
+ *      .setDataUpdateUrlFormatter(productFormatter(product))
+ * ```
+ * ## Update URL
+ * The example downloads from the 51Degrees Distributor. To download from another address, such
+ * as a server of your own that holds a copy of the data file, give its URL as the fourth
+ * command line argument.
+ * ``` {java}
+ *      .setDataUpdateUrl(dataUpdateUrl)
+ * ```
  * # Data Files
  * You can find out more about data files, licenses etc. at our [FAQ page](https://51degrees.com/resources/faqs?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&utm_term=updatedatafile)
  * ## Enterprise Data File
@@ -164,6 +191,16 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * ``` {java}
             			.setUpdateRandomisationMax(10*60)
  * ```
+ * ## Programmatic update
+ * Your own code can ask for an update at a time it chooses, for example from a scheduled job
+ * with automatic updates turned off. The data update service checks for a newer data file,
+ * downloads it and refreshes the engine.
+ * ``` {java}
+ *      DataUpdateService.AutoUpdateStatus status = dataUpdateService.checkForUpdate(
+ *              pipeline.getElement(DeviceDetectionHashEngine.class));
+ * ```
+ * To load a data file that your own process has put in place, call the engine's
+ * `refreshData(null)` instead.
  * # Location
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-java/blob/main/examples/device-detection/console/src/main/java/fiftyone/devicedetection/examples/console/UpdateDataFile.java).
  *
@@ -175,28 +212,35 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * device detection engine, and controls when a new data file is sought and when it is loaded by
  * the device detection software.
  * <p>
- * Three main aspects are demonstrated:
+ * Four main aspects are demonstrated:
  * <ol>
  *     <li>Update on Start-Up</li>
  *     <li>Filesystem Watcher</li>
  *     <li>Daily auto-update</li>
+ *     <li>Programmatic update</li>
  * </ol>
  * <p>
- * To update the data file you need a licence key, which you can ask for on our
+ * To update the data file you need a license key, which you can ask for on our
  * <a href="https://51degrees.com/contact-us?utm_source=code&amp;utm_medium=example&amp;utm_campaign=51degrees-java&amp;utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&amp;utm_term=updatedatafile-2">contact page</a>.
  * The key must be supplied as a command line argument or by setting
  * an environment variable or system property called {@link UpdateDataFile#UPDATE_EXAMPLE_LICENSE_KEY_NAME}
  */
 public class UpdateDataFile {
 
-    public static final String UPDATE_EXAMPLE_LICENSE_KEY_NAME = "LicenseKey";
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java";
+
+    public static final String UPDATE_EXAMPLE_LICENSE_KEY_NAME = "_51DEGREES_LICENSE_KEY";
     public static final String DEFAULT_DATA_FILENAME =
             System.getProperty("user.dir") + File.separator +  ENTERPRISE_HASH_DATA_FILE_NAME;
 
     private static final Logger logger = LoggerFactory.getLogger(UpdateDataFile.class);
 
     /**
-     * Where to ask for a licence key and a copy of the Enterprise data file,
+     * Where to ask for a license key and a copy of the Enterprise data file,
      * tagged with this example.
      */
     private static final String CONTACT_US = "https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&utm_term=licence-key";
@@ -208,7 +252,11 @@ public class UpdateDataFile {
         configureLogback(getFilePath("logback.xml"));
         String licenseKey = args.length > 0 ? args[0] : null;
         String dataFilename = args.length > 1 ? args[1] : null;
-        run(dataFilename, licenseKey, true);
+        String product = args.length > 2 ? args[2] : null;
+        String dataUpdateUrl = args.length > 3 ? args[3] : null;
+        run(dataFilename, licenseKey, product, dataUpdateUrl, true);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     /**
@@ -223,13 +271,44 @@ public class UpdateDataFile {
      * @throws Exception in the event of file not found, license key not found etc.
      */
     static void run(String dataFilename, String licenseKey, boolean interactive) throws Exception {
+        run(dataFilename, licenseKey, null, null, interactive);
+    }
+
+    /**
+     * Run the UpdateDataFile example for the product given, from the
+     * 51Degrees Distributor.
+     * @param dataFilename the path for a datafile to download, as above
+     * @param licenseKey a license key that holds the product, as above
+     * @param product the product to download, or null, as below
+     * @throws Exception in the event of file not found, license key not found etc.
+     */
+    static void run(String dataFilename, String licenseKey, String product,
+                    boolean interactive) throws Exception {
+        run(dataFilename, licenseKey, product, null, interactive);
+    }
+
+    /**
+     * Run the UpdateDataFile example for the product given, from the address
+     * given.
+     * @param dataFilename the path for a datafile to download, as above
+     * @param licenseKey a license key that holds the product, as above
+     * @param product the product of the data update service to download, for
+     *                example V4TAC. If null, the example names no product,
+     *                and the data update service asks for the product of the
+     *                data file
+     * @param dataUpdateUrl the URL to download from, or null for the
+     *                      51Degrees Distributor
+     * @throws Exception in the event of file not found, license key not found etc.
+     */
+    static void run(String dataFilename, String licenseKey, String product,
+                    String dataUpdateUrl, boolean interactive) throws Exception {
         logger.info("Starting example");
 
         // try to find a license key
         if (Objects.isNull(licenseKey)) {
-            licenseKey = KeyUtils.getNamedKey(UPDATE_EXAMPLE_LICENSE_KEY_NAME);
+            licenseKey = KeyHelper.getNamedKey(UPDATE_EXAMPLE_LICENSE_KEY_NAME);
         }
-        if (Objects.isNull(licenseKey) || KeyUtils.isInvalidKey(licenseKey)) {
+        if (Objects.isNull(licenseKey) || KeyHelper.isInvalidKey(licenseKey)) {
             explainLicenseKey(dataFilename, new PrintWriter(System.out, true));
             return;
         }
@@ -277,7 +356,7 @@ public class UpdateDataFile {
                     "in your licensed allocation.");
             System.out.print("Do you wish to continue with this example (y)? ");
             String input = scanner.nextLine();
-            if ((input.isEmpty() || input.toLowerCase().startsWith("y")) == false) {
+            if ((input.isEmpty() || input.toLowerCase(Locale.ROOT).startsWith("y")) == false) {
                 logger.info("Stopping example without download");
                 return;
             }
@@ -298,7 +377,7 @@ public class UpdateDataFile {
 
             // Build the device detection pipeline  and pass in the desired settings to configure
             // automatic updates.
-            try (Pipeline pipeline = new DeviceDetectionPipelineBuilder()
+            Pipeline pipeline = new DeviceDetectionPipelineBuilder()
                     // specify the filename for the data file. When using update on start-up
                     // the file need not exist, but the directory it is in must exist.
                     // Any file that is present is overwritten. Because the file will be
@@ -309,8 +388,17 @@ public class UpdateDataFile {
                     // to notify when update complete
                     .setDataUpdateService(dataUpdateService)
                     // For automatic updates to work you will need to provide a license key.
-                    // Contact us for a licence key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&utm_term=run
+                    // Contact us for a license key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-updatedatafile.java&utm_term=run
                     .setDataUpdateLicenseKey(licenseKey)
+                    // The address to download from, when one is given. With
+                    // none, the engine downloads from the 51Degrees
+                    // Distributor.
+                    .setDataUpdateUrl(dataUpdateUrl)
+                    // Name the product to download, when one is given. With
+                    // none, a license key that holds several products gets
+                    // the product of the data file, which update on start-up
+                    // reads from the header of the file.
+                    .setDataUpdateUrlFormatter(productFormatter(product))
                     // Enable update on startup, the auto update system
                     // will be used to check for an update before the
                     // device detection engine is created. This will block
@@ -326,13 +414,21 @@ public class UpdateDataFile {
                     // by default this is 30 mins
                     .setUpdatePollingInterval(1)
                     // build the pipeline
-                    .build()) {
+                    .build();
+            try {
 
                 // thread blocks till update checking is complete - or if there is an
                 // exception we don't get this far
-                logger.info("Update on start-up complete - status - {}", completionListener.args.getStatus());
+                DataUpdateService.AutoUpdateStatus status =
+                        completionListener.args.getStatus();
+                logger.info("Update on start-up complete - status - {}", status);
 
-                if (completionListener.args.getStatus().equals(
+                if (status.equals(
+                        DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED)) {
+                    // The data file in use is already the newest, so nothing
+                    // was downloaded and there is nothing to reload.
+                    logger.info("The data file is already the newest available");
+                } else if (status.equals(
                         DataUpdateService.AutoUpdateStatus.AUTO_UPDATE_SUCCESS)) {
 
                     logger.info("Modifying downloaded file to trigger reload ... please wait for that" +
@@ -355,17 +451,47 @@ public class UpdateDataFile {
                             completionListener.args.getStatus(), completionListener.isComplete());
                 } else {
                     logger.error("Auto update was not successful, abandoning example");
-                    throw new IllegalStateException("Auto update failed: " +
-                            completionListener.args.getStatus());
+                    throw new IllegalStateException("Auto update failed: " + status);
                 }
 
+                // Programmatic (non-automatic) update: ask for an update now,
+                // rather than wait for the next scheduled check. The file
+                // just loaded is the newest, so the status is normally
+                // AUTO_UPDATE_NOT_NEEDED.
+                DeviceDetectionHashEngine engine =
+                        pipeline.getElement(DeviceDetectionHashEngine.class);
+                logger.info("Programmatic update complete, status: {}",
+                        updateNow(dataUpdateService, engine));
+
                 logger.info("Finished Example");
+            } finally {
+                pipeline.close();
             }
         }
     }
 
     /**
-     * Without a licence key the example cannot download a data file, so it
+     * A programmatic (non-automatic) update. The data update service checks
+     * now for a newer data file for the engine, downloads it if there is
+     * one, and refreshes the engine with it, as an automatic update does.
+     * Call this when your own code decides it is time to update, for
+     * example from a scheduled job, with automatic updates turned off.
+     * To load a file that your own process has put in place, call the
+     * engine's {@code refreshData(null)} instead.
+     * @param dataUpdateService the service the pipeline was built with
+     * @param engine the on-premise engine to update
+     * @return the status of the update, such as AUTO_UPDATE_SUCCESS, or
+     * AUTO_UPDATE_NOT_NEEDED when the file in use is the newest
+     */
+    static DataUpdateService.AutoUpdateStatus updateNow(
+            DataUpdateService dataUpdateService,
+            OnPremiseAspectEngine<? extends AspectData,
+                    ? extends AspectPropertyMetaData> engine) {
+        return dataUpdateService.checkForUpdate(engine);
+    }
+
+    /**
+     * Without a license key the example cannot download a data file, so it
      * shows the data file it would start from, the free Lite file unless
      * another is given, and says what an update needs.
      * @param dataFilename the data file given, or null
@@ -391,11 +517,27 @@ public class UpdateDataFile {
         }
         output.println();
         output.println("Updating the data file downloads the Enterprise data " +
-                "file, which needs a licence key. Give the key as the first " +
+                "file, which needs a license key. Give the key as the first " +
                 "command line argument, or in the environment variable or " +
                 "system property '" + UPDATE_EXAMPLE_LICENSE_KEY_NAME + "'. " +
                 "Contact us for a key and a copy at " + CONTACT_US);
         output.flush();
+    }
+
+    /**
+     * A URL formatter that adds the product given to the URL the 51Degrees
+     * URL formatter builds, so every request names that product.
+     * @param product the product name, for example V4TAC, or null
+     * @return the formatter, or null to keep the default formatter, which
+     * names no product
+     */
+    static DataUpdateUrlFormatter productFormatter(final String product) {
+        if (Objects.isNull(product) || product.isEmpty()) {
+            return null;
+        }
+        final DataUpdateUrlFormatter formatter = new FiftyOneUrlFormatter();
+        return dataFile ->
+                formatter.getFormattedDataUpdateUrl(dataFile) + "&Product=" + product;
     }
 
     private static void logFileInfo(DataFileHelper.DatafileInfo metadata) {

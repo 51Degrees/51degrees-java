@@ -58,9 +58,15 @@ import static fiftyone.pipeline.web.Constants.DEFAULT_JSON_PATH;
  * This carries out the processing on the device making the request using the
  * Pipeline which has been constructed, and intercepts requests for the
  * 51Degrees JavaScript.
+ * <p>
+ * A Flow Data cannot be used by two threads at once. Application code reads
+ * the values it needs from the Flow Data on the request's thread, and hands
+ * those values, not the Flow Data, to any other thread or task. The Flow
+ * Data is closed when the request ends.
  */
 @Component
 public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
+    /** The Pipeline built from the options file. */
     public Pipeline pipeline;
 
     private final PipelineResultService resultService;
@@ -73,6 +79,20 @@ public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
     
     private final UACHService uachService;
 
+    /**
+     * Create the interceptor and build the Pipeline from the options file the
+     * configuration names.
+     *
+     * @param config the interceptor configuration
+     * @param resultService processes each request
+     * @param flowDataProvider gives the Flow Data for each request
+     * @param clientsidePropertyService serves the client-side JavaScript and
+     *    JSON
+     * @param fiftyOneJsService decides which requests get the JavaScript and
+     *    JSON
+     * @param uachService sets the User-Agent Client Hints response headers
+     * @throws RuntimeException if the Pipeline could not be built
+     */
     @Autowired
     public FiftyOneInterceptor(
         FiftyOneInterceptorConfig config,
@@ -122,10 +142,17 @@ public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
 
         resultService.setPipeline(pipeline);
         clientsidePropertyService.setPipeline(pipeline);
+        clientsidePropertyService.setCacheMaxAge(
+            config.getClientsideCacheMaxAge());
         fiftyOneJsService.enable(config.getClientsidePropertiesEnabled());
         fiftyOneJsService.setPaths(config.getJavaScriptPath(), jsonPath);
     }
 
+    /**
+     * Register the paths the client-side JavaScript and JSON are served from.
+     *
+     * @param viewControllerRegistry the registry to add the paths to
+     */
     public static void enableClientsideProperties(ViewControllerRegistry viewControllerRegistry) {
         viewControllerRegistry.addViewController("/" + CORE_JS_NAME);
         viewControllerRegistry.addViewController(DEFAULT_JSON_PATH);
@@ -162,6 +189,14 @@ public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
         HttpServletRequest request,
         HttpServletResponse response,
         Object handler) throws Exception {
+        // A request for the 51Degrees JavaScript or JSON whose If-None-Match
+        // matches the ETag of its Evidence is answered without processing,
+        // because that Evidence alone decides the content. Nothing is left
+        // to close.
+        if (fiftyOneJsService.serveNotModified(
+            request, response, resultService)) {
+            return false;
+        }
         resultService.process(request);
 
         boolean proceed = false;
@@ -196,6 +231,11 @@ public class FiftyOneInterceptor extends HandlerInterceptorAdapter {
         }
     }
 
+    /**
+     * The service that serves the client-side JavaScript and JSON.
+     *
+     * @return the service
+     */
     public ClientsidePropertyService getClientsidePropertyService() {
         return clientsidePropertyService;
     }

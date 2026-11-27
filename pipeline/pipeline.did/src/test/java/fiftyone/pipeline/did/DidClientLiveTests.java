@@ -26,6 +26,8 @@ import org.json.JSONObject;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -35,6 +37,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionException;
@@ -45,35 +48,60 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 /**
- * Tests against the live cloud service. They need a resource key, read
- * from the names {@link LiveCloudKeys} lists, and they fail rather than
- * skip when there is none, because a run that called nothing must not
- * report success. {@code _51DEGREES_CLOUD_ENDPOINT} points them at another
- * host, and a licence key is taken from the names {@link LiveCloudKeys} lists
- * where the account holds one. Each test creates a 51Did through the
- * cloud {@code json} endpoint, which is one use against the resource key,
- * plus one for each cloud call it then makes.
+ * Tests against the live cloud service. They run once for each resource
+ * key {@link LiveCloudKeys#PASSES} names, each with the license key of its
+ * own account where the pass has one, and a pass is skipped, naming the
+ * variable to set, when its resource key is not set.
+ * {@code _51DEGREES_CLOUD_ENDPOINT} points them at another host. Each test
+ * creates a 51Did through the cloud {@code json} endpoint, which is one use
+ * against the resource key, plus one for each cloud call it then makes.
  * <p>
- * The resource key has to carry the fodid product. A key without it gets
- * an answer from the service with no identifier in it, which these tests
- * report as an entitlement failure naming the product.
+ * The resource key has to carry the FODid product, and the CloudV5FODiD
+ * product for the marketing usages. A key without them gets an answer from
+ * the service with no identifier in it, which these tests report as an
+ * entitlement failure carrying the service's reason and naming the
+ * product.
  */
+@RunWith(Parameterized.class)
 public class DidClientLiveTests {
 
+    /**
+     * The name the resource key of each pass is read from, which names the
+     * pass, and the name its license key is read from, or null.
+     */
+    @Parameterized.Parameters(name = "{0}")
+    public static List<Object[]> passes() {
+        List<Object[]> passes = new ArrayList<>();
+        for (String[] pass : LiveCloudKeys.PASSES) {
+            passes.add(pass);
+        }
+        return passes;
+    }
+
+    private final String resourceKeyName;
+    private final String licenseKeyName;
     private String resourceKey;
-    private String licenceKey;
+    private String licenseKey;
     private DidClient client;
+
+    public DidClientLiveTests(String resourceKeyName, String licenseKeyName) {
+        this.resourceKeyName = resourceKeyName;
+        this.licenseKeyName = licenseKeyName;
+    }
 
     @Before
     public void init() {
-        resourceKey = LiveCloudKeys.find(LiveCloudKeys.RESOURCE_KEY_NAMES);
-        if (resourceKey == null) {
-            fail(LiveCloudKeys.noResourceKey());
-        }
+        resourceKey = LiveCloudKeys.read(resourceKeyName);
         // One lookup serves both, so the key the form body sends and the
         // one hasLicenceKey() answers for can never disagree.
-        licenceKey = LiveCloudKeys.find(LiveCloudKeys.LICENCE_KEY_NAMES);
-        client = new DidClient(resourceKey, licenceKey);
+        licenseKey = LiveCloudKeys.read(licenseKeyName);
+        if (resourceKey == null && licenseKey != null) {
+            fail(LiveCloudKeys.missingResourceKey(
+                resourceKeyName, licenseKeyName));
+        }
+        Assume.assumeTrue(LiveCloudKeys.noResourceKey(resourceKeyName),
+            resourceKey != null);
+        client = new DidClient(resourceKey, licenseKey);
     }
 
     @Test
@@ -133,13 +161,14 @@ public class DidClientLiveTests {
     public void verifyFullThenRedeemWithTheLicence_ReadsTheVerdict()
             throws Exception {
         Assume.assumeTrue(
-            "Set _51DEGREES_LICENSE_KEY to redeem a sealed result.",
+            LiveCloudKeys.noLicenseKey(licenseKeyName),
             client.hasLicenceKey());
 
-        List<FodId> identifiers = identifiersFor("id.usage", "standard");
+        Answer answer = identifiersFor("id.usage", "standard");
+        List<FodId> identifiers = answer.identifiers;
         Assume.assumeTrue(
-            "This resource key returned no marketing 51Did, so there was "
-            + "nothing to verify. Use a key entitled to the standard usage.",
+            LiveCloudKeys.notEntitled("id.usage=standard", answer.reason,
+                LiveCloudKeys.MARKETING),
             identifiers.isEmpty() == false);
         FodId fodId = identifiers.get(0);
         assertEquals(Usage.STANDARD, fodId.getUsage());
@@ -206,14 +235,15 @@ public class DidClientLiveTests {
     public void anIdentifierForAnotherAddress_ReportsEveryFactor()
             throws Exception {
         Assume.assumeTrue(
-            "Set _51DEGREES_LICENSE_KEY to redeem a sealed result.",
+            LiveCloudKeys.noLicenseKey(licenseKeyName),
             client.hasLicenceKey());
 
-        List<FodId> identifiers = identifiersCreatedFor(
+        Answer answer = identifiersCreatedFor(
             "id.usage", "standard", CREATED_FOR);
+        List<FodId> identifiers = answer.identifiers;
         Assume.assumeTrue(
-            "This resource key returned no marketing 51Did, so there was "
-            + "nothing to verify. Use a key entitled to the standard usage.",
+            LiveCloudKeys.notEntitled("id.usage=standard", answer.reason,
+                LiveCloudKeys.MARKETING),
             identifiers.isEmpty() == false);
         FodId fodId = identifiers.get(0);
 
@@ -309,7 +339,8 @@ public class DidClientLiveTests {
         if (value == null) {
             fail(LiveCloudKeys.notEntitled(
                 "a request for FODiD.IdProbGlobal with "
-                + "id.usage=non-marketing"));
+                + "id.usage=non-marketing",
+                LiveCloudKeys.nullReason(fodid), LiveCloudKeys.FODID));
         }
         return FodId.fromBase64(value);
     }
@@ -344,12 +375,27 @@ public class DidClientLiveTests {
         "https://m4ow.uk/mtm/2.txt";
 
     /**
-     * Asks the {@code json} endpoint for a 51Did with the given query
-     * parameter and returns every identifier it answered with. An empty
-     * list means the resource key is not entitled to that usage, which the
-     * caller fails on, naming the product the key is missing.
+     * Every identifier an answer from the {@code json} endpoint carried,
+     * and the reason the service gave when it carried none.
      */
-    private List<FodId> identifiersFor(String name, String value)
+    private static final class Answer {
+        final List<FodId> identifiers;
+        final String reason;
+
+        Answer(List<FodId> identifiers, String reason) {
+            this.identifiers = Collections.unmodifiableList(identifiers);
+            this.reason = reason;
+        }
+    }
+
+    /**
+     * Asks the {@code json} endpoint for a 51Did with the given query
+     * parameter and returns every identifier it answered with. No
+     * identifier means the resource key is not entitled to that usage,
+     * which the caller fails on with the service's reason, naming the
+     * product the key is missing.
+     */
+    private Answer identifiersFor(String name, String value)
             throws Exception {
         String url = client.getEndpoint() + "json?resource="
             + DidClient.encode(resourceKey)
@@ -367,10 +413,10 @@ public class DidClientLiveTests {
      * present the identifier from another. Both keys travel in the form
      * body, because a query string is written to access logs.
      */
-    private List<FodId> identifiersCreatedFor(
+    private Answer identifiersCreatedFor(
             String name, String value, String clientIp) throws Exception {
         String form = "resource=" + DidClient.encode(resourceKey)
-            + "&license=" + DidClient.encode(licenceKey)
+            + "&license=" + DidClient.encode(licenseKey)
             + "&" + name + "=" + DidClient.encode(value)
             + "&client-ip=" + DidClient.encode(clientIp)
             + "&values=FODiD.IdProbGlobal&values=FODiD.IdProbLic";
@@ -390,9 +436,9 @@ public class DidClientLiveTests {
 
     /**
      * Every identifier in the answer to a request sent to the {@code json}
-     * endpoint.
+     * endpoint, with the service's reason when there is none.
      */
-    private static List<FodId> readIdentifiers(HttpURLConnection connection)
+    private static Answer readIdentifiers(HttpURLConnection connection)
             throws Exception {
         int status = connection.getResponseCode();
         String body = readAll(status >= 400
@@ -403,7 +449,7 @@ public class DidClientLiveTests {
         List<FodId> identifiers = new ArrayList<>();
         JSONObject fodid = new JSONObject(body).optJSONObject("fodid");
         if (fodid == null) {
-            return identifiers;
+            return new Answer(identifiers, null);
         }
         for (String field : new String[] { "idprobglobal", "idproblic" }) {
             String found = fodid.optString(field, null);
@@ -411,7 +457,7 @@ public class DidClientLiveTests {
                 identifiers.add(FodId.fromBase64(found));
             }
         }
-        return identifiers;
+        return new Answer(identifiers, LiveCloudKeys.nullReason(fodid));
     }
 
     /**
@@ -452,9 +498,12 @@ public class DidClientLiveTests {
     public void everyUsageReadsBackTheTermsAndFlagsTheServiceWrote()
             throws Exception {
         String[][] cases = {
-            { "non-marketing", "NON_MARKETING", null },
-            { "standard", "STANDARD", MODEL_TERMS_FOR_MARKETING_2 },
-            { "personalized", "PERSONALIZED", MODEL_TERMS_FOR_MARKETING_2 },
+            { "non-marketing", "NON_MARKETING", null,
+                LiveCloudKeys.FODID },
+            { "standard", "STANDARD", MODEL_TERMS_FOR_MARKETING_2,
+                LiveCloudKeys.MARKETING },
+            { "personalized", "PERSONALIZED", MODEL_TERMS_FOR_MARKETING_2,
+                LiveCloudKeys.MARKETING },
         };
 
         int checked = 0;
@@ -463,9 +512,11 @@ public class DidClientLiveTests {
             Usage usage = Usage.valueOf(one[1]);
             String terms = one[2];
 
-            List<FodId> identifiers = identifiersFor("id.usage", name);
+            Answer answer = identifiersFor("id.usage", name);
+            List<FodId> identifiers = answer.identifiers;
             if (identifiers.isEmpty()) {
-                fail(LiveCloudKeys.notEntitled("id.usage=" + name));
+                fail(LiveCloudKeys.notEntitled(
+                    "id.usage=" + name, answer.reason, one[3]));
             }
             for (int i = 0; i < identifiers.size(); i++) {
                 assertAligned(name + "[" + i + "]", identifiers.get(i),
@@ -481,8 +532,7 @@ public class DidClientLiveTests {
         assertTrue(
             "The live cloud service returned no marketing 51Did, so no "
             + "terms address was read. The resource key has to carry the "
-            + "fodid product and be entitled to the standard or "
-            + "personalized usage.",
+            + LiveCloudKeys.MARKETING + " product.",
             checked > 0);
     }
 
@@ -518,10 +568,12 @@ public class DidClientLiveTests {
             // No id.usage is sent. A stated usage wins over a consent
             // string, so sending one would leave the bit clear and this
             // would prove the opposite of what it says.
-            List<FodId> identifiers = identifiersFor("tcstring", one[0]);
+            Answer answer = identifiersFor("tcstring", one[0]);
+            List<FodId> identifiers = answer.identifiers;
             if (identifiers.isEmpty()) {
                 fail(LiveCloudKeys.notEntitled(
-                    "a consent string granting " + usage));
+                    "a consent string granting " + usage, answer.reason,
+                    LiveCloudKeys.MARKETING));
             }
             for (int i = 0; i < identifiers.size(); i++) {
                 // A consent string granting a marketing usage produces a

@@ -22,6 +22,10 @@
 
 package fiftyone.pipeline.core.flowelements;
 
+import fiftyone.pipeline.annotations.AlternateName;
+import fiftyone.pipeline.annotations.DefaultValue;
+import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
+import fiftyone.pipeline.core.Constants;
 import fiftyone.pipeline.core.configuration.PipelineOptions;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.factories.FlowDataFactory;
@@ -42,8 +46,7 @@ import java.util.List;
  * @param <T> the builder type
  */
 
-@SuppressWarnings("rawtypes")
-public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
+public abstract class PipelineBuilderBase<T extends PipelineBuilderBase<T>> {
 
     /**
      * The {@link ILoggerFactory} used to create any loggers required by
@@ -60,16 +63,23 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
     /**
      * List of flow elements to add to the Pipeline.
      */
-    protected final List<FlowElement> flowElements = new ArrayList<>();
+    protected final List<FlowElement<?, ?>> flowElements = new ArrayList<>();
 
     /**
      * List of services to be managed by the Pipeline.
      */
     protected final List<PipelineService> services = new ArrayList<>();
     
-    protected boolean autoCloseElements = false;
+    /** Whether the Pipeline closes its elements when it is closed. */
+    protected boolean autoCloseElements =
+        Constants.DEFAULT_AUTO_CLOSE_ELEMENTS;
 
-    protected boolean suppressProcessExceptions = false;
+    /**
+     * Whether the Pipeline records errors from processing instead of throwing
+     * them.
+     */
+    protected boolean suppressProcessExceptions =
+        Constants.DEFAULT_SUPPRESS_PROCESS_EXCEPTIONS;
 
     /**
      * Construct a new instance using the default {@link ILoggerFactory}
@@ -91,7 +101,19 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
         this.logger = loggerFactory.getLogger(getClass().getName());
     }
 
-    protected List<FlowElement> getFlowElements() {
+    /**
+     * This builder as its own type, returned by the fluent setters so that a
+     * chain of calls keeps the type of the builder in use.
+     * @return this builder
+     */
+    protected abstract T self();
+
+    /**
+     * The elements added so far.
+     *
+     * @return the elements
+     */
+    protected List<FlowElement<?, ?>> getFlowElements() {
         return flowElements;
     }
 
@@ -102,6 +124,7 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
      */
     public Pipeline build() throws Exception {
         onPreBuild();
+        checkRunsLast(flowElements);
         Pipeline pipeline = new PipelineDefault(
             loggerFactory.getLogger(Pipeline.class.getName()),
             flowElements,
@@ -113,18 +136,68 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
     }
 
     /**
+     * After a build has failed, close the Flow Elements this builder made
+     * itself and take them out of its list, because no caller holds them to
+     * close. A failure to close one is added to the build's error.
+     * @param made the Flow Elements this builder made
+     * @param error the error the build failed with
+     */
+    protected void closeMadeElements(
+        List<? extends FlowElement<?, ?>> made,
+        Exception error) {
+        for (FlowElement<?, ?> element : made) {
+            getFlowElements().remove(element);
+            try {
+                element.close();
+            } catch (Exception e) {
+                error.addSuppressed(e);
+            }
+        }
+    }
+
+    /**
+     * Refuse a Pipeline that puts a Flow Element that must run last, such as
+     * the usage sharing element, anywhere but last, or in a parallel group.
+     * @param elements the Flow Elements of the Pipeline, in order
+     * @throws PipelineConfigurationException if one is out of place
+     */
+    private static void checkRunsLast(List<FlowElement<?, ?>> elements) {
+        for (int i = 0; i < elements.size(); i++) {
+            FlowElement<?, ?> element = elements.get(i);
+            if (element instanceof ParallelElements) {
+                for (FlowElement<?, ?> member :
+                    ((ParallelElements) element).getFlowElements()) {
+                    if (member instanceof RunsLast) {
+                        throw runsLastRefused((RunsLast) member);
+                    }
+                }
+            } else if (element instanceof RunsLast &&
+                i != elements.size() - 1) {
+                throw runsLastRefused((RunsLast) element);
+            }
+        }
+    }
+
+    private static PipelineConfigurationException runsLastRefused(
+        RunsLast element) {
+        return new PipelineConfigurationException(
+            element.getRunsLastName() + " must be the last Flow Element " +
+                "and outside any parallel group. Add it after every other " +
+                "Flow Element, and not as a member of a parallel group.");
+    }
+
+    /**
      * Add a {@link FlowElement} to the {@link Pipeline} to be run in series.
      * @param element to add
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
-    public T addFlowElement(FlowElement element) {
+    public T addFlowElement(FlowElement<?, ?> element) {
         if (element.isClosed()) {
             throw new IllegalStateException("The element '" +
                 element.getClass().getSimpleName() + "' was closed.");
         }
         flowElements.add(element);
-        return (T) this;
+        return self();
     }
 
     /**
@@ -133,9 +206,8 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
      * @param elements to add
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
-    public T addFlowElementsParallel(FlowElement[] elements) {
-        for (FlowElement element : elements) {
+    public T addFlowElementsParallel(FlowElement<?, ?>[] elements) {
+        for (FlowElement<?, ?> element : elements) {
             if (element.isClosed()) {
                 throw new IllegalStateException("The element '" +
                     element.getClass().getSimpleName() + "' was closed.");
@@ -145,7 +217,7 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
             loggerFactory.getLogger(ParallelElements.class.getName()),
             Arrays.asList(elements));
         flowElements.add(parallelElements);
-        return (T) this;
+        return self();
     }
     
     /**
@@ -157,10 +229,9 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
      * @param service the service instance to add
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
 	public T addService(PipelineService service) {
         services.add(service);
-        return (T) this;
+        return self();
     }
     
     /**
@@ -178,14 +249,18 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
     /**
      * Configure the {@link Pipeline} to either call dispose on it's child
      * {@link FlowElement}s when it is disposed or not.
+     * <p>
+     * A configuration file may also give this option as 'AutoDisposeElements'
+     * or 'SetAutoDisposeElements', the name other languages use.
      * @param autoClose true if the Pipeline should call dispose on it's child
      *                  elements when it is disposed
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
+    @DefaultValue(booleanValue = Constants.DEFAULT_AUTO_CLOSE_ELEMENTS)
+    @AlternateName("SetAutoDisposeElements")
     public T setAutoCloseElements(boolean autoClose) {
         this.autoCloseElements = autoClose;
-        return (T) this;
+        return self();
     }
 
     /**
@@ -197,10 +272,10 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
      *                 {@link FlowData#getErrors()}
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
+    @DefaultValue(booleanValue = Constants.DEFAULT_SUPPRESS_PROCESS_EXCEPTIONS)
     public T setSuppressProcessException(boolean suppress) {
         this.suppressProcessExceptions = suppress;
-        return (T) this;
+        return self();
     }
 
     /**

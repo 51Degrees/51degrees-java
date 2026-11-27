@@ -28,10 +28,12 @@ import fiftyone.pipeline.engines.services.HttpClientDefault;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
 
+/** Starts building a Pipeline that finds locations. */
 public class GeoLocationPipelineBuilder {
     private ILoggerFactory loggerFactory;
     private HttpClient httpClient;
 
+    /** Create a new builder with the default logger factory. */
     public GeoLocationPipelineBuilder() {
         this(LoggerFactory.getILoggerFactory());
     }
@@ -63,11 +65,10 @@ public class GeoLocationPipelineBuilder {
      * Use the 51Degrees cloud service to perform Geo Location.
      * @param resourceKey the resource key to use when querying the
      *                    service.
-     *                    Obtain one from https://configure.51degrees.com?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=geo-location-src-main-java-fiftyone-geolocation-geolocationpipelinebuilder.java&utm_term=usecloud
+     *                    Obtain one from <a href="https://51degrees.com/configure?utm_source=code&amp;utm_medium=comment&amp;utm_campaign=51degrees-java&amp;utm_content=geo-location-src-main-java-fiftyone-geolocation-geolocationpipelinebuilder.java&amp;utm_term=usecloud">51degrees.com/configure</a>
      * @param provider the Geo Location provider to use
      * @return builder that can be used to configure and build a pipeline
      * that will use the cloud Geo Location engine
-     * </returns>
      */
     public GeoLocationCloudPipelineBuilder useCloud(
         String resourceKey,
@@ -79,7 +80,7 @@ public class GeoLocationPipelineBuilder {
     /**
      * Use the 51Degrees cloud service to perform Geo Location
      * @param resourceKey the resource to use when querying the cloud service.
-     *                    Obtain one from https://configure.51degrees.com?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=geo-location-src-main-java-fiftyone-geolocation-geolocationpipelinebuilder.java&utm_term=usecloud-2
+     *                    Obtain one from <a href="https://51degrees.com/configure?utm_source=code&amp;utm_medium=comment&amp;utm_campaign=51degrees-java&amp;utm_content=geo-location-src-main-java-fiftyone-geolocation-geolocationpipelinebuilder.java&amp;utm_term=usecloud-2">51degrees.com/configure</a>
      * @param endpoint the 51Degrees cloud URL
      * @param provider the Geo Location provider to use
      * @return a builder that can be used to configure and build a pipeline that

@@ -23,7 +23,6 @@
 package fiftyone.ipintelligence.cloud.flowelements;
 
 import fiftyone.ipintelligence.cloud.data.IPIntelligenceDataCloud;
-import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudAspectEngineBase;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
 import fiftyone.pipeline.core.data.AccessiblePropertyMetaData;
@@ -32,7 +31,6 @@ import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.data.types.JavaScript;
-import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaDataDefault;
@@ -49,6 +47,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -63,11 +62,17 @@ import org.json.JSONArray;
  */
 public class IPIntelligenceCloudEngine
     extends CloudAspectEngineBase<IPIntelligenceDataCloud> {
+
+    @Override
+    protected Class<IPIntelligenceDataCloud> getDataType() {
+        return IPIntelligenceDataCloud.class;
+    }
+
     volatile List<AspectPropertyMetaData> aspectProperties;
     private String dataSourceTier;
     private final Object metadataLock = new Object();
     // Lower-cased names of properties the cloud returns as weighted lists
-    // (cloud type "Weighted..."), so processEngine can read their value/weight
+    // (cloud type "Weighted..."), so processCloudEngine can read their value/weight
     // pairs rather than treating them as a plain list.
     private final Set<String> weightedPropertyNames = new HashSet<>();
     CloudRequestEngine cloudRequestEngine;
@@ -135,111 +140,114 @@ public class IPIntelligenceCloudEngine
         return new EvidenceKeyFilterWhitelist(new ArrayList<String>());
     }
 
+    /**
+     * Populate the Element Data from this engine's part of the cloud
+     * response. The shared Cloud Aspect Engine processing finds the Cloud
+     * Request Engine's data, checks the request ran, and calls this only when
+     * there is a response.
+     * @param data the Flow Data being processed
+     * @param aspectData the Element Data to populate
+     * @param json the JSON response from the {@link CloudRequestEngine}
+     */
     @Override
-    protected void processEngine(FlowData data, IPIntelligenceDataCloud aspectData) {
-        if (cloudRequestEngine == null) {
-            throw new PipelineConfigurationException(
-                "The '" + getClass().getName() + "' requires a " +
-                    "'CloudRequestEngine' before it in the Pipeline. This " +
-                    "engine will be unable to produce results until this is " +
-                    "corrected.");
-        }
-        else {
-            CloudRequestData requestData =
-                data.getFromElement(cloudRequestEngine);
-            String json = "";
-            json = requestData.getJsonResponse();
+    protected void processCloudEngine(
+        FlowData data,
+        IPIntelligenceDataCloud aspectData,
+        String json) {
+        JSONObject jsonObj = new JSONObject(json);
+        JSONObject ipiObj = getElementJson(jsonObj);
 
-            // Extract data from json to the aspectData instance.
-            JSONObject jsonObj = new JSONObject(json);
-            JSONObject ipiObj = getElementJson(jsonObj);
+        Map<String, Object> propertyMap =
+            new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
-            Map<String, Object> propertyMap =
-                new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-
-            for (AspectPropertyMetaData property : getProperties()) {
-                if (weightedPropertyNames.contains(
-                        property.getName().toLowerCase())) {
+        for (AspectPropertyMetaData property : getProperties()) {
+            // A property the response leaves out has no entry, so
+            // reading it throws a PropertyMissingException.
+            if (ipiObj.has(
+                property.getName().toLowerCase(Locale.ROOT)) == false) {
+                continue;
+            }
+            if (weightedPropertyNames.contains(
+                    property.getName().toLowerCase(Locale.ROOT))) {
+                propertyMap.put(
+                    property.getName(),
+                    getWeightedListAspectPropertyValue(ipiObj, property));
+                continue;
+            }
+            String type = property.getType().getSimpleName();
+            switch(type) {
+                case ("List"):
                     propertyMap.put(
                         property.getName(),
-                        getWeightedListAspectPropertyValue(ipiObj, property));
-                    continue;
-                }
-                String type = property.getType().getSimpleName();
-                switch(type) {
-                    case ("List"):
-                        propertyMap.put(
-                            property.getName(),
-                            getListAspectPropertyValue(ipiObj, property));
+                        getListAspectPropertyValue(ipiObj, property));
+                    break;
+                case ("JavaScript"):
+                    propertyMap.put(
+                        property.getName(),
+                        getJavaScriptAspectPropertyValue(ipiObj, property));
+                    break;
+                case ("String"):
+                    propertyMap.put(
+                        property.getName(),
+                        getStringAspectPropertyValue(ipiObj, property));
                         break;
-                    case ("JavaScript"):
-                        propertyMap.put(
-                            property.getName(),
-                            getJavaScriptAspectPropertyValue(ipiObj, property));
+                case ("InetAddress"):
+                    propertyMap.put(
+                        property.getName(),
+                        getInetAddressAspectPropertyValue(ipiObj, property));
+                    break;
+                case ("WktString"):
+                    propertyMap.put(
+                        property.getName(),
+                        getWktStringAspectPropertyValue(ipiObj, property));
+                    break;
+                case ("boolean"):
+                    propertyMap.put(
+                        property.getName(),
+                        getBooleanAspectPropertyValue(ipiObj, property));
+                    break;
+                case ("int"):
+                    propertyMap.put(
+                        property.getName(),
+                        getIntegerAspectPropertyValue(ipiObj, property));
+                    break;
+                case ("double"):
+                    propertyMap.put(
+                        property.getName(),
+                        getDoubleAspectPropertyValue(ipiObj, property));
+                    break;
+                case ("Float"):
+                    propertyMap.put(
+                        property.getName(),
+                        getFloatAspectPropertyValue(ipiObj, property));
+                    break;
+                default:
+                    propertyMap.put(
+                        property.getName(),
+                        getStringAspectPropertyValue(ipiObj, property));
                         break;
-                    case ("String"):
-                        propertyMap.put(
-                            property.getName(),
-                            getStringAspectPropertyValue(ipiObj, property));
-                            break;
-                    case ("InetAddress"):
-                        propertyMap.put(
-                            property.getName(),
-                            getInetAddressAspectPropertyValue(ipiObj, property));
-                        break;
-                    case ("WktString"):
-                        propertyMap.put(
-                            property.getName(),
-                            getWktStringAspectPropertyValue(ipiObj, property));
-                        break;
-                    case ("boolean"):
-                        propertyMap.put(
-                            property.getName(),
-                            getBooleanAspectPropertyValue(ipiObj, property));
-                        break;
-                    case ("int"):
-                        propertyMap.put(
-                            property.getName(),
-                            getIntegerAspectPropertyValue(ipiObj, property));
-                        break;
-                    case ("double"):
-                        propertyMap.put(
-                            property.getName(),
-                            getDoubleAspectPropertyValue(ipiObj, property));
-                        break;
-                    case ("Float"):
-                        propertyMap.put(
-                            property.getName(),
-                            getFloatAspectPropertyValue(ipiObj, property));
-                        break;
-                    default:
-                        propertyMap.put(
-                            property.getName(),
-                            getStringAspectPropertyValue(ipiObj, property));
-                            break;
-                }
             }
-
-            // Add no value messages for any properties which have not yet been
-            // populated.
-            for (String key : ipiObj.keySet()) {
-                if (key.endsWith("nullreason")) {
-                    String actualKey = key
-                        .replace("nullreason", "");
-                    if (propertyMap.containsKey(actualKey) == false) {
-                        AspectPropertyValue<?> nullValue =
-                            new AspectPropertyValueDefault<Object>();
-                        nullValue.setNoValueMessage(
-                            ipiObj.optString(key, "Unknown"));
-                        propertyMap.put(
-                            actualKey,
-                            nullValue);
-                    }
-                }
-            }
-
-            aspectData.populateFromMap(propertyMap);
         }
+
+        // Add no value messages for any properties which have not yet been
+        // populated.
+        for (String key : ipiObj.keySet()) {
+            if (key.endsWith("nullreason")) {
+                String actualKey = key
+                    .replace("nullreason", "");
+                if (propertyMap.containsKey(actualKey) == false) {
+                    AspectPropertyValue<?> nullValue =
+                        new AspectPropertyValueDefault<Object>();
+                    nullValue.setNoValueMessage(
+                        ipiObj.optString(key, "Unknown"));
+                    propertyMap.put(
+                        actualKey,
+                        nullValue);
+                }
+            }
+        }
+
+        aspectData.populateFromMap(propertyMap);
     }
 
     @Override
@@ -280,7 +288,7 @@ public class IPIntelligenceCloudEngine
             for (AccessiblePropertyMetaData.PropertyMetaData item :
                 product.properties) {
                 if (item.type != null && item.type.startsWith("Weighted")) {
-                    weightedPropertyNames.add(item.name.toLowerCase());
+                    weightedPropertyNames.add(item.name.toLowerCase(Locale.ROOT));
                 }
                 AspectPropertyMetaData property = new AspectPropertyMetaDataDefault(
                     item.name,
@@ -355,7 +363,7 @@ public class IPIntelligenceCloudEngine
     private AspectPropertyValue<Integer> getIntegerAspectPropertyValue(
         JSONObject ipiObj,
         AspectPropertyMetaData property) {
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<Integer> intValue = new AspectPropertyValueDefault<>();
         if(ipiObj.isNull(key)){
             intValue.setNoValueMessage(getNoValueReason(ipiObj, key));
@@ -367,7 +375,7 @@ public class IPIntelligenceCloudEngine
     }
 
     private AspectPropertyValue<Double> getDoubleAspectPropertyValue(JSONObject ipiObj, AspectPropertyMetaData property) {
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<Double> doubleValue = new AspectPropertyValueDefault<>();
         if(ipiObj.isNull(key)){
             doubleValue.setNoValueMessage(getNoValueReason(ipiObj, key));
@@ -388,7 +396,7 @@ public class IPIntelligenceCloudEngine
      * for the value not being present
      */
     private AspectPropertyValue<Float> getFloatAspectPropertyValue(JSONObject ipiObj, AspectPropertyMetaData property) {
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<Float> floatValue = new AspectPropertyValueDefault<>();
         if(ipiObj.isNull(key)){
             floatValue.setNoValueMessage(getNoValueReason(ipiObj, key));
@@ -410,7 +418,7 @@ public class IPIntelligenceCloudEngine
     private AspectPropertyValue<Boolean> getBooleanAspectPropertyValue(
         JSONObject ipiObj,
         AspectPropertyMetaData property) {
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<Boolean> booleanValue = new AspectPropertyValueDefault<>();
         if(ipiObj.isNull(key)){
             booleanValue.setNoValueMessage(getNoValueReason(ipiObj, key));
@@ -432,7 +440,7 @@ public class IPIntelligenceCloudEngine
     private AspectPropertyValue<List<String>> getListAspectPropertyValue(
         JSONObject ipiObj,
         AspectPropertyMetaData property){
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<List<String>> listValue = new AspectPropertyValueDefault<>();
         if(ipiObj.isNull(key))
         {
@@ -465,7 +473,7 @@ public class IPIntelligenceCloudEngine
         getWeightedListAspectPropertyValue(
             JSONObject deviceObj,
             AspectPropertyMetaData property) {
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<List<IWeightedValue<String>>> weightedValue =
             new AspectPropertyValueDefault<>();
         if (deviceObj.isNull(key)) {
@@ -500,7 +508,7 @@ public class IPIntelligenceCloudEngine
     private AspectPropertyValue<InetAddress> getInetAddressAspectPropertyValue(
         JSONObject deviceObj,
         AspectPropertyMetaData property) {
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<InetAddress> ipValue = new AspectPropertyValueDefault<>();
         if (deviceObj.isNull(key)) {
             ipValue.setNoValueMessage(getNoValueReason(deviceObj, key));
@@ -526,7 +534,7 @@ public class IPIntelligenceCloudEngine
     private AspectPropertyValue<JavaScript> getJavaScriptAspectPropertyValue(
         JSONObject ipiObj,
         AspectPropertyMetaData property){
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<JavaScript> jsValue = new AspectPropertyValueDefault<>();
         if(ipiObj.isNull(key)){
             jsValue.setNoValueMessage(getNoValueReason(ipiObj, key));
@@ -539,7 +547,7 @@ public class IPIntelligenceCloudEngine
     /**
      * Get the {@link WktString} representation of a value from the cloud
      * engine's JSON response, and wrap it in an {@link AspectPropertyValue}.
-     * The cloud serialises WKT geometry (e.g. the {@code Areas} property) as an
+     * The cloud serializes WKT geometry (e.g. the {@code Areas} property) as an
      * object wrapping the text under a {@code "value"} key, so the text is
      * extracted and wrapped in a {@link WktString} to match the typed getter
      * ({@code getAreas()}).
@@ -551,12 +559,12 @@ public class IPIntelligenceCloudEngine
     private AspectPropertyValue<WktString> getWktStringAspectPropertyValue(
         JSONObject ipiObj,
         AspectPropertyMetaData property){
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<WktString> wktValue = new AspectPropertyValueDefault<>();
         if(ipiObj.isNull(key)){
             wktValue.setNoValueMessage(getNoValueReason(ipiObj, key));
         } else {
-            // The cloud serialises WKT geometry as an object that wraps the
+            // The cloud serializes WKT geometry as an object that wraps the
             // text under a "value" key, e.g. {"value":"POLYGON((...))"};
             // fall back to a plain string for forward compatibility.
             Object raw = ipiObj.get(key);
@@ -579,7 +587,7 @@ public class IPIntelligenceCloudEngine
     private AspectPropertyValue<String> getStringAspectPropertyValue(
         JSONObject ipiObj,
         AspectPropertyMetaData property){
-        String key = property.getName().toLowerCase();
+        String key = property.getName().toLowerCase(Locale.ROOT);
         AspectPropertyValue<String> stringValue = new AspectPropertyValueDefault<>();
         if(ipiObj.isNull(key)){
             stringValue.setNoValueMessage(getNoValueReason(ipiObj, key));
@@ -591,6 +599,12 @@ public class IPIntelligenceCloudEngine
     }
 
     /**
+     * The message for a property with no value when the response gives no
+     * reason.
+     */
+    private static final String UNKNOWN_NULL_REASON = "Unknown";
+
+    /**
      * Get the reason for the value of a property not being present in the cloud
      * engine's JSON response.
      * @param ipiObj to get the null reason from
@@ -599,7 +613,9 @@ public class IPIntelligenceCloudEngine
      */
     private String getNoValueReason(JSONObject ipiObj, String key){
         Object reason = tryToGet(ipiObj, key + "nullreason");
-        return reason == null ? null : reason.toString();
+        return reason == null || reason == JSONObject.NULL ?
+            UNKNOWN_NULL_REASON :
+            reason.toString();
     }
 
     /**

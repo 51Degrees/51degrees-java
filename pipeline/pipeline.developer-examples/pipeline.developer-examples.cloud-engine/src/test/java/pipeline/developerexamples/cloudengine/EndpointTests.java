@@ -38,35 +38,24 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  */
 public class EndpointTests {
 
-    private static final String NEW_NAME = "_51DEGREES_CLOUD_ENDPOINT";
-    private static final String OLD_NAME = "FOD_CLOUD_API_URL";
+    private static final String ENDPOINT_NAME = "_51DEGREES_CLOUD_ENDPOINT";
 
     @BeforeEach
     public void setUp() {
-        assumeTrue(System.getenv(NEW_NAME) == null);
-        assumeTrue(System.getenv(OLD_NAME) == null);
+        assumeTrue(System.getenv(ENDPOINT_NAME) == null);
         clear();
     }
 
     @AfterEach
     public void clear() {
-        System.clearProperty(NEW_NAME);
-        System.clearProperty(OLD_NAME);
+        System.clearProperty(ENDPOINT_NAME);
     }
 
     @Test
-    public void Endpoint_Old_Name_Alone() {
-        System.setProperty(OLD_NAME, "https://old.example/api/v4");
+    public void Endpoint_New_Name() {
+        System.setProperty(ENDPOINT_NAME, "https://other.example/api/v4");
 
-        assertEquals("https://old.example/api/v4/", Main.endpoint());
-    }
-
-    @Test
-    public void Endpoint_New_Name_Wins() {
-        System.setProperty(NEW_NAME, "https://new.example/api/v4/");
-        System.setProperty(OLD_NAME, "https://old.example/api/v4/");
-
-        assertEquals("https://new.example/api/v4/", Main.endpoint());
+        assertEquals("https://other.example/api/v4/", Main.endpoint());
     }
 
     @Test
@@ -78,41 +67,20 @@ public class EndpointTests {
         assertEquals(expected, Main.endpoint());
     }
 
-    private static final String NEW_KEY_NAME = "_51DEGREES_RESOURCE_KEY";
-    private static final String OLD_KEY_NAME = "RESOURCE_KEY";
+    private static final String KEY_NAME = "_51DEGREES_RESOURCE_KEY";
 
     @Test
-    public void ResourceKey_Old_Name_Alone() {
-        assumeTrue(System.getenv(NEW_KEY_NAME) == null);
-        assumeTrue(System.getenv(OLD_KEY_NAME) == null);
-        String savedNew = System.clearProperty(NEW_KEY_NAME);
+    public void ResourceKey_New_Name() {
+        assumeTrue(System.getenv(KEY_NAME) == null);
+        String saved = System.clearProperty(KEY_NAME);
         try {
-            System.setProperty(OLD_KEY_NAME, "old-name-key");
+            System.setProperty(KEY_NAME, "name-key");
 
-            assertEquals("old-name-key", Main.configuredResourceKey());
+            assertEquals("name-key", Main.configuredResourceKey());
         } finally {
-            System.clearProperty(OLD_KEY_NAME);
-            if (savedNew != null) {
-                System.setProperty(NEW_KEY_NAME, savedNew);
-            }
-        }
-    }
-
-    @Test
-    public void ResourceKey_New_Name_Wins() {
-        assumeTrue(System.getenv(NEW_KEY_NAME) == null);
-        assumeTrue(System.getenv(OLD_KEY_NAME) == null);
-        String savedNew = System.clearProperty(NEW_KEY_NAME);
-        try {
-            System.setProperty(NEW_KEY_NAME, "new-name-key");
-            System.setProperty(OLD_KEY_NAME, "old-name-key");
-
-            assertEquals("new-name-key", Main.configuredResourceKey());
-        } finally {
-            System.clearProperty(OLD_KEY_NAME);
-            System.clearProperty(NEW_KEY_NAME);
-            if (savedNew != null) {
-                System.setProperty(NEW_KEY_NAME, savedNew);
+            System.clearProperty(KEY_NAME);
+            if (saved != null) {
+                System.setProperty(KEY_NAME, saved);
             }
         }
     }

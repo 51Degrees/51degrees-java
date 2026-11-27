@@ -35,6 +35,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.Random;
 
 //! [class]
+/** Shows the star sign for the date of birth the browser sends. */
 @Controller
 @RequestMapping("/")
 public class ExampleController {
@@ -43,14 +44,29 @@ public class ExampleController {
 
     private final Random rand = new Random();
 
+    /**
+     * Create a new instance.
+     *
+     * @param flowDataProvider gives the Flow Data for each request
+     */
     @Autowired
     public ExampleController(FlowDataProvider flowDataProvider) {
         this.flowDataProvider = flowDataProvider;
     }
 
+    /**
+     * Show the star sign for the request.
+     *
+     * @param model holds the values the page shows
+     * @param request the request
+     * @return the name of the view
+     */
     @RequestMapping(method = RequestMethod.GET)
     public String get(ModelMap model, HttpServletRequest request) {
     	String message = "";
+        // A Flow Data cannot be used by two threads at once. Work handed to
+        // another thread or task gets the values it needs, read here on the
+        // request's thread, not the Flow Data.
         try (FlowData data = flowDataProvider.getFlowData(request)) {
 	        message = "With a date of birth of " +
 	        	data.getEvidence().get("cookie.date-of-birth") +

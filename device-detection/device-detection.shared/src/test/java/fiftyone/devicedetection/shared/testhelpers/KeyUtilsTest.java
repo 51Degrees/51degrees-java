@@ -24,13 +24,66 @@ package fiftyone.devicedetection.shared.testhelpers;
 
 import org.junit.Test;
 
+import java.util.Collections;
+import java.util.Map;
+
 import static org.junit.Assert.*;
 
 public class KeyUtilsTest {
+    private static final String NAME = "Key_Utils_Test_Name";
+
+    /**
+     * An environment that holds a value under the upper case form of
+     * {@link #NAME} only.
+     */
+    private static final Map<String, String> UPPER_CASE_ONLY =
+        Collections.singletonMap("KEY_UTILS_TEST_NAME", "from-environment");
+
     @Test
-    public void testGetEnv(){
-        assertNotNull(KeyUtils.getNamedKey("path"));
-        System.out.println(KeyUtils.getNamedKey("path"));
+    public void getNamedKey_ReadsTheEnvironmentUnderTheNameGiven() {
+        assertEquals("from-environment", TestKeyUtils.getNamedKey(
+            "KEY_UTILS_TEST_NAME", UPPER_CASE_ONLY::get));
+        assertNull(TestKeyUtils.getNamedKey(NAME, UPPER_CASE_ONLY::get));
     }
 
+    @Test
+    public void getNamedKey_NotInTheEnvironment_ReadsTheSystemProperty() {
+        System.setProperty(NAME, "from-property");
+        try {
+            assertEquals("from-property",
+                TestKeyUtils.getNamedKey(NAME, UPPER_CASE_ONLY::get));
+        } finally {
+            System.clearProperty(NAME);
+        }
+    }
+
+    /**
+     * The deprecated KeyUtils.getNamedKey reads the environment under the
+     * name given.
+     * @deprecated tests the deprecated {@link KeyUtils}.
+     */
+    @Deprecated
+    @Test
+    public void publishedGetNamedKey_ReadsTheEnvironmentUnderTheNameGiven() {
+        assertEquals("from-environment", KeyUtils.getNamedKey(
+            "KEY_UTILS_TEST_NAME", UPPER_CASE_ONLY::get));
+        assertNull(KeyUtils.getNamedKey(NAME, UPPER_CASE_ONLY::get));
+    }
+
+    /**
+     * The deprecated KeyUtils.getNamedKey reads the system property when
+     * the environment has no value under the name given.
+     * @deprecated tests the deprecated {@link KeyUtils}.
+     */
+    @Deprecated
+    @Test
+    public void publishedGetNamedKey_NotInTheEnvironment_ReadsTheSystemProperty() {
+        System.setProperty(NAME, "from-property");
+        try {
+            assertEquals("from-property",
+                KeyUtils.getNamedKey(NAME, UPPER_CASE_ONLY::get));
+        } finally {
+            System.clearProperty(NAME);
+        }
+    }
 }

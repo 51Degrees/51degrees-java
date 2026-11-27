@@ -5,7 +5,7 @@
             <BuildParameters>
                 <AutoUpdate>false</AutoUpdate>
                 <CreateTempDataCopy>false</CreateTempDataCopy>
-                <DataFile>${TestDataFile:-cxx/data/device-detection/51Degrees-LiteV4.1.hash}</DataFile>
+                <DataFile>${_51DEGREES_DD_PATH:-cxx/data/device-detection/51Degrees-LiteV4.1.hash}</DataFile>
                 <PerformanceProfile>LowMemory</PerformanceProfile>
             </BuildParameters>
             <BuilderName>DeviceDetectionHashEngine</BuilderName>
@@ -14,4 +14,13 @@
             <BuilderName>JavaScriptBuilderElement</BuilderName>
         </Element>
 -->    </Elements>
+    <BuildParameters>
+        <!--
+        This example processes evidence 51Degrees already holds, so it does
+        not share usage, but in normal operation usage sharing should be
+        enabled by adding a Usage Sharing Element to the Pipeline, which the
+        FiftyOnePipelineBuilder does when ShareUsage is true, its default.
+        -->
+        <ShareUsage>false</ShareUsage>
+    </BuildParameters>
 </PipelineOptions>

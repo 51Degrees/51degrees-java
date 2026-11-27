@@ -24,6 +24,7 @@ package pipeline.developerexamples.cloudengine;
 
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngineBuilder;
+import fiftyone.pipeline.cloudrequestengine.flowelements.Constants;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
@@ -34,9 +35,14 @@ import org.slf4j.LoggerFactory;
 import pipeline.developerexamples.cloudengine.flowelements.SimpleCloudEngine;
 import pipeline.developerexamples.cloudengine.flowelements.SimpleCloudEngineBuilder;
 
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.io.PrintStream;
 
+/** Shows how to build and use a custom cloud engine. */
 public class Main {
+    /** Create a new instance. */
+    public Main() {
+    }
+
     private static final ILoggerFactory loggerFactory = LoggerFactory.getILoggerFactory();
     private static final HttpClient httpClient = new HttpClientDefault();
 
@@ -56,24 +62,10 @@ public class Main {
         "https://cloud.51degrees.com/api/v4/";
 
     /**
-     * The name the cloud endpoint is read from, and the deprecated name
-     * read when that one is not set.
+     * The name the cloud endpoint is read from.
      */
     private static final String ENDPOINT_VARIABLE =
         "_51DEGREES_CLOUD_ENDPOINT";
-    private static final String OLD_ENDPOINT_VARIABLE = "FOD_CLOUD_API_URL";
-
-    private static final AtomicBoolean oldEndpointVariableLogged =
-        new AtomicBoolean(false);
-
-    /**
-     * The deprecated name of the first of the resource key names, read
-     * when that one is not set.
-     */
-    private static final String OLD_RESOURCE_KEY_VARIABLE = "RESOURCE_KEY";
-
-    private static final AtomicBoolean oldResourceKeyVariableLogged =
-        new AtomicBoolean(false);
 
     /**
      * The cloud endpoint, taken from _51DEGREES_CLOUD_ENDPOINT when that is
@@ -85,24 +77,10 @@ public class Main {
      * which is the private hosting option of the cloud service. Both run
      * the same service, so the example works unchanged. Normalised to
      * end in one slash so the builder appends its three paths to it
-     * directly. The deprecated name FOD_CLOUD_API_URL is read when
-     * _51DEGREES_CLOUD_ENDPOINT is not set, and the first use of it is
-     * logged as a warning.
+     * directly.
      */
     static String endpoint() {
         String value = env(ENDPOINT_VARIABLE);
-        if (value == null) {
-            value = env(OLD_ENDPOINT_VARIABLE);
-            if (value != null
-                && oldEndpointVariableLogged.compareAndSet(false, true)) {
-                loggerFactory.getLogger(Main.class.getName()).warn(
-                    "The environment variable " + OLD_ENDPOINT_VARIABLE
-                    + " is deprecated and " + ENDPOINT_VARIABLE
-                    + " replaces it. Set " + ENDPOINT_VARIABLE
-                    + " to the same value, as a later release may no "
-                    + "longer read " + OLD_ENDPOINT_VARIABLE + ".");
-            }
-        }
         if (value == null) {
             // A resource key and an endpoint travel together, because a
             // key is only known to the service that issued it. So the
@@ -120,45 +98,19 @@ public class Main {
     }
 
     /**
-     * The names a 51Degrees resource key is read from, in the order they
-     * are tried. Each is read as an environment variable first and then
-     * as a system property, so a developer can export one and a build
-     * can pass one on the command line with -D.
+     * The name a 51Degrees resource key is read from. It is read as an
+     * environment variable first and then as a system property, so a
+     * developer can export one and a build can pass one on the command
+     * line with -D.
      */
-    static final String[] RESOURCE_KEY_NAMES = {
-        "_51DEGREES_RESOURCE_KEY",
-        "_51DEGREES_RESOURCE_KEY_BESPOKE",
-        "TestResourceKey",
-        "SUPER_RESOURCE_KEY",
-    };
+    static final String RESOURCE_KEY_NAME = "_51DEGREES_RESOURCE_KEY";
 
     /**
-     * The 51Degrees resource key that was found, or null when none of the
-     * names above is set anywhere. When the first name is not set its
-     * deprecated name RESOURCE_KEY is read before the others, and the
-     * first use of it is logged as a warning.
+     * The 51Degrees resource key that was found, or null when the name
+     * above is not set anywhere.
      */
     static String configuredResourceKey() {
-        for (String name : RESOURCE_KEY_NAMES) {
-            String value = env(name);
-            if (value == null && name.equals(RESOURCE_KEY_NAMES[0])) {
-                value = env(OLD_RESOURCE_KEY_VARIABLE);
-                if (value != null
-                    && oldResourceKeyVariableLogged.compareAndSet(
-                        false, true)) {
-                    loggerFactory.getLogger(Main.class.getName()).warn(
-                        "The environment variable " + OLD_RESOURCE_KEY_VARIABLE
-                        + " is deprecated and " + name
-                        + " replaces it. Set " + name
-                        + " to the same value, as a later release may no longer "
-                        + "read " + OLD_RESOURCE_KEY_VARIABLE + ".");
-                }
-            }
-            if (value != null) {
-                return value;
-            }
-        }
-        return null;
+        return env(RESOURCE_KEY_NAME);
     }
 
     /**
@@ -179,17 +131,40 @@ public class Main {
         return value == null || value.trim().isEmpty() ? null : value.trim();
     }
 
+    /** Runs the example. */
     public static class Example {
+        /** Create a new instance. */
+        public Example() {
+        }
+
+        /**
+         * Run the example.
+         *
+         * @throws Exception if the example fails
+         */
         public void run() throws Exception {
+            run(httpClient, Constants.DEFAULT_TIMEOUT_MILLIS / 1000);
+        }
+
+        /**
+         * Runs the example with the given HTTP client and the given time
+         * allowed for each request to the cloud service.
+         * @param client sends the requests to the cloud service
+         * @param timeoutSeconds seconds allowed for each request
+         * @throws Exception if the example fails
+         */
+        public void run(HttpClient client, int timeoutSeconds)
+            throws Exception {
 //! [usage]
             // The endpoint comes from _51DEGREES_CLOUD_ENDPOINT when it is
             // set, so the example can be pointed at an on premise web
             // server or a privately hosted version of the 51Degrees cloud,
             // and otherwise at the star sign service it was written for.
             CloudRequestEngine cloudRequestEngine =
-                new CloudRequestEngineBuilder(loggerFactory, httpClient)
+                new CloudRequestEngineBuilder(loggerFactory, client)
                     .setEndpoint(endpoint())
                     .setResourceKey(resourceKey())
+                    .setTimeOutSeconds(timeoutSeconds)
                     .build();
 
             SimpleCloudEngine ageElement =
@@ -233,7 +208,48 @@ public class Main {
         }
     }
 
+    /**
+     * The rule above and below the "Find out more" section.
+     */
+    private static final String RULE =
+        "----------------------------------------------------------------";
+
+    /**
+     * Ends the output with the pages and repositories that say more about
+     * what this example shows.
+     * @param output where to write
+     */
+    static void writeFindOutMore(PrintStream output) {
+        output.println();
+        output.println(RULE);
+        output.println("Find out more");
+        output.println("\tThis example: https://51degrees.com/documentation/_pipeline_api__examples__custom_element__cloud.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=pipeline.developer-examples.cloud-engine-main.java&utm_term=find-out-more");
+        output.println("\tCustom flow elements: https://51degrees.com/documentation/_pipeline_api__features__custom_elements.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=pipeline.developer-examples.cloud-engine-main.java&utm_term=find-out-more");
+        output.println("\thttps://github.com/51Degrees/51degrees-java");
+        output.println("\thttps://github.com/51Degrees/specifications");
+        output.println(RULE);
+        output.flush();
+    }
+
+    /**
+     * Run the example, then print where to find out more.
+     *
+     * @param args not used
+     * @throws Exception if the example fails
+     */
     public static void main(String[] args) throws Exception {
-        new Example().run();
+        run(httpClient, Constants.DEFAULT_TIMEOUT_MILLIS / 1000);
+    }
+
+    /**
+     * Runs the example as main does, with the given HTTP client and the
+     * given time allowed for each request to the cloud service.
+     * @param client sends the requests to the cloud service
+     * @param timeoutSeconds seconds allowed for each request
+     * @throws Exception if the example fails
+     */
+    static void run(HttpClient client, int timeoutSeconds) throws Exception {
+        new Example().run(client, timeoutSeconds);
+        writeFindOutMore(System.out);
     }
 }

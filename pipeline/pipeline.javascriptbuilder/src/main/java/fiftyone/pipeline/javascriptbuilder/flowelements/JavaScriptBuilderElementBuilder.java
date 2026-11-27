@@ -39,16 +39,29 @@ import org.slf4j.Logger;
  */
 @ElementBuilder
 public class JavaScriptBuilderElementBuilder {
+    /**
+     * Whether the JavaScript keeps its cookies when nothing else is configured.
+     */
     public static final boolean ENABLE_COOKIES = true;
+    /**
+     * Whether the script is minified when nothing else is configured.
+     */
+    public static final boolean MINIFY = true;
     private final ILoggerFactory loggerFactory;
     private final Logger logger;
     
+    /** Host of the callback URL, or empty to use the Host header. */
     protected String host = "";
+    /** Path of the callback endpoint. */
     protected String endpoint = "";
+    /** Protocol of the callback URL, or empty to use the request's. */
     protected String protocol = "";
+    /** Context root of the callback URL, or empty to use the evidence. */
     protected String contextRoot = "";
+    /** Name of the JavaScript object. */
     protected String objName = Constants.DEFAULT_OBJECT_NAME;
     private boolean enableCookies = ENABLE_COOKIES;
+    private boolean minify = MINIFY;
 
     /**
      * Construct a new instance.
@@ -90,7 +103,7 @@ public class JavaScriptBuilderElementBuilder {
      * Set the evidence value for the context root
      * <p>
      * Default is value from evidence "server.contextroot"
-     * @param contextRoot
+     * @param contextRoot the context root of the callback URL
      * @return this builder
      */
     @DefaultValue("Value from evidence " + fiftyone.pipeline.core.Constants.EVIDENCE_WEB_CONTEXT_ROOT)
@@ -158,7 +171,7 @@ public class JavaScriptBuilderElementBuilder {
      * <p>
      * This can also be set per request, using the "query.fod-js-enable-cookies"
      * evidence key. For more details on personal data policy, see
-     * https://51degrees.com/terms/client-services-privacy-policy/?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=pipeline.javascriptbuilder-src-main-java-fiftyone-pipeline-javascriptbuilder-flowelements-javascriptbuilderelementbuilder.java&utm_term=setenablecookies
+     * <a href="https://51degrees.com/terms/client-services-privacy-policy/?utm_source=code&amp;utm_medium=comment&amp;utm_campaign=51degrees-java&amp;utm_content=pipeline.javascriptbuilder-src-main-java-fiftyone-pipeline-javascriptbuilder-flowelements-javascriptbuilderelementbuilder.java&amp;utm_term=setenablecookies">51degrees.com/terms/client-services-privacy-policy/</a>
      * <p>
      * Default is true
      * @param enableCookies should enable cookies?
@@ -168,6 +181,22 @@ public class JavaScriptBuilderElementBuilder {
     public JavaScriptBuilderElementBuilder setEnableCookies(
         boolean enableCookies) {
         this.enableCookies = enableCookies;
+        return this;
+    }
+
+    /**
+     * Set whether the JavaScript that is produced is minified. Minifying
+     * takes out the template's comments and white space, so the script is
+     * smaller to send. The values the script carries, such as the JSON, are
+     * not changed.
+     * <p>
+     * Default is true
+     * @param minify true to minify the JavaScript
+     * @return this builder
+     */
+    @DefaultValue(booleanValue = MINIFY)
+    public JavaScriptBuilderElementBuilder setMinify(boolean minify) {
+        this.minify = minify;
         return this;
     }
 
@@ -194,7 +223,8 @@ public class JavaScriptBuilderElementBuilder {
             enableCookies,
             host,
             protocol,
-            contextRoot);
-    } 
+            contextRoot,
+            minify);
+    }
 }
 //! [class]

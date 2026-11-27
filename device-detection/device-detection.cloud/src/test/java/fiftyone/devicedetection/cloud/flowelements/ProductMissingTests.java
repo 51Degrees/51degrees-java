@@ -98,20 +98,85 @@ public class ProductMissingTests {
     }
 
     /**
-     * With the Device Detection product included, a response that holds no
-     * part for it leaves the element data without values and throws
-     * nothing, as the Processing section of the cloud aspect engine
-     * specification says.
+     * A failed cloud request leaves no response. The engine processes
+     * nothing, throws nothing and logs one warning, as the Cloud Request
+     * Engine's error says why.
      */
     @Test
-    public void ProductPresent_ResponseWithoutPart_NoValues()
-        throws Exception {
+    public void NoResponse_ProcessesNothing() throws Exception {
         try (DeviceDetectionCloudEngine engine = buildEngine("device", "hardwarevendor")) {
+            for (String response : new String[] { null, "" }) {
+                DeviceDataCloud data = process(engine, response);
+                assertFalse(data.asKeyMap().containsKey("hardwarevendor"));
+            }
+            List<String> logged = warningsAndErrors();
+            assertEquals(logged.toString(), 2, logged.size());
+            for (String line : logged) {
+                assertTrue(line, line.startsWith("warn "));
+            }
+        }
+    }
+
+    /**
+     * With the Device Detection product included, a response that holds no
+     * part for it raises nothing while processing, and reading a property
+     * throws PropertyMissingException, as for any property the response
+     * leaves out.
+     */
+    @Test
+    public void ProductPresent_ResponseWithoutPart_PropertyIsMissing()
+        throws Exception {
+        try (DeviceDetectionCloudEngine engine =
+            buildEngine("device", "hardwarevendor")) {
             DeviceDataCloud data = process(
                 engine,
                 "{ 'ip': { 'registeredname': 'Example' }, " +
                     "'javascriptProperties': [] }");
+            try {
+                data.getHardwareVendor();
+                fail("A PropertyMissingException should have been thrown");
+            } catch (PropertyMissingException e) {
+                // The response held nothing for the product.
+            }
+        }
+    }
+
+    /**
+     * A property the response's part leaves out has no entry, so reading it
+     * throws PropertyMissingException rather than giving no value.
+     */
+    @Test
+    public void ProductPresent_PropertyLeftOut_PropertyIsMissing()
+        throws Exception {
+        try (DeviceDetectionCloudEngine engine =
+            buildEngine("device", "hardwarevendor")) {
+            DeviceDataCloud data = process(
+                engine,
+                "{ 'device': { 'another': 'Example' }, " +
+                    "'javascriptProperties': [] }");
+            try {
+                data.getHardwareVendor();
+                fail("A PropertyMissingException should have been thrown");
+            } catch (PropertyMissingException e) {
+                // The response's part did not hold the property.
+            }
+        }
+    }
+
+    /**
+     * A null with no reason beside it is no value with the message Unknown.
+     */
+    @Test
+    public void NullWithoutReason_MessageIsUnknown() throws Exception {
+        try (DeviceDetectionCloudEngine engine =
+            buildEngine("device", "hardwarevendor")) {
+            DeviceDataCloud data = process(
+                engine,
+                "{ 'device': { 'hardwarevendor': null }, " +
+                    "'javascriptProperties': [] }");
             assertFalse(data.getHardwareVendor().hasValue());
+            assertEquals("Unknown",
+                data.getHardwareVendor().getNoValueMessage());
         }
     }
 
@@ -172,7 +237,6 @@ public class ProductMissingTests {
      * one string property.
      */
     // thenReturn has a varargs overload, so a generic Map is an unchecked array.
-    @SuppressWarnings("unchecked")
     private DeviceDetectionCloudEngine buildEngine(
         String productKey,
         String property) throws Exception {

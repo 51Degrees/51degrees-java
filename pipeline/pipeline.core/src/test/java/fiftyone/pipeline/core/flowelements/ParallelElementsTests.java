@@ -27,6 +27,7 @@ import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.FlowError;
 import fiftyone.pipeline.core.testclasses.data.TestElementData;
+import fiftyone.pipeline.core.typed.TypedKeyDefault;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
 import org.mockito.invocation.InvocationOnMock;
@@ -43,7 +44,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeFalse;
 import static org.mockito.Mockito.*;
 
-@SuppressWarnings("rawtypes")
 public class ParallelElementsTests {
 
     private ParallelElements parallelElements;
@@ -62,15 +62,15 @@ public class ParallelElementsTests {
 
         when(pipeline.isConcurrent()).thenReturn(true);
         // Arrange
-        FlowElement element1 = mock(FlowElement.class);
-        FlowElement element2 = mock(FlowElement.class);
-        FlowElement element3 = mock(FlowElement.class);
+        FlowElement<?, ?> element1 = mock(FlowElement.class);
+        FlowElement<?, ?> element2 = mock(FlowElement.class);
+        FlowElement<?, ?> element3 = mock(FlowElement.class);
 
         doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
                 TestElementData tempData = ((FlowData) invocationOnMock.getArgument(0))
-                    .getOrAdd("element1", new FlowElement.DataFactory<TestElementData>() {
+                    .getOrAdd(new TypedKeyDefault<>("element1", TestElementData.class), new FlowElement.DataFactory<TestElementData>() {
                         @Override
                         public TestElementData create(FlowData flowData) {
                             return new TestElementData(mock(Logger.class), flowData);
@@ -88,7 +88,7 @@ public class ParallelElementsTests {
             @Override
             public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
                 TestElementData tempData = ((FlowData) invocationOnMock.getArgument(0))
-                    .getOrAdd("element2", new FlowElement.DataFactory<TestElementData>() {
+                    .getOrAdd(new TypedKeyDefault<>("element2", TestElementData.class), new FlowElement.DataFactory<TestElementData>() {
                         @Override
                         public TestElementData create(FlowData flowData) {
                             return new TestElementData(mock(Logger.class), flowData);
@@ -106,7 +106,7 @@ public class ParallelElementsTests {
             @Override
             public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
                 TestElementData tempData = ((FlowData) invocationOnMock.getArgument(0))
-                    .getOrAdd("element3", new FlowElement.DataFactory<TestElementData>() {
+                    .getOrAdd(new TypedKeyDefault<>("element3", TestElementData.class), new FlowElement.DataFactory<TestElementData>() {
                         @Override
                         public TestElementData create(FlowData flowData) {
                             return new TestElementData(mock(Logger.class), flowData);
@@ -130,10 +130,11 @@ public class ParallelElementsTests {
             mock(Logger.class),
             pipeline,
             new EvidenceDefault(mock(Logger.class)))) {
-            data.process();
-
             // Act
             parallelElements.process(data);
+            // The members add their Element Data before processing
+            // finishes, as a Flow Data is read only afterwards.
+            data.process();
 
             List<Date> startTimes = new ArrayList<>();
             startTimes.add((Date) data.get("element1").get("start"));
@@ -162,8 +163,8 @@ public class ParallelElementsTests {
 
     @Test
     public void ParallelElements_GetKeys() {
-        FlowElement element1 = mock(FlowElement.class);
-        FlowElement element2 = mock(FlowElement.class);
+        FlowElement<?, ?> element1 = mock(FlowElement.class);
+        FlowElement<?, ?> element2 = mock(FlowElement.class);
         // Configure the elements to return one key each
         when(element1.getEvidenceKeyFilter()).thenReturn(
             new EvidenceKeyFilterWhitelist(Arrays.asList("key1")));
@@ -186,8 +187,8 @@ public class ParallelElementsTests {
 
     @Test
     public void ParallelElements_ExceptionDuringProcessing() throws Exception {
-        final FlowElement element1 = mock(FlowElement.class);
-        final FlowElement element2 = mock(FlowElement.class);
+        final FlowElement<?, ?> element1 = mock(FlowElement.class);
+        final FlowElement<?, ?> element2 = mock(FlowElement.class);
         FlowData data = mock(FlowData.class);
 
         // Configure element 2 to throw an exception.
@@ -218,8 +219,8 @@ public class ParallelElementsTests {
     @Test
     public void ParallelElements_Dispose() throws Exception {
         // Arrange
-        FlowElement element1 = mock(FlowElement.class);
-        FlowElement element2 = mock(FlowElement.class);
+        FlowElement<?, ?> element1 = mock(FlowElement.class);
+        FlowElement<?, ?> element2 = mock(FlowElement.class);
 
         // Create the instance
         parallelElements = new ParallelElements(

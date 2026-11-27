@@ -47,6 +47,7 @@
 
 package fiftyone.ipintelligence.examples.console;
 
+import fiftyone.ipintelligence.examples.shared.FindOutMore;
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
 import fiftyone.devicedetection.shared.DeviceData;
 import fiftyone.ipintelligence.engine.onpremise.flowelements.IPIntelligenceOnPremiseEngine;
@@ -85,6 +86,12 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * The configuration file is <code>src/main/resources/gettingStartedMixed.xml</code>.
  */
 public class GettingStartedMixed {
+    /**
+     * This example's tag in the links of its "Find out more" section.
+     */
+    private static final String EXAMPLE_TAG =
+            "console-src-main-java-fiftyone-ipintelligence-examples-console-gettingstartedmixed.java";
+
     private static final Logger logger = LoggerFactory.getLogger(GettingStartedMixed.class);
 
     public static final String DD_DATA_FILE_DEFAULT = "device-detection/51Degrees-LiteV4.1.hash";
@@ -105,6 +112,8 @@ public class GettingStartedMixed {
 
         List<Map<String, String>> evidence = setUpCombinedEvidence();
         run(ddDataFile, ipiDataFile, evidence, System.out);
+        FindOutMore.write(System.out, EXAMPLE_TAG,
+                FindOutMore.ON_PREMISE_REPOSITORIES);
     }
 
     /**
@@ -120,20 +129,20 @@ public class GettingStartedMixed {
                            OutputStream outputStream) throws Exception {
         logger.info("Running GettingStartedMixed example");
 
-        // Resolve and set the Device Detection data file location
+        // Resolve the Device Detection data file location
+        String ddLocation;
         try {
-            String ddLocation = resolveDataFile(ddDataFile);
-            System.setProperty("TestDeviceDetectionDataFile", ddLocation);
+            ddLocation = resolveDataFile(ddDataFile);
         } catch (Exception e) {
             logger.error("Failed to find Device Detection data file at '{}'. " +
                     "Please provide a valid path to a Device Detection data file (.hash).", ddDataFile);
             throw e;
         }
 
-        // Resolve and set the IP Intelligence data file location
+        // Resolve the IP Intelligence data file location
+        String ipiLocation;
         try {
-            String ipiLocation = DataFileHelper.getDataFileLocation(ipiDataFile);
-            System.setProperty("TestDataFile", ipiLocation);
+            ipiLocation = DataFileHelper.getDataFileLocation(ipiDataFile);
         } catch (Exception e) {
             logger.error("Failed to find IP Intelligence data file at '{}'. " +
                     "Please provide a valid path to an IP Intelligence data file (.ipi). " +
@@ -145,9 +154,20 @@ public class GettingStartedMixed {
         // Load the pipeline configuration that includes both engines
         File optionsFile = getFilePath("gettingStartedMixed.xml");
         PipelineOptions pipelineOptions = PipelineOptionsFactory.getOptionsFromFile(optionsFile);
+        // The data files this method was given are the ones the pipeline
+        // uses, in place of the ones the options file names.
+        DataFileHelper.useDataFile(
+                pipelineOptions, "DeviceDetectionHashEngine", ddLocation);
+        DataFileHelper.useDataFile(
+                pipelineOptions, "IPIntelligenceOnPremiseEngine", ipiLocation);
 
-        try (Pipeline pipeline = new FiftyOnePipelineBuilder()
-                .buildFromConfiguration(pipelineOptions)) {
+        Pipeline pipeline = new FiftyOnePipelineBuilder()
+                // Usage sharing is off because this example's evidence is already
+                // known to 51Degrees. In production, leave usage sharing on, which adds
+                // a Usage Sharing Element to the Pipeline and helps improve the service.
+                .setShareUsage(false)
+                .buildFromConfiguration(pipelineOptions);
+        try {
 
             // The engines say which properties their data files have.
             DeviceDetectionHashEngine ddEngine = pipeline.getElement(DeviceDetectionHashEngine.class);
@@ -175,6 +195,8 @@ public class GettingStartedMixed {
             }
 
             logger.info("All done");
+        } finally {
+            pipeline.close();
         }
     }
 
@@ -226,7 +248,8 @@ public class GettingStartedMixed {
         boolean needsEnterprise = false;
         PrintWriter writer = new PrintWriter(out);
 
-        try (FlowData data = pipeline.createFlowData()) {
+        FlowData data = pipeline.createFlowData();
+        try {
 
             // List the evidence
             writer.println("===============================================================================");
@@ -302,6 +325,8 @@ public class GettingStartedMixed {
                     DataFileHelper.hasProperty(ipiEngine, "AccuracyRadiusMin"), ipData::getAccuracyRadiusMin);
             needsEnterprise |= writeValue(writer, "TimeZoneOffset",
                     DataFileHelper.hasProperty(ipiEngine, "TimeZoneOffset"), ipData::getTimeZoneOffset);
+        } finally {
+            data.close();
         }
         writer.println();
         writer.flush();

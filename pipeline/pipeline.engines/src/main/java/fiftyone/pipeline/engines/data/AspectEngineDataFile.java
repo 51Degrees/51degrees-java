@@ -164,6 +164,18 @@ public interface AspectEngineDataFile extends Closeable {
     String getFormattedUrl();
 
     /**
+     * Get the name of the product this data file needs from the data
+     * update service, for example V4TAC, found from the data the engine has
+     * loaded, or from the header of the data file before the engine has
+     * loaded it. It is used when a license key holds several products and
+     * the data update URL names none.
+     * @return the product name, or null if it is not known
+     */
+    default String getDataUpdateProduct() {
+        return null;
+    }
+
+    /**
      * Set the data update service that this data file is registered with.
      * @param dataUpdateService The data update service.
      */

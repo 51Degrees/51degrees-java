@@ -39,33 +39,60 @@ import java.util.*;
  * Abstract base class for ShareUsageElement builders.
  * @param <T> element type
  */
-@SuppressWarnings({"UnusedReturnValue", "DefaultAnnotationParam"})
 public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
 
+    /** Creates the loggers the element uses. */
     protected final ILoggerFactory loggerFactory;
 
+    /** Used for logging. */
     protected final Logger logger;
 
+    /** How long the same evidence is not shared again, in minutes. */
     protected int repeatEvidenceInterval = Constants.SHARE_USAGE_DEFAULT_REPEAT_EVIDENCE_MINUTES;
+    /** The proportion of requests shared, where 1.0 is all of them. */
     protected double sharePercentage = Constants.SHARE_USAGE_DEFAULT_SHARE_PERCENTAGE;
+    /** The fewest entries sent in one message. */
     protected int minimumEntriesPerMessage = Constants.SHARE_USAGE_DEFAULT_MIN_ENTRIES_PER_MESSAGE;
-    // This value must be accessed through the corresponding getter/setter.
+    /**
+     * The most entries the queue holds. Read and set it through its getter and
+     * setter.
+     */
     protected int maximumQueueSize = Constants.SHARE_USAGE_DEFAULT_MAX_QUEUE_SIZE;
+    /** Milliseconds to wait when adding to a full queue. */
     protected int addTimeout = Constants.SHARE_USAGE_DEFAULT_ADD_TIMEOUT;
+    /** Milliseconds to wait for another entry before sending. */
     protected int takeTimeout = Constants.SHARE_USAGE_DEFAULT_TAKE_TIMEOUT;
+    /** The address usage data is sent to. */
     protected String shareUsageUrl = Constants.SHARE_USAGE_DEFAULT_URL;
+    /** Name of the cookie that holds the session id. */
     protected String sessionCookieName = fiftyone.pipeline.engines.Constants.DEFAULT_SESSION_COOKIE_NAME;
+    /** The HTTP headers that are never shared. */
     protected List<String> blockedHttpHeaders = new ArrayList<>();
+    /** Not used, as the query string parameters setting has no effect. */
     protected final List<String> includedQueryStringParameters = new ArrayList<>();
+    /** Evidence whose requests are not shared, as pairs of key and value. */
     protected final List<Map.Entry<String, String>> ignoreDataEvidenceFilter = new ArrayList<>();
+    /** Whether the session cookie is used to tell repeated evidence apart. */
     protected boolean trackSession;
+    /**
+     * Failed sends within the window that start the wait before sending again.
+     */
     protected int failuresToEnterRecovery = Constants.SHARE_USAGE_FAILURES_TO_ENTER_RECOVERY_DEFAULT;
+    /** The window in which failed sends are counted, in seconds. */
     protected int failuresWindowSeconds = Constants.SHARE_USAGE_FAILURES_WINDOW_SECONDS_DEFAULT;
+    /** The first wait before sending again, in seconds. */
     protected double initialRecoveryDelaySeconds = Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_INITIAL_DELAY_SECONDS_DEFAULT;
+    /** The longest wait before sending again, in seconds. */
     protected double maxRecoveryDelaySeconds = Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MAX_DELAY_SECONDS_DEFAULT;
+    /** How much each wait grows after another failure. */
     protected double recoveryMultiplier = Constants.SHARE_USAGE_EXPONENTIAL_BACKOFF_MULTIPLIER_DEFAULT;
+    /**
+     * Whether all evidence is shared, not only the keys the Pipeline accepts.
+     */
     protected boolean shareAllEvidence;
-    protected boolean shareAllQueryStringParameters;
+    /** Not used, as the setting has no effect. */
+    protected boolean shareAllQueryStringParameters =
+        Constants.SHARE_USAGE_DEFAULT_SHARE_ALL_QUERY_STRING_PARAMETERS;
 
     /**
      * Constructor
@@ -90,20 +117,17 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     }
 
     /**
-     * By default, only query string parameters that start with 51D_ are
-     * shared.
-     * <p>
-     * This setter replaces the current list, if any
-     * <p>
-     * This setting allows you to share these parameters with 51Degrees
-     * if needed.
+     * Deprecated, and has no effect. A query string or HTTP form parameter
+     * is shared only when its name starts with 51D_ or it is Evidence the
+     * Pipeline uses, being a key a Flow Element in the Pipeline accepts,
+     * whatever this is set to.
      * @param queryStringParameterNames the (case-insensitive) names of
      *                                  the query string parameters
      *                                  to include
      * @return this builder
      */
 
-    @DefaultValue("No sharing unless the parameter starts with 51D_")
+    @DefaultValue("None, as it has no effect")
     public ShareUsageBuilderBase<T> setIncludedQueryStringParameters(
         List<String> queryStringParameterNames) {
         includedQueryStringParameters.clear();
@@ -112,19 +136,16 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     }
 
     /**
-     * By default, only query string parameters that start with 51D_ are
-     * shared.
-     * <p>
-     * This setter replaces the current list, if any
-     * <p>
-     * This setting allows you to share these parameters with 51Degrees
-     * if needed.
+     * Deprecated, and has no effect. A query string or HTTP form parameter
+     * is shared only when its name starts with 51D_ or it is Evidence the
+     * Pipeline uses, being a key a Flow Element in the Pipeline accepts,
+     * whatever this is set to.
      * @param queryStringParameterNames a comma separated list of
      *                                  (case-insensitive) names of the
      *                                  query string parameters to include
      * @return this builder
      */
-    @DefaultValue("No sharing unless the parameter starts with 51D_")
+    @DefaultValue("None, as it has no effect")
     public ShareUsageBuilderBase<T> setIncludedQueryStringParameters(
             String queryStringParameterNames) {
         includedQueryStringParameters.clear();
@@ -134,16 +155,15 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     }
 
     /**
-     * By default, only query string parameters that start with 51D_ are
-     * shared.
-     * <p>
-     * This setting adds the name of a parameter to share with 51Degrees
-     * if needed.
+     * Deprecated, and has no effect. A query string or HTTP form parameter
+     * is shared only when its name starts with 51D_ or it is Evidence the
+     * Pipeline uses, being a key a Flow Element in the Pipeline accepts,
+     * whatever this is set to.
      * @param queryStringParameterName the (case-insensitive) name of the
      *                                 query string parameter to include
      * @return this builder
      */
-    @DefaultValue("No sharing unless the parameter starts with 51D_")
+    @DefaultValue("None, as it has no effect")
     public ShareUsageBuilderBase<T> setIncludedQueryStringParameter(
         String queryStringParameterName) {
         includedQueryStringParameters.add(queryStringParameterName.trim());
@@ -151,16 +171,14 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     }
 
     /**
-     * If set to true, every query string and HTTP form parameter is shared,
-     * rather than only those that start with 51D_ or are named in the
-     * included parameters. The whole query string and the parameters that are
-     * never shared are still not shared.
-     * <p>
-     * Default value is false
-     * @param shareAll true to share all query string parameters
+     * Deprecated, and has no effect. Setting it shares no query string or
+     * HTTP form parameter that would not otherwise be shared, which is one
+     * whose name starts with 51D_ or that a Flow Element in the Pipeline
+     * accepts.
+     * @param shareAll kept, but not used
      * @return this builder
      */
-    @DefaultValue(booleanValue = false)
+    @DefaultValue(booleanValue = true)
     public ShareUsageBuilderBase<T> setShareAllQueryStringParameters(
         boolean shareAll) {
         this.shareAllQueryStringParameters = shareAll;
@@ -168,8 +186,9 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     }
 
     /**
-     * Whether every query string parameter is shared.
-     * @return true if all query string parameters are shared
+     * Deprecated. The value set for the share all query string parameters
+     * option, which has no effect.
+     * @return the value set
      */
     public boolean isShareAllQueryStringParameters() {
         return shareAllQueryStringParameters;
@@ -177,10 +196,12 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
 
     /**
      * If set to true, all Evidence is shared, which overrides the blocked
-     * HTTP headers and the rules for cookies, session values and query string
-     * parameters. The keys that are never shared (an email address, the salt
-     * for hashed email identifiers, the whole query string, the path and the
-     * Cookie header) are still not shared.
+     * HTTP headers and the rule for session values. The keys that are never
+     * shared (an email address, the salt for hashed email identifiers, the
+     * whole query string, the path and the Cookie header) are still not
+     * shared, and nor is any cookie whose name does not start with 51D_, or
+     * any query string or form parameter whose name does not start with 51D_
+     * and which the Pipeline does not use.
      * <p>
      * Default value is false
      * @param shareAll true to share all Evidence
@@ -201,24 +222,22 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
     }
 
     /**
-     * By default, all HTTP headers (excluding a few such as 'cookies', if they
-     * don't start with 51D_) are shared. Individual headers can be excluded from sharing by
-     * adding them to this list.
+     * By default, every HTTP header is shared except Cookie. Individual
+     * headers can be excluded from sharing by adding them to this list.
      * <p>
      * This setter replaces the current list
      * @param blockedHeaders the (case-insensitive) names of the headers to block
      * @return this builder
      */
-    @DefaultValue("All HTTP Headers are shared except cookies that do not start with 51D_")
+    @DefaultValue("All HTTP headers are shared except Cookie")
     public ShareUsageBuilderBase<T> setBlockedHttpHeaders(List<String> blockedHeaders) {
         blockedHttpHeaders = blockedHeaders;
         return this;
     }
 
     /**
-     * By default, all HTTP headers (excluding a few such as 'cookies', if they
-     * don't start with 51D_) are shared. Individual headers can be excluded from sharing by
-     * adding them to this list.
+     * By default, every HTTP header is shared except Cookie. Individual
+     * headers can be excluded from sharing by adding them to this list.
      * <p>
      * This setter adds to the blocked headers
      * @param blockedHeaders a comma separated list of
@@ -226,22 +245,21 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      *                                  headers to include
      * @return this builder
      */
-    @DefaultValue("All HTTP Headers are shared except cookies that do not start with 51D_")
+    @DefaultValue("All HTTP headers are shared except Cookie")
     public ShareUsageBuilderBase<T> setBlockedHttpHeaders(String blockedHeaders) {
         blockedHttpHeaders.addAll(Arrays.asList(blockedHeaders.split("\\s*,\\s*")));
         return this;
     }
 
     /**
-     * By default, all HTTP headers (excluding a few such as 'cookies', if they
-     * don't start with 51D_) are shared. Individual headers can be excluded from sharing by
-     * adding them to this list.
+     * By default, every HTTP header is shared except Cookie. Individual
+     * headers can be excluded from sharing by adding them to this list.
      * <p>
      * This setter allows you to add the name of a header to block.
      * @param blockedHeader the (case-insensitive) name of the header to block
      * @return this builder
      */
-    @DefaultValue("All HTTP Headers are shared except cookies that do not start with 51D_")
+    @DefaultValue("All HTTP headers are shared except Cookie")
     public ShareUsageBuilderBase<T> setBlockedHttpHeader(String blockedHeader) {
         blockedHttpHeaders.add(blockedHeader.trim());
         return this;
@@ -358,6 +376,7 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      * @return this builder
      */
     @Deprecated
+    @DefaultValue(intValue = Constants.SHARE_USAGE_DEFAULT_ADD_TIMEOUT)
     public ShareUsageBuilderBase<T> setAddTimeout(int milliseconds) {
         addTimeout = milliseconds;
         return this;
@@ -388,6 +407,7 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      * @return this builder
      */
     @Deprecated
+    @DefaultValue(intValue = Constants.SHARE_USAGE_DEFAULT_TAKE_TIMEOUT)
     public ShareUsageBuilderBase<T> setTakeTimeout(int milliseconds) {
         takeTimeout = milliseconds;
         return this;
@@ -450,7 +470,8 @@ public abstract class ShareUsageBuilderBase<T extends ShareUsageBase> {
      * If exactly the same evidence values are seen multiple times within this
      * time limit then they will only be shared once.
      * <p>
-     * The default value for this is 0 - meaning always share.
+     * The default is 20 minutes. An interval of 0, or a negative one,
+     * shares every repeat.
      * @param interval the interval in minutes
      * @return this builder
      */

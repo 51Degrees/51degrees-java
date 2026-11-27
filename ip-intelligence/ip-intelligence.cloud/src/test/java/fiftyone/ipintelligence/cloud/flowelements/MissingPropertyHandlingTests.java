@@ -23,7 +23,6 @@
 package fiftyone.ipintelligence.cloud.flowelements;
 
 import fiftyone.ipintelligence.cloud.data.IPIntelligenceDataCloud;
-import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
@@ -63,7 +62,6 @@ public class MissingPropertyHandlingTests {
                              .build()) {
 
             FlowData flowData = mock(FlowData.class);
-            addResponse(flowData, nullValueJson);
 
             IPIntelligenceDataCloud ipiData = new IPIntelligenceDataCloudInternal(
                     loggerFactory.getLogger(IPIntelligenceDataCloud.class.getSimpleName()),
@@ -73,7 +71,7 @@ public class MissingPropertyHandlingTests {
 
             engine.cloudRequestEngine = mock(CloudRequestEngine.class);
             engine.aspectProperties = properties;
-            engine.processEngine(flowData, ipiData);
+            engine.processCloudEngine(flowData, ipiData, nullValueJson);
 
             AspectPropertyValue<Float> latitude = ipiData.getLatitude();
             assertNotNull(latitude);
@@ -90,7 +88,6 @@ public class MissingPropertyHandlingTests {
      *
      * @throws Exception
      */
-    @SuppressWarnings("unused")
     @Test
     public void PropertyNotInResource() throws Exception {
         try (IPIntelligenceCloudEngine engine =
@@ -98,7 +95,6 @@ public class MissingPropertyHandlingTests {
                              .build()) {
 
             FlowData flowData = mock(FlowData.class);
-            addResponse(flowData, nullValueJson);
             MissingPropertyService missingPropertyService =
                     mock(MissingPropertyService.class);
             when(missingPropertyService.getMissingPropertyReason(
@@ -116,10 +112,10 @@ public class MissingPropertyHandlingTests {
 
             engine.cloudRequestEngine = mock(CloudRequestEngine.class);
             engine.aspectProperties = properties;
-            engine.processEngine(flowData, ipiData);
+            engine.processCloudEngine(flowData, ipiData, nullValueJson);
 
             try {
-                AspectPropertyValue<Float> longitude = ipiData.getLongitude();
+                ipiData.getLongitude();
                 fail("A PropertyMissingException should have been thrown");
             } catch (PropertyMissingException e) {
                 assertEquals(
@@ -155,11 +151,4 @@ public class MissingPropertyHandlingTests {
                     add(new AspectPropertyMetaDataDefault("registeredcountry", null, null, String.class, null, true));
                 }
             };
-
-    private void addResponse(FlowData data, String json) {
-        CloudRequestData cloudData = mock(CloudRequestData.class);
-        when(cloudData.getJsonResponse()).thenReturn(json);
-        when(data.getFromElement(any(CloudRequestEngine.class)))
-                .thenReturn(cloudData);
-    }
 }

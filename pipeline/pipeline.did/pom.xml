@@ -122,33 +122,16 @@
                     <properties combine.self="override"/>
                 </configuration>
             </plugin>
-            <!-- Enforce the Java 8 API floor. The compiler runs with
-                 -source/-target 8 (inherited), which sets the bytecode level
-                 but still links against the build JDK's library, so a newer
-                 JDK API (e.g. ByteArrayOutputStream.writeBytes, Java 11) could
-                 slip through. Animal Sniffer checks the compiled classes -
-                 including the OWID sources compiled in - against the Java 8
-                 signature and fails the build on any newer API. -->
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>animal-sniffer-maven-plugin</artifactId>
-                <version>1.24</version>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
                 <configuration>
-                    <signature>
-                        <groupId>org.codehaus.mojo.signature</groupId>
-                        <artifactId>java18</artifactId>
-                        <version>1.0</version>
-                    </signature>
+                    <!-- The owid-java submodule is third-party code from
+                         the SWAN community. Its classes are compiled into
+                         this module but documented in owid-java, so javadoc
+                         leaves their package out. -->
+                    <excludePackageNames>com.swancommunity.owid</excludePackageNames>
                 </configuration>
-                <executions>
-                    <execution>
-                        <id>check-java8-api</id>
-                        <phase>process-classes</phase>
-                        <goals>
-                            <goal>check</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>

@@ -24,6 +24,7 @@ package fiftyone.devicedetection.hash.engine.onpremise.flowelements;
 
 import fiftyone.devicedetection.hash.engine.onpremise.data.DeviceDataHash;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.ConfigHashSwig;
+import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.EngineHashSwig;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.RequiredPropertiesConfigSwig;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.swig.VectorStringSwig;
 import fiftyone.devicedetection.shared.flowelements.OnPremiseDeviceDetectionEngineBuilderBase;
@@ -44,6 +45,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 import static fiftyone.pipeline.util.StringManipulation.stringJoin;
 
@@ -58,6 +60,11 @@ public class DeviceDetectionHashEngineBuilder
     extends OnPremiseDeviceDetectionEngineBuilderBase<
     DeviceDetectionHashEngineBuilder,
     DeviceDetectionHashEngine> {
+
+    @Override
+    protected DeviceDetectionHashEngineBuilder self() {
+        return this;
+    }
 
     private final String dataDownloadType = "HashV41";
    
@@ -156,6 +163,7 @@ public class DeviceDetectionHashEngineBuilder
         }
     }
 
+    @DefaultValue("Balanced")
     @Override
     public DeviceDetectionHashEngineBuilder setPerformanceProfile(
         PerformanceProfiles profile) {
@@ -186,7 +194,8 @@ public class DeviceDetectionHashEngineBuilder
     /**
      * Provide a hint as to how many threads will access the pipeline simultaneously
      * <p>
-     * Default is the result of {@link Runtime#getRuntime()#getAvailableProcessors()}
+     * Default is the result of
+     * {@code Runtime.getRuntime().availableProcessors()}
      * @see <a href="https://51degrees.com/documentation/_device_detection__features__concurrent_processing.html?utm_source=code&amp;utm_medium=comment&amp;utm_campaign=51degrees-java&amp;utm_content=device-detection.hash.engine.on-premise-src-main-java-fiftyone-devicedetection-hash-engine-onpremise-flowelements-devicedetectionhashenginebuilder.java&amp;utm_term=setconcurrency">Concurrent processing</a>
      * @param concurrency expected concurrent accesses
      * @return this builder
@@ -269,7 +278,7 @@ public class DeviceDetectionHashEngineBuilder
     /**
      * Set whether the predictive optimized graph is used
      * for processing. When processing evidence, the predictive
-     * graph is optimised to find the best answer for evidence
+     * graph is optimized to find the best answer for evidence
      * which was not in the training data. However, this is at the
      * expense of processing time, as more possibilities are taken into
      * consideration.
@@ -285,6 +294,49 @@ public class DeviceDetectionHashEngineBuilder
         return this;
     }
     
+    /**
+     * Set the properties, such as TAC and NativeModel, whose values are
+     * indexed to the profiles holding them when the data file loads, so that
+     * {@link DeviceDetectionHashEngine#getProfileIdsForPropertyValue(String, String)}
+     * finds the profiles for a value of one of them without reading every
+     * profile. Names are matched exactly. A refresh indexes the same
+     * properties.
+     * <p>
+     * Default is none.
+     * @see <a href="https://github.com/51Degrees/specifications/blob/main/device-detection-specification/pipeline-elements/device-detection-on-premise.md#configuration-options">Specification</a>
+     * @param names of the properties to index
+     * @return this builder
+     */
+    @DefaultValue("None")
+    public DeviceDetectionHashEngineBuilder setIndexedProperties(
+        List<String> names) {
+        try (VectorStringSwig namesSwig = new VectorStringSwig()) {
+            namesSwig.addAll(names);
+            config.setIndexedProperties(namesSwig);
+        }
+        return this;
+    }
+
+    /**
+     * Set the properties whose values are indexed to the profiles holding
+     * them, as {@link #setIndexedProperties(List)} does, from a comma
+     * separated list of names, as a configuration file gives them.
+     * @param names comma separated names of the properties to index
+     * @return this builder
+     */
+    @DefaultValue("None")
+    public DeviceDetectionHashEngineBuilder setIndexedProperties(
+        String names) {
+        List<String> list = new ArrayList<>();
+        for (String name : names.split(",")) {
+            if (name.trim().isEmpty() == false) {
+                list.add(name.trim());
+            }
+        }
+        return setIndexedProperties(list);
+    }
+
+    @DefaultValue("No results cache, and none can be set for this engine")
     @Override
     public DeviceDetectionHashEngineBuilder setCache(
         CacheConfiguration cacheConfiguration) {
@@ -303,6 +355,16 @@ public class DeviceDetectionHashEngineBuilder
     @Override
     protected String getDefaultDataDownloadType() {
         return dataDownloadType;
+    }
+
+    /**
+     * The product of a data file, read from its header by the native
+     * library without loading the file.
+     * @return {@link EngineHashSwig#getProductFromFile(String)}
+     */
+    @Override
+    protected Function<String, String> getProductReader() {
+        return EngineHashSwig::getProductFromFile;
     }
 
     @Override

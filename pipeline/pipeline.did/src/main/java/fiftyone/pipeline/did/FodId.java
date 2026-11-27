@@ -257,28 +257,34 @@ public final class FodId {
      * already read or signed. This is the one walk of the payload that every
      * reader, throwing or not, goes through.
      * <p>
-     * The rules are lower bounds only. The header must be present before the
-     * type can be read, and the type then sets the least the payload can
-     * hold. Anything longer is accepted as it stands, because the bytes past
-     * the match key are the Terms and then a creator context section whose
-     * shape the cloud judges. The Terms adds nothing to those bounds, since
-     * a payload that ends at the match key reads as a Terms of zero.
+     * The version is read from the first byte before anything else, so a
+     * payload of a version this package does not know is refused naming
+     * that version however short it is. The other rules are lower bounds
+     * only. The header must be present before the type can be read, and the
+     * type then sets the least the payload can hold. Anything longer is
+     * accepted as it stands, because the bytes past the match key are the
+     * Terms and then a creator context section whose shape the cloud
+     * judges. The Terms adds nothing to those bounds, since a payload that
+     * ends at the match key reads as a Terms of zero.
      */
     private static FodIdParseResult read(Owid owid) {
         byte[] payload = owid.getPayload();
-        if (payload.length < HEADER_LENGTH) {
+        if (payload.length <= FLAGS_OFFSET) {
             return FodIdParseResult.failed(FodIdParseStatus.PAYLOAD_TOO_SHORT);
         }
         int flags = payload[FLAGS_OFFSET] & 0xFF;
-        // The version is read before any field, because a later version
-        // exists precisely because a field moved. Reading a payload of a
-        // version this package does not know under the layout it does know
-        // would answer with values that are wrong rather than absent,
-        // which is worse than refusing, and a version that nothing checks
-        // protects nothing.
+        // The version is read before any field, and before the header's
+        // length is checked, because a later version exists precisely
+        // because a field moved. Reading a payload of a version this package
+        // does not know under the layout it does know would answer with
+        // values that are wrong rather than absent, which is worse than
+        // refusing, and a version that nothing checks protects nothing.
         int payloadVersion = payloadVersionOf(flags);
         if (payloadVersion != SUPPORTED_PAYLOAD_VERSION) {
             return FodIdParseResult.unsupportedPayloadVersion(payloadVersion);
+        }
+        if (payload.length < HEADER_LENGTH) {
+            return FodIdParseResult.failed(FodIdParseStatus.PAYLOAD_TOO_SHORT);
         }
         // A payload with no usage bit set states no usage at all. The cloud
         // never writes one, so it is damaged or forged, and it is refused
@@ -552,6 +558,7 @@ public final class FodId {
     }
 
     /**
+     * Returns the identifier type carried in bits 6-7 of the Flags byte.
      * @return the identifier type carried in bits 6-7 of the Flags byte
      */
     public IdType getType() {
@@ -559,6 +566,8 @@ public final class FodId {
     }
 
     /**
+     * Returns the usage carried in bits 0-2 of the Flags byte, as the highest
+     * usage granted.
      * @return the usage carried in bits 0-2 of the Flags byte, as the
      *         highest usage granted; see {@link Usage} for why it is read
      *         that way
@@ -643,12 +652,18 @@ public final class FodId {
         return Terms.fromIndex(termsIndex).getUrl();
     }
 
-    /** @return the OWID version. */
+    /**
+     * Returns the OWID version.
+     * @return the OWID version.
+     */
     public Version getVersion() {
         return owid.getVersion();
     }
 
-    /** @return the domain of the OWID creator. */
+    /**
+     * Returns the domain of the OWID creator.
+     * @return the domain of the OWID creator.
+     */
     public String getDomain() {
         return owid.getDomain();
     }
@@ -665,12 +680,18 @@ public final class FodId {
         return owid.getDate();
     }
 
-    /** @return a copy of the OWID payload bytes. */
+    /**
+     * Returns a copy of the OWID payload bytes.
+     * @return a copy of the OWID payload bytes.
+     */
     public byte[] getPayload() {
         return owid.getPayload();
     }
 
-    /** @return a copy of the 64-byte OWID signature. */
+    /**
+     * Returns a copy of the 64-byte OWID signature.
+     * @return a copy of the 64-byte OWID signature.
+     */
     public byte[] getSignature() {
         return owid.getSignature();
     }
@@ -678,6 +699,8 @@ public final class FodId {
     // ----- Encoding -----
 
     /**
+     * Returns the OWID as a base64 string in the standard alphabet with
+     * padding, the form the cloud issues.
      * @return the OWID as a base64 string in the standard alphabet with
      *         padding, the form the cloud issues
      * @throws OwidException if a field cannot be encoded
@@ -701,6 +724,7 @@ public final class FodId {
     }
 
     /**
+     * Returns the OWID as a byte array including the signature.
      * @return the OWID as a byte array including the signature
      * @throws OwidException if a field cannot be encoded
      */

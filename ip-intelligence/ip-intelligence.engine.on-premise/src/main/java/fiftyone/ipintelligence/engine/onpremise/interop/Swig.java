@@ -34,6 +34,10 @@ import java.util.List;
  * Static methods to help interoperability through the SWIG layer to C++.
  */
 public class Swig {
+    /** Create a new instance. */
+    public Swig() {
+    }
+
     /**
      * Copy the values in the native string vector to a {@link List}.
      * @param vector native instance to copy

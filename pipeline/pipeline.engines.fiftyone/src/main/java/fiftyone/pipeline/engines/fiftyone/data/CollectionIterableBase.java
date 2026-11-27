@@ -24,10 +24,20 @@ package fiftyone.pipeline.engines.fiftyone.data;
 
 import java.util.Iterator;
 
+/**
+ * Iterates over a collection by index, from 0 to its size.
+ *
+ * @param <T> the type of the items
+ */
 public abstract class CollectionIterableBase<T> implements CloseableIterable<T> {
 
     private final long size;
 
+    /**
+     * Create a new instance.
+     *
+     * @param size the number of items
+     */
     public CollectionIterableBase(long size) {
         this.size = size;
     }
@@ -37,6 +47,12 @@ public abstract class CollectionIterableBase<T> implements CloseableIterable<T> 
         return new CollectionIterator();
     }
 
+    /**
+     * Get the item at an index.
+     *
+     * @param index the index of the item
+     * @return the item
+     */
     protected abstract T get(long index);
 
     private class CollectionIterator implements Iterator<T> {

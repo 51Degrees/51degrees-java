@@ -42,10 +42,18 @@ import static fiftyone.pipeline.core.Constants.EVIDENCE_CLIENTIP_KEY;
  * different engine base class functionality.
  */
 public class GeoEngineHelper {
+    /** Create a new instance. */
+    public GeoEngineHelper() {
+    }
+
     /**
      * The result of a call to performGeoLookup.
       */
     public static class GeoLookupResult {
+        /** Create a new instance. */
+        public GeoLookupResult() {
+        }
+
         /**
          * The raw string response from the geo-location web service.
          * If the FlowData does not contain the required evidence then the
@@ -101,6 +109,7 @@ public class GeoEngineHelper {
      * web service.
      * If not, it will contain the JavaScript to run on the client
      * device in order to supply the required evidence.
+     * @throws IOException if the request to the web service fails
      */
     public static GeoLookupResult performGeoLookup(
         FlowData data,

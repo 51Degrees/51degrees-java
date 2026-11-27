@@ -40,15 +40,16 @@ argument to use it.
 
 You will require [resource keys](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-resource-keys)
 to use the Cloud API, as described on our website. Get resource keys from
-our [configurator](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-resource-keys), see our [documentation](https://51degrees.com/documentation/_services__configurator.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-resource-keys) on
+our [configuration page](https://51degrees.com/configure/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-resource-keys), see our [documentation](https://51degrees.com/documentation/_services__configurator.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-resource-keys) on
 how to use this.
  
 A resource key configured with the properties needed
-to run most of the examples can be obtained [here](https://configure.51degrees.com/jqz435Nc?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-resource-keys). 
+to run most of the examples can be obtained [here](https://51degrees.com/configure/jqz435Nc?utm_source=github&utm_medium=readme&utm_campaign=51degrees-java&utm_content=readme.md&utm_term=cloud-resource-keys). 
 To use the resource key in the example it can be supplied as a
 command line parameter, pasted into the configuration file (where there is one)
 or supplied as either an environment variable or a system
-property called "TestResourceKey".
+property called "_51DEGREES_RESOURCE_KEY". The TAC and native model
+examples read theirs from the same name.
 
 Some cloud examples require an enhanced resource key containing a license key. And some
 on-premise examples require you to provide a license key. You can find out about 
@@ -94,8 +95,14 @@ The tables below describe the examples available in this repository.
 | OfflineProcessing        | Example showing how to ingest a file containing data from web requests and perform detection against the entries.                                                                                                              |
 | PerformanceBenchmark     | How to configure the various performance options and run some simple performance tests.                                                                                                                                        |
 | UpdateOnStartup          | How to configure the Pipeline to automatically update the device detection data file on startup. Also illustrates 'file watcher'. This will refresh the device detection engine if the specified data file is updated on disk. |
+| ManualDataUpdate         | How to make the device detection engine load a new data file when the application decides to, rather than through an automatic update, with no restart.                                                                     |
 
 ## Running built examples from command line
+
+Build the examples with JDK 17. They compile for Java 8 and treat every
+compiler warning as an error, and javac 21 and later warn that Java 8 is
+obsolete, so the build fails on JDK 21 and later. The JARs it makes run on
+Java 8 or later.
 
 Running
 
@@ -103,29 +110,33 @@ Running
 mvn package
 ```
 
-will produce "fat" JARs inside `target` subfolders.
+will produce "fat" JARs inside `target` subfolders. The version in each name is the one in this folder's `pom.xml`, which is not
+the version of the packages the examples use.
 
 Use them with relevant example class entrypoints like:
 
 ```bash
-java -cp ./console/target/device-detection-java-examples.console-4.4.20-jar-with-dependencies.jar fiftyone.devicedetection.examples.console.OfflineProcessing
+java -cp ./console/target/device-detection-java-examples.console-4.5.127-SNAPSHOT-jar-with-dependencies.jar fiftyone.devicedetection.examples.console.OfflineProcessing
 ```
 
 ### Web examples
 
 The web examples are run from the root of this repository, because they find their
-web content by a path relative to it. They listen on port 8081 and stop when Enter
-is pressed. Set the `PORT` environment variable to listen on another port, in which
-case the example runs until the process is stopped:
+web content by a path relative to it. They listen on port 5151 and stop when Enter
+is pressed. Set the `_51DEGREES_EXAMPLE_HTTP_PORTS` environment variable to listen on
+another port, in which case the example runs until the process is stopped:
 
 ```bash
-PORT=8100 java -jar ./web/getting-started.onprem/target/device-detection-java-examples.web.getting-started.onprem-4.4.20-jar-with-dependencies.jar
+_51DEGREES_EXAMPLE_HTTP_PORTS=8100 java -jar ./web/getting-started.onprem/target/device-detection-java-examples.web.getting-started.onprem-4.5.127-SNAPSHOT-jar-with-dependencies.jar
 ```
 
 The on-premise web example takes its data file from the `_51DEGREES_DD_PATH`
-environment variable, then from `TestDataFile`, and otherwise uses the free Lite file
-in `cxx/data/device-detection`, which it downloads before the server starts if it is
+environment variable, and otherwise uses the free Lite file in
+`cxx/data/device-detection`, which it downloads before the server starts if it is
 missing.
+
+The [Human Confidence](web/human-confidence/README.md) web example is a small server
+and page for the cloud's Human Confidence. Its README gives the steps to run it.
 
 ### Native library access
 
@@ -137,7 +148,7 @@ The fat JARs above bundle everything into a single jar on the classpath, so the
 permission to use is `ALL-UNNAMED`:
 
 ```bash
-java -cp ./console/target/device-detection-java-examples.console-4.4.20-jar-with-dependencies.jar --enable-native-access=ALL-UNNAMED fiftyone.devicedetection.examples.console.OfflineProcessing
+java -cp ./console/target/device-detection-java-examples.console-4.5.127-SNAPSHOT-jar-with-dependencies.jar --enable-native-access=ALL-UNNAMED fiftyone.devicedetection.examples.console.OfflineProcessing
 ```
 
 With the Maven exec plugin, use the `exec:exec` goal. `exec:java` runs in the Maven JVM
@@ -162,3 +173,15 @@ unnamed module. To grant native access to 51Degrees code alone you need the indi
 jars, with `pipeline.engines.fiftyone` and `device-detection.hash.engine.on-premise` on
 the module path - see the
 [device-detection-java README](https://github.com/51Degrees/51degrees-java/blob/main/device-detection/README.md#native-library-access).
+
+## Flow Data and threads
+
+A Flow Data cannot be used by two threads at once. The web examples handle
+each request on one thread, and read the Flow Data there. An application that
+hands work from a request to another thread or task reads the values that
+work needs from the Flow Data on the request's thread, into its own
+variables, and passes those values, not the Flow Data. The Flow Data is
+closed when the request ends, so work that outlives the request must not
+keep it either. The
+[pipeline README](../../pipeline/README.md#flow-data-and-threads)
+shows such a hand-off.

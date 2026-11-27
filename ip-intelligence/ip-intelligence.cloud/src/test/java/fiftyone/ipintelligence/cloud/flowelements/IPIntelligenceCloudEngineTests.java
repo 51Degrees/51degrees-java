@@ -23,7 +23,6 @@
 package fiftyone.ipintelligence.cloud.flowelements;
 
 import fiftyone.ipintelligence.cloud.data.IPIntelligenceDataCloud;
-import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
 import fiftyone.pipeline.core.data.AccessiblePropertyMetaData.ProductMetaData;
 import fiftyone.pipeline.core.data.AccessiblePropertyMetaData.PropertyMetaData;
@@ -46,7 +45,6 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -139,7 +137,7 @@ public class IPIntelligenceCloudEngineTests {
 
     /**
      * A property the cloud reports with the {@code WktString} type (e.g.
-     * {@code Areas}) is wrapped in a {@link WktString}. The cloud serialises it
+     * {@code Areas}) is wrapped in a {@link WktString}. The cloud serializes it
      * as an object that holds the text under a {@code "value"} key, so this also
      * exercises that the text is extracted rather than the object stringified.
      */
@@ -205,19 +203,13 @@ public class IPIntelligenceCloudEngineTests {
     }
 
     /**
-     * Run {@code processEngine} against a mocked cloud JSON response and return
+     * Run {@code processCloudEngine} against a cloud JSON response and return
      * the populated data instance.
      */
     private IPIntelligenceDataCloud process(
         IPIntelligenceCloudEngine engine,
         String json) {
-        CloudRequestData cloudData = mock(CloudRequestData.class);
-        when(cloudData.getJsonResponse()).thenReturn(json);
-
         FlowData flowData = mock(FlowData.class);
-        when(flowData.getFromElement(any(CloudRequestEngine.class)))
-            .thenReturn(cloudData);
-
         IPIntelligenceDataCloud data = new IPIntelligenceDataCloudInternal(
             loggerFactory.getLogger(
                 IPIntelligenceDataCloud.class.getSimpleName()),
@@ -225,7 +217,7 @@ public class IPIntelligenceCloudEngineTests {
             engine,
             mock(MissingPropertyService.class));
 
-        engine.processEngine(flowData, data);
+        engine.processCloudEngine(flowData, data, json);
         return data;
     }
 }

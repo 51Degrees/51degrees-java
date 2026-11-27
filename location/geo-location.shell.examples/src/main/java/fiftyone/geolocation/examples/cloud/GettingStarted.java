@@ -25,6 +25,8 @@ package fiftyone.geolocation.examples.cloud;
 import fiftyone.geolocation.GeoLocationPipelineBuilder;
 import fiftyone.geolocation.core.Enums;
 import fiftyone.geolocation.core.data.GeoData;
+import fiftyone.geolocation.examples.FindOutMore;
+import fiftyone.geolocation.examples.ResourceKey;
 import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
@@ -32,13 +34,12 @@ import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.Future;
 
 import static fiftyone.geolocation.core.Constants.EVIDENCE_GEO_LAT_PARAM_KEY;
 import static fiftyone.geolocation.core.Constants.EVIDENCE_GEO_LON_PARAM_KEY;
 
 /**
- *  @example cloud/GettingStarted.java
+ *  \example cloud/GettingStarted.java
  *
  * Getting started example of using cloud geo-location.
  *
@@ -47,12 +48,10 @@ import static fiftyone.geolocation.core.Constants.EVIDENCE_GEO_LON_PARAM_KEY;
  * Required Maven Dependencies:
  * - [com.51degrees.geo-location](https://central.sonatype.com/artifact/com.51degrees/geo-location/)
  *
- * 1. Build a new Pipeline to use the 51Degrees cloud service, with lazy loading
- * configured to allow up to a second for a response from the service.
+ * 1. Build a new Pipeline to use the 51Degrees cloud service.
  * ```
  * Pipeline pipeline = new GeoLocationPipelineBuilder(loggerFactory)
  *     .useCloud(resourceKey, Enums.GeoLocationProvider.FiftyOneDegrees)
- *     .useLazyLoading(1000)
  *     .build();
  * ```
  *
@@ -73,30 +72,42 @@ import static fiftyone.geolocation.core.Constants.EVIDENCE_GEO_LON_PARAM_KEY;
  * ```
  *
  * 4. Extract the value of a property as a string from the results.
- * ```
+ * <pre>{@code
  * AspectPropertyValue<String> country = data.get(GeoData.class).getCoutnry();
- * ```
+ * }</pre>
  */
 public class GettingStarted {
+    /** Create a new instance. */
+    public GettingStarted() {
+    }
 
     private static ILoggerFactory loggerFactory = LoggerFactory.getILoggerFactory();
 
+    /**
+     * Run the example.
+     *
+     * @param args not used
+     * @throws Exception if the example fails
+     */
     public static void main(String[] args) throws Exception {
-        // Obtain a resource key for free at https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-src-main-java-fiftyone-geolocation-examples-cloud-gettingstarted.java&utm_term=main
+        // Obtain a resource key for free at https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-src-main-java-fiftyone-geolocation-examples-cloud-gettingstarted.java&utm_term=main
         // Make sure to include the 'Country' property as it is used by this example.
-        String resourceKey = "!!Your resource license key!!";
+        String resourceKey = ResourceKey.find(args);
 
-        if (resourceKey.startsWith("!!")) {
-            System.out.println("You need to create a resource key at " +
-                "https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-src-main-java-fiftyone-geolocation-examples-cloud-gettingstarted.java&utm_term=resource-key-required and paste it into this example.");
+        if (resourceKey == null) {
+            System.out.println("This example calls the 51Degrees cloud " +
+                "service, which needs a resource key, and none is set.");
+            System.out.println("Set the " + ResourceKey.VARIABLE +
+                " environment variable to a resource key, or give the key " +
+                "as the first argument, and run the example again.");
+            System.out.println("Create a resource key at " +
+                "https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-src-main-java-fiftyone-geolocation-examples-cloud-gettingstarted.java&utm_term=resource-key-required");
             System.out.println("Make sure to include the 'Country' " +
                 "property as it is used by this example.");
         }
         else {
             try (Pipeline pipeline = new GeoLocationPipelineBuilder(loggerFactory)
                 .useCloud(resourceKey, Enums.GeoLocationProvider.FiftyOneDegrees)
-                .setEndPoint("https://cloud.51degrees.com/api/v4")
-                .useLazyLoading(1000)
                 .setAutoCloseElements(true)
                 .build();
                 FlowData flowData = pipeline.createFlowData()) {
@@ -106,10 +117,6 @@ public class GettingStarted {
 
                 AspectPropertyValue<String> country = flowData.get(GeoData.class).getCountry();
 
-                Future<?> future = flowData.get(GeoData.class).getProcessFuture();
-                System.out.print("Awaiting response");
-                outputUntilCancelled(".", 1000, future);
-
                 System.out.println(flowData.get(CloudRequestData.class).getJsonResponse());
 
                 System.out.println("Country: " + country.toString());
@@ -117,16 +124,9 @@ public class GettingStarted {
                 System.out.println(flowData.get(GeoData.class).getRegion());
             }
         }
-    }
-
-    private static void outputUntilCancelled(
-        String text,
-        int intervalMs,
-        Future<?> future) throws InterruptedException {
-        while (future.isDone() == false) {
-            System.out.print(text);
-            Thread.sleep(intervalMs);
-        }
-        future.cancel(true);
+        FindOutMore.write(
+            System.out,
+            "https://51degrees.com/documentation/_reverse_geocoding__examples__getting_started_51_degrees_cloud.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-gettingstarted.java&utm_term=find-out-more",
+            "https://51degrees.com/location?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=geo-location.shell.examples-gettingstarted.java&utm_term=find-out-more");
     }
 }

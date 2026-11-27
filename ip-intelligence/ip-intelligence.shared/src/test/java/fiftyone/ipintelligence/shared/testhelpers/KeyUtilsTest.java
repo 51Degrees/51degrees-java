@@ -24,18 +24,42 @@ package fiftyone.ipintelligence.shared.testhelpers;
 
 import org.junit.Test;
 
+import java.util.Collections;
+import java.util.Map;
+
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
 public class KeyUtilsTest {
+    private static final String NAME = "Key_Utils_Test_Name";
+
+    /**
+     * An environment that holds a value under the upper case form of
+     * {@link #NAME} only.
+     */
+    private static final Map<String, String> UPPER_CASE_ONLY =
+        Collections.singletonMap("KEY_UTILS_TEST_NAME", "from-environment");
+
     @Test
-    public void testGetEnv(){
-        assertNotNull(KeyUtils.getNamedKey("path"));
-        System.out.println(KeyUtils.getNamedKey("path"));
+    public void getNamedKey_ReadsTheEnvironmentUnderTheNameGiven() {
+        assertEquals("from-environment", KeyUtils.getNamedKey(
+            "KEY_UTILS_TEST_NAME", UPPER_CASE_ONLY::get));
+        assertNull(KeyUtils.getNamedKey(NAME, UPPER_CASE_ONLY::get));
     }
 
-    private static final String NEW_KEY_NAME = "_51DEGREES_RESOURCE_KEY";
-    private static final String OLD_KEY_NAME = "51DEGREES_RESOURCE_KEY";
+    @Test
+    public void getNamedKey_NotInTheEnvironment_ReadsTheSystemProperty() {
+        System.setProperty(NAME, "from-property");
+        try {
+            assertEquals("from-property",
+                KeyUtils.getNamedKey(NAME, UPPER_CASE_ONLY::get));
+        } finally {
+            System.clearProperty(NAME);
+        }
+    }
+
+    private static final String KEY_NAME =
+        "_51DEGREES_RESOURCE_KEY_BESPOKE";
 
     /**
      * System properties stand in for the environment variables, because
@@ -43,49 +67,16 @@ public class KeyUtilsTest {
      * variable.
      */
     @Test
-    public void oldKeyNameIsReadWhenNewIsNotSet() {
-        assumeKeyNamesNotInEnvironment();
-        String savedNew = System.clearProperty(NEW_KEY_NAME);
-        String savedOld = System.clearProperty(OLD_KEY_NAME);
+    public void keyNameIsRead() {
+        assumeTrue(System.getenv(KEY_NAME) == null);
+        String saved = System.clearProperty(KEY_NAME);
         try {
-            System.setProperty(OLD_KEY_NAME, "old-name-key");
-            assertEquals("old-name-key",
-                KeyUtils.getResourceKey("NoSuchLegacyName"));
+            System.setProperty(KEY_NAME, "name-key");
+            assertEquals("name-key",
+                KeyUtils.getResourceKey());
         } finally {
-            restore(NEW_KEY_NAME, savedNew);
-            restore(OLD_KEY_NAME, savedOld);
+            restore(KEY_NAME, saved);
         }
-    }
-
-    @Test
-    public void newKeyNameWinsOverOld() {
-        assumeKeyNamesNotInEnvironment();
-        String savedNew = System.clearProperty(NEW_KEY_NAME);
-        String savedOld = System.clearProperty(OLD_KEY_NAME);
-        try {
-            System.setProperty(NEW_KEY_NAME, "new-name-key");
-            System.setProperty(OLD_KEY_NAME, "old-name-key");
-            assertEquals("new-name-key",
-                KeyUtils.getResourceKey("NoSuchLegacyName"));
-        } finally {
-            restore(NEW_KEY_NAME, savedNew);
-            restore(OLD_KEY_NAME, savedOld);
-        }
-    }
-
-    @Test
-    @SuppressWarnings("deprecation")
-    public void oldKeyConstantKeepsItsValue() throws Exception {
-        assertEquals(OLD_KEY_NAME, KeyUtils.RESOURCE_KEY_ENV_VAR);
-        assertTrue(KeyUtils.class.getField("RESOURCE_KEY_ENV_VAR")
-            .isAnnotationPresent(Deprecated.class));
-        assertEquals(NEW_KEY_NAME,
-            KeyUtils.class.getField("RESOURCE_KEY_VARIABLE").get(null));
-    }
-
-    private static void assumeKeyNamesNotInEnvironment() {
-        assumeTrue(System.getenv(NEW_KEY_NAME) == null);
-        assumeTrue(System.getenv(OLD_KEY_NAME) == null);
     }
 
     private static void restore(String name, String value) {

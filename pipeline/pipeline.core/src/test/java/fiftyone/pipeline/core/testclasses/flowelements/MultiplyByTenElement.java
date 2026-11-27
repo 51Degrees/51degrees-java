@@ -40,6 +40,11 @@ import java.util.List;
 public class MultiplyByTenElement
     extends FlowElementBase<TestElementData, ElementPropertyMetaData> {
 
+    @Override
+    protected Class<TestElementData> getDataType() {
+        return TestElementData.class;
+    }
+
     public final List<String> evidenceKeys = Arrays.asList("value");
     private EvidenceKeyFilterWhitelist evidenceKeyFilter;
 
