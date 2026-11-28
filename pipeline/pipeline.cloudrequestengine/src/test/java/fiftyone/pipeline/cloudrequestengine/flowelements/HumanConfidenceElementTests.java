@@ -295,6 +295,54 @@ public class HumanConfidenceElementTests extends CloudRequestEngineTestsBase {
     }
 
     /**
+     * An element built with no Cloud Request Engine at all builds in a
+     * Pipeline that has none. A sealed request gives Medium and Active
+     * with no error and no request, and any other request gives each
+     * Property no value and a reason.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void withoutAnyCloudRequestEngineThePipelineStillWorks()
+        throws Exception {
+        answerJsonCalls();
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+                .addFlowElement(
+                    new HumanConfidenceElementBuilder(loggerFactory).build())
+                .build()) {
+            try (FlowData data = pipeline.createFlowData()) {
+                data.addEvidence(sealed());
+                data.process();
+                Read read = new Read();
+                read(data, read);
+                assertEquals("Medium", read.humanConfidence);
+                assertEquals("Active", read.source);
+                assertTrue(data.getErrors() == null ||
+                    data.getErrors().isEmpty(), String.valueOf(
+                    data.getErrors()));
+            }
+            try (FlowData data = pipeline.createFlowData()) {
+                data.addEvidence("query.User-Agent", "iPhone");
+                data.process();
+                for (String name : Arrays.asList(
+                    HumanConfidenceElement.HUMAN_CONFIDENCE,
+                    HumanConfidenceElement.HUMAN_CONFIDENCE_SOURCE)) {
+                    AspectPropertyValue<String> value =
+                        (AspectPropertyValue<String>) data.get(
+                            HumanConfidenceElement.ELEMENT_DATA_KEY)
+                            .get(name);
+                    assertFalse(value.hasValue(), name);
+                    assertTrue(value.getNoValueMessage().contains(name),
+                        value.getNoValueMessage());
+                }
+                assertTrue(data.getErrors() == null ||
+                    data.getErrors().isEmpty(), String.valueOf(
+                    data.getErrors()));
+            }
+        }
+        assertTrue(calls.isEmpty(), "A request was made: " + calls);
+    }
+
+    /**
      * Two reads of HumanConfidence for one request make one request to the
      * remote server.
      */
