@@ -30,13 +30,12 @@ import fiftyone.pipeline.cloudrequestengine.flowelements.HumanConfidenceElement;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngineDefault;
 import fiftyone.pipeline.cloudrequestengine.flowelements.HumanConfidenceElementBuilder;
 import fiftyone.pipeline.cloudrequestengine.flowelements.HumanConfidencePage;
+import fiftyone.pipeline.core.data.AccessiblePropertyMetaData;
 import fiftyone.pipeline.core.data.ElementData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
-import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
@@ -46,12 +45,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.URL;
 import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -201,8 +197,8 @@ public class HumanConfidence {
      * @throws IOException when the server can't start
      */
     public int start(int port) throws IOException {
-        checkProperties();
         buildPipeline();
+        checkProperties();
         server = HttpServer.create(
                 new InetSocketAddress(InetAddress.getLoopbackAddress(), port), 0);
         server.createContext("/", this::handle);
@@ -267,49 +263,36 @@ public class HumanConfidence {
     }
 
     /**
-     * Asks the cloud which properties the Resource Key has. When
-     * HumanConfidence isn't one of them, the console and the page say so.
+     * Looks for HumanConfidence in the properties the Cloud Request Engine
+     * found for the keys when it was built, so the example makes no call
+     * of its own. When it isn't one of them, the console and the page say
+     * so.
      */
     private void checkProperties() {
-        try {
-            Answer answer = send("GET", api + "accessibleproperties?resource="
-                    + encode(resource), null);
-            if (answer.status == 200) {
-                hasHumanConfidence = hasProperty(
-                        new JSONObject(answer.body), "humanconfidence");
+        Map<String, AccessiblePropertyMetaData.ProductMetaData> products =
+                engine.getPublicProperties();
+        if (products == null) {
+            System.out.println("Couldn't check the Resource Key's "
+                    + "properties. The cloud didn't answer.");
+            return;
+        }
+        hasHumanConfidence = false;
+        for (AccessiblePropertyMetaData.ProductMetaData product
+                : products.values()) {
+            if (product.properties == null) {
+                continue;
             }
-        } catch (IOException | JSONException e) {
-            System.out.println("Couldn't check the Resource Key's properties. "
-                    + e.getMessage());
+            for (AccessiblePropertyMetaData.PropertyMetaData property
+                    : product.properties) {
+                if ("HumanConfidence".equalsIgnoreCase(property.name)) {
+                    hasHumanConfidence = true;
+                }
+            }
         }
         if (hasHumanConfidence == false) {
             System.out.println("This Resource Key doesn't include "
                     + "HumanConfidence. Contact us to add it. " + CONTACT_URL);
         }
-    }
-
-    /** Looks for a property Name anywhere in the answer. */
-    private static boolean hasProperty(Object node, String name) {
-        if (node instanceof JSONObject) {
-            JSONObject object = (JSONObject) node;
-            Object value = object.opt("Name");
-            if (value instanceof String
-                    && name.equalsIgnoreCase((String) value)) {
-                return true;
-            }
-            for (String key : object.keySet()) {
-                if (hasProperty(object.get(key), name)) {
-                    return true;
-                }
-            }
-        } else if (node instanceof JSONArray) {
-            for (Object item : (JSONArray) node) {
-                if (hasProperty(item, name)) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     private void handle(HttpExchange exchange) throws IOException {
@@ -443,42 +426,6 @@ public class HumanConfidence {
         }
     }
 
-    /** A status code and body from the cloud. */
-    private static class Answer {
-        final int status;
-        final String body;
-
-        Answer(int status, String body) {
-            this.status = status;
-            this.body = body;
-        }
-    }
-
-    private static Answer send(String method, String url, String form)
-            throws IOException {
-        HttpURLConnection connection =
-                (HttpURLConnection) new URL(url).openConnection();
-        try {
-            connection.setConnectTimeout(TIMEOUT_MS);
-            connection.setReadTimeout(TIMEOUT_MS);
-            connection.setRequestMethod(method);
-            if (form != null) {
-                connection.setDoOutput(true);
-                connection.setRequestProperty("Content-Type",
-                        "application/x-www-form-urlencoded");
-                try (OutputStream out = connection.getOutputStream()) {
-                    out.write(bytes(form));
-                }
-            }
-            int status = connection.getResponseCode();
-            InputStream in = status >= 400
-                    ? connection.getErrorStream() : connection.getInputStream();
-            return new Answer(status, in == null ? "" : readAll(in));
-        } finally {
-            connection.disconnect();
-        }
-    }
-
     /**
      * Reads a URL encoded form.
      * @param body the form
@@ -496,26 +443,6 @@ public class HumanConfidence {
             fields.put(decode(name), decode(value));
         }
         return fields;
-    }
-
-    private static String form(Map<String, String> fields) {
-        StringBuilder text = new StringBuilder();
-        for (Map.Entry<String, String> field : fields.entrySet()) {
-            if (text.length() > 0) {
-                text.append('&');
-            }
-            text.append(encode(field.getKey())).append('=')
-                    .append(encode(field.getValue()));
-        }
-        return text.toString();
-    }
-
-    private static String encode(String text) {
-        try {
-            return URLEncoder.encode(text, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new IllegalStateException(e);
-        }
     }
 
     private static String decode(String text) {
@@ -568,10 +495,6 @@ public class HumanConfidence {
 
     private static byte[] bytes(String text) {
         return text.getBytes(StandardCharsets.UTF_8);
-    }
-
-    private static String trim(String text) {
-        return text.length() > 200 ? text.substring(0, 200) : text;
     }
 
     private static boolean isBlank(String text) {

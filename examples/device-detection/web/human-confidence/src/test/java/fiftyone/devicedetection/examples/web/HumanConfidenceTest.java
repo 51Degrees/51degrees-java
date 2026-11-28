@@ -109,6 +109,7 @@ public class HumanConfidenceTest {
     private final List<Map<String, String>> sealedForms =
             new CopyOnWriteArrayList<>();
     private final AtomicInteger hcRedeemCalls = new AtomicInteger();
+    private final AtomicInteger propertiesCalls = new AtomicInteger();
     private volatile String passiveAnswer = PASSIVE;
 
     @After
@@ -152,8 +153,10 @@ public class HumanConfidenceTest {
                   + "\"Properties\":["
                   + "{\"Name\":\"IsMobile\",\"Type\":\"Bool\","
                   + "\"Category\":\"Device\"}]}}}";
-        cloud.createContext("/api/v4/accessibleproperties",
-                exchange -> reply(exchange, 200, properties));
+        cloud.createContext("/api/v4/accessibleproperties", exchange -> {
+            propertiesCalls.incrementAndGet();
+            reply(exchange, 200, properties);
+        });
         cloud.createContext("/api/v4/" + RESOURCE + ".json", exchange -> {
             Map<String, String> form = HumanConfidence.parseForm(
                     body(exchange));
@@ -350,6 +353,17 @@ public class HumanConfidenceTest {
         assertEquals(HumanConfidence.READ_FAILED, answer.getString("error"));
         assertFalse(answer.toString(), answer.toString().contains("cloud said"));
         assertFalse(answer.toString(), answer.toString().contains("-key"));
+    }
+
+    /**
+     * The example reads the properties the Cloud Request Engine found, so
+     * the only accessibleproperties call is the engine's own.
+     */
+    @Test
+    public void onlyTheEngineAsksForTheProperties() throws IOException {
+        start(true);
+        assertTrue(example.hasHumanConfidence());
+        assertEquals(1, propertiesCalls.get());
     }
 
     @Test
