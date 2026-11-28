@@ -726,6 +726,31 @@ public class HumanConfidenceTransactionTests
         }
     }
 
+    /**
+     * A response without a derived member leaves both Properties out, so
+     * each gives the missing Property reason rather than the reason for no
+     * response.
+     */
+    @Test
+    public void notCarried_NoDerivedMemberGivesTheMissingReason()
+        throws Exception {
+        answer = "{'device':{'ismobile':true}}";
+        try (Pipeline pipeline = pipeline();
+             FlowData data = pipeline.createFlowData()) {
+            data.addEvidence("header.user-agent", "Mozilla/5.0");
+            data.process();
+            for (String name : Arrays.asList(
+                HumanConfidenceElement.HUMAN_CONFIDENCE,
+                HumanConfidenceElement.HUMAN_CONFIDENCE_SOURCE)) {
+                AspectPropertyValue<String> value = property(data, name);
+                assertFalse(value.hasValue());
+                assertEquals(
+                    String.format(HumanConfidenceElement.MISSING, name),
+                    value.getNoValueMessage());
+            }
+        }
+    }
+
     // The Evidence the web integration adds.
 
     @Test

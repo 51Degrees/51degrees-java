@@ -151,8 +151,9 @@ public class HumanConfidenceElement
     }
 
     /**
-     * The {@code derived} member of the JSON call's answer, or null where
-     * there is none. It is null where the Pipeline has no Cloud Request
+     * The {@code derived} member of the JSON call's answer, empty where the
+     * answer leaves it out, or null where there is no answer to read. It
+     * is null where the Pipeline has no Cloud Request
      * Engine, where the engine made no request, where the request failed,
      * and, on a request that carries a sealed result, where the engine has
      * no License Key or kept no transaction for the page, because the
@@ -197,10 +198,13 @@ public class HumanConfidenceElement
             JSONObject answer = new JSONObject(json);
             for (String key : answer.keySet()) {
                 if (ELEMENT_DATA_KEY.equalsIgnoreCase(key)) {
-                    return answer.optJSONObject(key);
+                    JSONObject member = answer.optJSONObject(key);
+                    return member == null ? new JSONObject() : member;
                 }
             }
-            return null;
+            // The answer has no derived member, so each Property is left
+            // out of the response, and its reason is the missing one.
+            return new JSONObject();
         } catch (JSONException unreadable) {
             return null;
         }
