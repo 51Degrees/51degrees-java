@@ -494,11 +494,19 @@ public class JavaScriptBuilderElement
      * session id is different on every page view, so a record holding one
      * could never match. The .NET builder excludes the same two and is the
      * reference for this behaviour.
+     * <p>
+     * A sealed Human Confidence result is left out too, as the
+     * specification says a package never puts it in the JavaScript
+     * Builder's output. So is the page id sent beside it, which only names
+     * the page the result came from. See
+     * <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/human-confidence.md#what-a-package-never-exposes">human-confidence.md</a>.
      */
     private static final Set<String> EXCLUDED_PARAMETERS =
             Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
                     EVIDENCE_SESSIONID,
-                    EVIDENCE_SEQUENCE)));
+                    EVIDENCE_SEQUENCE,
+                    "query.humanconfidence",
+                    "query.humanconfidencepage")));
 
     private Map<String, String> getParameters(FlowData data) throws UnsupportedEncodingException {
         HashMap<String, String> parameters = new HashMap<>();
