@@ -151,8 +151,7 @@ public class CloudRequestDataInternal extends AspectDataBase
     }
 
     /**
-     * Wait for a cloud request still running, so closing the Flow Data does
-     * not leave it behind. Readers get any failure, so this ignores it.
+     * Clear the redeeming flag, so a reused instance starts as a new one.
      */
     @Override
     protected void onReuse() {
@@ -160,6 +159,10 @@ public class CloudRequestDataInternal extends AspectDataBase
         redeeming = false;
     }
 
+    /**
+     * Wait for a cloud request still running, so closing the Flow Data does
+     * not leave it behind. Readers get any failure, so this ignores it.
+     */
     @Override
     public void close() {
         CompletableFuture<String> task = jsonResponseTask;
