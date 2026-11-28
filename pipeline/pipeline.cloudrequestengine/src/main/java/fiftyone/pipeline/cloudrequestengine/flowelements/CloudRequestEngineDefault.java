@@ -107,6 +107,24 @@ public class CloudRequestEngineDefault
         "query.humanconfidence";
 
     /**
+     * The Evidence that carries the id of a {@link HumanConfidencePage},
+     * being the {@code humanconfidencepage} parameter the page sends. It
+     * is never sent to the cloud service.
+     */
+    public static final String HUMAN_CONFIDENCE_PAGE_EVIDENCE =
+        "query.humanconfidencepage";
+
+    /** The form field the kept transaction is sent as. */
+    private static final String TRANSACTION_FIELD = "transaction";
+
+    /** What replaces a sealed result, transaction or key in a message. */
+    private static final String HIDDEN = "[hidden]";
+
+    /** The transactions given to pages and not yet used. */
+    private final HumanConfidencePages humanConfidencePages =
+        new HumanConfidencePages();
+
+    /**
      * The Property the request names on a request that carries a sealed
      * result, so the answer holds the redeemed value.
      */
@@ -574,6 +592,17 @@ public class CloudRequestEngineDefault
     }
 
     /**
+     * Make what a new page needs so that its sealed Human Confidence result
+     * can be redeemed. Call it once for each page served, and never share
+     * the result between pages. The engine keeps the page's transaction for
+     * a limited time and uses it once.
+     * @return the page's id and script address
+     */
+    public HumanConfidencePage newHumanConfidencePage() {
+        return humanConfidencePages.issue();
+    }
+
+    /**
      * Whether the Flow Data's Evidence holds a sealed Human Confidence
      * result, being {@link #SEALED_HUMAN_CONFIDENCE_EVIDENCE} with a value
      * that is not empty.
@@ -669,10 +698,30 @@ public class CloudRequestEngineDefault
 
     @Override
     protected void processEngine(FlowData data, CloudRequestData aspectData) throws IOException {
-        ((CloudRequestDataInternal)aspectData).setProcessStarted(true);
+        CloudRequestDataInternal request = aspectData;
+        request.setProcessStarted(true);
         completeDiscovery();
 
-        byte[] content = getContent(data);
+        // A sealed Human Confidence result is redeemed only with the License
+        // Key and the transaction kept for the page it came from. Otherwise
+        // neither the sealed result nor any transaction is sent, and the
+        // Human Confidence element gives Medium.
+        String transaction = null;
+        List<String> hidden = null;
+        if (carriesSealedResult(data)) {
+            if (hasLicenseKey()) {
+                transaction = humanConfidencePages.take(
+                    evidenceValue(data, HUMAN_CONFIDENCE_PAGE_EVIDENCE));
+            }
+            if (transaction != null) {
+                request.setRedeeming();
+            }
+            hidden = new ArrayList<>(getLicenseKeys());
+            hidden.add(evidenceValue(data, SEALED_HUMAN_CONFIDENCE_EVIDENCE));
+            hidden.add(transaction);
+        }
+
+        byte[] content = getContent(data, transaction, hidden);
         HttpURLConnection connection = httpClient.connect(toUrl(endPoint.trim()));
         setTimeouts(connection);
 
@@ -683,9 +732,57 @@ public class CloudRequestEngineDefault
 
         // The request is built from the Flow Data above. The task holds only
         // the request, and readers of the JSON response wait for it.
-        ((CloudRequestDataInternal)aspectData).setJsonResponseTask(
+        final List<String> hide = hidden;
+        request.setJsonResponseTask(
             CompletableFuture.supplyAsync(
-                () -> send(connection, headers, content), requests));
+                () -> send(connection, headers, content, hide), requests));
+    }
+
+    /**
+     * The value of an Evidence key, found without regard to case.
+     * @return the value, or null where there is none or it is empty
+     */
+    private static String evidenceValue(FlowData data, String key) {
+        for (Map.Entry<String, Object> entry :
+            data.getEvidence().asKeyMap().entrySet()) {
+            if (key.equalsIgnoreCase(entry.getKey()) &&
+                entry.getValue() != null) {
+                String value = entry.getValue().toString();
+                return value.isEmpty() ? null : value;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The message with each value replaced, as written and as encoded in a
+     * URL. On a request that carries a sealed result no message holds the
+     * sealed result, the transaction or the License Key, not even in part.
+     * See the Human Confidence specification, "What a package never
+     * exposes".
+     */
+    private static String hide(String message, List<String> values) {
+        if (message == null || values == null) {
+            return message;
+        }
+        String result = message;
+        List<String> longestFirst = new ArrayList<>();
+        for (String value : values) {
+            if (value != null && value.isEmpty() == false) {
+                longestFirst.add(value);
+            }
+        }
+        longestFirst.sort((a, b) -> b.length() - a.length());
+        for (String value : longestFirst) {
+            result = result.replace(value, HIDDEN);
+            try {
+                result = result.replace(
+                    URLEncoder.encode(value, "UTF-8"), HIDDEN);
+            } catch (UnsupportedEncodingException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+        return result;
     }
 
     /**
@@ -695,10 +792,11 @@ public class CloudRequestEngineDefault
     private String send(
         HttpURLConnection connection,
         Map<String, String> headers,
-        byte[] content) {
+        byte[] content,
+        List<String> hidden) {
         try {
             String response = httpClient.postData(connection, headers, content);
-            validateResponse(response, connection);
+            validateResponse(response, connection, true, hidden);
             reportPropertiesNotCovered(response);
             return response;
         } catch (IOException e) {
@@ -768,13 +866,28 @@ public class CloudRequestEngineDefault
      * 'query.' evidence should take precedence over all other evidence.
      * If there are evidence keys other than 'query.' that conflict then
      * this is unexpected so a warning will be logged.
+     * <p>
+     * A request that carries a sealed Human Confidence result sends it only
+     * with the transaction kept for its page. Otherwise it sends neither.
      * @param data the FlowData
+     * @param transaction the transaction kept for the page, or null
+     * @param hidden the values no message may hold, or null
      * @return form content for a POST request
      * @throws UnsupportedEncodingException
      */
-    private byte[] getContent(FlowData data) throws UnsupportedEncodingException {
+    private byte[] getContent(
+        FlowData data,
+        String transaction,
+        List<String> hidden) throws UnsupportedEncodingException {
 
-        Map<String, Object> formData = getFormData(data);
+        Map<String, Object> formData = getFormData(data, hidden);
+        if (carriesSealedResult(data)) {
+            if (transaction == null) {
+                formData.remove(keySuffix(SEALED_HUMAN_CONFIDENCE_EVIDENCE));
+            } else {
+                formData.put(TRANSACTION_FIELD, transaction);
+            }
+        }
         List<String> formItems = new ArrayList<>();
 
         formItems.addAll(credentialItems());
@@ -852,6 +965,19 @@ public class CloudRequestEngineDefault
      * @return the form fields to send
      */
     Map<String, Object> getFormData(FlowData flowData) {
+        return getFormData(flowData, null);
+    }
+
+    /**
+     * As {@link #getFormData(FlowData)}, with a conflict warning that holds
+     * none of the values given.
+     * @param flowData the FlowData
+     * @param hidden the values no message may hold, or null
+     * @return the form fields to send
+     */
+    private Map<String, Object> getFormData(
+        FlowData flowData,
+        List<String> hidden) {
         // On a request that carries a sealed result, Evidence named
         // transaction or challenge is left out, so the call holds no
         // transaction taken from the request.
@@ -872,13 +998,17 @@ public class CloudRequestEngineDefault
         // Add the other evidence lowest precedence first, being other
         // prefixes in reverse alphabetical order, then location, fiftyone
         // and server.
-        addFormData(formData, evidence, getSelectedEvidence(evidence, "other"));
+        addFormData(formData, evidence,
+            getSelectedEvidence(evidence, "other"), hidden);
         // Add cookie evidence.
-        addFormData(formData, evidence, getSelectedEvidence(evidence, "cookie"));
+        addFormData(formData, evidence,
+            getSelectedEvidence(evidence, "cookie"), hidden);
         // Add header evidence.
-        addFormData(formData, evidence, getSelectedEvidence(evidence, "header"));
+        addFormData(formData, evidence,
+            getSelectedEvidence(evidence, "header"), hidden);
         // Add query evidence.
-        addFormData(formData, evidence, getSelectedEvidence(evidence, "query"));
+        addFormData(formData, evidence,
+            getSelectedEvidence(evidence, "query"), hidden);
 
         return formData;
     }
@@ -894,6 +1024,7 @@ public class CloudRequestEngineDefault
      */
     private boolean isSent(String key) {
         return HTTP_REQUEST_KEY.equalsIgnoreCase(key) == false &&
+            HUMAN_CONFIDENCE_PAGE_EVIDENCE.equalsIgnoreCase(key) == false &&
             ENGINE_FIELDS.contains(
                 keySuffix(key).toLowerCase(Locale.ROOT)) == false;
     }
@@ -929,11 +1060,13 @@ public class CloudRequestEngineDefault
      * @param allEvidence all the Evidence being sent. This is used to
      *                    report which evidence keys are conflicting
      * @param evidence evidence to add to the form data
+     * @param hidden the values the conflict warning may not hold, or null
      */
     private void addFormData(
         Map<String, Object> formData,
         Map<String, Object> allEvidence,
-        Map<String, Object> evidence) {
+        Map<String, Object> evidence,
+        List<String> hidden) {
 
         // Lowest precedence first, so a later key replaces an earlier one.
         // Other prefixes are compared as prefixes, in lower case, then the
@@ -985,7 +1118,7 @@ public class CloudRequestEngineDefault
                             evidenceKey,
                             shown(evidenceKey, evidence.get(evidenceKey)),
                             conflictStr.toString());
-                    logger.warn(warningMessage);
+                    logger.warn(hide(warningMessage, hidden));
                 }
                 // Replace the existing field, name and value, so the name
                 // sent is the winning key's.
@@ -1222,6 +1355,22 @@ public class CloudRequestEngineDefault
         HttpURLConnection connection,
         boolean checkForErrorMessages) 
         throws IOException, CloudRequestException, AggregateException {
+        validateResponse(jsonResult, connection, checkForErrorMessages, null);
+    }
+
+    /**
+     * Validate the JSON response from the cloud service.
+     * @param jsonResult the JSON content that is returned from the cloud
+     * @param connection connection used when making the request
+     * @param checkForErrorMessages Set to false if the response will
+     * never contain error message text.
+     * @param hidden the values no message may hold, or null
+     */
+    private void validateResponse(String jsonResult,
+        HttpURLConnection connection,
+        boolean checkForErrorMessages,
+        List<String> hidden)
+        throws IOException, CloudRequestException, AggregateException {
 
         int code = connection.getResponseCode();
         boolean hasData = jsonResult != null && jsonResult.isEmpty() == false;
@@ -1262,7 +1411,8 @@ public class CloudRequestEngineDefault
             if (warnings != null) {
                 for (Object warning : warnings.toList()) {
                     logger.warn(LicenseKeyMask.maskIn(
-                        String.valueOf(warning), getLicenseKeys()));
+                        hide(String.valueOf(warning), hidden),
+                        getLicenseKeys()));
                 }
             }
         }
@@ -1289,7 +1439,8 @@ public class CloudRequestEngineDefault
         }
 
         // The cloud's errors can name the license key it was sent.
-        messages.replaceAll(m -> LicenseKeyMask.maskIn(m, getLicenseKeys()));
+        messages.replaceAll(m -> LicenseKeyMask.maskIn(
+            hide(m, hidden), getLicenseKeys()));
 
         Map<String, List<String>> headers = null;
         if (messages.size() > 0){

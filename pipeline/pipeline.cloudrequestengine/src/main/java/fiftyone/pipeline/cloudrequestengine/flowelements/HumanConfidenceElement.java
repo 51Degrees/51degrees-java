@@ -99,8 +99,9 @@ public class HumanConfidenceElement
 
     private final EvidenceKeyFilter evidenceKeyFilter =
         new EvidenceKeyFilterWhitelist(
-            Collections.singletonList(
-                CloudRequestEngineDefault.SEALED_HUMAN_CONFIDENCE_EVIDENCE),
+            Arrays.asList(
+                CloudRequestEngineDefault.SEALED_HUMAN_CONFIDENCE_EVIDENCE,
+                CloudRequestEngineDefault.HUMAN_CONFIDENCE_PAGE_EVIDENCE),
             String.CASE_INSENSITIVE_ORDER);
 
     /**
@@ -154,17 +155,13 @@ public class HumanConfidenceElement
      * there is none. It is null where the Pipeline has no Cloud Request
      * Engine, where the engine made no request, where the request failed,
      * and, on a request that carries a sealed result, where the engine has
-     * no License Key, because the sealed result is then not redeemed. A
+     * no License Key or kept no transaction for the page, because the
+     * sealed result is then not redeemed. A
      * failed request is recorded once as the Cloud Request Engine's error,
      * and this element adds no error of its own.
      */
     private JSONObject derived(FlowData data, boolean sealed) {
         if (requestEngine == null) {
-            return null;
-        }
-        if (sealed && requestEngine instanceof CloudRequestEngineDefault &&
-            ((CloudRequestEngineDefault) requestEngine).hasLicenseKey()
-                == false) {
             return null;
         }
         CloudRequestData request;
@@ -174,6 +171,12 @@ public class HumanConfidenceElement
             return null;
         }
         if (request == null || request.getProcessStarted() == false) {
+            return null;
+        }
+        // Without the License Key and the transaction kept for the page,
+        // the engine sent no sealed result, so the answer is not about it.
+        if (sealed && ((CloudRequestDataInternal) request).isRedeeming()
+            == false) {
             return null;
         }
         String json;

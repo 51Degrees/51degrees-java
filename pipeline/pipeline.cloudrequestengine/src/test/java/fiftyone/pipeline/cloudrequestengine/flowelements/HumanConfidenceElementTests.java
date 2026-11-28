@@ -44,6 +44,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -116,9 +117,19 @@ public class HumanConfidenceElementTests extends CloudRequestEngineTestsBase {
         final List<FlowError> errors = new ArrayList<>();
     }
 
+    /**
+     * Process the Evidence. A request that carries a sealed result is
+     * given the id of a page the engine served, as the page sends it.
+     */
     private Read process(
         CloudRequestEngine engine,
         Map<String, String> evidence) throws Exception {
+        if (evidence.containsKey("query.humanconfidence")) {
+            evidence = new LinkedHashMap<>(evidence);
+            evidence.put("query.humanconfidencepage",
+                ((CloudRequestEngineDefault) engine)
+                    .newHumanConfidencePage().getId());
+        }
         Read read = new Read();
         try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
                 .setSuppressProcessException(true)
@@ -177,6 +188,8 @@ public class HumanConfidenceElementTests extends CloudRequestEngineTestsBase {
         assertEquals(1, calls.size());
         assertEquals(SEALED, calls.get(0).get("humanconfidence"));
         assertEquals(LICENSE, calls.get(0).get("license"));
+        assertNotNull(calls.get(0).get("transaction"));
+        assertNull(calls.get(0).get("humanconfidencepage"));
         assertTrue(read.errors.isEmpty(), read.errors.toString());
     }
 
@@ -278,6 +291,9 @@ public class HumanConfidenceElementTests extends CloudRequestEngineTestsBase {
                 .build();
              FlowData data = pipeline.createFlowData()) {
             data.addEvidence(sealed());
+            data.addEvidence("query.humanconfidencepage",
+                ((CloudRequestEngineDefault) engine)
+                    .newHumanConfidencePage().getId());
             data.process();
             Read first = new Read();
             Read second = new Read();
@@ -317,7 +333,8 @@ public class HumanConfidenceElementTests extends CloudRequestEngineTestsBase {
     /**
      * Evidence under any prefix whose key strips to transaction or
      * challenge, in any letter case, is left out of a call that carries a
-     * sealed result. A call without a sealed result sends it as before.
+     * sealed result, which holds the transaction kept for the page. A call
+     * without a sealed result sends it as before.
      */
     @Test
     public void sealedCallHoldsNoTransactionFromTheRequest() throws Exception {
@@ -331,9 +348,13 @@ public class HumanConfidenceElementTests extends CloudRequestEngineTestsBase {
 
         process(engine, evidence);
 
+        // The only transaction is the one the engine kept for the page.
         for (String name : calls.get(0).keySet()) {
-            assertFalse(name.equalsIgnoreCase("transaction"), name);
             assertFalse(name.equalsIgnoreCase("challenge"), name);
+        }
+        assertNotNull(calls.get(0).get("transaction"));
+        for (String value : calls.get(0).values()) {
+            assertFalse(value.startsWith("from-"), value);
         }
 
         evidence.remove("query.humanconfidence");
