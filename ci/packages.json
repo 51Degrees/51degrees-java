@@ -5,7 +5,7 @@
   {"Name": "pipeline.did", "Path": "pipeline/pipeline.did", "ExtraPaths": ["pipeline/owid-java"], "DependsOn": ["pipeline"], "Publish": true},
   {"Name": "pipeline.engines", "Path": "pipeline/pipeline.engines", "DependsOn": ["pipeline", "pipeline.core", "pipeline.caching", "pipeline.common"], "Publish": true},
   {"Name": "pipeline.caching", "Path": "pipeline/pipeline.caching", "DependsOn": ["pipeline", "pipeline.common"], "Publish": true},
-  {"Name": "pipeline.cloudrequestengine", "Path": "pipeline/pipeline.cloudrequestengine", "DependsOn": ["pipeline", "pipeline.engines", "pipeline.common"], "Publish": true},
+  {"Name": "pipeline.cloudrequestengine", "Path": "pipeline/pipeline.cloudrequestengine", "DependsOn": ["pipeline", "pipeline.engines", "pipeline.common", "pipeline.derivedproperty"], "Publish": true},
   {"Name": "pipeline.engines.fiftyone", "Path": "pipeline/pipeline.engines.fiftyone", "DependsOn": ["pipeline", "pipeline.engines", "pipeline.common"], "Publish": true},
   {"Name": "pipeline.translation", "Path": "pipeline/pipeline.translation", "DependsOn": ["pipeline", "pipeline.engines", "pipeline.core"], "Publish": true},
   {"Name": "pipeline.derivedproperty", "Path": "pipeline/pipeline.derivedproperty", "ExtraPaths": ["pipeline/derived-properties"], "DependsOn": ["pipeline", "pipeline.engines", "pipeline.core"], "Publish": true, "FirstVersion": "4.6.2"},
