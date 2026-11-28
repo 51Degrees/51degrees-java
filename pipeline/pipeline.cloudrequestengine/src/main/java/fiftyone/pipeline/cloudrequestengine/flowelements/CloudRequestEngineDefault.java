@@ -37,7 +37,6 @@ import fiftyone.pipeline.engines.data.AspectPropertyMetaDataDefault;
 import fiftyone.pipeline.engines.flowelements.AspectEngineBase;
 import fiftyone.pipeline.engines.services.HttpClient;
 import fiftyone.pipeline.exceptions.AggregateException;
-import fiftyone.pipeline.util.LicenseKeyMask;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -59,6 +58,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -779,10 +779,10 @@ public class CloudRequestEngineDefault
 
     /**
      * The message with each value replaced, as written and as encoded in a
-     * URL. On a request that carries a sealed result no message holds the
-     * sealed result, the transaction or the License Key, not even in part.
-     * See the Human Confidence specification, "What a package never
-     * exposes".
+     * URL. No message holds the License Key, and on a request that carries
+     * a sealed result none holds the sealed result or the transaction, not
+     * even in part. See the Human Confidence specification, "What a
+     * package never exposes".
      */
     private static String hide(String message, List<String> values) {
         if (message == null || values == null) {
@@ -799,14 +799,32 @@ public class CloudRequestEngineDefault
         for (String value : longestFirst) {
             result = result.replace(value, HIDDEN);
             try {
-                result = result.replace(
-                    URLEncoder.encode(value, "UTF-8"), HIDDEN);
+                String encoded = URLEncoder.encode(value, "UTF-8");
+                result = result.replace(encoded, HIDDEN);
+                result = result.replace(lowerCaseEscapes(encoded), HIDDEN);
             } catch (UnsupportedEncodingException e) {
                 throw new IllegalStateException(e);
             }
         }
         return result;
     }
+
+    /**
+     * The URL encoded text with each escape in lower case, as some
+     * services write them.
+     */
+    private static String lowerCaseEscapes(String encoded) {
+        Matcher escape = URL_ESCAPE.matcher(encoded);
+        StringBuffer result = new StringBuffer(encoded.length());
+        while (escape.find()) {
+            escape.appendReplacement(
+                result, escape.group().toLowerCase(Locale.ROOT));
+        }
+        escape.appendTail(result);
+        return result.toString();
+    }
+
+    private static final Pattern URL_ESCAPE = Pattern.compile("%[0-9A-F]{2}");
 
     /**
      * Send a built request and check its response, as the task behind the
@@ -1385,7 +1403,8 @@ public class CloudRequestEngineDefault
         HttpURLConnection connection,
         boolean checkForErrorMessages) 
         throws IOException, CloudRequestException, AggregateException {
-        validateResponse(jsonResult, connection, checkForErrorMessages, null);
+        validateResponse(
+            jsonResult, connection, checkForErrorMessages, null);
     }
 
     /**
@@ -1405,6 +1424,13 @@ public class CloudRequestEngineDefault
         int code = connection.getResponseCode();
         boolean hasData = jsonResult != null && jsonResult.isEmpty() == false;
         List<String> messages = new ArrayList<>();
+
+        // The cloud's text can name the License Key it was sent. No part of
+        // it is kept, on any request, not even its last characters.
+        List<String> secrets = new ArrayList<>(getLicenseKeys());
+        if (hidden != null) {
+            secrets.addAll(hidden);
+        }
 
         if (hasData && checkForErrorMessages) {
             JSONObject jObj;
@@ -1435,14 +1461,11 @@ public class CloudRequestEngineDefault
             }
 
             // Each warning is logged, whether or not the response also
-            // holds errors. The cloud's warnings can name the license key
-            // it was sent.
+            // holds errors.
             JSONArray warnings = jObj.optJSONArray("warnings");
             if (warnings != null) {
                 for (Object warning : warnings.toList()) {
-                    logger.warn(LicenseKeyMask.maskIn(
-                        hide(String.valueOf(warning), hidden),
-                        getLicenseKeys()));
+                    logger.warn(hide(String.valueOf(warning), secrets));
                 }
             }
         }
@@ -1468,9 +1491,7 @@ public class CloudRequestEngineDefault
             messages.add(message);
         }
 
-        // The cloud's errors can name the license key it was sent.
-        messages.replaceAll(m -> LicenseKeyMask.maskIn(
-            hide(m, hidden), getLicenseKeys()));
+        messages.replaceAll(m -> hide(m, secrets));
 
         Map<String, List<String>> headers = null;
         if (messages.size() > 0){

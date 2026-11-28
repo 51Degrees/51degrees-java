@@ -615,6 +615,70 @@ public class HumanConfidenceTransactionTests
         }
     }
 
+    // Messages on any request.
+
+    /**
+     * No part of the License Key is in a log entry or error on a request
+     * without a sealed result, whether the cloud names the key as it is
+     * or URL encoded.
+     */
+    @Test
+    public void messages_NoPartOfTheLicenseKeyOnAnyRequest() throws Exception {
+        answer = "{'errors':['The key " + LICENSE + " is not valid.']," +
+            "'warnings':['Seen license=" + LICENSE + "']}";
+        List<String> messages;
+        try (Pipeline pipeline = pipeline();
+             FlowData data = pipeline.createFlowData()) {
+            data.addEvidence("header.user-agent", "Mozilla/5.0");
+            data.process();
+            messages = logged();
+            addErrors(messages, data);
+        }
+        assertNoPartOfTheLicenseKey(messages);
+    }
+
+    /** Nor in the error a refused discovery request gives. */
+    @Test
+    public void discovery_NoPartOfTheLicenseKeyInTheError() {
+        accessiblePropertiesResponse =
+            "{'errors':['The license key " + LICENSE + " is not valid.']}";
+        accessiblePropertiesResponseCode = 403;
+        Exception refused = assertThrows(Exception.class,
+            () -> requestEngine(LICENSE).build());
+        List<String> messages = logged();
+        addThrowable(messages, refused);
+        assertNoPartOfTheLicenseKey(messages);
+    }
+
+    private static void assertNoPartOfTheLicenseKey(List<String> messages) {
+        for (String message : messages) {
+            for (int i = 0; i + 4 <= LICENSE.length(); i++) {
+                assertFalse(message.contains(LICENSE.substring(i, i + 4)),
+                    "A message holds part of the License Key: " + message);
+            }
+        }
+        assertTrue(messages.stream().anyMatch(m -> m.contains("[hidden]")),
+            "The cloud's text was not given: " + messages);
+    }
+
+    /** The text of each error, its causes and the ones it suppressed. */
+    private static void addErrors(List<String> messages, FlowData data) {
+        if (data.getErrors() != null) {
+            for (FlowError error : data.getErrors()) {
+                addThrowable(messages, error.getThrowable());
+            }
+        }
+    }
+
+    private static void addThrowable(List<String> messages, Throwable t) {
+        for (; t != null; t = t.getCause()) {
+            messages.add(t.toString());
+            for (Throwable s : t.getSuppressed()) {
+                addThrowable(messages, s);
+            }
+        }
+    }
+
     // A credential that leaves the Properties out.
 
     @Test

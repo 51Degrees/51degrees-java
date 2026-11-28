@@ -44,7 +44,7 @@ public class CloudRequestEngineWarningsTests
 
     private static final String LICENSE_KEY = "TESTKEYNOTREALABCDEFGHIJ1234";
 
-    private static final String MASKED = "************************1234";
+    private static final String HIDDEN = "[hidden]";
 
     public CloudRequestEngineWarningsTests() throws MalformedURLException {
         super();
@@ -104,11 +104,11 @@ public class CloudRequestEngineWarningsTests
     }
 
     /**
-     * A warning that names the license key shows it only by its last 4
-     * characters, as an error does.
+     * A warning that names the license key shows no part of it, as an
+     * error does.
      */
     @Test
-    public void Process_LicenseKeyInWarning_Masked() throws Exception {
+    public void Process_LicenseKeyInWarning_Hidden() throws Exception {
         jsonResponse = "{\"device\":{\"value\":\"1\"}," +
             "\"warnings\":[\"License key " + LICENSE_KEY +
             " expires soon\"]}";
@@ -122,7 +122,7 @@ public class CloudRequestEngineWarningsTests
         for (String warning : warnings()) {
             assertFalse(warning.contains(LICENSE_KEY), warning);
         }
-        assertLoggedOnce("License key " + MASKED + " expires soon");
+        assertLoggedOnce("License key " + HIDDEN + " expires soon");
     }
 
     /**
