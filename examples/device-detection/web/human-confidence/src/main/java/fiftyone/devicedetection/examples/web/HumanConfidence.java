@@ -24,9 +24,20 @@ package fiftyone.devicedetection.examples.web;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
+import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngineBuilder;
+import fiftyone.pipeline.cloudrequestengine.flowelements.HumanConfidenceElement;
+import fiftyone.pipeline.cloudrequestengine.flowelements.HumanConfidenceElementBuilder;
+import fiftyone.pipeline.core.data.ElementData;
+import fiftyone.pipeline.core.data.FlowData;
+import fiftyone.pipeline.core.flowelements.Pipeline;
+import fiftyone.pipeline.core.flowelements.PipelineBuilder;
+import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.slf4j.ILoggerFactory;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -40,36 +51,36 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Executors;
 
 /**
- * Human Confidence demo server. It uses only the JDK's own HTTP server and
- * client, and org.json to read the cloud's answers.
+ * Human Confidence demo server. It uses the JDK's own HTTP server, and a
+ * 51Degrees Pipeline with the Cloud Request Engine and the Human Confidence
+ * element to get the HumanConfidence and HumanConfidenceSource Properties.
  * <p>
  * Human Confidence says how likely it is that a person is looking at the
  * page. The demo shows it in three steps.
  * <ol>
- * <li>Passive. This server asks the cloud itself, passing on the visitor's
- * request headers and IP address, and reads HumanConfidenceSource and
- * HumanConfidence from the answer. The request names both properties, so
- * the answer carries them whatever the Resource Key's saved list of
- * properties holds. The server asks rather than reading a
- * level from the page, because a level a browser sends can be forged.</li>
+ * <li>Passive. This server processes the visitor's request headers and IP
+ * address with the Pipeline, and reads HumanConfidenceSource and
+ * HumanConfidence. The Pipeline names both properties, so the answer
+ * carries them whatever the Resource Key's saved list of properties holds.
+ * The server reads them rather than reading a level from the page, because
+ * a level a browser sends can be forged.</li>
  * <li>Active. The page loads the 51Degrees client script. When the script
  * completes, HumanConfidenceSource is Active and HumanConfidence holds a
  * sealed value the browser can't read or change.</li>
- * <li>Redeem. The page hands the sealed value to this server, which sends
- * it with the License Key to hc/redeem and returns the cloud's answer as it
- * came. A sealed value redeems once, within ten seconds. The License Key
- * stays on this server. The answer's status says what happened, and only
- * success carries the level. A cloud from before status says why a redeem
- * failed in result.</li>
+ * <li>Read by the server. The page sends the sealed value to this server
+ * as humanconfidence. The server adds it to the Evidence as
+ * query.humanconfidence and processes the request with the Pipeline. The
+ * Pipeline redeems the sealed value with the License Key, which stays on
+ * this server, and the server reads the same two Properties. A sealed
+ * value redeems once, within ten seconds. Where it does not redeem,
+ * HumanConfidence is Medium.</li>
  * </ol>
  * Environment variables:
  * <ul>
@@ -107,15 +118,19 @@ public class HumanConfidence {
     /** A short limit, so a slow cloud can't hang the demo. */
     private static final int TIMEOUT_MS = 10000;
 
+    /** The page's parameter that carries the sealed value. */
+    public static final String SEALED_PARAMETER = "humanconfidence";
+
     private static final String PAGE = "/human-confidence/page.html";
     private static final String CSS = "/human-confidence/examples-main.min.css";
 
     private final String api;
     private final String resource;
     private final String license;
-    private volatile Set<String> headerNames;
     private boolean hasHumanConfidence = true;
     private HttpServer server;
+    private CloudRequestEngine engine;
+    private Pipeline pipeline;
 
     /**
      * @param api the cloud API base ending in /api/v4/
@@ -145,8 +160,9 @@ public class HumanConfidence {
         String license = env.get("_51DEGREES_LICENSE_KEY");
         if (isBlank(license)) {
             System.out.println("No _51DEGREES_LICENSE_KEY set. The page still "
-                    + "shows Passive and Active, but redeeming needs a "
-                    + "License Key.");
+                    + "shows Passive and Active. The sealed value redeems "
+                    + "only with a License Key, so the third row shows "
+                    + "Medium.");
             license = null;
         }
         String endpoint = env.get("_51DEGREES_CLOUD_ENDPOINT");
@@ -178,6 +194,7 @@ public class HumanConfidence {
      */
     public int start(int port) throws IOException {
         checkProperties();
+        buildPipeline();
         server = HttpServer.create(
                 new InetSocketAddress(InetAddress.getLoopbackAddress(), port), 0);
         server.createContext("/", this::handle);
@@ -186,10 +203,50 @@ public class HumanConfidence {
         return server.getAddress().getPort();
     }
 
-    /** Stops the server. */
+    /** Stops the server and closes the Pipeline. */
     public void stop() {
         if (server != null) {
             server.stop(0);
+        }
+        if (pipeline != null) {
+            try {
+                pipeline.close();
+            } catch (Exception e) {
+                System.out.println("Couldn't close the Pipeline. "
+                        + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Builds the Pipeline: the Cloud Request Engine with the Resource Key,
+     * the License Key where there is one, and the two properties named,
+     * then the Human Confidence element that gives them.
+     */
+    private void buildPipeline() throws IOException {
+        ILoggerFactory loggers = LoggerFactory.getILoggerFactory();
+        try {
+            CloudRequestEngineBuilder builder =
+                    new CloudRequestEngineBuilder(loggers)
+                            .setResourceKey(resource);
+            if (license != null) {
+                builder.setLicenseKey(license);
+            }
+            engine = builder
+                    .setEndpoint(api)
+                    .setRequestedProperties(PASSIVE_VALUES)
+                    .setTimeOutSeconds(TIMEOUT_MS / 1000)
+                    .build();
+            pipeline = new PipelineBuilder(loggers)
+                    .setSuppressProcessException(true)
+                    .addFlowElement(engine)
+                    .addFlowElement(new HumanConfidenceElementBuilder(loggers)
+                            .setRequestEngine(engine)
+                            .build())
+                    .build();
+        } catch (Exception e) {
+            throw new IOException("Couldn't build the Pipeline. "
+                    + e.getMessage(), e);
         }
     }
 
@@ -256,9 +313,11 @@ public class HumanConfidence {
             } else if ("/examples-main.min.css".equals(path)) {
                 reply(exchange, 200, "text/css", resourceBytes(CSS));
             } else if ("/passive".equals(path) && "GET".equals(method)) {
-                passive(exchange);
-            } else if ("/redeem".equals(path) && "POST".equals(method)) {
-                redeem(exchange);
+                properties(exchange, null);
+            } else if ("/active".equals(path) && "POST".equals(method)) {
+                String sealed = parseForm(readAll(exchange.getRequestBody()))
+                        .get(SEALED_PARAMETER);
+                properties(exchange, sealed == null ? "" : sealed);
             } else {
                 reply(exchange, 404, "text/plain", bytes("Not found"));
             }
@@ -284,119 +343,64 @@ public class HumanConfidence {
     }
 
     /**
-     * Passes the visitor's headers that the cloud reads, and the visitor's
-     * IP address, to the cloud, naming {@link #PASSIVE_VALUES}, and returns
-     * source and humanConfidence from its answer.
+     * Processes the visitor's request with the Pipeline, and returns source
+     * and humanConfidence from the HumanConfidenceSource and
+     * HumanConfidence Properties. The Evidence is the visitor's headers
+     * that the cloud reads, the visitor's IP address, and the sealed value
+     * where the page sent one. The Pipeline redeems a sealed value itself,
+     * so this server only reads the two Properties. A Property with no
+     * value is left out, and its reason is given instead.
+     * @param sealed the sealed value the page sent, or null for the
+     *               passive step
      */
-    private void passive(HttpExchange exchange) throws IOException {
+    private void properties(HttpExchange exchange, String sealed)
+            throws IOException {
         JSONObject result = new JSONObject();
-        try {
-            Set<String> names = cloudHeaders();
-            Map<String, String> fields = new LinkedHashMap<>();
+        try (FlowData data = pipeline.createFlowData()) {
             for (Map.Entry<String, List<String>> header
                     : exchange.getRequestHeaders().entrySet()) {
-                String name = header.getKey().toLowerCase(Locale.ROOT);
-                if (names.contains(name)) {
-                    fields.put(name, String.join(",", header.getValue()));
+                String key = "header."
+                        + header.getKey().toLowerCase(Locale.ROOT);
+                // Only the headers the cloud reads, so headers such as
+                // Authorization stay on this server.
+                if (engine.getEvidenceKeyFilter().include(key)) {
+                    data.addEvidence(key, String.join(",", header.getValue()));
                 }
             }
             // Behind a load balancer or CDN, use the visitor's address it
-            // passes on. Set after the headers, so no header can replace
-            // it or the properties named.
-            fields.put("client-ip",
+            // passes on.
+            data.addEvidence("server.client-ip",
                     exchange.getRemoteAddress().getAddress().getHostAddress());
-            fields.put("values", PASSIVE_VALUES);
-            Answer answer = send("POST", api + resource + ".json",
-                    form(fields));
-            if (answer.status / 100 != 2) {
-                result.put("error", "HTTP " + answer.status + ": "
-                        + trim(answer.body));
-            } else {
-                JSONObject derived = new JSONObject(answer.body)
-                        .optJSONObject("derived");
-                if (derived != null) {
-                    result.put("source",
-                            derived.optString("humanconfidencesource", null));
-                    result.put("humanConfidence",
-                            derived.optString("humanconfidence", null));
-                }
+            if (sealed != null) {
+                data.addEvidence("query." + SEALED_PARAMETER, sealed);
             }
-        } catch (IOException | JSONException e) {
-            result = new JSONObject().put("error", String.valueOf(e.getMessage()));
+            data.process();
+            ElementData derived = data.get(
+                    HumanConfidenceElement.ELEMENT_DATA_KEY);
+            put(result, "source", derived.get(
+                    HumanConfidenceElement.HUMAN_CONFIDENCE_SOURCE));
+            put(result, "humanConfidence", derived.get(
+                    HumanConfidenceElement.HUMAN_CONFIDENCE));
+        } catch (Exception e) {
+            result = new JSONObject().put("error",
+                    String.valueOf(e.getMessage()));
         }
         reply(exchange, 200, "application/json", bytes(result.toString()));
     }
 
     /**
-     * Sends the sealed value and the License Key to hc/redeem, and returns
-     * the cloud's answer unchanged. The sealed value goes as sealedResult,
-     * which the cloud reads now, and again as value, which a cloud from
-     * before sealedResult reads.
+     * Puts a Property's value in the answer under the name, or its reason
+     * under the name followed by Reason where it has no value.
      */
-    private void redeem(HttpExchange exchange) throws IOException {
-        Map<String, String> fields = new LinkedHashMap<>();
-        Map<String, String> page = parseForm(readAll(exchange.getRequestBody()));
-        String sealed = named(page, "sealedResult", "value");
-        fields.put("sealedResult", sealed);
-        fields.put("value", sealed);
-        if (license != null) {
-            fields.put("license", license);
-        }
-        try {
-            Answer answer = send("POST", api + "hc/redeem", form(fields));
-            if (answer.status == 404) {
-                reply(exchange, 200, "application/json", bytes(new JSONObject()
-                        .put("error", "The service at " + api
-                                + " doesn't redeem Human Confidence.")
-                        .toString()));
-                return;
+    private static void put(JSONObject result, String name, Object property) {
+        if (property instanceof AspectPropertyValue) {
+            AspectPropertyValue<?> value = (AspectPropertyValue<?>) property;
+            if (value.hasValue()) {
+                result.put(name, String.valueOf(value.getValue()));
+            } else {
+                result.put(name + "Reason", value.getNoValueMessage());
             }
-            reply(exchange, answer.status, "application/json",
-                    bytes(answer.body));
-        } catch (IOException e) {
-            reply(exchange, 502, "application/json", bytes(new JSONObject()
-                    .put("error", String.valueOf(e.getMessage())).toString()));
         }
-    }
-
-    /**
-     * The value under the current name, or under the obsolete name where
-     * the current one is missing or empty. A page cached from before the
-     * current name still sends {@code value}, and an empty value means the
-     * name was not sent. Never null.
-     */
-    static String named(
-            Map<String, String> form, String current, String obsolete) {
-        String value = form.get(current);
-        if (value == null || value.isEmpty()) {
-            value = form.get(obsolete);
-        }
-        return value == null ? "" : value;
-    }
-
-    /**
-     * The request headers the cloud reads, from its own evidencekeys list,
-     * fetched once. Only these are passed on, so headers such as
-     * Authorization stay here.
-     */
-    private Set<String> cloudHeaders() throws IOException {
-        Set<String> names = headerNames;
-        if (names == null) {
-            Answer answer = send("GET", api + "evidencekeys", null);
-            if (answer.status != 200) {
-                throw new IOException("evidencekeys answered HTTP "
-                        + answer.status);
-            }
-            names = new HashSet<>();
-            for (Object key : new JSONArray(answer.body)) {
-                String text = String.valueOf(key).toLowerCase(Locale.ROOT);
-                if (text.startsWith("header.")) {
-                    names.add(text.substring(7));
-                }
-            }
-            headerNames = names;
-        }
-        return names;
     }
 
     /** A status code and body from the cloud. */

@@ -92,6 +92,38 @@ public class CloudRequestEngineDefault
         Collections.unmodifiableSet(new HashSet<>(
             Arrays.asList("resource", "license", "licence", "values")));
 
+    /**
+     * The Evidence that carries a sealed Human Confidence result. See the
+     * Human Confidence specification, "When HumanConfidence arrives
+     * sealed".
+     */
+    public static final String SEALED_HUMAN_CONFIDENCE_EVIDENCE =
+        "query.humanconfidence";
+
+    /**
+     * The Property the request names on a request that carries a sealed
+     * result, so the answer holds the redeemed value.
+     */
+    static final String HUMAN_CONFIDENCE_PROPERTY = "derived.humanconfidence";
+
+    /**
+     * Names whose Evidence is left out of a request that carries a sealed
+     * result, because the only transaction in that call is the one the
+     * package kept. See the Human Confidence specification, "Redeeming
+     * through the JSON call".
+     */
+    private static final Set<String> TRANSACTION_FIELDS =
+        Collections.unmodifiableSet(new HashSet<>(
+            Arrays.asList("transaction", "challenge")));
+
+    /**
+     * Names whose values are never written to a log entry, being the
+     * sealed result and the transaction.
+     */
+    private static final Set<String> HIDDEN_FIELDS =
+        Collections.unmodifiableSet(new HashSet<>(
+            Arrays.asList("humanconfidence", "transaction", "challenge")));
+
     private HttpClient httpClient;
 
     private String endPoint;
@@ -472,6 +504,39 @@ public class CloudRequestEngineDefault
     }
 
     /**
+     * Whether the Flow Data's Evidence holds a sealed Human Confidence
+     * result, being {@link #SEALED_HUMAN_CONFIDENCE_EVIDENCE} with a value
+     * that is not empty.
+     * @param data the Flow Data
+     * @return true if the request carries a sealed result
+     */
+    public static boolean carriesSealedResult(FlowData data) {
+        for (Map.Entry<String, Object> entry :
+            data.getEvidence().asKeyMap().entrySet()) {
+            if (SEALED_HUMAN_CONFIDENCE_EVIDENCE.equalsIgnoreCase(
+                    entry.getKey()) &&
+                entry.getValue() != null &&
+                entry.getValue().toString().isEmpty() == false) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * A request that carries a sealed Human Confidence result is neither
+     * served from nor stored in the cache, because a sealed result redeems
+     * once. See the caching specification, "Values created for one
+     * request".
+     * @param flowData the Flow Data being processed
+     * @return false where the request carries a sealed result
+     */
+    @Override
+    protected boolean isCacheUsed(FlowData flowData) {
+        return carriesSealedResult(flowData) == false;
+    }
+
+    /**
      * A response whose JSON has a top-level member named fodid, in any case,
      * holds a 51Did created for the one request, so it is never served from
      * the cache, and the request goes to the cloud service instead. See the
@@ -645,7 +710,7 @@ public class CloudRequestEngineDefault
         formItems.addAll(credentialItems());
         if (requestedProperties.isEmpty() == false) {
             formItems.add("values=" + URLEncoder.encode(
-                stringJoin(requestedProperties, ","), "UTF-8"));
+                stringJoin(valuesFor(data), ","), "UTF-8"));
         }
 
         List<String> formKeys = Arrays.asList(formData.keySet().toArray(new String[0]));
@@ -660,11 +725,34 @@ public class CloudRequestEngineDefault
         return string.getBytes(StandardCharsets.UTF_8);
     }
 
+    /**
+     * The Properties the request names. On a request that carries a sealed
+     * result, {@link #HUMAN_CONFIDENCE_PROPERTY} is added where the
+     * configured list does not hold it. The report of Properties the answer
+     * left out reads the configured list alone.
+     */
+    private List<String> valuesFor(FlowData data) {
+        if (carriesSealedResult(data) == false) {
+            return requestedProperties;
+        }
+        for (String name : requestedProperties) {
+            if (HUMAN_CONFIDENCE_PROPERTY.equalsIgnoreCase(name)) {
+                return requestedProperties;
+            }
+        }
+        List<String> values = new ArrayList<>(requestedProperties);
+        values.add(HUMAN_CONFIDENCE_PROPERTY);
+        return values;
+    }
+
     private boolean hasResourceKey() {
         return resourceKey != null && resourceKey.isEmpty() == false;
     }
 
-    private boolean hasLicenseKey() {
+    /**
+     * @return true where the engine was given a License Key
+     */
+    boolean hasLicenseKey() {
         return licenseKey != null && licenseKey.isEmpty() == false;
     }
 
@@ -694,10 +782,17 @@ public class CloudRequestEngineDefault
      * @return the form fields to send
      */
     Map<String, Object> getFormData(FlowData flowData) {
+        // On a request that carries a sealed result, Evidence named
+        // transaction or challenge is left out, so the call holds no
+        // transaction taken from the request.
+        boolean sealed = carriesSealedResult(flowData);
         Map<String, Object> evidence = new HashMap<>();
         for (Map.Entry<String, Object> entry :
             flowData.getEvidence().asKeyMap().entrySet()) {
-            if (isSent(entry.getKey())) {
+            if (isSent(entry.getKey()) &&
+                (sealed == false || TRANSACTION_FIELDS.contains(
+                    keySuffix(entry.getKey()).toLowerCase(Locale.ROOT))
+                    == false)) {
                 evidence.put(entry.getKey(), entry.getValue());
             }
         }
@@ -810,13 +905,15 @@ public class CloudRequestEngineDefault
                         if (conflictStr.length() > 0) {
                             conflictStr.append(", ");
                         }
-                        conflictStr.append(String.format("%s:%s", conflict.getKey(), conflict.getValue()));
+                        conflictStr.append(String.format("%s:%s",
+                            conflict.getKey(),
+                            shown(conflict.getKey(), conflict.getValue())));
                     }
 
                     String warningMessage = String.format(
                             fiftyone.pipeline.cloudrequestengine.Constants.Messages.EvidenceConflict,
                             evidenceKey,
-                            evidence.get(evidenceKey),
+                            shown(evidenceKey, evidence.get(evidenceKey)),
                             conflictStr.toString());
                     logger.warn(warningMessage);
                 }
@@ -826,6 +923,16 @@ public class CloudRequestEngineDefault
                 formData.put(suffix, evidence.get(evidenceKey));
             }
         }
+    }
+
+    /**
+     * The value of an Evidence key as a log entry shows it. The sealed
+     * result and the transaction are never shown.
+     */
+    private static Object shown(String key, Object value) {
+        return HIDDEN_FIELDS.contains(keySuffix(key).toLowerCase(Locale.ROOT))
+            ? "(not shown)"
+            : value;
     }
 
     /**

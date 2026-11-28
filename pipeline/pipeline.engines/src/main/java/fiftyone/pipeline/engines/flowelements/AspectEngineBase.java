@@ -176,6 +176,19 @@ public abstract class AspectEngineBase<
     }
 
     /**
+     * Whether the cache is used for this Flow Data at all. Where it is not,
+     * no result is served from the cache and the processed result is not
+     * stored in it. An engine overrides this for a request whose result is
+     * created for that one request, as its Evidence shows before processing.
+     * @param flowData the {@link FlowData} being processed
+     * @return true, unless an engine overrides this to keep the request away
+     * from the cache
+     */
+    protected boolean isCacheUsed(FlowData flowData) {
+        return true;
+    }
+
+    /**
      * Private method that checks if the result is already in the cache or not.
      * If it is then the result is added to 'data', if not then
      * {@link #processEngine(FlowData, AspectData)}is called to do so.
@@ -186,8 +199,9 @@ public abstract class AspectEngineBase<
     @SuppressWarnings("unchecked")
     private void processWithCache(final FlowData flowData) throws Exception {
         TData cacheResult = null;
+        boolean cacheUsed = cache != null && isCacheUsed(flowData);
 
-        if (cache != null) {
+        if (cacheUsed) {
             Object cacheResultsObject = cache.get(flowData);
             if (cacheResultsObject != null &&
                 getTypedDataKey().getType().isAssignableFrom(
@@ -213,7 +227,9 @@ public abstract class AspectEngineBase<
             // Process on this thread, whether or not the deprecated lazy
             // loading option is set, then cache the result if it may be.
             processEngine(flowData, aspectData);
-            putInCache(flowData, aspectData);
+            if (cacheUsed) {
+                putInCache(flowData, aspectData);
+            }
         } else {
             // We have a result from the cache so add it
             // into the flow data.

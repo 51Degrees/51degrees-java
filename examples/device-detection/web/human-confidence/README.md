@@ -7,38 +7,37 @@ console program, because the browser tests only run in a browser.
 
 | Example | Description |
 | --- | --- |
-| `HumanConfidence` | A demo web server that serves `page.html`, asks the cloud for the passive level, and redeems the sealed active level server side. It uses the JDK's own HTTP server and client, and `org.json`, with no 51Degrees package needed. |
+| `HumanConfidence` | A demo web server that serves `page.html` and reads `HumanConfidence` and `HumanConfidenceSource` from a 51Degrees Pipeline, for the passive step and again for the sealed active value. It uses the JDK's own HTTP server, the Cloud Request Engine and the Human Confidence element from `pipeline.cloudrequestengine`, and `org.json`. |
 
 ## The flow
 
 The page shows three rows, one for each step.
 
-1. **Passive.** The server asks the cloud itself, passing on the visitor's
-   request headers and IP address. It sends only the headers the cloud lists
-   in its `evidencekeys`, so headers such as `Authorization` stay on the
-   server. The request names `HumanConfidence` and `HumanConfidenceSource`,
-   so the answer carries both whatever properties the Resource Key was saved
-   with. The answer has `HumanConfidenceSource` as `Passive` and
-   `HumanConfidence` as a plain level, `High`, `Medium`, or `Low`. The server
-   asks for it rather than reading it from the page, because a level sent by
-   a browser can be forged.
+1. **Passive.** The server processes the visitor's request headers and IP
+   address with the Pipeline, and reads the two properties. It adds only the
+   headers the cloud lists in its `evidencekeys`, so headers such as
+   `Authorization` stay on the server. The Cloud Request Engine names
+   `HumanConfidence` and `HumanConfidenceSource`, so the answer carries both
+   whatever properties the Resource Key was saved with.
+   `HumanConfidenceSource` is `Passive` and `HumanConfidence` is a plain
+   level, `High`, `Medium`, or `Low`. The server reads it rather than
+   reading it from the page, because a level sent by a browser can be
+   forged.
 2. **Active.** The page loads the 51Degrees client script. It runs the
    browser tests, which take a few seconds. When the script completes,
    `HumanConfidenceSource` is `Active` and `HumanConfidence` holds a sealed
    value. The browser can't read it or change it.
-3. **Redeem.** The page hands the sealed value to the server, which sends it
-   to the cloud's `hc/redeem` as `sealedResult`, with the account's License
-   Key, and returns the answer as it came. A sealed value redeems once,
-   within ten seconds of the tests. The answer's `status` is `success`,
-   `expired`, `replayed`, `unconfirmed` or `unreadable`, and only `success`
-   carries the level. The page then offers to redeem the same value again,
-   which answers `replayed`.
-
-   The server also sends the sealed value as `value`, the name a cloud from
-   before `sealedResult` reads. That cloud answers without `status`, and
-   says why a redeem failed in `result`, which the page reads instead. It
-   sends a level with `expired` and `replayed` too, so the page shows a
-   success only when `result` is left out or is `success`.
+3. **Active, read by the server.** The page sends the sealed value to the
+   server as `humanconfidence`. The server adds it to the Evidence as
+   `query.humanconfidence` and processes the request with the Pipeline,
+   then reads the same two properties. The example never redeems the
+   sealed value itself. The Pipeline redeems it through its normal call to
+   the cloud, with the account's License Key, and never caches that call.
+   `HumanConfidenceSource` is `Active`, and `HumanConfidence` is the level
+   the sealed value redeemed to. A sealed value redeems once, within ten
+   seconds of the tests. Where it does not redeem, `HumanConfidence` is
+   `Medium`. The page then offers to send the same value again, which
+   gives `Medium`.
 
 ## What you need
 
@@ -50,8 +49,9 @@ The page shows three rows, one for each step.
 - **Leave the Resource Key's domain list empty,** or include `localhost`.
   The server calls the cloud with the same key, and a call from a server has
   no `Origin` header, so a key limited to domains is refused.
-- **A License Key** of the same account. The server uses it to redeem. It
-  never goes in the page.
+- **A License Key** of the same account. The Pipeline uses it to redeem
+  the sealed value. It never goes in the page. Without it the third row
+  shows `Medium`.
 - A JDK, 8 or later, and Maven or the `mvnw` wrapper at the repository root.
 
 ## Environment variables
@@ -59,7 +59,7 @@ The page shows three rows, one for each step.
 | Variable | Meaning |
 | --- | --- |
 | `_51DEGREES_RESOURCE_KEY` | The Resource Key. Required. |
-| `_51DEGREES_LICENSE_KEY` | A License Key of the same account. Server side only. Needed to redeem. |
+| `_51DEGREES_LICENSE_KEY` | A License Key of the same account. Server side only. Needed for the Pipeline to redeem the sealed value. |
 | `_51DEGREES_CLOUD_ENDPOINT` | Optional. The API base including the `/api/v4/` segment. It defaults to `https://cloud.51degrees.com/api/v4/`. |
 | `_51DEGREES_EXAMPLE_HTTP_PORTS` | The port to listen on. It defaults to `5151`. If it lists several, separated by commas, the example listens on the first. |
 
@@ -95,13 +95,14 @@ process is stopped. To use another cloud address, also set
 
 1. The first row shows `Passive` and a level.
 2. After a few seconds, the second row shows `Active` and a sealed value.
-3. The third row shows the level the server redeemed.
-4. **Redeem the same value again** shows `replayed`.
+3. The third row shows `Active` and the level the sealed value redeemed to.
+4. **Send the same value again** shows `Medium`, because a sealed value
+   redeems once.
 
 Results vary by browser and device. If the second row stays `Passive`, the
 browser tests didn't run. The cloud you're using may not have the tests yet,
 or the Resource Key may not include `HumanConfidenceSource`. A sealed value
-redeemed more than ten seconds after the tests answers `expired`.
+sent more than ten seconds after the tests gives `Medium`.
 
 ## Tests
 
@@ -142,7 +143,7 @@ runs both, and fails if either is skipped.
 
 Every call to the cloud is one use against the subscription behind the keys.
 A page load makes several. They are the server's passive call, the client
-script's calls, and the redeem.
+script's calls, and the server's call with the sealed value.
 
 ## Find out more
 

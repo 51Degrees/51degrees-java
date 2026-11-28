@@ -111,4 +111,30 @@ public class WritesAfterProcessingTests extends CloudRequestEngineTestsBase {
                 "setProcessStarted");
         }
     }
+
+    @Test
+    public void humanConfidenceElement_ElementDataRefusesWrites()
+        throws Exception {
+        configureMockedClient();
+        CloudRequestEngine engine =
+            new CloudRequestEngineBuilder(loggerFactory, httpClient)
+                .setResourceKey("resource_key")
+                .build();
+        HumanConfidenceElement element =
+            new HumanConfidenceElementBuilder(loggerFactory)
+                .setRequestEngine(engine)
+                .build();
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+                .addFlowElement(engine)
+                .addFlowElement(element)
+                .setAutoCloseElements(true)
+                .build();
+             FlowData data = pipeline.createFlowData()) {
+            data.addEvidence("query.User-Agent", "iPhone");
+            data.process();
+            assertEquals(0, data.getErrors().size(),
+                String.valueOf(data.getErrors()));
+            assertWritesFail(data.getFromElement(element));
+        }
+    }
 }

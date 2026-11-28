@@ -26,7 +26,6 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import org.json.JSONObject;
 import org.junit.After;
-import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -42,7 +41,10 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -59,8 +61,16 @@ public class HumanConfidenceTest {
 
     private static final String RESOURCE = "test-resource-key";
     private static final String LICENSE = "test-license-key";
+    /** The JSON call's answer where the sealed value redeems. */
     private static final String REDEEMED =
-            "{\"humanConfidence\":\"High\",\"secondsSinceVerified\":2}";
+            "{\"derived\":{"
+            + "\"humanconfidencesource\":\"Active\","
+            + "\"humanconfidence\":\"High\"}}";
+    /** The JSON call's answer where the sealed value was redeemed before. */
+    private static final String REPLAYED =
+            "{\"derived\":{"
+            + "\"humanconfidencesource\":\"Active\","
+            + "\"humanconfidence\":\"Medium\"}}";
     private static final String PASSIVE =
             "{\"derived\":{"
             + "\"humanconfidencesource\":\"Passive\","
@@ -96,7 +106,9 @@ public class HumanConfidenceTest {
     private HttpServer cloud;
     private HumanConfidence example;
     private volatile Map<String, String> passiveForm;
-    private volatile Map<String, String> redeemForm;
+    private final List<Map<String, String>> sealedForms =
+            new CopyOnWriteArrayList<>();
+    private final AtomicInteger hcRedeemCalls = new AtomicInteger();
     private volatile String passiveAnswer = PASSIVE;
 
     @After
@@ -109,46 +121,68 @@ public class HumanConfidenceTest {
         }
     }
 
+    private String start(boolean hasProperty) throws IOException {
+        return start(hasProperty, LICENSE);
+    }
+
     /**
-     * Starts the fake cloud and the example that uses it.
+     * Starts the fake cloud and the example that uses it. The fake cloud's
+     * JSON call redeems a sealed value the first time it is sent, and
+     * answers Medium after that. It counts any call to hc/redeem, which
+     * the example must never make.
      * @param hasProperty whether the key's properties include
      *                    HumanConfidence
-     * @param redeems whether the fake cloud answers hc/redeem
+     * @param license the License Key the example is given, or null
      * @return the example's base URL
      */
-    private String start(boolean hasProperty, final boolean redeems)
+    private String start(boolean hasProperty, String license)
             throws IOException {
         cloud = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         cloud.createContext("/api/v4/evidencekeys", exchange -> reply(
                 exchange, 200,
                 "[\"header.user-agent\",\"header.sec-ch-ua\",\"query.x\"]"));
         final String properties = hasProperty
-                ? "{\"Products\":{\"device\":{\"Properties\":["
-                  + "{\"Name\":\"HumanConfidence\"},"
-                  + "{\"Name\":\"HumanConfidenceSource\"}]}}}"
-                : "{\"Products\":{\"device\":{\"Properties\":["
-                  + "{\"Name\":\"IsMobile\"}]}}}";
+                ? "{\"Products\":{\"derived\":{\"DataTier\":\"Bespoke\","
+                  + "\"Properties\":["
+                  + "{\"Name\":\"HumanConfidence\",\"Type\":\"String\","
+                  + "\"Category\":\"Bot Detection\"},"
+                  + "{\"Name\":\"HumanConfidenceSource\",\"Type\":\"String\","
+                  + "\"Category\":\"Bot Detection\"}]}}}"
+                : "{\"Products\":{\"device\":{\"DataTier\":\"Free\","
+                  + "\"Properties\":["
+                  + "{\"Name\":\"IsMobile\",\"Type\":\"Bool\","
+                  + "\"Category\":\"Device\"}]}}}";
         cloud.createContext("/api/v4/accessibleproperties",
                 exchange -> reply(exchange, 200, properties));
         cloud.createContext("/api/v4/" + RESOURCE + ".json", exchange -> {
-            passiveForm = HumanConfidence.parseForm(body(exchange));
+            Map<String, String> form = HumanConfidence.parseForm(
+                    body(exchange));
+            String sealed = form.get("humanconfidence");
+            if (sealed != null) {
+                boolean first = true;
+                for (Map<String, String> earlier : sealedForms) {
+                    first &= sealed.equals(earlier.get("humanconfidence"))
+                            == false;
+                }
+                sealedForms.add(form);
+                reply(exchange, 200, first && form.containsKey("license")
+                        ? REDEEMED : REPLAYED);
+                return;
+            }
+            passiveForm = form;
             String values = passiveForm.get("values");
             reply(exchange, 200, values != null
                     && values.contains("derived.humanconfidencesource")
                     ? passiveAnswer : LEVEL_ONLY);
         });
         cloud.createContext("/api/v4/hc/redeem", exchange -> {
-            redeemForm = HumanConfidence.parseForm(body(exchange));
-            if (redeems) {
-                reply(exchange, 200, REDEEMED);
-            } else {
-                reply(exchange, 404, "Not found");
-            }
+            hcRedeemCalls.incrementAndGet();
+            reply(exchange, 404, "Not found");
         });
         cloud.start();
         String api = "http://127.0.0.1:" + cloud.getAddress().getPort()
                 + "/api/v4/";
-        example = new HumanConfidence(api, RESOURCE, LICENSE);
+        example = new HumanConfidence(api, RESOURCE, license);
         int port = example.start(0);
         return "http://127.0.0.1:" + port + "/";
     }
@@ -172,7 +206,7 @@ public class HumanConfidenceTest {
 
     @Test
     public void pageHasKeyAndEndpointAndIsNotCached() throws IOException {
-        String base = start(true, true);
+        String base = start(true);
         HttpURLConnection connection = open(base);
         String page = read(connection);
         assertEquals(200, connection.getResponseCode());
@@ -188,7 +222,7 @@ public class HumanConfidenceTest {
     @Test
     public void passiveSendsOnlyCloudHeadersAndReadsDerived()
             throws IOException {
-        String base = start(true, true);
+        String base = start(true);
         // A raw request, so every header arrives exactly as written.
         String response = rawGet(base, "/passive",
                 "User-Agent: Test Agent",
@@ -213,7 +247,7 @@ public class HumanConfidenceTest {
     @Test
     public void passiveWithoutTheSourceReportsNone() throws IOException {
         passiveAnswer = NO_SOURCE;
-        String base = start(true, true);
+        String base = start(true);
         String response = rawGet(base, "/passive", "User-Agent: Test Agent");
         JSONObject answer = new JSONObject(
                 response.substring(response.indexOf("\r\n\r\n") + 4));
@@ -223,64 +257,81 @@ public class HumanConfidenceTest {
                 answer.has("humanConfidence"));
     }
 
+    /**
+     * The page sends the sealed value to the server as humanconfidence.
+     * The server adds it to the Evidence, and the Pipeline redeems it
+     * through the JSON call with the License Key. The server reads the two
+     * properties and makes no request to hc/redeem.
+     */
     @Test
-    public void redeemPassesTheAnswerOnUnchanged() throws IOException {
-        String base = start(true, true);
-        HttpURLConnection connection = post(base + "redeem",
-                "sealedResult=sealed%2Bvalue");
+    public void activeReadsThePropertiesThePipelineRedeemed()
+            throws IOException {
+        String base = start(true);
+        HttpURLConnection connection = post(base + "active",
+                "humanconfidence=sealed%2Bvalue");
         assertEquals(200, connection.getResponseCode());
-        assertEquals(REDEEMED, read(connection));
-        assertEquals("sealed+value", redeemForm.get("sealedResult"));
-        assertEquals("sealed+value", redeemForm.get("value"));
-        assertEquals(LICENSE, redeemForm.get("license"));
-    }
+        JSONObject answer = new JSONObject(read(connection));
+        assertEquals("Active", answer.optString("source"));
+        assertEquals("High", answer.optString("humanConfidence"));
 
-    @Test
-    public void redeemSendsTheSealedValueUnderBothNames() throws IOException {
-        String base = start(true, true);
-        HttpURLConnection connection = post(base + "redeem", "value=v");
-        assertEquals(200, connection.getResponseCode());
-        assertEquals("v", redeemForm.get("sealedResult"));
-        assertEquals("v", redeemForm.get("value"));
-        assertFalse(redeemForm.containsKey("challenge"));
+        assertEquals(1, sealedForms.size());
+        Map<String, String> form = sealedForms.get(0);
+        assertEquals("sealed+value", form.get("humanconfidence"));
+        assertEquals(LICENSE, form.get("license"));
+        assertFalse(form.containsKey("value"));
+        assertFalse(form.containsKey("sealedResult"));
+        assertEquals(0, hcRedeemCalls.get());
     }
 
     /**
-     * An empty sealedResult counts as not sent, so value is used, and
-     * sealedResult wins when both are sent with a value.
+     * A sealed value redeems once. The same value sent again is not served
+     * from a cache, and the second answer is Medium, still Active.
      */
     @Test
-    public void redeemTreatsAnEmptySealedResultAsNotSent()
-            throws IOException {
-        String base = start(true, true);
-        assertEquals(200, post(base + "redeem", "sealedResult=&value=v")
-                .getResponseCode());
-        assertEquals("v", redeemForm.get("sealedResult"));
-        assertEquals("v", redeemForm.get("value"));
-
-        assertEquals(200, post(base + "redeem", "sealedResult=s&value=v")
-                .getResponseCode());
-        assertEquals("s", redeemForm.get("sealedResult"));
-        assertEquals("s", redeemForm.get("value"));
-
-        assertEquals(200, post(base + "redeem", "sealedResult=")
-                .getResponseCode());
-        assertEquals("", redeemForm.get("sealedResult"));
-        assertEquals("", redeemForm.get("value"));
+    public void activeSentTwiceIsMediumTheSecondTime() throws IOException {
+        String base = start(true);
+        post(base + "active", "humanconfidence=v").getResponseCode();
+        JSONObject second = new JSONObject(read(post(base + "active",
+                "humanconfidence=v")));
+        assertEquals("Active", second.optString("source"));
+        assertEquals("Medium", second.optString("humanConfidence"));
+        assertEquals(2, sealedForms.size());
+        assertEquals(0, hcRedeemCalls.get());
     }
 
+    /** Without a License Key the sealed value is not redeemed. */
     @Test
-    public void redeemNotFoundSaysTheServiceDoesNotRedeem()
-            throws IOException {
-        String base = start(true, false);
-        HttpURLConnection connection = post(base + "redeem", "value=v");
-        String error = new JSONObject(read(connection)).optString("error");
-        assertTrue(error, error.contains("doesn't redeem Human Confidence"));
+    public void activeWithoutALicenseKeyIsMedium() throws IOException {
+        String base = start(true, null);
+        JSONObject answer = new JSONObject(read(post(base + "active",
+                "humanconfidence=v")));
+        assertEquals("Active", answer.optString("source"));
+        assertEquals("Medium", answer.optString("humanConfidence"));
+        assertEquals(0, hcRedeemCalls.get());
+    }
+
+    /**
+     * The page sends the sealed value to the server's active route as
+     * humanconfidence, and reads only the two properties the server
+     * answers with.
+     */
+    @Test
+    public void pageSendsTheSealedValueToTheServer() throws IOException {
+        String page;
+        try (InputStream in = HumanConfidence.class.getResourceAsStream(
+                "/human-confidence/page.html")) {
+            page = readAll(in);
+        }
+        assertTrue(page.contains("fetch(\"active\""));
+        assertTrue(page.contains("body.set(\"humanconfidence\", value)"));
+        assertFalse(page.contains("fetch(\"redeem\""));
+        assertFalse(page.contains("sealedResult"));
+        assertFalse(page.contains("answer.status"));
     }
 
     @Test
     public void missingPropertyLinksToContactUs() throws IOException {
-        String base = start(false, true);
+        String base = start(false);
         assertFalse(example.hasHumanConfidence());
         String page = read(open(base));
         assertTrue(HumanConfidence.CONTACT_URL,
@@ -294,7 +345,7 @@ public class HumanConfidenceTest {
 
     @Test
     public void stylesheetHasTheStatusColors() throws IOException {
-        String base = start(true, true);
+        String base = start(true);
         HttpURLConnection connection = open(base + "examples-main.min.css");
         String css = read(connection);
         assertEquals(200, connection.getResponseCode());
@@ -342,76 +393,6 @@ public class HumanConfidenceTest {
             assertEquals("cloud.51degrees.com", hosts.group());
         }
         assertTrue("README cloud addresses found: " + count, count >= 1);
-    }
-
-    /**
-     * The page shows a redemption as a success only when it was one. A
-     * cloud from before status answers expired and replayed with a level
-     * as well, and names the failure in result, so those must read as
-     * failures. The page's own function is run in Node with each answer.
-     * Where Node is absent the test says so and stops.
-     */
-    @Test
-    public void pageReadsLegacyFailuresAsFailures() throws Exception {
-        String page;
-        try (InputStream in = HumanConfidence.class.getResourceAsStream(
-                "/human-confidence/page.html")) {
-            page = readAll(in);
-        }
-        Matcher function = Pattern.compile(
-                "function redeemed\\(answer\\) \\{.*?\\r?\\n  \\}",
-                Pattern.DOTALL).matcher(page);
-        assertTrue("the page has its redeemed function", function.find());
-        String[][] cases = {
-            // Answers with status.
-            {"{\"status\":\"success\",\"humanConfidence\":\"High\"}", "true"},
-            {"{\"status\":\"replayed\",\"humanConfidence\":\"Low\"}", "false"},
-            // Answers from a cloud before status.
-            {"{\"humanConfidence\":\"High\",\"secondsSinceVerified\":2}",
-                "true"},
-            {"{\"humanConfidence\":\"High\",\"result\":\"success\"}", "true"},
-            {"{\"humanConfidence\":\"Low\",\"result\":\"replayed\"}", "false"},
-            {"{\"humanConfidence\":\"Low\",\"result\":\"expired\"}", "false"},
-            {"{\"humanConfidence\":\"Low\",\"result\":\"unreadable\"}",
-                "false"},
-            {"{\"humanConfidence\":\"Low\",\"result\":\"unconfirmed\"}",
-                "false"},
-            {"{\"humanConfidence\":\"Low\",\"context\":\"replayed\"}",
-                "false"},
-            {"{\"humanConfidence\":\"Low\",\"result\":\"something-new\"}",
-                "false"},
-            {"{\"result\":\"unreadable\"}", "false"},
-            {"{}", "false"},
-        };
-        StringBuilder script = new StringBuilder(function.group())
-                .append("\nvar answers = [");
-        for (String[] answer : cases) {
-            script.append(answer[0]).append(",");
-        }
-        script.append("];\nconsole.log(JSON.stringify("
-                + "answers.map(function (a) { return redeemed(a); })));");
-        Process process;
-        try {
-            // The script goes in on standard input, which Node runs when
-            // it is given no file, so no quoting of it is needed.
-            process = new ProcessBuilder("node")
-                    .redirectErrorStream(true).start();
-        } catch (IOException notThere) {
-            Assume.assumeTrue("node is not on the path, so the page's "
-                    + "function was not run: " + notThere.getMessage(), false);
-            return;
-        }
-        try (OutputStream in = process.getOutputStream()) {
-            in.write(script.toString().getBytes(StandardCharsets.UTF_8));
-        }
-        String printed = readAll(process.getInputStream()).trim();
-        assertEquals(printed, 0, process.waitFor());
-        org.json.JSONArray results = new org.json.JSONArray(printed);
-        assertEquals(cases.length, results.length());
-        for (int i = 0; i < cases.length; i++) {
-            assertEquals(cases[i][0], Boolean.parseBoolean(cases[i][1]),
-                    results.getBoolean(i));
-        }
     }
 
     private static String rawGet(String base, String path, String... headers)
