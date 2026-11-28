@@ -965,14 +965,18 @@ public final class DidClient {
      * for a call that presents a License Key valid for Human Confidence, the
      * Human Confidence Value the 51Did carries. A 503 answer is always
      * {@link Outcome#UNCONFIRMED}, whatever its body says, and the caller
-     * may retry.
+     * may retry. A 200 answer whose body is not a JSON object, or holds
+     * neither {@code status} nor {@code context}, is
+     * {@link Outcome#UNREADABLE}, with the Signature outcome
+     * {@link RedeemResult.Signature#UNKNOWN}.
      * <p>
      * The future fails with {@link IllegalArgumentException} where the
      * cloud says the identifier is not a 51Did, with the cloud's message,
      * with {@link DidNotSupportedException} where the host does not offer
      * the creator context, with {@link DidHttpException} where the cloud
-     * answers with any other status or a body that is not its own shape,
-     * and with {@link IOException} where the cloud cannot be reached.
+     * answers with any other status, or a 400 that holds no
+     * {@code errors}, and with
+     * {@link IOException} where the cloud cannot be reached.
      *
      * @param fodId        the identifier the sealed result was made for
      * @param sealedResult the sealed result exactly as the verify endpoint
@@ -1048,15 +1052,10 @@ public final class DidClient {
         JSONObject json = asObject(response.getBody());
         switch (status) {
             case 200:
-                if (json == null) {
-                    throw new CompletionException(
-                        httpError("Redemption", response, licenceKey));
-                }
-                return RedeemResult.fromResponse(
-                    status, json, response.getBody());
             case 503:
                 // RedeemResult.fromResponse reads nothing from a 503 body,
-                // which may be empty or not JSON.
+                // and reads a 200 body that is not a JSON object as
+                // unreadable, so neither fails the future.
                 return RedeemResult.fromResponse(
                     status, json, response.getBody());
             case 400:

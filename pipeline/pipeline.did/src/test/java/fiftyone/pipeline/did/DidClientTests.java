@@ -1356,14 +1356,40 @@ public class DidClientTests {
         assertEquals("boom", error.getBody());
     }
 
+    /**
+     * A 200 whose body is not a JSON object, or holds neither
+     * {@code status} nor {@code context}, completes with the Redemption and
+     * Context outcomes Unreadable and the Signature outcome Unknown. No
+     * other member of such a body is read.
+     */
     @Test
-    public void redeem_NonJson200FailsWithHttpError() {
-        transport.queue(200, "<html>proxy</html>");
+    @SuppressWarnings("deprecation")
+    public void redeem_200WithoutStatusOrContextIsUnreadable()
+            throws Exception {
+        String[] bodies = {
+            "<html>proxy</html>",
+            "",
+            "[\"verified\"]",
+            "{\"signature\":\"verified\",\"humanConfidence\":\"High\"}",
+            "{\"signature\":\"invalid\"}",
+        };
+        for (String body : bodies) {
+            transport.queue(200, body);
 
-        DidHttpException error = failure(DidHttpException.class,
-            client.redeem(validDid, "sealed", "abc"));
+            RedeemResult result =
+                client.redeem(validDid, "sealed", "abc").join();
 
-        assertEquals(200, error.getStatusCode());
+            assertEquals(body, Outcome.UNREADABLE, result.getOutcome());
+            assertEquals(body, RedeemResult.Context.UNREADABLE,
+                result.getContext());
+            assertEquals(body, RedeemResult.Signature.UNKNOWN,
+                result.getSignature());
+            assertNull(body, result.getStatusValue());
+            assertNull(body, result.getHumanConfidence());
+            assertTrue(body, result.getFactors().isEmpty());
+            assertEquals(body, 200, result.getStatusCode());
+            assertEquals(body, body, result.getRaw());
+        }
     }
 
     @Test

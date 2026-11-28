@@ -313,9 +313,15 @@ public final class RedeemResult {
      * the outcome and the context, and nothing is read from the body, which
      * may be empty, not JSON, or claim another outcome.
      *
+     * <p>A 200 whose body is not a JSON object, or holds neither
+     * {@code status} nor {@code context}, gives {@link Outcome#UNREADABLE}
+     * and {@link Context#UNREADABLE} with {@link Signature#UNKNOWN}, and
+     * nothing else is read from it. See the package surface section "A
+     * sealed creator context result".
+     *
      * @param statusCode the HTTP status, 200 or 503
-     * @param json       the body parsed as a JSON object, which a 200 must
-     *                   have, or null where it is empty or not JSON
+     * @param json       the body parsed as a JSON object, or null where it
+     *                   is empty or not a JSON object
      * @param raw        the body as received
      * @return the typed result
      */
@@ -323,6 +329,11 @@ public final class RedeemResult {
             int statusCode, JSONObject json, String raw) {
         if (statusCode == 503) {
             return unconfirmed(raw);
+        }
+        if (json == null
+                || (json.has("status") == false
+                    && json.has("context") == false)) {
+            return unreadable(statusCode, raw);
         }
         String contextValue = json.optString("context", null);
         Context context = Context.fromValue(contextValue);
@@ -381,6 +392,30 @@ public final class RedeemResult {
             secondsSinceVerified,
             statusCode,
             raw);
+    }
+
+    /**
+     * The result of a 200 answer that is not a JSON object, or that holds
+     * neither {@code status} nor {@code context}: {@link Outcome#UNREADABLE}
+     * and {@link Context#UNREADABLE}, with {@link Signature#UNKNOWN} and no
+     * factors or Human Confidence. Only {@link #fromResponse} calls it.
+     */
+    private static RedeemResult unreadable(int statusCode, String raw) {
+        @SuppressWarnings("deprecation")
+        Context context = Context.UNREADABLE;
+        return new RedeemResult(
+            Outcome.UNREADABLE,
+            null,
+            context,
+            context.getValue(),
+            Signature.UNKNOWN,
+            Collections.<String, Factor>emptyMap(),
+            false,
+            HumanConfidence.Fields.NONE,
+            null,
+            null,
+            statusCode,
+            raw == null ? "" : raw);
     }
 
     /**
