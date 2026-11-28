@@ -415,6 +415,28 @@ public class HumanConfidenceTest {
         assertTrue("README links found: " + count, count >= 4);
     }
 
+    /**
+     * The README says that naming HumanConfidence delays the complete
+     * handlers, that change handlers read the first answer sooner, and
+     * which Content Security Policy directives the browser tests need.
+     */
+    @Test
+    public void readmeDocumentsTheDelayAndThePolicy() throws IOException {
+        String readme = new String(
+                Files.readAllBytes(Paths.get("README.md")),
+                StandardCharsets.UTF_8);
+        String[] wanted = {
+            "delays the client script's complete handlers",
+            "fod.onChange",
+            "| `script-src` | The cloud's host, and `'unsafe-eval'` |",
+            "| `connect-src` | The cloud's host |",
+            "| `worker-src` | `blob:` |"
+        };
+        for (String text : wanted) {
+            assertTrue(text, readme.contains(text));
+        }
+    }
+
     @Test
     public void readmeNamesOnlyTheProductionCloud() throws IOException {
         assertEquals("https://cloud.51degrees.com/api/v4/",

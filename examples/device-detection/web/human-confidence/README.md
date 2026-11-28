@@ -43,6 +43,29 @@ The page shows three rows, one for each step.
    `Medium`. The page then offers to send the same value again, which
    gives `Medium`.
 
+## When the results complete
+
+Naming `HumanConfidence` delays the client script's complete handlers. The
+cloud gives the page the browser tests, and the client script sends their
+answers with one more request. The script reports complete only after the
+answer to that request. So `fod.complete` runs later, by the time the
+tests take and one more request. A page can read the first answer's
+properties sooner with `fod.onChange`.
+
+## What a page's policy must allow
+
+If a page sets a Content Security Policy, it must allow these for the
+browser tests to run.
+
+| Directive | Must allow |
+| --- | --- |
+| `script-src` | The cloud's host, and `'unsafe-eval'` |
+| `connect-src` | The cloud's host |
+| `worker-src` | `blob:` |
+
+A page whose policy blocks any of these runs no browser tests. It still
+gets every property, with `HumanConfidenceSource` set to `Passive`.
+
 ## What you need
 
 - **A Resource Key** with the properties `HumanConfidence` and

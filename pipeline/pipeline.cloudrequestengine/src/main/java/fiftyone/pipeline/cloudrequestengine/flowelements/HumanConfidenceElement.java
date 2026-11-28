@@ -71,6 +71,23 @@ import java.util.List;
  * sealed result and never redeems one itself. See the Human Confidence
  * specification, "What a consumer reads" and "When HumanConfidence arrives
  * sealed".
+ * <p>
+ * Naming HumanConfidence delays the client script's complete handlers.
+ * The cloud gives a request that names it the browser tests, which the
+ * client script runs, and it sends their answers with one more request.
+ * The script reports complete only after the answer to that request, so
+ * its complete handlers run later by the time the tests take and one more
+ * request. A page reads the Properties of the first answer sooner through
+ * the client script's change handlers, {@code onChange}.
+ * <p>
+ * Where a page sets a Content Security Policy, it must allow these for the
+ * browser tests to run. Otherwise the page gets every Property, with
+ * HumanConfidenceSource {@code Passive}.
+ * <ul>
+ * <li>{@code script-src}: the cloud's host, and {@code 'unsafe-eval'}</li>
+ * <li>{@code connect-src}: the cloud's host</li>
+ * <li>{@code worker-src}: {@code blob:}</li>
+ * </ul>
  */
 public class HumanConfidenceElement
     extends FlowElementBase<ElementData, ElementPropertyMetaData> {
