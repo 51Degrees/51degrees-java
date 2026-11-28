@@ -623,16 +623,39 @@ public class CloudRequestEngineDefault
     }
 
     /**
-     * A request that carries a sealed Human Confidence result is neither
-     * served from nor stored in the cache, because a sealed result redeems
-     * once. See the caching specification, "Values created for one
+     * Whether any Evidence named humanconfidence, under any prefix or
+     * none, has a value that is not empty. Only
+     * {@link #SEALED_HUMAN_CONFIDENCE_EVIDENCE} is ever sent. One under any
+     * other key is left out, and so are transaction and challenge.
+     */
+    private static boolean holdsHumanConfidence(FlowData data) {
+        for (Map.Entry<String, Object> entry :
+            data.getEvidence().asKeyMap().entrySet()) {
+            if (isHumanConfidence(entry.getKey()) &&
+                entry.getValue() != null &&
+                entry.getValue().toString().isEmpty() == false) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isHumanConfidence(String key) {
+        return keySuffix(SEALED_HUMAN_CONFIDENCE_EVIDENCE)
+            .equalsIgnoreCase(keySuffix(key));
+    }
+
+    /**
+     * A request with Evidence named humanconfidence, under any key, is
+     * neither served from nor stored in the cache, because a sealed result
+     * redeems once. See the caching specification, "Values created for one
      * request".
      * @param flowData the Flow Data being processed
-     * @return false where the request carries a sealed result
+     * @return false where the Evidence holds a humanconfidence value
      */
     @Override
     protected boolean isCacheUsed(FlowData flowData) {
-        return carriesSealedResult(flowData) == false;
+        return holdsHumanConfidence(flowData) == false;
     }
 
     /**
@@ -980,18 +1003,23 @@ public class CloudRequestEngineDefault
     private Map<String, Object> getFormData(
         FlowData flowData,
         List<String> hidden) {
-        // On a request that carries a sealed result, Evidence named
+        // Where any Evidence is named humanconfidence, Evidence named
         // transaction or challenge is left out, so the call holds no
-        // transaction taken from the request.
-        boolean sealed = carriesSealedResult(flowData);
+        // transaction taken from the request. Only a sealed result in
+        // query.humanconfidence is sent. One under a header, a cookie or
+        // any other key is not.
+        boolean sealed = holdsHumanConfidence(flowData);
+        boolean sealedInQuery = carriesSealedResult(flowData);
         Map<String, Object> evidence = new HashMap<>();
         for (Map.Entry<String, Object> entry :
             flowData.getEvidence().asKeyMap().entrySet()) {
-            if (isSent(entry.getKey()) &&
+            String key = entry.getKey();
+            if (isSent(key) &&
                 (sealed == false || TRANSACTION_FIELDS.contains(
-                    keySuffix(entry.getKey()).toLowerCase(Locale.ROOT))
-                    == false)) {
-                evidence.put(entry.getKey(), entry.getValue());
+                    keySuffix(key).toLowerCase(Locale.ROOT)) == false) &&
+                (isHumanConfidence(key) == false || (sealedInQuery &&
+                    SEALED_HUMAN_CONFIDENCE_EVIDENCE.equalsIgnoreCase(key)))) {
+                evidence.put(key, entry.getValue());
             }
         }
         Map<String, Object> formData =

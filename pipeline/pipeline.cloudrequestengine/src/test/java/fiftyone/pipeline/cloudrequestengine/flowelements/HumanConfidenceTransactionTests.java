@@ -41,6 +41,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.SocketTimeoutException;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -538,6 +539,79 @@ public class HumanConfidenceTransactionTests
                 call.get("51D_a&license"));
             assertEquals(Collections.singletonList("y"),
                 call.get("51D_c&humanconfidence=EVIL&x"));
+        }
+    }
+
+    // A sealed result under any key but query.humanconfidence.
+
+    /**
+     * A sealed result in a header, a cookie, server or with no prefix is
+     * not sent, and nor is a transaction or challenge from the request,
+     * whether query.humanconfidence is missing or empty.
+     */
+    @Test
+    public void notSent_SealedResultUnderAnotherKey() throws Exception {
+        try (Pipeline pipeline = pipeline()) {
+            for (String key : Arrays.asList("header.humanconfidence",
+                "cookie.HumanConfidence", "server.humanconfidence",
+                "humanconfidence", "other.humanconfidence")) {
+                for (String query : Arrays.asList(null, "")) {
+                    HumanConfidencePage page = engine.newHumanConfidencePage();
+                    try (FlowData data = pipeline.createFlowData()) {
+                        data.addEvidence("header.user-agent", "Mozilla/5.0");
+                        if (query != null) {
+                            data.addEvidence("query.humanconfidence", query);
+                        }
+                        data.addEvidence(
+                            "query.humanconfidencepage", page.getId());
+                        data.addEvidence(key, SEALED);
+                        data.addEvidence("query.transaction", "from-the-page");
+                        data.addEvidence("header.transaction", "from-a-header");
+                        data.addEvidence("cookie.challenge", "from-a-cookie");
+                        data.process();
+                    }
+                    String body = calls.get(calls.size() - 1);
+                    Map<String, List<String>> call = form(body);
+                    for (String name : Arrays.asList(
+                        "humanconfidence", "transaction", "challenge")) {
+                        assertNull(call.get(name), key + " sent " + name);
+                    }
+                    assertFalse(body.contains(
+                        URLEncoder.encode(SEALED, "UTF-8")), key);
+                }
+            }
+        }
+    }
+
+    /** No cache is asked or offered a result for one either. */
+    @Test
+    public void cache_NotUsedForASealedResultUnderAnotherKey()
+        throws Exception {
+        FlowCache cache = mock(FlowCache.class);
+        try (Pipeline pipeline = pipeline()) {
+            engine.setCache(cache);
+            try (FlowData data = pipeline.createFlowData()) {
+                data.addEvidence("header.user-agent", "Mozilla/5.0");
+                data.addEvidence("header.humanconfidence", SEALED);
+                data.process();
+            }
+        }
+        verify(cache, never()).get(any());
+        verify(cache, never()).put(any(), any());
+    }
+
+    /** An empty humanconfidence is no sealed result and changes nothing. */
+    @Test
+    public void form_EmptyHumanConfidenceChangesNothing() throws Exception {
+        try (Pipeline pipeline = pipeline()) {
+            try (FlowData data = pipeline.createFlowData()) {
+                data.addEvidence("query.humanconfidence", "");
+                data.addEvidence("header.humanconfidence", "");
+                data.addEvidence("query.transaction", "from-the-page");
+                data.process();
+            }
+            assertEquals(Collections.singletonList("from-the-page"),
+                form(calls.get(0)).get("transaction"));
         }
     }
 
