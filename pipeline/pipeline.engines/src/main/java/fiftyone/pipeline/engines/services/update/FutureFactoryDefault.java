@@ -28,7 +28,11 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+/** Schedules tasks on a single background thread. */
 public class FutureFactoryDefault implements FutureFactory {
+    /** Create a new instance. */
+    public FutureFactoryDefault() {
+    }
 
     private final ScheduledExecutorService executor =
         Executors.newSingleThreadScheduledExecutor();

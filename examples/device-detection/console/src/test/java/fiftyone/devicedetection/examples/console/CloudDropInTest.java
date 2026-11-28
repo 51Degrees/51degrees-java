@@ -111,7 +111,8 @@ public class CloudDropInTest {
      * The code a developer writes once, for either engine.
      */
     private static boolean isMobile(Pipeline pipeline) throws Exception {
-        try (FlowData data = pipeline.createFlowData()) {
+        FlowData data = pipeline.createFlowData();
+        try {
             data.addEvidence("header.user-agent", IPHONE).process();
             DeviceData device = data.get(DeviceData.class);
             ElementData byKey = data.get("device");
@@ -122,6 +123,8 @@ public class CloudDropInTest {
                     "with a reason when it has none, and was " + byName,
                 byName instanceof AspectPropertyValue);
             return device.getIsMobile().getValue();
+        } finally {
+            data.close();
         }
     }
 
@@ -129,11 +132,14 @@ public class CloudDropInTest {
     public void cloudResultsReadAsOnPremise() throws Exception {
         String endPoint = "http://" + cloud.getAddress().getHostString() +
             ":" + cloud.getAddress().getPort() + "/api/v4/";
-        try (Pipeline pipeline = new DeviceDetectionPipelineBuilder()
+        Pipeline pipeline = new DeviceDetectionPipelineBuilder()
             .useCloud("dropinresourcekey")
             .setEndPoint(endPoint)
-            .build()) {
+            .build();
+        try {
             assertTrue(isMobile(pipeline));
+        } finally {
+            pipeline.close();
         }
     }
 
@@ -141,12 +147,15 @@ public class CloudDropInTest {
     public void onPremiseResultsReadAsCloud() throws Exception {
         String file = getFilePath("device-detection/51Degrees-LiteV4.1.hash")
             .getAbsolutePath();
-        try (Pipeline pipeline = new DeviceDetectionPipelineBuilder()
+        Pipeline pipeline = new DeviceDetectionPipelineBuilder()
             .useOnPremise(file, false)
             .setAutoUpdate(false)
             .setShareUsage(false)
-            .build()) {
+            .build();
+        try {
             assertTrue(isMobile(pipeline));
+        } finally {
+            pipeline.close();
         }
     }
 }

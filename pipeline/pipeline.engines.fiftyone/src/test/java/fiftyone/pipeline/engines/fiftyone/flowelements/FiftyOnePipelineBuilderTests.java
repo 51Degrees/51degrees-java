@@ -40,14 +40,13 @@ public class FiftyOnePipelineBuilderTests {
         assertTrue(Constants.SHARE_USAGE_DEFAULT_ENABLED);
     }
 
-    @SuppressWarnings("rawtypes")
     @Test
     public void ShareUsage_NotSet_FollowsDefault() throws Exception {
         try (Pipeline pipeline = new FiftyOnePipelineBuilder()
             .setAutoCloseElements(true)
             .build()) {
             int shareUsage = 0;
-            for (FlowElement element : pipeline.getFlowElements()) {
+            for (FlowElement<?, ?> element : pipeline.getFlowElements()) {
                 if (element instanceof ShareUsageElement) {
                     shareUsage++;
                 }

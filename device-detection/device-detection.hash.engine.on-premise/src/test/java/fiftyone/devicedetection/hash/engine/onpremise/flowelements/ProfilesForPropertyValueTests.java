@@ -29,6 +29,7 @@ import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -41,7 +42,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -67,11 +67,8 @@ public class ProfilesForPropertyValueTests {
     @Test
     public void ProfilesForValue_FromTheNativeFunction() throws Exception {
         EngineOverMockNativeCode mocks = new EngineOverMockNativeCode();
-        VectorUInt32Swig ids = mock(VectorUInt32Swig.class);
-        when(ids.size()).thenReturn(3);
-        when(ids.get(0)).thenReturn(12280L);
-        when(ids.get(1)).thenReturn(17470L);
-        when(ids.get(2)).thenReturn(4294967295L);
+        VectorUInt32Swig ids =
+            new VectorUInt32Swig(new long[] {12280L, 17470L, 4294967295L});
         when(mocks.nativeEngine.getProfileIdsForPropertyValue(
             "NativeModel", "iPhone14,2")).thenReturn(ids);
 
@@ -82,7 +79,17 @@ public class ProfilesForPropertyValueTests {
         verify(mocks.nativeEngine).getProfileIdsForPropertyValue(
             "NativeModel", "iPhone14,2");
         // The native vector is released once its ids are copied.
-        verify(ids).close();
+        assertEquals(0L, cPtr(ids));
+    }
+
+    /**
+     * The address of the native vector a proxy holds, which is 0 once the
+     * proxy is closed.
+     */
+    private static long cPtr(VectorUInt32Swig vector) throws Exception {
+        Field field = VectorUInt32Swig.class.getDeclaredField("swigCPtr");
+        field.setAccessible(true);
+        return field.getLong(vector);
     }
 
     private static File liteFile() {

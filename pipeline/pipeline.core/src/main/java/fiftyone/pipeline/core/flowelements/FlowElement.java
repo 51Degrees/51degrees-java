@@ -44,6 +44,14 @@ public interface FlowElement<
     TData extends ElementData,
     TProperty extends ElementPropertyMetaData>
     extends AutoCloseable {
+
+    /**
+     * Free the resources the element holds. It throws no checked exception,
+     * so a try-with-resources block needs no catch for it.
+     */
+    @Override
+    void close();
+
     /**
      * Carry out whatever operations this element is designed to do using the
      * {@link FlowData} passed.

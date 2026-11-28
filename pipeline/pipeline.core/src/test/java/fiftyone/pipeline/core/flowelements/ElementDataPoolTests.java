@@ -84,6 +84,11 @@ public class ElementDataPoolTests {
      */
     private static class Counter
         extends FlowElementBase<PooledData, ElementPropertyMetaData> {
+
+        @Override
+        protected Class<PooledData> getDataType() {
+            return PooledData.class;
+        }
         private final AtomicInteger allocated;
 
         Counter(AtomicInteger allocated) {
@@ -156,6 +161,11 @@ public class ElementDataPoolTests {
      */
     private static class TaskStarter
         extends FlowElementBase<TaskData, ElementPropertyMetaData> {
+
+        @Override
+        protected Class<TaskData> getDataType() {
+            return TaskData.class;
+        }
         private volatile CompletableFuture<Void> next = null;
 
         TaskStarter() {
@@ -292,9 +302,9 @@ public class ElementDataPoolTests {
     }
 
     /**
-     * Closing a Flow Data a second time, as a try-with-resources around one
-     * that a web filter also closes does, must not give back an instance
-     * that the pool has since given to another request.
+     * Closing a Flow Data a second time, as happens when the code that used
+     * it and a web filter both close it, must not give back an instance that
+     * the pool has since given to another request.
      */
     @Test
     public void closingTwice_GivesNoInstanceToTwoRequests() throws Exception {
@@ -303,36 +313,40 @@ public class ElementDataPoolTests {
                 LoggerFactory.getILoggerFactory())
                 .addFlowElement(new Counter(allocated))
                 .setAutoCloseElements(true)
-                .build();
-             FlowData first = pipeline.createFlowData()) {
-            first.addEvidence("query.request", "first");
-            first.process();
-            Object pooled = first.get("counter");
-            first.close();
-
-            try (FlowData second = pipeline.createFlowData()) {
-                second.addEvidence("query.request", "second");
-                second.process();
-                assertSame(
-                    "The instance was not reused, so this proves nothing",
-                    pooled,
-                    second.get("counter"));
-
+                .build()) {
+            FlowData first = pipeline.createFlowData();
+            try {
+                first.addEvidence("query.request", "first");
+                first.process();
+                Object pooled = first.get("counter");
                 first.close();
 
-                try (FlowData third = pipeline.createFlowData()) {
-                    third.addEvidence("query.request", "third");
-                    third.process();
-                    assertNotSame(
-                        "A second close gave an instance that another " +
-                            "request holds back to its pool",
+                try (FlowData second = pipeline.createFlowData()) {
+                    second.addEvidence("query.request", "second");
+                    second.process();
+                    assertSame(
+                        "The instance was not reused, so this proves nothing",
                         pooled,
-                        third.get("counter"));
+                        second.get("counter"));
+
+                    first.close();
+
+                    try (FlowData third = pipeline.createFlowData()) {
+                        third.addEvidence("query.request", "third");
+                        third.process();
+                        assertNotSame(
+                            "A second close gave an instance that another " +
+                                "request holds back to its pool",
+                            pooled,
+                            third.get("counter"));
+                    }
+                    assertEquals(
+                        "The second request's value was overwritten",
+                        "second",
+                        ((ElementDataBase) second.get("counter")).get("request"));
                 }
-                assertEquals(
-                    "The second request's value was overwritten",
-                    "second",
-                    ((ElementDataBase) second.get("counter")).get("request"));
+            } finally {
+                first.close();
             }
         }
         assertEquals(

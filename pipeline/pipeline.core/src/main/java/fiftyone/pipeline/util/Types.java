@@ -34,6 +34,9 @@ import java.util.Map;
  * Static type methods.
  */
 public class Types {
+    /** Create a new instance. */
+    public Types() {
+    }
 
     /**
      * Get a map of primitive types to their boxed type e.g. boolean and Boolean

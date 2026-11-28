@@ -53,6 +53,12 @@ import static org.apache.commons.lang3.BooleanUtils.isFalse;
 public class IPIntelligenceOnPremiseEngine
     extends FiftyOneOnPremiseAspectEngineBase<IPIntelligenceDataHash,
     FiftyOneAspectPropertyMetaData> {
+
+    @Override
+    protected Class<IPIntelligenceDataHash> getDataType() {
+        return IPIntelligenceDataHash.class;
+    }
+
     // Volatile, so a thread that processes sees the native engine a
     // refresh on another thread made.
     private volatile EngineIpiSwig engine = null;
@@ -96,7 +102,7 @@ public class IPIntelligenceOnPremiseEngine
      * @param dataFile data file to read the data set from
      * @param config native configuration which was configured by the builder
      * @param properties native required properties configuration which define
-     *                   the properties which the engine should be initialised
+     *                   the properties which the engine should be initialized
      *                   with
      * @param propertyNames the property names {@code properties} was made
      *                      from, in the same order

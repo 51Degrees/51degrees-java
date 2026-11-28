@@ -54,18 +54,38 @@ final class ExampleKey {
 
     /**
      * Runs the action with the key set as the system property the example
-     * reads, and puts the property back afterwards.
+     * reads, and puts the property back afterwards. When the action fails,
+     * every cause is printed before the failure is passed on, as the test
+     * report shortens the chain.
      */
     static void runWith(String key, Action action) throws Exception {
         String saved = System.getProperty(Main.RESOURCE_KEY_NAME);
         System.setProperty(Main.RESOURCE_KEY_NAME, key);
         try {
             action.run();
+        } catch (Exception e) {
+            printCauses(e);
+            throw e;
         } finally {
             if (saved == null) {
                 System.clearProperty(Main.RESOURCE_KEY_NAME);
             } else {
                 System.setProperty(Main.RESOURCE_KEY_NAME, saved);
+            }
+        }
+    }
+
+    /**
+     * Prints the failure and each cause under it, one to a line.
+     */
+    private static void printCauses(Throwable failure) {
+        String indent = "";
+        for (Throwable cause = failure; cause != null;
+            cause = cause.getCause()) {
+            System.err.println(indent + cause);
+            indent = "  caused by ";
+            if (cause.getCause() == cause) {
+                break;
             }
         }
     }

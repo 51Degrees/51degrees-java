@@ -36,11 +36,26 @@ import fiftyone.pipeline.engines.flowelements.CloudPipelineBuilderBase;
 import fiftyone.pipeline.engines.services.HttpClient;
 import org.slf4j.ILoggerFactory;
 
+/** Builds a Pipeline that finds locations with the cloud service. */
 public class GeoLocationCloudPipelineBuilder
     extends CloudPipelineBuilderBase<GeoLocationCloudPipelineBuilder> {
+
+    @Override
+    protected GeoLocationCloudPipelineBuilder self() {
+        return this;
+    }
+
     private final HttpClient httpClient;
     private final Enums.GeoLocationProvider geoLocationProvider;
 
+    /**
+     * Create a new builder.
+     *
+     * @param loggerFactory creates the loggers for the Pipeline and its
+     *    elements
+     * @param httpClient used to make requests to the cloud service
+     * @param geoLocationProvider the location data provider to use
+     */
     public GeoLocationCloudPipelineBuilder(
         ILoggerFactory loggerFactory,
         HttpClient httpClient,

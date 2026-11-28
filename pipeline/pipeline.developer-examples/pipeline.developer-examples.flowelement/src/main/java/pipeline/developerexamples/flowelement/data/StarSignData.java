@@ -25,7 +25,13 @@ package pipeline.developerexamples.flowelement.data;
 import fiftyone.pipeline.core.data.ElementData;
 
 //! [class]
+/** The star sign the element returns. */
 public interface StarSignData extends ElementData {
+    /**
+     * The star sign for the date of birth given.
+     *
+     * @return the name of the star sign
+     */
     String getStarSign();
 }
 //! [class]

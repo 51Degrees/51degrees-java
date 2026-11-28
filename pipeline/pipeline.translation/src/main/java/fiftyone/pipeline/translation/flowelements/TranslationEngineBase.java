@@ -31,8 +31,6 @@ import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
-import fiftyone.pipeline.core.typed.TypedKey;
-import fiftyone.pipeline.core.typed.TypedKeyDefault;
 import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
 import fiftyone.pipeline.translation.data.ITranslationData;
 import fiftyone.pipeline.translation.data.Languages;
@@ -122,8 +120,8 @@ public class TranslationEngineBase<T extends ITranslationData>
     /**
      * Create a new translation engine.
      * @param sourceElementDataKey element data key of the source flow element
-     * @param translations the translations to execute (source -> destination
-     *                     property name pairs)
+     * @param translations the translations to execute, as pairs of source
+     *                     and destination property names
      * @param sources the YAML translation sources, keyed on file name
      * @param fixedLanguage fixed language to translate to. If set, the engine
      *                     always translates to this language; otherwise the
@@ -184,11 +182,8 @@ public class TranslationEngineBase<T extends ITranslationData>
     }
 
     @Override
-    public TypedKey<T> getTypedDataKey() {
-        if (typedKey == null) {
-            typedKey = new TypedKeyDefault<>(getElementDataKey(), dataType);
-        }
-        return typedKey;
+    protected Class<T> getDataType() {
+        return dataType;
     }
 
     /**

@@ -39,6 +39,9 @@ import java.util.Locale;
  * services needed.
  */
 public class StartupHelpers {
+    /** Create a new instance. */
+    public StartupHelpers() {
+    }
 
     /**
      * Get the index in the {@link PipelineOptions#elements} of the element with

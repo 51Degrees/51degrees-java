@@ -62,6 +62,12 @@ import org.json.JSONArray;
  */
 public class IPIntelligenceCloudEngine
     extends CloudAspectEngineBase<IPIntelligenceDataCloud> {
+
+    @Override
+    protected Class<IPIntelligenceDataCloud> getDataType() {
+        return IPIntelligenceDataCloud.class;
+    }
+
     volatile List<AspectPropertyMetaData> aspectProperties;
     private String dataSourceTier;
     private final Object metadataLock = new Object();
@@ -541,7 +547,7 @@ public class IPIntelligenceCloudEngine
     /**
      * Get the {@link WktString} representation of a value from the cloud
      * engine's JSON response, and wrap it in an {@link AspectPropertyValue}.
-     * The cloud serialises WKT geometry (e.g. the {@code Areas} property) as an
+     * The cloud serializes WKT geometry (e.g. the {@code Areas} property) as an
      * object wrapping the text under a {@code "value"} key, so the text is
      * extracted and wrapped in a {@link WktString} to match the typed getter
      * ({@code getAreas()}).
@@ -558,7 +564,7 @@ public class IPIntelligenceCloudEngine
         if(ipiObj.isNull(key)){
             wktValue.setNoValueMessage(getNoValueReason(ipiObj, key));
         } else {
-            // The cloud serialises WKT geometry as an object that wraps the
+            // The cloud serializes WKT geometry as an object that wraps the
             // text under a "value" key, e.g. {"value":"POLYGON((...))"};
             // fall back to a plain string for forward compatibility.
             Object raw = ipiObj.get(key);

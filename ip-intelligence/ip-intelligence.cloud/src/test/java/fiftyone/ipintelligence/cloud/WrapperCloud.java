@@ -37,6 +37,8 @@ import java.io.Closeable;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
 
+import static org.junit.Assume.assumeFalse;
+
 public class WrapperCloud implements Closeable {
 
     protected static final ILoggerFactory loggerFactory = LoggerFactory.getILoggerFactory();
@@ -45,9 +47,15 @@ public class WrapperCloud implements Closeable {
     public IPIntelligenceCloudEngine IPIntelligenceCloudEngine;
 
     public WrapperCloud() throws Exception {
+        String resourceKey = KeyUtils.getResourceKey();
+        assumeFalse("These tests call the live 51Degrees cloud service, so " +
+                "they need a resource key, and they are skipped because " +
+                KeyUtils.RESOURCE_KEY_VARIABLE + " is not set as an " +
+                "environment variable or as a system property.",
+            KeyUtils.isInvalidKey(resourceKey));
         cloudRequestEngine = 
                 new CloudRequestEngineBuilder(loggerFactory, new TimedHttpClient())
-                .setResourceKey(KeyUtils.getResourceKey())
+                .setResourceKey(resourceKey)
                 // The live cloud service is shared with every CI run. In run
                 // 44881631156 its slowest answer was 0.77 s, over 540
                 // requests on all 15 Build and Test jobs (TimedHttpClient
@@ -76,8 +84,7 @@ public class WrapperCloud implements Closeable {
         return pipeline;
     }
     
-    @SuppressWarnings("rawtypes")
-	public AspectEngine getEngine() {
+	public AspectEngine<?, ?> getEngine() {
        return IPIntelligenceCloudEngine;
     }
 

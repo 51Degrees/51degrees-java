@@ -5,7 +5,9 @@ Describe 'the workflows' {
 
     # Each name holds one thing, so a workflow never fills one name from the
     # secret or variable of another. The 51Did license key, for one, unseals
-    # only results made with the resource key of its own account.
+    # only results made with the resource key of its own account. The one
+    # setting a workflow writes as it is, rather than from a secret, is that
+    # warnings are errors.
     It 'fill every _51DEGREES_ name from the secret or variable of the same name' {
         $workflows = Join-Path $PSScriptRoot '../.github/workflows'
         $lines = @(Get-ChildItem $workflows -Filter *.yml |
@@ -19,8 +21,21 @@ Describe 'the workflows' {
         $lines | Should -Not -BeNullOrEmpty
         $lines | Where-Object {
             $_.Text -notmatch (':\s*\$\{\{\s*(?:secrets|vars)\.' +
-                [regex]::Escape($_.Name) + '\s*\}\}\s*$')
+                [regex]::Escape($_.Name) + '\s*\}\}\s*$') -and
+            $_.Text -cnotmatch ':\s*_51DEGREES_WARNINGS_AS_ERRORS:\s*''true''$'
         } | ForEach-Object Text | Should -BeNullOrEmpty
+    }
+
+    It 'make every warning an error in each workflow that runs Maven' {
+        $workflows = Join-Path $PSScriptRoot '../.github/workflows'
+        foreach ($file in Get-ChildItem $workflows -Filter *.yml) {
+            $text = Get-Content -Raw $file.FullName
+            if ($text -match '(?m)^\s*(run:\s*)?mvn\s') {
+                $text | Should -MatchExactly (
+                    '(?m)^env[:]\s*\n\s+_51DEGREES_WARNINGS_AS_ERRORS:\s*''true''') `
+                    -Because "$($file.Name) runs Maven"
+            }
+        }
     }
 
     # The resource keys and the license keys are organization secrets, and

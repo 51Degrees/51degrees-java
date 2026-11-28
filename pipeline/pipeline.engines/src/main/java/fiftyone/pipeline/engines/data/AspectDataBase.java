@@ -25,6 +25,7 @@ package fiftyone.pipeline.engines.data;
     import fiftyone.pipeline.core.data.ElementDataBase;
     import fiftyone.pipeline.core.data.FlowData;
     import fiftyone.pipeline.core.data.FlowError;
+    import fiftyone.pipeline.core.data.IWeightedValue;
     import fiftyone.pipeline.core.data.TryGetResult;
     import fiftyone.pipeline.engines.exceptions.PropertyMissingException;
     import fiftyone.pipeline.engines.flowelements.AspectEngine;
@@ -310,6 +311,79 @@ public abstract class AspectDataBase extends ElementDataBase implements AspectDa
         }
         return result.getValue();
 
+    }
+
+    /**
+     * Get the value of a property whose values are of a single type, for
+     * example {@link String} or {@link Integer}.
+     * <p>
+     * The value is read as {@link #getAs} reads it, then checked against the
+     * type. The result is a new instance, so setting its value does not
+     * change the value stored in this instance.
+     * @param key name of the property
+     * @param type the type of the value
+     * @param <V> the type of the value
+     * @return the value, or no value with the reason when there is none
+     * @throws ClassCastException if the stored value is not of the type
+     */
+    protected <V> AspectPropertyValue<V> getValue(String key, Class<V> type) {
+        return AspectPropertyValues.checkedValue(
+            key,
+            getAs(key, AspectPropertyValue.class, type),
+            type);
+    }
+
+    /**
+     * Get the value of a property whose values are a {@link List} of a
+     * single type, for example a list of {@link String}.
+     * <p>
+     * The value is read as {@link #getAs} reads it, then each element is
+     * checked against the element type and copied into a new list. The
+     * result is a new instance, so changing it does not change the value
+     * stored in this instance.
+     * @param key name of the property
+     * @param elementType the type of each element in the list
+     * @param <V> the type of each element in the list
+     * @return the value, or no value with the reason when there is none
+     * @throws ClassCastException if the stored value is not a list of the
+     *                            element type
+     */
+    protected <V> AspectPropertyValue<List<V>> getList(
+        String key,
+        Class<V> elementType) {
+        return AspectPropertyValues.checkedList(
+            key,
+            getAs(key, AspectPropertyValue.class, List.class, elementType),
+            elementType);
+    }
+
+    /**
+     * Get the value of a property whose values are a {@link List} of
+     * {@link IWeightedValue}, each holding a value of a single type.
+     * <p>
+     * The value is read as {@link #getAs} reads it, then each weighted value
+     * is checked, and its value checked against the value type, and copied
+     * into a new list. The result is a new instance, so changing it does not
+     * change the value stored in this instance.
+     * @param key name of the property
+     * @param valueType the type of the value in each weighted value
+     * @param <V> the type of the value in each weighted value
+     * @return the value, or no value with the reason when there is none
+     * @throws ClassCastException if the stored value is not a list of
+     *                            weighted values of the value type
+     */
+    protected <V> AspectPropertyValue<List<IWeightedValue<V>>> getWeightedList(
+        String key,
+        Class<V> valueType) {
+        return AspectPropertyValues.checkedWeightedList(
+            key,
+            getAs(
+                key,
+                AspectPropertyValue.class,
+                List.class,
+                IWeightedValue.class,
+                valueType),
+            valueType);
     }
 
     /**

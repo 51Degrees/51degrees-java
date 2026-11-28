@@ -32,7 +32,6 @@ import static org.mockito.Mockito.*;
 
 public class MockFlowData {
 
-    @SuppressWarnings("unchecked")
     public static FlowData createFromEvidence(
         final Map<String, Object> evidenceData,
         boolean dataKeyFromAllEvidence) {
@@ -59,7 +58,7 @@ public class MockFlowData {
             when(data.generateKey(any(EvidenceKeyFilter.class))).thenReturn(key);
         }
 
-        when(data.tryGetEvidence(anyString(), any(Class.class))).thenAnswer(
+        when(data.tryGetEvidence(anyString(), any())).thenAnswer(
             new Answer<Object>() {
                 @Override
                 public Object answer(InvocationOnMock invocation) throws Throwable {

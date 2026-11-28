@@ -62,6 +62,7 @@ public final class DerivedOutputMetaData {
     }
 
     /**
+     * Returns the property name published under the derived Element Data key.
      * @return the property name published under the derived Element Data
      * key
      */
@@ -70,6 +71,7 @@ public final class DerivedOutputMetaData {
     }
 
     /**
+     * Returns what the property asserts.
      * @return what the property asserts
      */
     public String getDescription() {
@@ -77,6 +79,7 @@ public final class DerivedOutputMetaData {
     }
 
     /**
+     * Returns string, bool, int or double.
      * @return string, bool, int or double
      */
     public String getValueType() {
@@ -84,6 +87,8 @@ public final class DerivedOutputMetaData {
     }
 
     /**
+     * Returns the Java type of the value, being {@link String}, {@link
+     * Boolean}, {@link Integer} or {@link Double}.
      * @return the Java type of the value, being {@link String},
      * {@link Boolean}, {@link Integer} or {@link Double}
      */
@@ -91,11 +96,17 @@ public final class DerivedOutputMetaData {
         return output.getValueType().getValueClass();
     }
 
+    /**
+     * The StoredValueType field.
+     *
+     * @return the field, or null when the script does not give it
+     */
     public String getStoredValueType() {
         return output.getStoredValueType();
     }
 
     /**
+     * Returns the string form of the default recorded for the property.
      * @return the string form of the default recorded for the property.
      * This is metadata only, and nothing reads it while a request is
      * processed.
@@ -105,45 +116,87 @@ public final class DerivedOutputMetaData {
     }
 
     /**
+     * Returns false, as format 1 has no list outputs.
      * @return false, as format 1 has no list outputs
      */
     public boolean isList() {
         return output.isList();
     }
 
+    /**
+     * The IsMandatory field.
+     *
+     * @return the field, or null when the script does not give it
+     */
     public Boolean getIsMandatory() {
         return output.getIsMandatory();
     }
 
+    /**
+     * The IsObsolete field.
+     *
+     * @return the field, or null when the script does not give it
+     */
     public Boolean getIsObsolete() {
         return output.getIsObsolete();
     }
 
+    /**
+     * The Category field.
+     *
+     * @return the field, or null when the script does not give it
+     */
     public String getCategory() {
         return output.getCategory();
     }
 
+    /**
+     * The IsPopular field.
+     *
+     * @return the field, or null when the script does not give it
+     */
     public Boolean getIsPopular() {
         return output.getIsPopular();
     }
 
+    /**
+     * The ExportValues field.
+     *
+     * @return the field, or null when the script does not give it
+     */
     public Boolean getExportValues() {
         return output.getExportValues();
     }
 
+    /**
+     * The Url field.
+     *
+     * @return the field, or null when the script does not give it
+     */
     public String getUrl() {
         return output.getUrl();
     }
 
+    /**
+     * The DisplayOrder field.
+     *
+     * @return the field, or null when the script does not give it
+     */
     public Long getDisplayOrder() {
         return output.getDisplayOrder();
     }
 
+    /**
+     * The PropertyId field.
+     *
+     * @return the field, or null when the script does not give it
+     */
     public Long getPropertyId() {
         return output.getPropertyId();
     }
 
     /**
+     * Returns the list as written, with numbers as {@link Double}.
      * @return the list as written, with numbers as {@link Double}
      */
     public List<Object> getVendorIds() {
@@ -151,6 +204,8 @@ public final class DerivedOutputMetaData {
     }
 
     /**
+     * Returns the list the script gives, or every source property its checks
+     * and rules name, in elementKey.PropertyName form, where it gives none.
      * @return the list the script gives, or every source property its
      * checks and rules name, in elementKey.PropertyName form, where it gives
      * none
@@ -160,6 +215,8 @@ public final class DerivedOutputMetaData {
     }
 
     /**
+     * Returns the values the property can have, or null where the script gives
+     * no list.
      * @return the values the property can have, or null where the script
      * gives no list
      */

@@ -24,8 +24,12 @@ the native engines from `cxx` and does need them, as the README says.
 ### Prerequisites
 
 - Git.
-- A JDK, 8 or later. CI tests 8, 11, 17 and 21 (`ci/options.json`), and
-  builds and runs the examples on the JDK each runner has (see
+- JDK 17. On JDK 9 and later the poms compile against the Java 8 API
+  (`--release 8`), and javac 21 and later warn that Java 8 is obsolete, which
+  is an error when `_51DEGREES_WARNINGS_AS_ERRORS` is true. Without it any JDK
+  from 8 builds. CI compiles with JDK 17, as the publish does, and runs the
+  tests on 8, 11, 17 and 21 (`ci/options.json`). The examples fresh clone
+  workflow builds and runs the examples on the JDK each runner has (see
   [What CI tests](#pitfalls)).
 - Maven 3.8 or later, or the `mvnw` wrapper at the root.
 - Network access to GitHub, to Maven Central for the packages the examples
@@ -238,7 +242,7 @@ and for a list of properties that fails once or every time.
   packages the examples use, `4.5.130`. Use the name in `target`.
 - **The `dev` profile.** `-Pdev`, which CI uses, builds the examples against
   the libraries here, which needs `mvn install` at the root first and so the
-  native build, with CMake 3.10 or later and a C++ toolchain. It is not needed
+  native build, with CMake 3.24 or later and a C++ toolchain. It is not needed
   to run the examples.
 - **Platforms the packages cover.** The published
   `device-detection.hash.engine.on-premise` 4.5.128 jar has native libraries
@@ -248,16 +252,20 @@ and for a list of properties that fails once or every time.
 - **What CI tests.** On a pull request CI builds and tests the examples
   with the `dev` profile (`ci/build-project.ps1` and
   `ci/run-unit-tests.ps1`), and the example tests use the paid data files
-  when CI has them. Publish tests them against the packages it has just
-  built (`ci/run-integration-tests.ps1`).
+  when CI has them. Every entry compiles with JDK 17 and runs the tests on
+  its own JDK, so the Java 8 entries run the classes Java 8 users get.
+  Publish tests them against the packages it has just built
+  (`ci/run-integration-tests.ps1`).
   [examples-fresh-clone.yml](.github/workflows/examples-fresh-clone.yml)
-  does what [Run the examples](#run-the-examples) says, with the JDK and
+  does what [Run the examples](#run-the-examples) says, with JDK 17 and the
   Maven each runner has. It
   builds the console examples against the published packages and runs each
   product's `GettingStartedOnPrem` jar from the repository root with no
-  settings. On Ubuntu the free data file is downloaded, as from a fresh
-  clone, and the Windows and macOS jobs take that file from the run's cache,
-  so each file is downloaded once a run. The Ubuntu job then builds every
+  settings. On Ubuntu the example downloads the free data file, as from a
+  fresh clone, from a stand-in on the runner that serves the copy common-ci's
+  fetch-assets step fetched, so the example downloads nothing from the
+  Distributor. The Windows and macOS jobs take that file from the run's
+  cache. The Ubuntu job then builds every
   example module, the web examples too, with its tests compiled against
   the published packages, so a test that uses a class only this
   repository has fails there. It runs on each push to `main` and

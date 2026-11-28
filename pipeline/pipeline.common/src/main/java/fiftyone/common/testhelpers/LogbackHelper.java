@@ -46,7 +46,16 @@ import java.util.Objects;
  * Helpers to configure logback directly (in the course of a test, possibly) and other helpers
  */
 public class LogbackHelper {
+    /** Create a new instance. Every member is static. */
+    public LogbackHelper() {
+    }
+
+    /** Accepts logging events at level WARN or higher. */
     public static class WarnEvaluator extends EventEvaluatorBase<ILoggingEvent> {
+
+        /** Create a new instance. */
+        public WarnEvaluator() {
+        }
 
         /**
          * Return true if event passed as parameter has level WARN or higher, returns
@@ -82,6 +91,11 @@ public class LogbackHelper {
         StatusPrinter.printInCaseOfErrorsOrWarnings(loggerContext);
     }
 
+    /**
+     * Replace the logback configuration with the one read from a stream.
+     *
+     * @param logbackConfig the configuration XML
+     */
     public static void configureLogback(InputStream logbackConfig){
         // assume SLF4J is bound to logback in the current environment
         LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
@@ -99,6 +113,11 @@ public class LogbackHelper {
         StatusPrinter.printInCaseOfErrorsOrWarnings(context);
     }
 
+    /**
+     * Replace the logback configuration with the one read from a file.
+     *
+     * @param logbackConfig the configuration file
+     */
     public static void configureLogback(File logbackConfig){
         // assume SLF4J is bound to logback in the current environment
         LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
@@ -116,6 +135,11 @@ public class LogbackHelper {
         StatusPrinter.printInCaseOfErrorsOrWarnings(context);
     }
 
+    /**
+     * Replace the logback configuration with the one in a string.
+     *
+     * @param logbackConfig the configuration XML
+     */
     public static void configureLogbackFromString(String logbackConfig){
         // assume SLF4J is bound to logback in the current environment
         LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();

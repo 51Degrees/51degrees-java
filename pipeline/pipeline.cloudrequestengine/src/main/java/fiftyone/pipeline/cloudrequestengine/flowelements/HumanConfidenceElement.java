@@ -260,6 +260,11 @@ public class HumanConfidenceElement
     }
 
     @Override
+    protected Class<ElementData> getDataType() {
+        return ElementData.class;
+    }
+
+    @Override
     public String getElementDataKey() {
         return ELEMENT_DATA_KEY;
     }

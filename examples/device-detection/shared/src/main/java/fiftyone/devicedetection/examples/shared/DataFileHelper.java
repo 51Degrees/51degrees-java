@@ -110,10 +110,13 @@ public static class DatafileInfo {
         }
     }
     public static DatafileInfo getDatafileMetaData(String dataFileLocation) throws Exception {
-        try(DeviceDetectionHashEngine ddhe = new DeviceDetectionHashEngineBuilder()
+        DeviceDetectionHashEngine ddhe = new DeviceDetectionHashEngineBuilder()
                 .setAutoUpdate(false)
-                .build(dataFileLocation,false)) {
+                .build(dataFileLocation,false);
+        try {
             return new DatafileInfo((FiftyOneDataFile) ddhe.getDataFileMetaData(), ddhe.getDataSourceTier());
+        } finally {
+            ddhe.close();
         }
     }
 
@@ -225,7 +228,6 @@ public static class DatafileInfo {
      * @throws Exception if the file was not found
      */
 
-    @SuppressWarnings("RedundantThrows")
     public static File getEvidenceFile(String evidenceFilename) throws Exception {
         if (Objects.isNull(evidenceFilename)) {
             evidenceFilename = EVIDENCE_FILE_PATH;
@@ -248,7 +250,6 @@ public static class DatafileInfo {
      * @return a full pathname
      * @throws Exception if the file was not found
      */
-    @SuppressWarnings("RedundantThrows")
     public static String getDataFileLocation(String dataFilename) throws Exception {
         if (Objects.isNull(dataFilename)) {
             dataFilename = findHashFileName();

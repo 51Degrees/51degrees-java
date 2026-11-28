@@ -34,7 +34,6 @@ package fiftyone.devicedetection.examples.console.comparison;
  * It will also be necessary to add WURFL specific dependencies to the POM.xml
  */
 
-@SuppressWarnings({"unused", "CommentedOutCode"})
 public class DetectionImplScientiaMobile {
     public static final String WURFL = "WURFL";
 

@@ -33,8 +33,20 @@ import java.util.*;
 
 //! [class]
 //! [constructor]
+/** A Flow Element that finds the star sign for a date of birth. */
 public class SimpleFlowElement extends FlowElementBase<StarSignData, ElementPropertyMetaData> {
 
+    @Override
+    protected Class<StarSignData> getDataType() {
+        return StarSignData.class;
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param logger used for logging
+     * @param elementDataFactory creates the element data this element returns
+     */
     public SimpleFlowElement(
         Logger logger,
         ElementDataFactory<StarSignData> elementDataFactory) {

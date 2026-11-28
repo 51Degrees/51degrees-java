@@ -26,7 +26,6 @@ import fiftyone.pipeline.core.data.*;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.typed.TypedKey;
 import fiftyone.pipeline.core.typed.TypedKeyDefault;
-import fiftyone.pipeline.util.Types;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
@@ -40,7 +39,7 @@ import java.util.concurrent.BlockingQueue;
  * {@link #process(FlowData)} method deals with {@link FlowData#isStopped()} and
  * any errors that may be thrown, and calls the abstract
  * {@link #processInternal(FlowData)} method to do the actual processing.
- * <p>
+ *
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/conceptual-overview.md#flow-element">Specification</a>
  *
  * @param <TData>     the type of element data that the flow element will write to
@@ -53,7 +52,9 @@ public abstract class FlowElementBase<
         TProperty extends ElementPropertyMetaData>
         implements FlowElement<TData, TProperty> {
 
+    /** Used for logging. */
     protected final Logger logger;
+    /** The key the element's data is stored under in the Flow Data. */
     protected TypedKey<TData> typedKey = null;
     private boolean closed = false;
     private final List<Pipeline> pipelines = new ArrayList<>();
@@ -66,13 +67,12 @@ public abstract class FlowElementBase<
      * @param elementDataFactory the factory to use when creating a
      *                           {@link ElementDataBase} instance
      */
-    @SuppressWarnings("this-escape")
     public FlowElementBase(
             Logger logger,
             ElementDataFactory<TData> elementDataFactory) {
         this.logger = logger;
-        logger.debug("FlowElement '" + getClass().getSimpleName() + "'-'" +
-                hashCode() + "' created.");
+        logger.debug("FlowElement '" + getClass().getSimpleName() +
+                "' created.");
         this.dataFactory = new DataFactoryInternal<>(elementDataFactory, this);
     }
 
@@ -120,15 +120,21 @@ public abstract class FlowElementBase<
         return null;
     }
 
+    /**
+     * The type of the element data this element adds to the Flow Data,
+     * which reads through {@link #getTypedDataKey()} are checked against.
+     * Usually the interface the element's data implements, for example
+     * {@code return MyData.class;}.
+     * @return the type of the element data
+     */
+    protected abstract Class<TData> getDataType();
+
     @Override
     public TypedKey<TData> getTypedDataKey() {
         if (typedKey == null) {
             typedKey = new TypedKeyDefault<>(
                     getElementDataKey(),
-                    Types.findSubClassParameterType(
-                            this,
-                            FlowElementBase.class,
-                            0));
+                    getDataType());
         }
         return typedKey;
     }
@@ -226,6 +232,12 @@ public abstract class FlowElementBase<
      */
     protected abstract void unmanagedResourcesCleanup();
 
+    /**
+     * Release the element's resources.
+     *
+     * @param closing true to release managed resources as well as unmanaged
+     *    ones
+     */
     protected void close(boolean closing) {
         if (closed) {
             logger.debug("FlowElement '{}'-'{}' already closed.", getClass().getSimpleName(), hashCode());
@@ -241,7 +253,6 @@ public abstract class FlowElementBase<
     }
 
 /*
-    @SuppressWarnings("deprecation")
     @Override
     protected void finalize() throws Throwable {
         if (closed) {
@@ -261,7 +272,7 @@ public abstract class FlowElementBase<
 */
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         close(true);
     }
 

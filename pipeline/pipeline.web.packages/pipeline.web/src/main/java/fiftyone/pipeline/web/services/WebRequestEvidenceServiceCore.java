@@ -58,6 +58,9 @@ public interface WebRequestEvidenceServiceCore {
      * service.
      */
     class Default implements WebRequestEvidenceServiceCore {
+        /** Create a new instance. */
+        public Default() {
+        }
 
         private static final String EVIDENCE_REQUEST_METHOD =
             EVIDENCE_SERVER_PREFIX + EVIDENCE_SEPERATOR + "request-method";

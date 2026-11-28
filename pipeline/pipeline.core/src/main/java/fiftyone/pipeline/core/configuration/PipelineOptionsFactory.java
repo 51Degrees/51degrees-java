@@ -37,12 +37,30 @@ import java.io.File;
  * Instantiate pipeline options from an XML config file
  */
 public class PipelineOptionsFactory {
+    /** Create a new instance. */
+    public PipelineOptionsFactory() {
+    }
 
+    /** Name of the schema the options file is checked against. */
     public static final String PIPELINE_OPTIONS_SCHEMA = "pipelineOptions.xsd";
 
+    /**
+     * Read Pipeline options from an XML file.
+     *
+     * @param configFile path of the file
+     * @return the options
+     * @throws Exception if the file cannot be read or does not match the schema
+     */
     public static PipelineOptions getOptionsFromFile(String configFile) throws Exception{
         return getOptionsFromFile(new File(configFile));
     }
+    /**
+     * Read Pipeline options from an XML file.
+     *
+     * @param configFile the file
+     * @return the options
+     * @throws Exception if the file cannot be read or does not match the schema
+     */
     public static PipelineOptions getOptionsFromFile(File configFile) throws Exception{
         JAXBContext jaxbContext = JAXBContext.newInstance(PipelineOptions.class);
         Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();

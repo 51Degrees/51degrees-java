@@ -147,7 +147,8 @@ public class GettingStartedWebMixed extends HttpServlet {
         return configXml.getParentFile().getParent();
     }
 
-    FlowDataProviderCore flowDataProvider = new FlowDataProviderCore.Default();
+    // HttpServlet is Serializable, but this servlet is never serialized.
+    transient FlowDataProviderCore flowDataProvider = new FlowDataProviderCore.Default();
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws Exception {

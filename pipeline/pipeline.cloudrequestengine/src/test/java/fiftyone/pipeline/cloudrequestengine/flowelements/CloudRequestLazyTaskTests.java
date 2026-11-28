@@ -92,6 +92,12 @@ public class CloudRequestLazyTaskTests extends CloudRequestEngineTestsBase {
     }
 
     private class TestAspectEngine extends CloudAspectEngineBase<TestData> {
+
+        @Override
+        protected Class<TestData> getDataType() {
+            return TestData.class;
+        }
+
         private final String key;
 
         TestAspectEngine(String key) {
@@ -317,7 +323,6 @@ public class CloudRequestLazyTaskTests extends CloudRequestEngineTestsBase {
     }
 
     @Test
-    @SuppressWarnings("rawtypes")
     public void FailedRequest_EveryParallelReaderMarkedFailed()
         throws Exception {
         jsonResponse = "{\"errors\":[\"The request failed.\"]}";
@@ -333,7 +338,7 @@ public class CloudRequestLazyTaskTests extends CloudRequestEngineTestsBase {
         try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
                 .setSuppressProcessException(true)
                 .addFlowElement(engine)
-                .addFlowElementsParallel(new FlowElement[]{first, second})
+                .addFlowElementsParallel(new FlowElement<?, ?>[]{first, second})
                 .build();
              FlowData data = pipeline.createFlowData()) {
             data.addEvidence("query.User-Agent", "iPhone");

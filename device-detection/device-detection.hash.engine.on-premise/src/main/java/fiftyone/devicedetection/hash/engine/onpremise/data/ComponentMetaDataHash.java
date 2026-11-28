@@ -111,6 +111,12 @@ public class ComponentMetaDataHash implements ComponentMetaData {
         return super.equals(obj);
     }
 
+    /**
+     * Whether this component has the same id as another.
+     *
+     * @param other the component to compare with
+     * @return true if the ids are equal
+     */
     public boolean equals(ComponentMetaData other) {
         return getComponentId() == other.getComponentId();
     }

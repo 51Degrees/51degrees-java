@@ -149,11 +149,10 @@ public class Translator {
             List<IWeightedValue<String>> result =
                 new ArrayList<>(values.size());
             for (Object item : values) {
-                @SuppressWarnings("unchecked")
-                IWeightedValue<String> weighted = (IWeightedValue<String>) item;
+                IWeightedValue<?> weighted = (IWeightedValue<?>) item;
                 result.add(new WeightedValue<>(
                     weighted.getRawWeighting(),
-                    translateString(weighted.getValue(), errors)));
+                    translateString((String) weighted.getValue(), errors)));
             }
             return result;
         }

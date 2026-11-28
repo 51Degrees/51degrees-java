@@ -57,14 +57,13 @@ public class PropertyHelperWeightingTests {
         };
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
     @Test
     public void weightedValues_ListOfWeightedValues_KeepsEachWeighting() {
         List<IWeightedValue<Object>> list = new ArrayList<>();
         list.add(weighted(49151, "gb"));
         list.add(weighted(16384, "ie"));
-        AspectPropertyValue<String> property =
-            new AspectPropertyValueDefault(list);
+        AspectPropertyValue<?> property =
+            new AspectPropertyValueDefault<>(list);
 
         List<IWeightedValue<?>> values =
             PropertyHelper.weightedValues(property);
@@ -100,12 +99,11 @@ public class PropertyHelperWeightingTests {
         assertTrue(PropertyHelper.weightedValues(null).isEmpty());
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
     @Test
     public void asWeightedString_ShowsValueAndWeighting() {
         List<IWeightedValue<Object>> list = new ArrayList<>();
         list.add(weighted(65535, "gb"));
         assertEquals("gb (weighting 1.00)", PropertyHelper.asWeightedString(
-            new AspectPropertyValueDefault(list)));
+            new AspectPropertyValueDefault<>(list)));
     }
 }

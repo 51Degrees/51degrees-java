@@ -46,6 +46,11 @@ public final class MultiDeviceDataCloud
     private static final String DEVICE_LIST_KEY = "profiles";
 
     /**
+     * The profiles, which are also stored under {@link #DEVICE_LIST_KEY}.
+     */
+    private final List<DeviceData> devices = new ArrayList<>();
+
+    /**
      * Constructs a new instance with a non-thread-safe, case-insensitive
      * {@link Map} as the underlying storage.
      * @param logger used for logging
@@ -58,7 +63,7 @@ public final class MultiDeviceDataCloud
         FlowData flowData,
         AspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine) {
         super(logger, flowData, engine);
-        this.put(DEVICE_LIST_KEY, new ArrayList<DeviceData>());
+        this.put(DEVICE_LIST_KEY, devices);
     }
 
     /**
@@ -77,7 +82,7 @@ public final class MultiDeviceDataCloud
         AspectEngine<? extends AspectData, ? extends AspectPropertyMetaData> engine,
         MissingPropertyService missingPropertyService) {
         super(logger, flowData, engine, missingPropertyService);
-        this.put(DEVICE_LIST_KEY, new ArrayList<DeviceData>());
+        this.put(DEVICE_LIST_KEY, devices);
     }
 
     @Override
@@ -95,11 +100,10 @@ public final class MultiDeviceDataCloud
     }
 
     /**
-     * Internal methof to get the list of devices form the underlying data.
-     * @return
+     * Internal method to get the list of devices from the underlying data.
+     * @return the list of devices
      */
-    @SuppressWarnings("unchecked")
     private List<DeviceData> getDeviceList() {
-        return (List<DeviceData>)this.get(DEVICE_LIST_KEY);
+        return devices;
     }
 }

@@ -49,6 +49,9 @@ public class LruPutCache<K, V> extends LruCacheBase<K, V> implements PutCache<K,
      * Implementation of {@link CacheBuilder} for {@link LruPutCache} caches.
      */
     public static class Builder implements PutCacheBuilder {
+        /** Create a new instance. */
+        public Builder() {
+        }
 
         private boolean updateExisting = false;
         private int concurrency = Runtime.getRuntime().availableProcessors();

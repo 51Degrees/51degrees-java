@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
  */
 public class DeviceDetectionPipelineBuilder {
 
+    /** Creates the loggers for the Pipeline and its elements. */
     protected final ILoggerFactory loggerFactory;
     private final DataUpdateService dataUpdateService;
     private final HttpClient httpClient;
@@ -145,7 +146,7 @@ public class DeviceDetectionPipelineBuilder {
     /**
      * Use the 51Degrees Cloud service to perform device detection.
      * @param resourceKey The resource key to use when querying the cloud service. 
-     * Obtain one from https://51degrees.com/configure?utm_source=code&utm_medium=comment&utm_campaign=51degrees-java&utm_content=device-detection-src-main-java-fiftyone-devicedetection-devicedetectionpipelinebuilder.java&utm_term=usecloud
+     * Obtain one from <a href="https://51degrees.com/configure?utm_source=code&amp;utm_medium=comment&amp;utm_campaign=51degrees-java&amp;utm_content=device-detection-src-main-java-fiftyone-devicedetection-devicedetectionpipelinebuilder.java&amp;utm_term=usecloud">51degrees.com/configure</a>
      * @return A builder that can be used to configure and build a pipeline
      * that will use the cloud device detection engine.
      */

@@ -88,7 +88,7 @@ public class EnginesPopulateAspectDataTests {
 
     /**
      * The classes the engines' factories make, which hold the values, take
-     * the Pipeline's Aspect Data behaviour from its base class.
+     * the Pipeline's Aspect Data behavior from its base class.
      */
     @Test
     public void Engines_DataMadeIsAspectData() {

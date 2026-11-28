@@ -8,7 +8,7 @@
 
 package fiftyone.devicedetection.hash.engine.onpremise.interop.swig;
 
-public class DeviceDetectionHashEngineModule {
+final class DeviceDetectionHashEngineModule {
   public static void Evidence_AddFromBytes(EvidenceBaseSwig evidence, byte[] key, byte[] value) {
     DeviceDetectionHashEngineModuleJNI.Evidence_AddFromBytes(EvidenceBaseSwig.getCPtr(evidence), evidence, key, value);
   }

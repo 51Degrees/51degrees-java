@@ -37,13 +37,27 @@ import fiftyone.pipeline.core.data.FlowData;
  * Data containing the result of {@link SetHeadersElement}.
  */
 public class SetHeadersData extends ElementDataBase {
+	/** Name of the property holding the response headers to set. */
 	public static final String RESPONSE_HEADER_PROPERTY_NAME =
 		"ResponseHeaderDictionary";
 
+	/**
+	 * Create a new instance.
+	 *
+	 * @param logger used for logging
+	 * @param flowData the Flow Data this element data belongs to
+	 */
 	public SetHeadersData(Logger logger, FlowData flowData) {
 		super(logger, flowData);
 	}
 	
+	/**
+	 * Create a new instance with values.
+	 *
+	 * @param logger used for logging
+	 * @param flowData the Flow Data this element data belongs to
+	 * @param data the values
+	 */
 	public SetHeadersData(
 		Logger logger,
 		FlowData flowData,
@@ -62,14 +76,27 @@ public class SetHeadersData extends ElementDataBase {
 	}
 
 	/**
-	 * Get the response headers to be set.
+	 * Get the response headers to be set. The map returned is a copy, so
+	 * changing it does not change the headers held by this instance.
 	 * @return table of response headers
 	 */
-	@SuppressWarnings("unchecked")
 	public HashMap<String, String> getResponseHeaderDictionary() {
-		return getAs(RESPONSE_HEADER_PROPERTY_NAME, HashMap.class);
+		Map<?, ?> stored = getAs(RESPONSE_HEADER_PROPERTY_NAME, Map.class);
+		if (stored == null) {
+			return null;
+		}
+		HashMap<String, String> result = new HashMap<>();
+		for (Map.Entry<?, ?> entry : stored.entrySet()) {
+			result.put((String) entry.getKey(), (String) entry.getValue());
+		}
+		return result;
 	}
 	
+	/**
+	 * Set the response headers to be set.
+	 *
+	 * @param responseHeaders table of response headers
+	 */
 	public void setResponseHeaderDictionary(HashMap<String, String> responseHeaders) {
 		put(RESPONSE_HEADER_PROPERTY_NAME, responseHeaders);
 	}

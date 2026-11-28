@@ -27,8 +27,15 @@ package fiftyone.devicedetection;
  */
 @Deprecated
 public class Enums {
+    /** Create a new instance. */
+    public Enums() {
+    }
+
+    /** The detection algorithms an engine can use. */
     public enum DeviceDetectionAlgorithm {
+        /** The Hash algorithm. */
         Hash,
+        /** The Pattern algorithm, which is no longer available. */
         Pattern
     }
 }

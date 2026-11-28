@@ -68,7 +68,6 @@ public class PropertyHelper {
      * @param value the raw value from AspectPropertyValue.getValue()
      * @return the unwrapped string representation
      */
-    @SuppressWarnings("unchecked")
     private static String unwrapValue(Object value) {
         if (value instanceof List) {
             List<?> list = (List<?>) value;
@@ -299,11 +298,14 @@ public class PropertyHelper {
      * useful when the typed value is needed for further calculation rather
      * than for display.
      * @param property the property value
-     * @param <T> the declared type of the property
+     * @param type the type of the value, which the value is checked against
+     * @param <T> the type of the value
      * @return the first unwrapped value, or null when there is no value
+     * @throws ClassCastException if the value is not of the type
      */
-    @SuppressWarnings("unchecked")
-    public static <T> T firstValue(AspectPropertyValue<T> property) {
+    public static <T> T firstValue(
+            AspectPropertyValue<?> property,
+            Class<T> type) {
         if (property == null || property.hasValue() == false) {
             return null;
         }
@@ -317,9 +319,9 @@ public class PropertyHelper {
             if (item instanceof IWeightedValue) {
                 item = ((IWeightedValue<?>) item).getValue();
             }
-            return (T) item;
+            return type.cast(item);
         }
-        return (T) value;
+        return type.cast(value);
     }
 
 }

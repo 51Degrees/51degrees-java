@@ -35,6 +35,9 @@ import java.util.TreeMap;
  * against the available locales.
  */
 public class Languages {
+    /** Create a new instance. */
+    public Languages() {
+    }
 
     /**
      * The result of matching a language tag against the available locales: the
@@ -51,6 +54,7 @@ public class Languages {
         }
 
         /**
+         * Returns the translator for the matched locale.
          * @return the translator for the matched locale
          */
         public Translator getTranslator() {
@@ -58,6 +62,7 @@ public class Languages {
         }
 
         /**
+         * Returns the locale key that was matched (e.g. "fr_FR").
          * @return the locale key that was matched (e.g. "fr_FR")
          */
         public String getLocale() {

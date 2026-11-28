@@ -86,6 +86,12 @@ public class ValueMetaDataHash implements ValueMetaData {
         return super.equals(obj);
     }
 
+    /**
+     * Whether this value has the same property and name as another.
+     *
+     * @param other the value to compare with
+     * @return true if both are equal
+     */
     public boolean equals(ValueMetaData other) {
         return getProperty().equals(other.getProperty()) &&
             getName().equals(other.getName());

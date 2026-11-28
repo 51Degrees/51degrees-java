@@ -32,7 +32,8 @@ import fiftyone.pipeline.engines.services.MissingPropertyServiceDefault;
 import org.slf4j.Logger;
 
 /**
- * Engine that takes the JSON response from the {@link CloudRequestEngine} and
+ * Engine that takes the JSON response from the
+ * {@link fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine} and
  * uses it to populate a {@link MultiIPIDataCloud} instance for easier
  * consumption.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/device-detection-specification/pipeline-elements/hardware-profile-lookup-cloud.md">Specification</a>
@@ -40,6 +41,17 @@ import org.slf4j.Logger;
 public class HardwareProfileCloudEngine
     extends PropertyKeyedCloudEngineBase<MultiIPIDataCloud, IPIntelligenceData> {
 
+    @Override
+    protected Class<MultiIPIDataCloud> getDataType() {
+        return MultiIPIDataCloud.class;
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param logger used for logging
+     * @param aspectDataFactory creates the element data this engine returns
+     */
     public HardwareProfileCloudEngine(
         Logger logger,
         ElementDataFactory<MultiIPIDataCloud> aspectDataFactory) {

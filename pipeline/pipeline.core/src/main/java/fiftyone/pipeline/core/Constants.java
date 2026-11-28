@@ -22,32 +22,47 @@
 
 package fiftyone.pipeline.core;
 
+/** Evidence prefixes, suffixes and keys shared by every element. */
 public class Constants {
-    // Evidence Separator
+    /** Create a new instance. */
+    public Constants() {
+    }
+
+    /** Separates the parts of an evidence key. */
     public static final String EVIDENCE_SEPERATOR = ".";
 
-    // Evidence Prefixes
+    /** Prefix of evidence from HTTP headers. */
     public static final String EVIDENCE_HTTPHEADER_PREFIX = "header";
+    /** Prefix of evidence from cookies. */
     public static final String EVIDENCE_COOKIE_PREFIX = "cookie";
+    /** Prefix of evidence from the session. */
     public static final String EVIDENCE_SESSION_PREFIX = "session";
+    /** Prefix of evidence from the query string. */
     public static final String EVIDENCE_QUERY_PREFIX = "query";
+    /** Prefix of evidence from the server. */
     public static final String EVIDENCE_SERVER_PREFIX = "server";
 
-    // Evidence Suffixes
+    /** Suffix of the User-Agent evidence. */
     public static final String EVIDENCE_USERAGENT = "user-agent";
+    /** Suffix of the web context root evidence. */
     public static final String EVIDENCE_WEB_CONTEXT_ROOT_SUFFIX = "contextroot";
 
-    // Evidence Keys
+    /** Evidence key of the client IP address. */
     public static final String EVIDENCE_CLIENTIP_KEY = EVIDENCE_SERVER_PREFIX + EVIDENCE_SEPERATOR + "client-ip";
 
+    /** Evidence key of a User-Agent in the query string. */
     public static final String EVIDENCE_QUERY_USERAGENT_KEY = EVIDENCE_QUERY_PREFIX + EVIDENCE_SEPERATOR + EVIDENCE_USERAGENT;
 
+    /** Evidence key of the User-Agent header. */
     public static final String EVIDENCE_HEADER_USERAGENT_KEY = EVIDENCE_HTTPHEADER_PREFIX + EVIDENCE_SEPERATOR + EVIDENCE_USERAGENT;
     
+    /** Evidence key of the web context root. */
     public static final String EVIDENCE_WEB_CONTEXT_ROOT = EVIDENCE_SERVER_PREFIX + EVIDENCE_SEPERATOR + EVIDENCE_WEB_CONTEXT_ROOT_SUFFIX;
     
+    /** Evidence key of the request protocol. */
     public static final String EVIDENCE_PROTOCOL = EVIDENCE_HTTPHEADER_PREFIX + EVIDENCE_SEPERATOR + "protocol";
 
+    /** Evidence key of the session. */
     public static final String EVIDENCE_SESSION_KEY = EVIDENCE_SESSION_PREFIX + EVIDENCE_SEPERATOR + "session";
 
     /**

@@ -22,14 +22,21 @@
 
 package fiftyone.pipeline.cloudrequestengine.flowelements;
 
+/** Default settings of the Cloud Request Engine. */
 public class Constants {
-	// Default end point
+    /** Create a new instance. */
+    public Constants() {
+    }
+
+	/** The default cloud service endpoint. */
 	public static final String END_POINT_DEFAULT =
 		"https://cloud.51degrees.com/api/v4";
-	// Environment variable name to set end point
+	/** Environment variable that sets the cloud service endpoint. */
 	public static final String CLOUD_ENDPOINT_VARIABLE = "_51DEGREES_CLOUD_ENDPOINT";
-	// Default timeout for each request to the cloud service, as the
-	// specification's Configuration options table gives.
+	/**
+	 * Default timeout of each request to the cloud service, in milliseconds, as
+	 * the Configuration options table of the specification gives.
+	 */
 	public static final int DEFAULT_TIMEOUT_MILLIS = 2000;
 	
 }

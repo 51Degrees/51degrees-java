@@ -38,12 +38,11 @@ import java.util.concurrent.*;
  * package-private, so only the Pipeline builders create one.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/advanced-features/parallel-processing.md">Specification</a>
  */
-@SuppressWarnings("rawtypes")
 public class ParallelElements
     extends FlowElementBase<ElementData, ElementPropertyMetaData> {
 
     private final ExecutorService threadPool;
-    private List<FlowElement> flowElements;
+    private List<FlowElement<?, ?>> flowElements;
 
     private EvidenceKeyFilterAggregator evidenceKeyFilter;
 
@@ -53,7 +52,7 @@ public class ParallelElements
      * @param flowElements the list of {@link FlowElement} instances to execute
      *                    when Process is called
      */
-    ParallelElements(Logger logger, List<FlowElement> flowElements) {
+    ParallelElements(Logger logger, List<FlowElement<?, ?>> flowElements) {
         super(logger, null);
         threadPool = Executors.newCachedThreadPool();
         this.flowElements = flowElements;
@@ -63,14 +62,19 @@ public class ParallelElements
      * Get an unmodifiable list of the child {@link FlowElement} instances.
      * @return child {@link FlowElement}s
      */
-    public List<FlowElement> getFlowElements() {
+    public List<FlowElement<?, ?>> getFlowElements() {
         return Collections.unmodifiableList(flowElements);
+    }
+
+    @Override
+    protected Class<ElementData> getDataType() {
+        return ElementData.class;
     }
 
     @Override
     protected void processInternal(FlowData flowData) throws Exception {
         List<FlowElementCallable> parallelCallers = new ArrayList<>(flowElements.size());
-        for (FlowElement element : flowElements) {
+        for (FlowElement<?, ?> element : flowElements) {
             parallelCallers.add(new FlowElementCallable(element, flowData));
         }
         try {
@@ -128,7 +132,7 @@ public class ParallelElements
     public EvidenceKeyFilter getEvidenceKeyFilter() {
         if (evidenceKeyFilter == null) {
             evidenceKeyFilter = new EvidenceKeyFilterAggregator();
-            for (FlowElement element : flowElements) {
+            for (FlowElement<?, ?> element : flowElements) {
                 evidenceKeyFilter.addFilter(element.getEvidenceKeyFilter());
             }
         }
@@ -150,7 +154,7 @@ public class ParallelElements
      */
     @Override
     public boolean hasLoadedProperties() {
-        for (FlowElement element : flowElements) {
+        for (FlowElement<?, ?> element : flowElements) {
             if (element.hasLoadedProperties() == false) {
                 return false;
             }
@@ -160,7 +164,7 @@ public class ParallelElements
 
     @Override
     protected void managedResourcesCleanup() {
-        for (FlowElement element : flowElements) {
+        for (FlowElement<?, ?> element : flowElements) {
             try {
                 element.close();
             } catch (Exception e) {
@@ -183,9 +187,9 @@ public class ParallelElements
     private static class FlowElementCallable implements Callable<FlowError> {
 
         private final FlowData _flowData;
-        private final FlowElement _element;
+        private final FlowElement<?, ?> _element;
 
-        private FlowElementCallable(FlowElement element, FlowData flowData) {
+        private FlowElementCallable(FlowElement<?, ?> element, FlowData flowData) {
             _element = element;
             _flowData = flowData;
         }

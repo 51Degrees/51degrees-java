@@ -25,6 +25,13 @@ package fiftyone.common.wrappers.data;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+/** A source of data that readers read from. */
 public interface Source {
+    /**
+     * Create a buffer over the data, positioned at the start.
+     *
+     * @return a new buffer
+     * @throws IOException if the data could not be read
+     */
     ByteBuffer createStream() throws IOException;
 }

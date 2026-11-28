@@ -38,6 +38,11 @@ import java.util.List;
 public class StopElement
     extends FlowElementBase<TestElementData, ElementPropertyMetaData> {
 
+    @Override
+    protected Class<TestElementData> getDataType() {
+        return TestElementData.class;
+    }
+
     private List<String> evidenceKeys = Collections.emptyList();
     private EvidenceKeyFilterWhitelist evidenceKeyFilter;
 

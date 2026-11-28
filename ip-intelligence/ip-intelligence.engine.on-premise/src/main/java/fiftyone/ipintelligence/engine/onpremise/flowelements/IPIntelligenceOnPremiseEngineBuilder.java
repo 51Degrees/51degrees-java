@@ -24,6 +24,7 @@ package fiftyone.ipintelligence.engine.onpremise.flowelements;
 
 import fiftyone.ipintelligence.engine.onpremise.data.IPIntelligenceDataHash;
 import fiftyone.ipintelligence.engine.onpremise.interop.swig.ConfigIpiSwig;
+import fiftyone.ipintelligence.engine.onpremise.interop.swig.EngineIpiSwig;
 import fiftyone.ipintelligence.engine.onpremise.interop.swig.RequiredPropertiesConfigSwig;
 import fiftyone.ipintelligence.engine.onpremise.interop.swig.VectorStringSwig;
 import fiftyone.ipintelligence.shared.flowelements.OnPremiseIPIntelligenceEngineBuilderBase;
@@ -44,6 +45,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 import static fiftyone.pipeline.util.StringManipulation.stringJoin;
 
@@ -58,6 +60,11 @@ public class IPIntelligenceOnPremiseEngineBuilder
     extends OnPremiseIPIntelligenceEngineBuilderBase<
     IPIntelligenceOnPremiseEngineBuilder,
     IPIntelligenceOnPremiseEngine> {
+
+    @Override
+    protected IPIntelligenceOnPremiseEngineBuilder self() {
+        return this;
+    }
 
     private final String dataDownloadType = "IPIV41";
    
@@ -190,7 +197,8 @@ public class IPIntelligenceOnPremiseEngineBuilder
     /**
      * Provide a hint as to how many threads will access the pipeline simultaneously
      * <p>
-     * Default is the result of {@link Runtime#getRuntime()#getAvailableProcessors()}
+     * Default is the result of
+     * {@code Runtime.getRuntime().availableProcessors()}
      * @see <a href="https://51degrees.com/documentation/_device_detection__features__concurrent_processing.html?utm_source=code&amp;utm_medium=comment&amp;utm_campaign=51degrees-java&amp;utm_content=ip-intelligence.engine.on-premise-src-main-java-fiftyone-ipintelligence-engine-onpremise-flowelements-ipintelligenceonpremiseenginebuilder.java&amp;utm_term=setconcurrency">Concurrent processing</a>
      * @param concurrency expected concurrent accesses
      * @return this builder
@@ -221,6 +229,16 @@ public class IPIntelligenceOnPremiseEngineBuilder
     @Override
     protected String getDefaultDataDownloadType() {
         return dataDownloadType;
+    }
+
+    /**
+     * The product of a data file, read from its header by the native
+     * library without loading the file.
+     * @return {@link EngineIpiSwig#getProductFromFile(String)}
+     */
+    @Override
+    protected Function<String, String> getProductReader() {
+        return EngineIpiSwig::getProductFromFile;
     }
 
     @Override

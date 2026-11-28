@@ -29,14 +29,22 @@ import fiftyone.pipeline.engines.flowelements.AspectEngine;
  * {@link AspectEngine}'s processing.
  */
 public enum MissingPropertyReason {
+    /**
+     * The data file does not hold the property, so a higher data tier is
+     * needed.
+     */
     DataFileUpgradeRequired,
+    /** The property was excluded when the engine was configured. */
     PropertyExcludedFromEngineConfiguration,
+    /** The resource key does not give the property. */
     PropertyNotAccessibleWithResourceKey,
+    /** The resource key gives no properties of the product. */
     ProductNotAccessibleWithResourceKey,
     /**
      * A request to the cloud service failed, so no data was available to
      * populate the property.
      */
     CloudRequestFailed,
+    /** No other reason fits. */
     Unknown
 }

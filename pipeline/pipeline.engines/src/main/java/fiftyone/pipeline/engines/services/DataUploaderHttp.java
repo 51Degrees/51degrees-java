@@ -31,6 +31,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.zip.GZIPOutputStream;
 
+/** Uploads data in an HTTP POST, compressed with gzip. */
 public class DataUploaderHttp implements DataUploader{
 
     private final String url;

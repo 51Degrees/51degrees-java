@@ -32,6 +32,11 @@ public class JavaScript implements Comparable<String> {
 
     private final String value;
 
+    /**
+     * Create a new instance.
+     *
+     * @param value the JavaScript
+     */
     public JavaScript(String value) {
         this.value = value;
     }

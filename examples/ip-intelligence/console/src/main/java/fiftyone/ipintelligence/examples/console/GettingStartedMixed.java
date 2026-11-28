@@ -161,12 +161,13 @@ public class GettingStartedMixed {
         DataFileHelper.useDataFile(
                 pipelineOptions, "IPIntelligenceOnPremiseEngine", ipiLocation);
 
-        try (Pipeline pipeline = new FiftyOnePipelineBuilder()
+        Pipeline pipeline = new FiftyOnePipelineBuilder()
                 // Usage sharing is off because this example's evidence is already
                 // known to 51Degrees. In production, leave usage sharing on, which adds
                 // a Usage Sharing Element to the Pipeline and helps improve the service.
                 .setShareUsage(false)
-                .buildFromConfiguration(pipelineOptions)) {
+                .buildFromConfiguration(pipelineOptions);
+        try {
 
             // The engines say which properties their data files have.
             DeviceDetectionHashEngine ddEngine = pipeline.getElement(DeviceDetectionHashEngine.class);
@@ -194,6 +195,8 @@ public class GettingStartedMixed {
             }
 
             logger.info("All done");
+        } finally {
+            pipeline.close();
         }
     }
 
@@ -245,7 +248,8 @@ public class GettingStartedMixed {
         boolean needsEnterprise = false;
         PrintWriter writer = new PrintWriter(out);
 
-        try (FlowData data = pipeline.createFlowData()) {
+        FlowData data = pipeline.createFlowData();
+        try {
 
             // List the evidence
             writer.println("===============================================================================");
@@ -321,6 +325,8 @@ public class GettingStartedMixed {
                     DataFileHelper.hasProperty(ipiEngine, "AccuracyRadiusMin"), ipData::getAccuracyRadiusMin);
             needsEnterprise |= writeValue(writer, "TimeZoneOffset",
                     DataFileHelper.hasProperty(ipiEngine, "TimeZoneOffset"), ipData::getTimeZoneOffset);
+        } finally {
+            data.close();
         }
         writer.println();
         writer.flush();

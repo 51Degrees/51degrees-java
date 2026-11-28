@@ -22,6 +22,7 @@
 
 package fiftyone.pipeline.engines.flowelements;
 
+import org.mockito.ArgumentMatchers;
 import fiftyone.common.testhelpers.TestLogger;
 import fiftyone.common.testhelpers.TestLoggerFactory;
 import fiftyone.pipeline.core.data.ElementData;
@@ -74,7 +75,6 @@ public class AspectEngineCachedTests {
         }
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void FlowElementCached_Process_CheckCachePut() throws Exception {
         // Arrange
@@ -87,8 +87,8 @@ public class AspectEngineCachedTests {
             engine,
             MissingPropertyServiceDefault.getInstance());
         when(data.getOrAdd(
-            any(TypedKey.class),
-            any(FlowElement.DataFactory.class)))
+            ArgumentMatchers.<TypedKey<EmptyEngineData>>any(),
+            any()))
             .thenReturn(aspectData);
         when(data.getFromElement(eq(engine))).thenReturn(aspectData);
 
@@ -117,7 +117,6 @@ public class AspectEngineCachedTests {
             any(EmptyEngineData.class));
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void FlowElementCached_Process_CheckCacheGet() throws Exception {
         // Arrange
@@ -138,10 +137,10 @@ public class AspectEngineCachedTests {
         // Assert
         // Verify that the cached result was added to the flow data.
         verify(data, times(1)).getOrAdd(
-            any(TypedKey.class),
-            argThat(new ArgumentMatcher<FlowElement.DataFactory<? extends ElementData>>() {
+            ArgumentMatchers.<TypedKey<EmptyEngineData>>any(),
+            argThat(new ArgumentMatcher<FlowElement.DataFactory<EmptyEngineData>>() {
                 @Override
-                public boolean matches(FlowElement.DataFactory<? extends ElementData> dataFactory) {
+                public boolean matches(FlowElement.DataFactory<EmptyEngineData> dataFactory) {
                     return dataFactory.create(data).equals(cachedData);
                 }
             })

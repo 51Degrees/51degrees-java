@@ -32,8 +32,6 @@ import fiftyone.pipeline.core.data.WeightedValue;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
-import fiftyone.pipeline.engines.data.AspectData;
-import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
 import fiftyone.pipeline.engines.flowelements.AspectEngine;
@@ -112,13 +110,12 @@ public final class Fixtures {
      * @return the pipeline
      * @throws Exception if the pipeline cannot be built
      */
-    @SuppressWarnings("unchecked")
     public static Pipeline build(
         AspectPropertyValue<List<IWeightedValue<String>>> geographical,
         AspectPropertyValue<List<IWeightedValue<String>>> population)
         throws Exception {
         final Logger logger = LOGGER_FACTORY.getLogger("StubIpEngine");
-        final AspectEngine<? extends AspectData, ? extends AspectPropertyMetaData>
+        final AspectEngine<?, ?>
             mockEngine = mock(AspectEngine.class);
         ElementDataFactory<IPIntelligenceData> ipFactory =
             (flowData, flowElement) ->
@@ -141,7 +138,7 @@ public final class Fixtures {
     /**
      * Build a pipeline as {@link #build} but with a countries translation
      * engine using custom country name sources and a custom set of all known
-     * countries. Used to exercise the missing-single-name behaviour with a
+     * countries. Used to exercise the missing-single-name behavior with a
      * deliberately incomplete locale map.
      * @param geographical the geographical weighted codes
      * @param population the population weighted codes
@@ -150,7 +147,6 @@ public final class Fixtures {
      * @return the pipeline
      * @throws Exception if the pipeline cannot be built
      */
-    @SuppressWarnings("unchecked")
     public static Pipeline buildCustom(
         AspectPropertyValue<List<IWeightedValue<String>>> geographical,
         AspectPropertyValue<List<IWeightedValue<String>>> population,
@@ -158,7 +154,7 @@ public final class Fixtures {
         List<Map.Entry<String, String>> allCountries)
         throws Exception {
         final Logger logger = LOGGER_FACTORY.getLogger("StubIpEngine");
-        final AspectEngine<? extends AspectData, ? extends AspectPropertyMetaData>
+        final AspectEngine<?, ?>
             mockEngine = mock(AspectEngine.class);
         ElementDataFactory<IPIntelligenceData> ipFactory =
             (flowData, flowElement) ->

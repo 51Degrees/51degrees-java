@@ -27,8 +27,8 @@ import fiftyone.pipeline.cloudrequestengine.data.CloudRequestData;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
 import fiftyone.pipeline.core.data.AccessiblePropertyMetaData.ProductMetaData;
 import fiftyone.pipeline.core.data.AccessiblePropertyMetaData.PropertyMetaData;
+import fiftyone.pipeline.core.data.ElementData;
 import fiftyone.pipeline.core.data.FlowData;
-import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.typed.TypedKey;
 import fiftyone.pipeline.engines.exceptions.PropertyMissingException;
@@ -36,6 +36,7 @@ import fiftyone.pipeline.engines.services.MissingPropertyReason;
 import fiftyone.pipeline.engines.services.MissingPropertyServiceDefault;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.Invocation;
 import org.slf4j.ILoggerFactory;
@@ -241,7 +242,6 @@ public class ProductMissingTests {
      * one string property.
      */
     // thenReturn has a varargs overload, so a generic Map is an unchecked array.
-    @SuppressWarnings("unchecked")
     private IPIntelligenceCloudEngine buildEngine(
         String productKey,
         String property) throws Exception {
@@ -271,7 +271,6 @@ public class ProductMissingTests {
      * response, as a Pipeline does, through the engine's public process
      * method.
      */
-    @SuppressWarnings("unchecked")
     private IPIntelligenceDataCloud processFlowData(
         IPIntelligenceCloudEngine engine,
         String response) throws Exception {
@@ -289,8 +288,8 @@ public class ProductMissingTests {
             engine,
             MissingPropertyServiceDefault.getInstance());
         when(flowData.getOrAdd(
-            any(TypedKey.class),
-            any(FlowElement.DataFactory.class))).thenReturn(data);
+            ArgumentMatchers.<TypedKey<ElementData>>any(),
+            any())).thenReturn(data);
         engine.process(flowData);
         return data;
     }

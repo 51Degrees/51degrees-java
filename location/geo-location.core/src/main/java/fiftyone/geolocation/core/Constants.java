@@ -27,16 +27,33 @@ import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 
 import java.util.Arrays;
 
+/** Evidence keys and messages used by the location engines. */
 public class Constants {
+    /** Create a new instance. */
+    public Constants() {
+    }
+
+    /** Evidence key for the latitude. */
     public static final String EVIDENCE_GEO_LAT_KEY = "location.latitude";
+    /** Evidence key for the longitude. */
     public static final String EVIDENCE_GEO_LON_KEY = "location.longitude";
+    /** Name of the cookie the client-side JavaScript sets to the latitude. */
     public static final String EVIDENCE_GEO_LAT_COOKIE_NAME = "51D_Pos_latitude";
+    /** Name of the cookie the client-side JavaScript sets to the longitude. */
     public static final String EVIDENCE_GEO_LON_COOKIE_NAME = "51D_Pos_longitude";
+    /** Evidence key for the latitude cookie. */
     public static final String EVIDENCE_GEO_LAT_COOKIE_KEY = "cookie." + EVIDENCE_GEO_LAT_COOKIE_NAME;
+    /** Evidence key for the longitude cookie. */
     public static final String EVIDENCE_GEO_LON_COOKIE_KEY = "cookie." + EVIDENCE_GEO_LON_COOKIE_NAME;
+    /** Evidence key for the latitude in the query string. */
     public static final String EVIDENCE_GEO_LAT_PARAM_KEY = "query." + EVIDENCE_GEO_LAT_COOKIE_NAME;
+    /** Evidence key for the longitude in the query string. */
     public static final String EVIDENCE_GEO_LON_PARAM_KEY = "query." + EVIDENCE_GEO_LON_COOKIE_NAME;
 
+    /**
+     * Accepts the client IP address and every latitude and longitude key,
+     * ignoring case.
+     */
     public static final EvidenceKeyFilter DefaultGeoEvidenceKeyFilter =
         new EvidenceKeyFilterWhitelist(Arrays.asList(
                 fiftyone.pipeline.core.Constants.EVIDENCE_CLIENTIP_KEY,
@@ -48,6 +65,10 @@ public class Constants {
                 Constants.EVIDENCE_GEO_LON_PARAM_KEY),
             String.CASE_INSENSITIVE_ORDER);
 
+    /**
+     * Explains why a property has no value before the client has sent its
+     * position.
+     */
     public static final String NO_EVIDENCE_MESSAGE = "This property requires evidence" +
         " values from JavaScript running on the client. It cannot be" +
         " populated until a future request is made that contains this" +

@@ -38,6 +38,8 @@ public interface IDerivedPropertyElement
     extends FlowElement<IDerivedPropertyData, ElementPropertyMetaData> {
 
     /**
+     * Returns the metadata of every script the element holds, in the order the
+     * scripts were added.
      * @return the metadata of every script the element holds, in the order
      * the scripts were added
      */

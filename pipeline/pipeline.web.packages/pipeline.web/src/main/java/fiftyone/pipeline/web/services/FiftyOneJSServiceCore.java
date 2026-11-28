@@ -93,9 +93,13 @@ public interface FiftyOneJSServiceCore {
      * Default implementation of the {@link FiftyOneJSServiceCore} service.
      */
     class Default implements FiftyOneJSServiceCore {
+        /** Serves the JavaScript and JSON. */
         protected final ClientsidePropertyServiceCore clientsidePropertyServiceCore;
+        /** Whether the JavaScript and JSON are served. */
         protected boolean enabled;
+        /** The end of the request path the JavaScript is served for. */
         protected String javaScriptPath;
+        /** The end of the request path the JSON is served for. */
         protected String jsonPath;
 
         /**
@@ -240,10 +244,6 @@ public interface FiftyOneJSServiceCore {
                         flowData, request, response) :
                     clientsidePropertyServiceCore.serveJsonNotModified(
                         flowData, request, response);
-            } catch (IOException | RuntimeException e) {
-                throw e;
-            } catch (Exception e) {
-                throw new IOException("FlowData could not be disposed of.", e);
             }
         }
 

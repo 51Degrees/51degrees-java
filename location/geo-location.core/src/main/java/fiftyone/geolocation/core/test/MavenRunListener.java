@@ -38,6 +38,10 @@ import org.slf4j.MarkerFactory;
  */
 @RunListener.ThreadSafe
 public class MavenRunListener extends RunListener {
+    /** Create a new instance. */
+    public MavenRunListener() {
+    }
+
     static Logger logger = LoggerFactory.getLogger(MavenRunListener.class);
     static Marker marker = MarkerFactory.getMarker("Starting Test");
     static Marker endMarker = MarkerFactory.getMarker("Finished Test");

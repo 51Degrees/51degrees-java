@@ -11,9 +11,8 @@ package fiftyone.devicedetection.hash.engine.onpremise.interop.swig;
 import fiftyone.devicedetection.hash.engine.onpremise.flowelements.DeviceDetectionHashEngine;
 import fiftyone.devicedetection.hash.engine.onpremise.interop.Constants;
 import fiftyone.pipeline.engines.fiftyone.flowelements.interop.LibLoader;
-import java.nio.ByteBuffer;
 
-public class DeviceDetectionHashEngineModuleJNI {
+final class DeviceDetectionHashEngineModuleJNI {
   public final static native long new_MapStringStringSwig__SWIG_0();
   public final static native long new_MapStringStringSwig__SWIG_1(long jarg1, MapStringStringSwig jarg1_);
   public final static native long MapStringStringSwig_Iterator_getNextUnchecked(long jarg1, MapStringStringSwig.Iterator jarg1_);
@@ -295,6 +294,8 @@ public class DeviceDetectionHashEngineModuleJNI {
   public final static native long new_EngineHashSwig__SWIG_1(byte[] jarg1, long jarg3, ConfigHashSwig jarg3_, long jarg4, RequiredPropertiesConfigSwig jarg4_);
   public final static native long EngineHashSwig_getPublishedTime(long jarg1, EngineHashSwig jarg1_);
   public final static native long EngineHashSwig_getUpdateAvailableTime(long jarg1, EngineHashSwig jarg1_);
+  public final static native long EngineHashSwig_getPublishedTimeFromFile(String jarg1);
+  public final static native String EngineHashSwig_getProductFromFile(String jarg1);
   public final static native String EngineHashSwig_getDataFilePath(long jarg1, EngineHashSwig jarg1_);
   public final static native String EngineHashSwig_getDataFileTempPath(long jarg1, EngineHashSwig jarg1_);
   public final static native void EngineHashSwig_refreshData__SWIG_0(long jarg1, EngineHashSwig jarg1_);

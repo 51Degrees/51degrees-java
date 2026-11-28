@@ -39,7 +39,6 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 /**
  * Finds the data and evidence files the tests use.
  */
-@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public class TestFileUtils {
     public static final String ENTERPRISE_HASH_DATA_FILE_NAME = "Enterprise-HashV41.hash";
 

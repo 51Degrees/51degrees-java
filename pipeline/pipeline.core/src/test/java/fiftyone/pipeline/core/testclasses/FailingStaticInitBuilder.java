@@ -26,7 +26,6 @@ package fiftyone.pipeline.core.testclasses;
 
 import fiftyone.pipeline.core.flowelements.FlowElement;
 
-@SuppressWarnings("rawtypes")
 public class FailingStaticInitBuilder {
     static {
         if (true) {
@@ -34,7 +33,7 @@ public class FailingStaticInitBuilder {
         }
     }
 
-    public FlowElement build() {
+    public FlowElement<?, ?> build() {
         return null;
     }
 }

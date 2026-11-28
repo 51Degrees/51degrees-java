@@ -34,6 +34,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * Holds the response from the cloud service and whether the request has
+ * started.
+ */
 public class CloudRequestDataInternal extends AspectDataBase
     implements AutoCloseable {
     private static final String JSON_RESPONSE_KEY = "json-response";
@@ -167,6 +171,13 @@ public class CloudRequestDataInternal extends AspectDataBase
     }
 
 
+    /**
+     * Create a new instance.
+     *
+     * @param logger used for logging
+     * @param flowData the Flow Data this element data belongs to
+     * @param engine the engine which created the instance
+     */
     public CloudRequestDataInternal(
         Logger logger,
         FlowData flowData,
@@ -174,6 +185,11 @@ public class CloudRequestDataInternal extends AspectDataBase
         super(logger, flowData, engine);
     }
 
+    /**
+     * Set the JSON response from the cloud service.
+     *
+     * @param value the response
+     */
     public void setJsonResponse(String value) {
         super.put(JSON_RESPONSE_KEY, value);
     }
@@ -189,6 +205,11 @@ public class CloudRequestDataInternal extends AspectDataBase
 		return false;
     }
     
+    /**
+     * Set whether the Cloud Request Engine has started processing.
+     *
+     * @param value true once it has started
+     */
     public void setProcessStarted(Boolean value) {
         super.put(PROCESS_STARTED_KEY, value);
     }

@@ -134,7 +134,6 @@ public class ShareUsageExample {
      *                      51Degrees endpoint. A test gives an endpoint of
      *                      its own, so that it shares nothing.
      */
-    @SuppressWarnings("unchecked")
     public static void run(InputStream is, String shareUsageUrl) throws Exception {
         logger.info("Starting ShareUsage example");
         logger.info("Settings: minEntriesPerMessage={}, sharePercentage={}%, recordsToProcess={}",
@@ -168,10 +167,11 @@ public class ShareUsageExample {
         // Build a pipeline with only the ShareUsageElement. The pipeline is
         // asked to close the element, which sends any data still queued, as
         // it is not closed anywhere else.
-        try (Pipeline pipeline = new PipelineBuilder()
+        Pipeline pipeline = new PipelineBuilder()
                 .addFlowElement(shareUsageElement)
                 .setAutoCloseElements(true)
-                .build()) {
+                .build();
+        try {
 
             logger.info("Pipeline built successfully with ShareUsageElement");
 
@@ -182,10 +182,11 @@ public class ShareUsageExample {
             // Process evidence records
             int count = 0;
             while (evidenceIterator.hasNext() && count < RECORDS_TO_PROCESS) {
-                try (FlowData flowData = pipeline.createFlowData()) {
+                FlowData flowData = pipeline.createFlowData();
+                try {
                     // Get evidence from YAML and filter to only header.* entries
                     Map<String, String> evidence = filterEvidence(
-                            (Map<String, String>) evidenceIterator.next(),
+                            (Map<?, ?>) evidenceIterator.next(),
                             "header.");
 
                     // Add a client IP address to the evidence for deduplication purposes
@@ -209,11 +210,15 @@ public class ShareUsageExample {
                     if (count % 10 == 0) {
                         logger.info("Processed {} records", count);
                     }
+                } finally {
+                    flowData.close();
                 }
             }
 
             logger.info("Finished processing {} records", count);
             logger.info("Closing pipeline - this will flush any remaining queued data...");
+        } finally {
+            pipeline.close();
         }
 
         // Give the background thread time to send any remaining data
@@ -224,17 +229,21 @@ public class ShareUsageExample {
     }
 
     /**
-     * Filter evidence entries to only include those with the specified prefix.
+     * Filter evidence entries to only include those with the specified prefix
+     * and both a name and a value.
      *
      * @param evidence the original evidence map
      * @param prefix the prefix to filter on (e.g., "header.")
      * @return filtered evidence map
      */
-    private static Map<String, String> filterEvidence(Map<String, String> evidence, String prefix) {
+    private static Map<String, String> filterEvidence(Map<?, ?> evidence, String prefix) {
         return evidence.entrySet()
                 .stream()
-                .filter(e -> e.getKey().startsWith(prefix))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                .filter(e -> e.getKey() != null && e.getValue() != null)
+                .filter(e -> e.getKey().toString().startsWith(prefix))
+                .collect(Collectors.toMap(
+                        e -> e.getKey().toString(),
+                        e -> e.getValue().toString()));
     }
 
     /**

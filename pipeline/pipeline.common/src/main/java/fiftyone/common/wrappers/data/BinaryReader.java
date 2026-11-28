@@ -30,11 +30,18 @@ import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 
+/** Reads little-endian values from a byte buffer. */
 public class BinaryReader implements Closeable {
 
     private final FileChannel channel;
     private ByteBuffer byteBuffer;
 
+    /**
+     * Create a reader over the whole file, mapped into memory.
+     *
+     * @param fileInputStream the file to read
+     * @throws IOException if the file could not be mapped
+     */
     public BinaryReader(FileInputStream fileInputStream) throws IOException {
         channel = fileInputStream.getChannel();
         byteBuffer = channel.map(
@@ -44,44 +51,95 @@ public class BinaryReader implements Closeable {
         byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
     }
 
+    /**
+     * Create a reader over the buffer given.
+     *
+     * @param byteBuffer the bytes to read
+     */
     public BinaryReader(ByteBuffer byteBuffer) {
         this.byteBuffer = byteBuffer;
         this.byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
         channel = null;
     }
 
+    /**
+     * The number of bytes the reader holds.
+     *
+     * @return the size in bytes
+     */
     public long getSize() {
         return byteBuffer.limit();
     }
 
+    /**
+     * The buffer the reader reads from.
+     *
+     * @return the buffer
+     */
     public ByteBuffer getBuffer() {
         return byteBuffer;
     }
 
+    /**
+     * The position of the next byte to read.
+     *
+     * @return the position
+     */
     public int getPosition() {
         return byteBuffer.position();
     }
 
+    /**
+     * Move to a new position.
+     *
+     * @param position the position of the next byte to read
+     */
     public void setPosition(int position) {
         byteBuffer.position(position);
     }
 
+    /**
+     * Read a 4 byte float.
+     *
+     * @return the value
+     */
     public float readFloat() {
         return byteBuffer.getFloat();
     }
 
+    /**
+     * Read a 2 byte integer.
+     *
+     * @return the value
+     */
     public short readInt16() {
         return byteBuffer.getShort();
     }
 
+    /**
+     * Read a 4 byte integer.
+     *
+     * @return the value
+     */
     public int readInt32() {
         return byteBuffer.getInt();
     }
 
+    /**
+     * Read an 8 byte integer.
+     *
+     * @return the value
+     */
     public long readInt64() {
         return byteBuffer.getLong();
     }
 
+    /**
+     * Read bytes as characters up to the next line feed, dropping any carriage
+     * return.
+     *
+     * @return the line, or null at the end of the buffer
+     */
     public String readLine() {
         char c;
         boolean read = false;
@@ -97,12 +155,23 @@ public class BinaryReader implements Closeable {
         return read == true ? result.toString() : null;
     }
 
+    /**
+     * Read the number of bytes given.
+     *
+     * @param length the number of bytes
+     * @return the bytes
+     */
     public byte[] readBytes(final int length) {
         byte[] bytes = new byte[length];
         byteBuffer.get(bytes);
         return bytes;
     }
 
+    /**
+     * Copy every byte the reader holds, from the start, into a new array.
+     *
+     * @return the bytes
+     */
     public byte[] toByteArray() {
         ByteBuffer result = ByteBuffer.allocate((int) getSize());
         // https://www.morling.dev/blog/bytebuffer-and-the-dreaded-nosuchmethoderror/
@@ -111,10 +180,21 @@ public class BinaryReader implements Closeable {
         return result.array();
     }
 
+    /**
+     * Write every byte the reader holds to a writer.
+     *
+     * @param writer where the bytes are written
+     * @throws IOException if the writer fails
+     */
     public void copyTo(BinaryWriter writer) throws IOException {
         writer.writeBytes(toByteArray());
     }
 
+    /**
+     * Read one byte.
+     *
+     * @return the value
+     */
     public byte readByte() {
         return byteBuffer.get();
     }

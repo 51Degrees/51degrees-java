@@ -185,14 +185,12 @@ public class FiftyOneUrlFormatterTests {
      * loaded data of the given tier, or it has no engine when the tier is
      * null.
      */
-    @SuppressWarnings("unchecked")
     private static FiftyOneDataFile dataFile(String type, String tier) {
         FiftyOneDataFileDefault file = new FiftyOneDataFileDefault();
         file.setConfiguration(configuration());
         file.setDataUpdateDownloadType(type);
         if (tier != null) {
-            OnPremiseAspectEngine<? extends AspectData,
-                ? extends AspectPropertyMetaData> engine =
+            OnPremiseAspectEngine<?, ?> engine =
                 mock(OnPremiseAspectEngine.class);
             when(engine.getDataSourceTier()).thenReturn(tier);
             file.setEngine(engine);

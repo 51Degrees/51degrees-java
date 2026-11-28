@@ -35,8 +35,13 @@ import static fiftyone.pipeline.core.Constants.*;
 @Service
 public interface WebRequestEvidenceService extends WebRequestEvidenceServiceCore {
 
+    /** Default implementation of {@link WebRequestEvidenceService}. */
     @Service
     class Default extends WebRequestEvidenceServiceCore.Default implements WebRequestEvidenceService {
+        /** Create a new instance. */
+        public Default() {
+        }
+
         @Override
         public void addEvidenceFromRequest(
             FlowData flowData,

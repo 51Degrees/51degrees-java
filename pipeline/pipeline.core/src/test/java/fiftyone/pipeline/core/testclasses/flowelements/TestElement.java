@@ -35,6 +35,11 @@ import java.util.List;
 public class TestElement
     extends FlowElementBase<TestElementData, ElementPropertyMetaData> {
 
+    @Override
+    protected Class<TestElementData> getDataType() {
+        return TestElementData.class;
+    }
+
     public TestElement(
         Logger logger,
         ElementDataFactory<TestElementData> elementDataFactory) {

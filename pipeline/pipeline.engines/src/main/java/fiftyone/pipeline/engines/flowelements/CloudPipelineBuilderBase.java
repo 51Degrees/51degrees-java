@@ -38,20 +38,33 @@ public abstract class CloudPipelineBuilderBase<
     TBuilder extends CloudPipelineBuilderBase<TBuilder>>
     extends PrePackagedPipelineBuilderBase<TBuilder> {
 
+    /** The cloud service endpoint, or empty for the default. */
     protected String url = "";
 
+    /** The data endpoint, or empty for the default. */
     protected String dataEndpoint = "";
 
+    /** The properties endpoint, or empty for the default. */
     protected String propertiesEndpoint = "";
 
+    /** The evidence keys endpoint, or empty for the default. */
     protected String evidenceKeysEndpoint = "";
 
+    /** The resource key sent with each request. */
     protected String resourceKey = "";
 
+    /** The license key sent with each request. */
     protected String licenseKey = "";
 
+    /**
+     * The properties to ask the cloud service for, or empty for all the key
+     * gives.
+     */
     protected final List<String> requestedProperties = new ArrayList<>();
 
+    /**
+     * The value of the Origin header sent with each request, or empty for none.
+     */
     protected String cloudRequestOrigin = "";
 
     /**
@@ -73,13 +86,12 @@ public abstract class CloudPipelineBuilderBase<
      */
     @DefaultValue("https://cloud.51degrees.com/api/v4/, the Cloud Request " +
         "Engine's default")
-    @SuppressWarnings("unchecked")
     public TBuilder setEndPoint(String url) {
         if (url.endsWith("/") == false) {
             url += '/';
         }
         this.url = url;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -88,10 +100,9 @@ public abstract class CloudPipelineBuilderBase<
      * @return this builder
      */
     @DefaultValue("The endpoint followed by {resourcekey}.json")
-    @SuppressWarnings("unchecked")
     public TBuilder setDataEndpoint(String url) {
         this.dataEndpoint = url;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -101,10 +112,9 @@ public abstract class CloudPipelineBuilderBase<
      * @return this builder
      */
     @DefaultValue("The endpoint followed by accessibleproperties")
-    @SuppressWarnings("unchecked")
     public TBuilder setPropertiesEndpoint(String propertiesEndpoint) {
         this.propertiesEndpoint = propertiesEndpoint;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -114,10 +124,9 @@ public abstract class CloudPipelineBuilderBase<
      * @return this builder
      */
     @DefaultValue("The endpoint followed by evidencekeys")
-    @SuppressWarnings("unchecked")
     public TBuilder setEvidenceKeysEndpoint(String evidenceKeysEndpoint) {
         this.evidenceKeysEndpoint = evidenceKeysEndpoint;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -127,10 +136,9 @@ public abstract class CloudPipelineBuilderBase<
      */
     @DefaultValue("No default - a resource key or a license key must be " +
         "supplied")
-    @SuppressWarnings("unchecked")
     public TBuilder setResourceKey(String key) {
         this.resourceKey = key;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -143,10 +151,9 @@ public abstract class CloudPipelineBuilderBase<
      * @return this builder
      */
     @DefaultValue("No default")
-    @SuppressWarnings("unchecked")
     public TBuilder setLicenseKey(String key) {
         this.licenseKey = key;
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -158,14 +165,13 @@ public abstract class CloudPipelineBuilderBase<
      * @return this builder
      */
     @DefaultValue("None - required with a license key alone")
-    @SuppressWarnings("unchecked")
     public TBuilder setRequestedProperties(List<String> properties) {
         if (properties == null) {
             throw new IllegalArgumentException(
                 "properties must not be null");
         }
         requestedProperties.addAll(properties);
-        return (TBuilder)this;
+        return self();
     }
 
     /**
@@ -195,9 +201,8 @@ public abstract class CloudPipelineBuilderBase<
      * @return this builder
      */
     @DefaultValue("None")
-    @SuppressWarnings("unchecked")
     public TBuilder setCloudRequestOrigin(String cloudRequestOrigin) {
         this.cloudRequestOrigin = cloudRequestOrigin;
-        return (TBuilder)this;
+        return self();
     }
 }

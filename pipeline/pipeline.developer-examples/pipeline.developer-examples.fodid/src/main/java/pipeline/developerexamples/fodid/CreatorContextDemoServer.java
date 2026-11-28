@@ -116,6 +116,9 @@ import java.util.concurrent.CompletionException;
  * Then open {@code http://localhost:5151/}.
  */
 public class CreatorContextDemoServer {
+    /** Create a new instance. */
+    public CreatorContextDemoServer() {
+    }
 
     /** Where the page and stylesheet live on the classpath. */
     static final String RESOURCES = "/fodid/creator-context/";
@@ -139,6 +142,12 @@ public class CreatorContextDemoServer {
      */
     static DidClient client;
 
+    /**
+     * Start the demo server, or say how to set a resource key when none is set.
+     *
+     * @param args not used
+     * @throws Exception if the server fails
+     */
     public static void main(String[] args) throws Exception {
         if (RESOURCE == null) {
             System.out.println("This demo calls the 51Degrees cloud " +

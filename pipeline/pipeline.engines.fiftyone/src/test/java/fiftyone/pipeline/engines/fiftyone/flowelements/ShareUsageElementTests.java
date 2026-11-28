@@ -226,7 +226,7 @@ public class ShareUsageElementTests {
     private void createShareUsage(
             double sharePercentage,
             int minimumEntriesPerMessage,
-            @SuppressWarnings("SameParameterValue") int interval,
+            int interval,
             List<String> blockedHeaders,
             List<String> includedQueryStringParams,
             List<Entry<String, String>> ignoreDataEvidenceFiler) {
@@ -244,7 +244,7 @@ public class ShareUsageElementTests {
             double sharePercentage,
             int minimumEntriesPerMessage,
             int maximumQueueSize,
-            @SuppressWarnings("SameParameterValue") int interval,
+            int interval,
             List<String> blockedHeaders,
             List<String> includedQueryStringParams,
             List<Entry<String, String>> ignoreDataEvidenceFiler) {
@@ -403,6 +403,11 @@ public class ShareUsageElementTests {
      */
     private static class GroupMember
         extends FlowElementBase<ElementData, ElementPropertyMetaData> {
+
+        @Override
+        protected Class<ElementData> getDataType() {
+            return ElementData.class;
+        }
         private final String key;
 
         GroupMember(String key) {
@@ -459,11 +464,10 @@ public class ShareUsageElementTests {
      * 51Degrees package those depend on".
      */
     @Test
-    @SuppressWarnings("rawtypes")
     public void ShareUsageElement_Packages_IncludeParallelGroupMembers() throws Exception {
         pipeline.close();
         pipeline = new PipelineBuilder()
-            .addFlowElementsParallel(new FlowElement[] {
+            .addFlowElementsParallel(new FlowElement<?, ?>[] {
                 new FirstGroupMember(),
                 new SecondGroupMember() })
             .build();

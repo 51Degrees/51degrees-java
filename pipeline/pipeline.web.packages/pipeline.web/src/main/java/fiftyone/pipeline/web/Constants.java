@@ -22,7 +22,11 @@
 
 package fiftyone.pipeline.web;
 
+/** Names, paths and defaults used by the web integration. */
 public class Constants {
+    /** Create a new instance. */
+    public Constants() {
+    }
 
     /**
      * The name of the core JavaScript served to the client.

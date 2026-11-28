@@ -41,13 +41,16 @@ $modules = @($plan | ForEach-Object { Get-ModulePath $_ })
 # common-ci deploys from the root to a local staging folder with signing, and
 # copies the result and the publishing bundle into the package folder. It reads
 # the signing keys from the environment of the job that signs. The versions are
-# already set, so it is given no folder to set them in.
-./java/build-package.ps1 `
-    -RepoName $RepoName `
-    -Name $Name `
-    -Version $Version `
-    -VersionPaths @() `
-    -ExtraArgs "-DskipNativeBuild=true", "-pl", ($modules -join ',')
+# already set, so it is given no folder to set them in. It compiles with the
+# same JDK as every other build.
+Invoke-WithJavaHome (Get-CompileJavaHome) {
+    ./java/build-package.ps1 `
+        -RepoName $RepoName `
+        -Name $Name `
+        -Version $Version `
+        -VersionPaths @() `
+        -ExtraArgs "-DskipNativeBuild=true", "-pl", ($modules -join ',')
+}
 $exitCode = $LASTEXITCODE
 
 # Maven Central limits each organisation's release size and file count in a

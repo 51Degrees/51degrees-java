@@ -52,11 +52,12 @@ public class GettingStartedApiNotesTest {
     public void startupNotes_FreeDataFile() throws Exception {
         String lite = DataFileHelper.getDataFileLocation(
                 DataFileHelper.LITE_DATA_FILE_REL_PATH);
-        try (IPIntelligenceOnPremiseEngine engine =
-                     new IPIntelligenceOnPremiseEngineBuilder(
-                             LoggerFactory.getILoggerFactory())
-                             .setAutoUpdate(false)
-                             .build(lite, false)) {
+        IPIntelligenceOnPremiseEngine engine =
+                new IPIntelligenceOnPremiseEngineBuilder(
+                        LoggerFactory.getILoggerFactory())
+                        .setAutoUpdate(false)
+                        .build(lite, false);
+        try {
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
             GettingStartedApi.writeStartupNotes(
                     new PrintStream(buffer, true, "UTF-8"), engine);
@@ -75,6 +76,8 @@ public class GettingStartedApiNotesTest {
             assertTrue("The '" + FindOutMore.HEADING +
                             "' section should end with its rule:\n" + output,
                     output.indexOf(FindOutMore.RULE, heading) > heading);
+        } finally {
+            engine.close();
         }
     }
 }

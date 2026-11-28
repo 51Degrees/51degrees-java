@@ -28,12 +28,9 @@ import fiftyone.pipeline.core.data.EvidenceKeyFilter;
 import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
-import fiftyone.pipeline.core.typed.TypedKey;
-import fiftyone.pipeline.core.typed.TypedKeyDefault;
 import fiftyone.pipeline.engines.data.AspectData;
 import fiftyone.pipeline.engines.data.AspectPropertyMetaData;
 import fiftyone.pipeline.engines.data.MultiProfileData;
-import fiftyone.pipeline.util.Types;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -62,6 +59,12 @@ public abstract class PropertyKeyedCloudEngineBase<
         return evidenceKeyFilter;
     }
 
+    /**
+     * Create a new instance.
+     *
+     * @param logger used for logging
+     * @param aspectDataFactory creates the element data this engine returns
+     */
     public PropertyKeyedCloudEngineBase(
         Logger logger,
         ElementDataFactory<TData> aspectDataFactory) {
@@ -109,13 +112,11 @@ public abstract class PropertyKeyedCloudEngineBase<
         }
     }
 
-    @Override
-    public TypedKey<TData> getTypedDataKey() {
-        if (typedKey == null) {
-            typedKey = new TypedKeyDefault<>(getElementDataKey(), Types.findSubClassParameterType(this, PropertyKeyedCloudEngineBase.class, 0));
-        }
-        return typedKey;
-    }
-
+    /**
+     * Create the element data for one profile in the response.
+     *
+     * @param flowData the Flow Data being processed
+     * @return a new element data
+     */
     protected abstract TProfile createProfileData(FlowData flowData);
 }

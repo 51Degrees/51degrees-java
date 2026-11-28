@@ -66,6 +66,11 @@ public abstract class ShareUsageBase
     extends FlowElementBase<ElementData, ElementPropertyMetaData>
     implements RunsLast {
 
+    @Override
+    protected Class<ElementData> getDataType() {
+        return ElementData.class;
+    }
+
     /**
      * IP Addresses of local host device.
      */
@@ -714,14 +719,13 @@ public abstract class ShareUsageBase
      * If there are multiple or no pipelines then log an error.
      * @return list of flow elements
      */
-    @SuppressWarnings("rawtypes")
     protected List<String> getFlowElements() {
         if (flowElements == null) {
             Pipeline pipeline;
             if (getPipelines().size() == 1) {
                 pipeline = getPipelines().get(0);
                 List<String> list = new ArrayList<>();
-                for ( FlowElement element : pipeline.getFlowElements()) {
+                for ( FlowElement<?, ?> element : pipeline.getFlowElements()) {
                     list.add(element.getClass().getName());
                 }
                 flowElements = list;
@@ -769,11 +773,10 @@ public abstract class ShareUsageBase
      * @param classes the classes in use
      * @param elements the flow elements to add
      */
-    @SuppressWarnings("rawtypes")
     private static void addElementClasses(
             List<Class<?>> classes,
-            List<FlowElement> elements) {
-        for (FlowElement element : elements) {
+            List<FlowElement<?, ?>> elements) {
+        for (FlowElement<?, ?> element : elements) {
             classes.add(element.getClass());
             if (element instanceof ParallelElements) {
                 addElementClasses(
@@ -1000,7 +1003,6 @@ public abstract class ShareUsageBase
      * @param address the address to check
      * @return true if localhost
      */
-    @SuppressWarnings("unused")
     private boolean isLocalHost(String address) throws UnknownHostException {
         InetAddress other = InetAddress.getByName(address);
         for (InetAddress host : localHosts) {
@@ -1179,6 +1181,11 @@ public abstract class ShareUsageBase
         }
     }
 
+    /**
+     * Send the queued usage data.
+     *
+     * @throws HttpException if the data could not be sent
+     */
     protected abstract void sendUsageData() throws HttpException;
 
     /**
@@ -1247,9 +1254,17 @@ public abstract class ShareUsageBase
      * prior to it being sent to 51Degrees.
      */
     protected static class ShareUsageData {
+        /** Create a new instance. */
+        protected ShareUsageData() {
+        }
+
+        /** The session id, when sessions are tracked. */
         public String sessionId;
+        /** The position of this request in the session. */
         public int sequence;
+        /** The IP address of the client. */
         public String clientIP;
+        /** The evidence shared, by category and then by field name. */
         public final Map<String, Map<String, String>> evidenceData = new HashMap<>();
 
         void tryAddToData(String key, Object value) {

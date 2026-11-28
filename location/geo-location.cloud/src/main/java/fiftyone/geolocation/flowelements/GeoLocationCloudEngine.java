@@ -48,7 +48,16 @@ import static fiftyone.pipeline.cloudrequestengine.Constants.Messages.NoCloudRes
 import java.util.*;
 import org.json.JSONArray;
 
+/**
+ * Engine that reads the location results from the response of the Cloud Request
+ * Engine.
+ */
 public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> {
+
+    @Override
+    protected Class<CloudGeoData> getDataType() {
+        return CloudGeoData.class;
+    }
 
     private CloudRequestEngine cloudRequestEngine = null;
     private volatile List<AspectPropertyMetaData> properties;
@@ -108,10 +117,22 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
         return elementDataKey;
     }
 
+    /**
+     * The prefix the cloud service gives the properties of the chosen provider.
+     *
+     * @return the provider's property prefix
+     */
     public String getDataProviderPrefix() {
         return dataProviderPrefix;
     }
 
+    /**
+     * Create a new instance.
+     *
+     * @param logger used for logging
+     * @param aspectDataFactory creates the element data this engine returns
+     * @param provider the location data provider whose results the engine reads
+     */
     public GeoLocationCloudEngine(
         Logger logger,
         ElementDataFactory<CloudGeoData> aspectDataFactory,
@@ -194,6 +215,13 @@ public class GeoLocationCloudEngine extends CloudAspectEngineBase<CloudGeoData> 
         }
     }
 
+    /**
+     * Get the reason the response gives for a property having no value.
+     *
+     * @param jsonObj the JSON object holding the property
+     * @param key the property name
+     * @return the reason, or null if the response gives none
+     */
     public static Object tryToGet(JSONObject jsonObj, String key) {
         return jsonObj.opt(key + "nullreason");
     }

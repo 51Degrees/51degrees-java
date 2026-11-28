@@ -34,11 +34,26 @@ import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
+/** Shows how to build and use a custom on-premise engine. */
 public class Main {
+    /** Create a new instance. */
+    public Main() {
+    }
+
     private static final ILoggerFactory loggerFactory =
         LoggerFactory.getILoggerFactory();
 
+    /** Runs the example. */
     public static class Example {
+        /** Create a new instance. */
+        public Example() {
+        }
+
+        /**
+         * Run the example.
+         *
+         * @throws Exception if the example fails
+         */
         public void run() throws Exception {
 //! [usage]
             SimpleOnPremiseEngine starSignEngine =
@@ -96,6 +111,12 @@ public class Main {
         output.flush();
     }
 
+    /**
+     * Run the example, then print where to find out more.
+     *
+     * @param args not used
+     * @throws Exception if the example fails
+     */
     public static void main(String[] args) throws Exception {
         new Example().run();
         writeFindOutMore(System.out);

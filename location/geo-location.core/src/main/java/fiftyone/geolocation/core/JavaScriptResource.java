@@ -22,7 +22,15 @@
 
 package fiftyone.geolocation.core;
 
+/**
+ * Holds the JavaScript that asks the browser for its position and stores it in
+ * cookies.
+ */
 public class JavaScriptResource {
+    /** Create a new instance. */
+    public JavaScriptResource() {
+    }
+
     private static final String javaScript =
         "if (navigator.geolocation) {\n" +
         "\tnavigator.geolocation.getCurrentPosition(function(pos) {\n" +
@@ -36,6 +44,11 @@ public class JavaScriptResource {
         "    });\n" +
         "}\n";
 
+    /**
+     * Get the JavaScript that sends the position.
+     *
+     * @return the JavaScript source
+     */
     public static String getJavaScript() {
         return javaScript;
     }

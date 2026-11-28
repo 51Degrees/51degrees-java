@@ -25,6 +25,7 @@ package fiftyone.pipeline.core.flowelements;
 import fiftyone.pipeline.core.data.ElementData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.typed.TypedKey;
+import fiftyone.pipeline.core.typed.TypedKeyDefault;
 import fiftyone.pipeline.core.exceptions.PipelineDataException;
 import fiftyone.pipeline.core.testclasses.flowelements.MultiplyByFiveElement;
 import org.junit.Test;
@@ -108,15 +109,16 @@ public class FlowDataDeclaredExceptionsTests {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void getByTypedKey_DeclaresAndThrowsIllegalState()
         throws Exception {
         List<Class<?>> declared = declared("get", TypedKey.class);
         assertDeclares(declared, IllegalStateException.class, "get(TypedKey)");
         assertDeclares(declared, IllegalArgumentException.class,
             "get(TypedKey)");
+        TypedKey<ElementData> key =
+            new TypedKeyDefault<>("test", ElementData.class);
         assertThrowsDeclared(declared, "get(TypedKey)", false,
-            d -> d.get(mock(TypedKey.class)));
+            d -> d.get(key));
     }
 
     @Test
@@ -159,6 +161,5 @@ public class FlowDataDeclaredExceptionsTests {
     /**
      * Keeps the ElementData import, which documents what get returns.
      */
-    @SuppressWarnings("unused")
     private static ElementData unused;
 }

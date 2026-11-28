@@ -22,6 +22,12 @@
 
 package fiftyone.pipeline.engines.flowelements;
 
+/** Constants used by the element builders. */
 public class Constants {
+    /** Create a new instance. */
+    public Constants() {
+    }
+
+    /** Separates the property names in a list. */
     public static final String PROPERTIES_SEPARATOR = ",";
 }

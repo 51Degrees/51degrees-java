@@ -52,7 +52,6 @@ import static fiftyone.pipeline.util.FileFinder.getFilePath;
  * <p>
  * The concepts of "pipeline", "flow data", "evidence" and "results" are illustrated.
  */
-@SuppressWarnings("DuplicatedCode")
 public class GettingStartedCloud {
     /**
      * This example's tag in the links of its "Find out more" section.
@@ -107,10 +106,11 @@ public class GettingStartedCloud {
         For more information about pipelines in general see the documentation at
         https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-java&utm_content=console-src-main-java-fiftyone-devicedetection-examples-console-gettingstartedcloud.java&utm_term=run
 
-        Note that we wrap the creation of a pipeline in a try/resources to control its lifecycle */
-        try (Pipeline pipeline = new DeviceDetectionPipelineBuilder()
+        Note that we close the pipeline in a finally block to control its lifecycle */
+        Pipeline pipeline = new DeviceDetectionPipelineBuilder()
                 .useCloud(resourceKey)
-                .build()) {
+                .build();
+        try {
 
 
             // carry out some sample detections
@@ -119,6 +119,8 @@ public class GettingStartedCloud {
             }
 
             logger.info("All done");
+        } finally {
+            pipeline.close();
         }
     }
 
@@ -138,9 +140,10 @@ public class GettingStartedCloud {
         detection is called "evidence" and usually consists of a number of HTTP Header field
         values, in this case represented by a Map<String, String> of header name/value entries.
 
-        FlowData is wrapped in a try/resources block in order to ensure that the unmanaged
+        FlowData is closed in a finally block in order to ensure that the unmanaged
         resources allocated by the native device detection library are freed */
-        try (FlowData data = pipeline.createFlowData()) {
+        FlowData data = pipeline.createFlowData();
+        try {
 
             // list the evidence
             writer.println("Input values:");
@@ -169,6 +172,8 @@ public class GettingStartedCloud {
             writer.println("\tPlatform Version: " + asString(device.getPlatformVersion()));
             writer.println("\tBrowser Name: " + asString(device.getBrowserName()));
             writer.println("\tBrowser Version: " + asString(device.getBrowserVersion()));
+        } finally {
+            data.close();
         }
         writer.println();
         writer.flush();

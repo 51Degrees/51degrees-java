@@ -88,40 +88,53 @@ public interface PipelineResultServiceCore {
          * request, so it is closed here instead.
          */
         @Override
-        @SuppressWarnings("PMD.FlowDataInTryWithResources")
         public void process(HttpServletRequest request) {
             FlowData flowData = createFlowData(request);
+            Throwable failure = null;
             try {
                 // Start processing the data
                 flowData.process();
             } catch (RuntimeException | Error e) {
-                closeAfterFailure(flowData, e);
+                failure = e;
                 throw e;
+            } finally {
+                if (failure != null) {
+                    try {
+                        flowData.close();
+                    } catch (RuntimeException closeException) {
+                        failure.addSuppressed(closeException);
+                    }
+                }
             }
             // Store the FlowData in the request
             request.setAttribute(HTTPCONTEXT_FLOWDATA, flowData);
         }
 
+        /**
+         * The FlowData is returned to the caller, which closes it. If adding
+         * the evidence fails it never reaches the caller, so it is closed
+         * here instead.
+         */
         @Override
-        @SuppressWarnings("PMD.FlowDataInTryWithResources")
         public FlowData createFlowData(HttpServletRequest request) {
             FlowData flowData = pipeline.createFlowData();
+            Throwable failure = null;
             try {
                 // Extract the required pieces of evidence from the request
                 evidenceService.addEvidenceFromRequest(flowData, request);
             } catch (RuntimeException | Error e) {
-                closeAfterFailure(flowData, e);
+                failure = e;
                 throw e;
+            } finally {
+                if (failure != null) {
+                    try {
+                        flowData.close();
+                    } catch (RuntimeException closeException) {
+                        failure.addSuppressed(closeException);
+                    }
+                }
             }
             return flowData;
-        }
-
-        private static void closeAfterFailure(FlowData flowData, Throwable e) {
-            try {
-                flowData.close();
-            } catch (Exception closeException) {
-                e.addSuppressed(closeException);
-            }
         }
     }
 }

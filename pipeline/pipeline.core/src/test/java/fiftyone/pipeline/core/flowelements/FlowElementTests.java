@@ -22,7 +22,6 @@
 
 package fiftyone.pipeline.core.flowelements;
 
-import fiftyone.pipeline.core.data.factories.ElementDataFactory;
 import fiftyone.pipeline.core.testclasses.flowelements.TestElement;
 import fiftyone.pipeline.core.testclasses.data.TestElementData;
 import fiftyone.pipeline.core.typed.TypedKey;
@@ -35,9 +34,10 @@ import static org.mockito.Mockito.mock;
 public class FlowElementTests {
 
     @Test
-    @SuppressWarnings({ "rawtypes", "unchecked" })
     public void FlowElement_GetTypedKey() {
-        FlowElement element = new TestElement(mock(Logger.class), mock(ElementDataFactory.class));
+        TestElement element = new TestElement(
+            mock(Logger.class),
+            (data, flowElement) -> new TestElementData(mock(Logger.class), data));
         TypedKey<TestElementData> typedKey = element.getTypedDataKey();
 
         assertEquals(element.getElementDataKey(), typedKey.getName());

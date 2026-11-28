@@ -54,14 +54,13 @@ public class ValueTests {
         }
     }
 
-    @SuppressWarnings("unchecked")
     public static void valueTypes(WrapperCloud wrapper) throws Exception {
         try (FlowData data = wrapper.getPipeline().createFlowData()) {
             data.addEvidence("server.client-ip", Constants.IPV6_ADDRESS)
                 .process();
             ElementData elementData = data.get(wrapper.getEngine().getElementDataKey());
             for (AspectPropertyMetaData property :
-                (List<AspectPropertyMetaData>) wrapper.getEngine().getProperties()) {
+                wrapper.getEngine().getProperties()) {
                 if (property.isAvailable()) {
                     Class<?> expectedType;
                     Object value = elementData.get(property.getName());
@@ -94,14 +93,13 @@ public class ValueTests {
         }
     }
     
-    @SuppressWarnings("unchecked")
     public static void availableProperties(WrapperCloud wrapper) throws Exception {
         try (FlowData data = wrapper.getPipeline().createFlowData()) {
             data.addEvidence("server.client-ip", Constants.IPV4_ADDRESS)
                 .process();
             ElementData elementData = data.get(wrapper.getEngine().getElementDataKey());
             for (AspectPropertyMetaData property :
-                (List<AspectPropertyMetaData>) wrapper.getEngine().getProperties()) {
+                wrapper.getEngine().getProperties()) {
                 Map<String, Object> map = elementData.asKeyMap();
 
                 assertEquals("Property '" + property.getName() + "' " +
@@ -112,7 +110,6 @@ public class ValueTests {
         }
     }
 
-    @SuppressWarnings("unchecked")
     public static void typedGetters(WrapperCloud   wrapper) throws Exception {
         try (FlowData data = wrapper.getPipeline().createFlowData()) {
             data.addEvidence("server.client-ip", Constants.IPV6_ADDRESS)
@@ -120,7 +117,7 @@ public class ValueTests {
             ElementData elementData = data.get(wrapper.getEngine().getElementDataKey());
             List<String> missingGetters = new ArrayList<>();
             for (AspectPropertyMetaData property :
-                (List<AspectPropertyMetaData>) wrapper.getEngine().getProperties()) {
+                wrapper.getEngine().getProperties()) {
 
                 if (Arrays.asList(Constants.ExcludedProperties)
                     .contains(property.getName()) == false) {

@@ -50,6 +50,7 @@ public final class SigningKey {
     }
 
     /**
+     * Create a new instance.
      * @param startsAt     when the key comes into force, UTC
      * @param publicKeyPem the public key in SPKI PEM form
      * @param endsAt       when the key stops being in force, UTC, which must
@@ -66,12 +67,17 @@ public final class SigningKey {
         this.endsAt = endsAt;
     }
 
-    /** @return when the key comes into force, UTC */
+    /**
+     * Returns when the key comes into force, UTC.
+     * @return when the key comes into force, UTC
+     */
     public Instant getStartsAt() {
         return startsAt;
     }
 
     /**
+     * Returns when the key stops being in force, UTC, or null where the cloud
+     * sent no end.
      * @return when the key stops being in force, UTC, or null where the
      *         cloud sent no end
      */
@@ -79,7 +85,10 @@ public final class SigningKey {
         return endsAt;
     }
 
-    /** @return the public key in SPKI PEM form */
+    /**
+     * Returns the public key in SPKI PEM form.
+     * @return the public key in SPKI PEM form
+     */
     public String getPublicKeyPem() {
         return publicKeyPem;
     }

@@ -41,14 +41,14 @@ import static org.junit.Assert.fail;
  * is built in code or from a configuration.
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/pipeline-elements/usage-sharing-element.md#position-in-the-pipeline">Specification</a>
  */
-@SuppressWarnings("rawtypes")
 public class RunsLastTests {
 
     private static final String MUST_BE_LAST =
         "must be the last Flow Element and outside any parallel group";
 
     private static void assertRefused(PipelineBuilder builder) {
-        try (Pipeline pipeline = builder.build()) {
+        try {
+            builder.build().close();
             fail("A Pipeline with the element anywhere but last was built.");
         } catch (PipelineConfigurationException e) {
             assertTrue(e.getMessage(), e.getMessage().contains(MUST_BE_LAST));
@@ -70,7 +70,7 @@ public class RunsLastTests {
     public void RunsLast_InAParallelGroup_Refused() {
         assertRefused(new PipelineBuilder()
             .addFlowElement(new MultiplyByElement(2))
-            .addFlowElementsParallel(new FlowElement[]{
+            .addFlowElementsParallel(new FlowElement<?, ?>[]{
                 new MultiplyByElement(3),
                 new RunsLastElement()}));
     }
@@ -82,7 +82,7 @@ public class RunsLastTests {
             .addFlowElement(new MultiplyByElement(2))
             .addFlowElement(last)
             .build()) {
-            List<FlowElement> elements = pipeline.getFlowElements();
+            List<FlowElement<?, ?>> elements = pipeline.getFlowElements();
             assertEquals(last, elements.get(elements.size() - 1));
         }
     }
@@ -100,8 +100,8 @@ public class RunsLastTests {
     }
 
     private static void assertRefusedFrom(PipelineOptions options) {
-        try (Pipeline pipeline =
-                 new PipelineBuilder().buildFromConfiguration(options)) {
+        try {
+            new PipelineBuilder().buildFromConfiguration(options).close();
             fail("A Pipeline with the element anywhere but last was built " +
                 "from a configuration.");
         } catch (PipelineConfigurationException e) {
@@ -137,7 +137,7 @@ public class RunsLastTests {
         options.elements.add(element("RunsLastElement"));
         try (Pipeline pipeline =
                  new PipelineBuilder().buildFromConfiguration(options)) {
-            List<FlowElement> elements = pipeline.getFlowElements();
+            List<FlowElement<?, ?>> elements = pipeline.getFlowElements();
             assertTrue(elements.get(elements.size() - 1)
                 instanceof RunsLastElement);
         }

@@ -103,12 +103,16 @@ public class PropertyIndexLaterDataSetTests {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private static Map<String, Integer> table(
         IPIntelligenceOnPremiseEngine engine) throws Exception {
         Field field = IPIntelligenceOnPremiseEngine.class
             .getDeclaredField("propertyIndexes");
         field.setAccessible(true);
-        return new TreeMap<>((Map<String, Integer>) field.get(engine));
+        Map<String, Integer> table = new TreeMap<>();
+        for (Map.Entry<?, ?> entry :
+            ((Map<?, ?>) field.get(engine)).entrySet()) {
+            table.put((String) entry.getKey(), (Integer) entry.getValue());
+        }
+        return table;
     }
 }

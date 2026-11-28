@@ -40,6 +40,7 @@ import org.slf4j.Logger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -59,6 +60,13 @@ import static fiftyone.pipeline.util.Types.getPrimitiveTypeMap;
 public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceDataBase
     implements ProvidesValuesAsString {
 
+    /**
+     * Maps each primitive type to its boxed type.
+     * @deprecated no longer used, as native values are converted without
+     * it. Use {@link fiftyone.pipeline.util.Types#getPrimitiveTypeMap()}
+     * for the same map.
+     */
+    @Deprecated
     protected final Map<Class<?>, Class<?>> primitiveTypes;
     private final Object dataLock = new Object();
     private final Object getLock = new Object();
@@ -239,6 +247,29 @@ public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceData
     }
 
     /**
+     * Whether the map {@link #asKeyMap()} fills holds the value in the form
+     * asked for. The map holds every property as a list of weighted values,
+     * so a property asked for as a single value is read from the results
+     * instead. A property asked for as a plain list, not weighted, is not
+     * held in the map either, and reading it from the results gives null,
+     * as the results give lists only as weighted values.
+     * @param key name of the property
+     * @param type the type asked for
+     * @param parameterizedTypes the parameterized types asked for
+     * @return true if the value in the map is in the form asked for
+     */
+    private boolean isHeldInMap(
+        String key,
+        Class<?> type,
+        Class<?>[] parameterizedTypes) {
+        return type.equals(AspectPropertyValue.class) == false ||
+            parameterizedTypes.length == 0 ||
+            Arrays.equals(
+                parameterizedTypes,
+                toWeightedListType(getPropertyType(key), false));
+    }
+
+    /**
      * By default, the base map will not be populated as doing so is a fairly
      * expensive operation. Instead, we override the AsDictionary method to
      * populate the dictionary on-demand.
@@ -277,7 +308,6 @@ public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceData
      * @param propertyName name of the property
      * @return value type, or {@link Object} if unknown
      */
-    @SuppressWarnings("unchecked")
     protected Class<?> getPropertyType(String propertyName) {
         Class<?> type = Object.class;
         Map<String, ElementPropertyMetaData> properties =
@@ -286,38 +316,40 @@ public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceData
         if (properties != null) {
             ElementPropertyMetaData property = properties.get(propertyName);
             if (property != null) {
-                type = (Class<Object>)property.getType();
+                type = property.getType();
             }
         }
         return type;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     protected <T> TryGetResult<T> tryGetValue(
         String key,
         Class<T> type,
-        Class<?>... parameterisedTypes) {
+        Class<?>... parameterizedTypes) {
         TryGetResult<T> result = new TryGetResult<>();
-        if (mapPopulated == true) {
-            // If the complete set of values has been populated
-            // then we can use the base implementation to get
-            // the value from the dictionary.
+        if (mapPopulated == true &&
+            isHeldInMap(key, type, parameterizedTypes)) {
+            // If the complete set of values has been populated, and the
+            // value is wanted in the form the map holds it, then we can
+            // use the base implementation to get the value from the
+            // dictionary.
             return super.tryGetValue(key, type);
         } else {
             // If the complete set of values has not been populated
             // then we don't want to retrieve values for all
             // properties so just get the one we want.
             if (propertyIsAvailable(key)) {
+                Class<?> valueType = type;
                 if (type.equals(Object.class)) {
-                    type = (Class<T>)AspectPropertyValue.class;
-                    parameterisedTypes = toWeightedListType(getPropertyType(key), false);
+                    valueType = AspectPropertyValue.class;
+                    parameterizedTypes = toWeightedListType(getPropertyType(key), false);
                 }
                 synchronized (getLock) {
                     Object obj = null;
-                    if (type.equals(AspectPropertyValue.class)){
-                        if (parameterisedTypes.length > 0) {
-                            Class<?> innerType = parameterisedTypes[0];
+                    if (valueType.equals(AspectPropertyValue.class)){
+                        if (parameterizedTypes.length > 0) {
+                            Class<?> innerType = parameterizedTypes[0];
                             if (innerType.equals(String.class)) {
                                 obj = getValueAsString(key);
                             } else if (innerType.equals(Boolean.class)) {
@@ -333,7 +365,7 @@ public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceData
                             } else if (innerType.equals(WktString.class)) {
                                 obj = getValueAsWktString(key);
                             } else if (innerType.equals(List.class)) {
-                                obj = getValues(key, parameterisedTypes);
+                                obj = getValues(key, parameterizedTypes);
                             } else if (innerType.equals(JavaScript.class)) {
                                 obj = getValueAsJavaScript(key);
                             } else {
@@ -345,13 +377,9 @@ public abstract class IPIntelligenceDataBaseOnPremise extends IPIntelligenceData
                         }
                     }
                     try {
-                        T value;
-                        if (type.isPrimitive()) {
-                            value = (T) primitiveTypes.get(type).cast(obj);
-                        } else {
-                            value = type.cast(obj);
-                        }
-                        result.setValue(value);
+                        // A primitive type's cast accepts only null, as
+                        // the value is always an AspectPropertyValue.
+                        result.setValue(type.cast(obj));
                     } catch (ClassCastException e) {
                         throw new ClassCastException(
                             "Expected property '" + key + "' to be of " +

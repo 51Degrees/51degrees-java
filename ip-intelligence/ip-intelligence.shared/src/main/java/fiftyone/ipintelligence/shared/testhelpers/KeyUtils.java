@@ -30,6 +30,13 @@ import java.util.function.Function;
  * Helpers to obtain keys from the environment
  */
 public class KeyUtils {
+
+    /**
+     * Makes an instance. Every member is static, so an instance is not
+     * needed, and the constructor is public for code that makes one.
+     */
+    public KeyUtils() {
+    }
     /**
      * Name of the environment variable or system property which supplies
      * the tests with the resource key with every property. It is the only
@@ -51,6 +58,8 @@ public class KeyUtils {
     /**
      * Obtain a key from the environment variable of the name given, or
      * from the system property of the same name when that is not set.
+     * @param keyName name of the environment variable and system property
+     * @return the key, or null when neither is set
      */
     public static String getNamedKey(String keyName) {
         return getNamedKey(keyName, System::getenv);

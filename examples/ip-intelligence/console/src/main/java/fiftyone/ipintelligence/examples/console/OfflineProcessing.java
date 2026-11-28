@@ -140,7 +140,6 @@ public class OfflineProcessing {
      * @param is       an InputStream containing YAML documents - one per IP address
      * @param os       an OutputStream for the processed data
      */
-    @SuppressWarnings("unchecked")
     public static void run(String dataFile, InputStream is, OutputStream os) throws Exception {
 
         String dataFileLocation;
@@ -173,9 +172,9 @@ public class OfflineProcessing {
 
         logger.info("Constructing pipeline with on-premise IP Intelligence " +
                 "engine from file " + dataFile);
-        // Build a new on-premise IP Intelligence engine in a try/resources so
-        // that the pipeline is disposed when done
-        try (Pipeline pipeline = new IPIntelligencePipelineBuilder()
+        // Build a new on-premise IP Intelligence engine and close it in a finally
+        // block so that the pipeline is disposed when done
+        Pipeline pipeline = new IPIntelligencePipelineBuilder()
                 .useOnPremise(dataFileLocation, false)
                 // Usage sharing is off because this example's evidence is already
                 // known to 51Degrees. In production, leave usage sharing on, which adds
@@ -196,7 +195,8 @@ public class OfflineProcessing {
                 // loads the whole data file into memory, which makes each
                 // lookup faster where there is memory to hold it.
                 .setPerformanceProfile(Constants.PerformanceProfiles.LowMemory)
-                .build()) {
+                .build();
+        try {
 
             // get the details of the IP Intelligence engine from the pipeline,
             // to find out what data file we are using
@@ -216,13 +216,14 @@ public class OfflineProcessing {
                     // Flow data is the container for inputs and outputs that
                     // flow through the pipeline a flowdata instance is
                     // created by the pipeline factory method it's important
-                    // to dispose flowdata - so wrap in a try/resources
-                    try (FlowData flowData = pipeline.createFlowData()) {
+                    // to dispose flowdata - so close it in a finally block
+                    FlowData flowData = pipeline.createFlowData();
+                    try {
                         // the evidence values in the test YAML data are read
                         // as a Map<String, String> - add the evidence to the
                         // flowData
                         flowData.addEvidence(
-                                filterEvidence((Map<String, String>) evidenceIterator.next(),
+                                filterEvidence((Map<?, ?>) evidenceIterator.next(),
                                         "server."));
 
                         /*
@@ -266,6 +267,8 @@ public class OfflineProcessing {
                         yaml.dump(flowData.getEvidence().asKeyMap(), writer);
                         yaml.dump(resultMap, writer);
                         writer.flush();
+                    } finally {
+                        flowData.close();
                     }
                     count++;
                 }
@@ -284,23 +287,28 @@ public class OfflineProcessing {
                 writer.flush();
                 logger.info("Finished processing {} records", count);
             }
+        } finally {
+            pipeline.close();
         }
     }
 	
     /**
-     * Filter entries that are not keyed on the required prefix
+     * Filter entries that are not keyed on the required prefix, or that
+     * have no name or no value
      *
      * @param prefix a prefix for the evidence to filter - e.g. "header."
      * @param evidence a Map<String, String> of evidence entries
      * @return a filtered Map
      */
-    @SuppressWarnings("SameParameterValue")
-    private static Map<String, String> filterEvidence(Map<String, String> evidence, String prefix) {
+    private static Map<String, String> filterEvidence(Map<?, ?> evidence, String prefix) {
 
         return evidence.entrySet()
                 .stream()
-                .filter(e -> e.getKey().startsWith(prefix))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                .filter(e -> e.getKey() != null && e.getValue() != null)
+                .filter(e -> e.getKey().toString().startsWith(prefix))
+                .collect(Collectors.toMap(
+                        e -> e.getKey().toString(),
+                        e -> e.getValue().toString()));
     }
 
     /**
@@ -309,7 +317,6 @@ public class OfflineProcessing {
      * @param prefix the prefix we want for the property name e.g "ip."
      * @return a filtered map
      */
-    @SuppressWarnings({"SameParameterValue", "unused"})
     private static Map<String, Object> getPopulatedProperties(IPIntelligenceData data, String prefix) {
 
         return data.asKeyMap().entrySet()

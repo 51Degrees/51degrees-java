@@ -32,6 +32,7 @@ import fiftyone.caching.LruPutCache;
  */
 public class CacheConfiguration {
 
+    /** Number of entries a cache holds when no size is given. */
     public static final int defaultSize = 1000;
 
     private final CacheBuilder builder;

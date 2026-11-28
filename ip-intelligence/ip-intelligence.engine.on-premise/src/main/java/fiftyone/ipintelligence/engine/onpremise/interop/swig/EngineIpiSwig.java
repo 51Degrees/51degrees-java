@@ -11,15 +11,34 @@ package fiftyone.ipintelligence.engine.onpremise.interop.swig;
 public class EngineIpiSwig extends EngineBaseSwig {
   private transient long swigCPtr;
 
+  /**
+   * Makes a proxy for a C++ object.
+   *
+   * @param cPtr the address of the C++ object
+   * @param cMemoryOwn whether the proxy deletes the C++ object
+   */
   protected EngineIpiSwig(long cPtr, boolean cMemoryOwn) {
     super(IpIntelligenceOnPremiseEngineModuleJNI.EngineIpiSwig_SWIGUpcast(cPtr), cMemoryOwn);
     swigCPtr = cPtr;
   }
 
+  /**
+   * The address of the C++ object of a proxy, or 0 for null.
+   *
+   * @param obj the proxy, or null
+   * @return the address of its C++ object
+   */
   protected static long getCPtr(EngineIpiSwig obj) {
     return (obj == null) ? 0 : obj.swigCPtr;
   }
 
+  /**
+   * Takes the C++ object from a proxy that owns it, so the caller deletes
+   * it and the proxy can no longer be used.
+   *
+   * @param obj the proxy, or null
+   * @return the address of its C++ object, or 0 for null
+   */
   protected static long swigRelease(EngineIpiSwig obj) {
     long ptr = 0;
     if (obj != null) {
@@ -32,11 +51,18 @@ public class EngineIpiSwig extends EngineBaseSwig {
     return ptr;
   }
 
-  @SuppressWarnings({"deprecation", "removal"})
+  /**
+   * Deletes the C++ object, if this proxy owns it, when the garbage
+   * collector finalizes this proxy.
+   */
   protected void finalize() {
     delete();
   }
 
+  /**
+   * Deletes the C++ object if this proxy owns it. The proxy cannot be used
+   * after this.
+   */
   public synchronized void delete() {
     if (swigCPtr != 0) {
       if (swigCMemOwn) {
@@ -62,6 +88,14 @@ public class EngineIpiSwig extends EngineBaseSwig {
 
   public Date getUpdateAvailableTime() {
     return new Date(IpIntelligenceOnPremiseEngineModuleJNI.EngineIpiSwig_getUpdateAvailableTime(swigCPtr, this), true);
+  }
+
+  public static Date getPublishedTimeFromFile(String fileName) {
+    return new Date(IpIntelligenceOnPremiseEngineModuleJNI.EngineIpiSwig_getPublishedTimeFromFile(fileName), true);
+  }
+
+  public static String getProductFromFile(String fileName) {
+    return IpIntelligenceOnPremiseEngineModuleJNI.EngineIpiSwig_getProductFromFile(fileName);
   }
 
   public String getDataFilePath() {

@@ -88,7 +88,6 @@ public class MissingPropertyHandlingTests {
      *
      * @throws Exception
      */
-    @SuppressWarnings("unused")
     @Test
     public void PropertyNotInResource() throws Exception {
         try (IPIntelligenceCloudEngine engine =
@@ -116,7 +115,7 @@ public class MissingPropertyHandlingTests {
             engine.processCloudEngine(flowData, ipiData, nullValueJson);
 
             try {
-                AspectPropertyValue<Float> longitude = ipiData.getLongitude();
+                ipiData.getLongitude();
                 fail("A PropertyMissingException should have been thrown");
             } catch (PropertyMissingException e) {
                 assertEquals(

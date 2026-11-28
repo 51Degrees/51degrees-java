@@ -77,16 +77,15 @@ public class MissingPropertyServiceDefault implements MissingPropertyService {
         return missingPropertyService;
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
     public MissingPropertyResult getMissingPropertyReason(
         String propertyName,
-        AspectEngine engine) {
+        AspectEngine<?, ?> engine) {
 
         MissingPropertyReason reason = MissingPropertyReason.Unknown;
 
-        boolean cloud = engine instanceof CloudAspectEngine;
-        boolean onPremise = engine instanceof OnPremiseAspectEngine;
+        boolean cloud = engine instanceof CloudAspectEngine<?, ?>;
+        boolean onPremise = engine instanceof OnPremiseAspectEngine<?, ?>;
         // An On-premise Engine loads its metadata when it is built.
         boolean loaded = cloud == false || engine.hasLoadedProperties();
 
@@ -170,7 +169,7 @@ public class MissingPropertyServiceDefault implements MissingPropertyService {
                 break;
             case PropertyNotAccessibleWithResourceKey:
                 List<String> available =
-                    ((List<ElementPropertyMetaData>)engine.getProperties())
+                    engine.getProperties()
                     .stream().map(ElementPropertyMetaData::getName)
                     .collect(Collectors.toList());
                 message.append(String.format(

@@ -66,7 +66,13 @@ public interface FileWrapper {
      */
     String getPath();
 
+    /**
+     * Whether the file exists.
+     *
+     * @return true if it exists
+     */
     boolean exists();
 
+    /** Delete the file. */
     void delete();
 }

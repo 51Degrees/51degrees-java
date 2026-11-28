@@ -60,7 +60,9 @@
         <maven.compiler.source>1.8</maven.compiler.source>
 
         <pipeline.version>${project.version}</pipeline.version>
-        <devicedetection.version>4.5.130</devicedetection.version>
+        <!-- Device Detection is built in the same reactor and released with
+             the pipeline, so the examples use the version built with them. -->
+        <devicedetection.version>${project.version}</devicedetection.version>
 
         <junit.version>4.13.2</junit.version>
         <slf4j-api.version>2.0.20</slf4j-api.version>
@@ -82,7 +84,49 @@
 
         <skippackagesign>true</skippackagesign>
         <skipPublishing>false</skipPublishing>
+
+        <!-- Whether a compiler or tool warning stops the build. The
+             warnings-as-errors profile below sets it. -->
+        <fiftyone.warningsAsErrors>false</fiftyone.warningsAsErrors>
     </properties>
+
+    <profiles>
+        <!-- On JDK 9 and later, compile against the Java 8 API itself, which
+             these packages target, rather than against the newer JDK's own
+             classes with only the source and target set to 8. javac then
+             links every call to a method Java 8 has, as Java 8 users will run
+             the code. Without it, a call such as ByteBuffer.clear() links to
+             the override that JDK 9 added, which Java 8 does not have. JDK 8
+             has no release option and compiles against its own API. -->
+        <profile>
+            <id>java-8-api</id>
+            <activation>
+                <jdk>[9,)</jdk>
+            </activation>
+            <properties>
+                <maven.compiler.release>8</maven.compiler.release>
+            </properties>
+        </profile>
+        <!-- javac's warnings and PMD's findings are shown in every build,
+             and stop it only in the builds 51Degrees runs, which set the
+             environment variable _51DEGREES_WARNINGS_AS_ERRORS to true. A
+             build from a clone anywhere else does not stop on a warning.
+             Maven reads failOnWarning and failOnViolation as true only for
+             the word true, in any case, so any other value leaves warnings
+             as warnings. -->
+        <profile>
+            <id>warnings-as-errors</id>
+            <activation>
+                <property>
+                    <name>env._51DEGREES_WARNINGS_AS_ERRORS</name>
+                </property>
+            </activation>
+            <properties>
+                <fiftyone.warningsAsErrors>${env._51DEGREES_WARNINGS_AS_ERRORS}</fiftyone.warningsAsErrors>
+            </properties>
+        </profile>
+    
+    </profiles>
 
     <dependencyManagement>
         <dependencies>
@@ -138,9 +182,9 @@
                         <source>${maven.compiler.source}</source>
                         <target>${maven.compiler.target}</target>
                         <showWarnings>true</showWarnings>
+                        <failOnWarning>${fiftyone.warningsAsErrors}</failOnWarning>
                         <compilerArgs>
-                            <arg>-Xlint:all,-try,-options</arg>
-<!--                            <arg>-Werror</arg>-->
+                            <arg>-Xlint:all</arg>
                         </compilerArgs>
                     </configuration>
                 </plugin>
@@ -231,8 +275,16 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>${maven-javadoc-plugin.version}</version>
                 <configuration>
-                    <doclint>none</doclint>
-                    <quiet>true</quiet>
+                    <!-- Every javadoc check is on, and any warning fails the
+                         build. A module that leaves a check out says why in
+                         its own pom. -->
+                    <doclint>all</doclint>
+                    <failOnWarnings>${fiftyone.warningsAsErrors}</failOnWarnings>
+                    <!-- Maven would link each module's javadoc to the other
+                         modules' under the project URL, which is the repository
+                         and serves no javadoc, and fails to find one for
+                         pipeline.aggregate, which has no sources. -->
+                    <detectOfflineLinks>false</detectOfflineLinks>
                     <detectJavaApiLink>false</detectJavaApiLink>
                 </configuration>
                 <executions>
@@ -312,12 +364,9 @@
                         <ruleset>${maven.multiModuleProjectDirectory}/ci/pmd-resource-ruleset.xml</ruleset>
                     </rulesets>
                     <includeTests>true</includeTests>
-                    <failOnViolation>true</failOnViolation>
+                    <failOnViolation>${fiftyone.warningsAsErrors}</failOnViolation>
                     <printFailingErrors>true</printFailingErrors>
                     <linkXRef>false</linkXRef>
-                    <excludes>
-                        <exclude>**/interop/swig/*.java</exclude>
-                    </excludes>
                 </configuration>
                 <executions>
                     <execution>
@@ -345,4 +394,5 @@
         <connection>scm:git:https://github.com/51Degrees/51degrees-java.git</connection>
         <developerConnection>scm:git:https://github.com/51Degrees/51degrees-java.git</developerConnection>
     </scm>
+
 </project>

@@ -24,10 +24,16 @@ package fiftyone.pipeline.engines.fiftyone.data;
 
 import fiftyone.pipeline.engines.data.AspectEngineDataFileDefault;
 
+import java.io.File;
+import java.util.function.Function;
+
 /**
  * Default implementation of the {@link FiftyOneDataFile} interface.
  */
 public class FiftyOneDataFileDefault extends AspectEngineDataFileDefault implements FiftyOneDataFile {
+    /** Create a new instance. */
+    public FiftyOneDataFileDefault() {
+    }
 
     /**
      * The start of a download type and the prefix of the product names of
@@ -43,13 +49,34 @@ public class FiftyOneDataFileDefault extends AspectEngineDataFileDefault impleme
 
     private String downloadType;
 
+    private Function<String, String> productReader;
+
+    /**
+     * Set the function that reads the product of a data file from its
+     * header without loading it, given the path of the file. It is used
+     * until an engine has loaded the data file, for example by the update
+     * on start-up, which runs before the engine is created. The function
+     * may return null, or throw, when the product cannot be read.
+     * @param productReader the function, or null for none
+     */
+    public void setProductReader(Function<String, String> productReader) {
+        this.productReader = productReader;
+    }
+
+    /**
+     * {@inheritDoc}
+     * Once an engine has loaded the data file, the name is made from the
+     * tier of the data the engine has loaded. Before then, the tier is read
+     * from the header of the data file at the configured location, if a
+     * product reader is set. No product is known where there is no reader,
+     * no file at that location, or a read that fails.
+     */
     @Override
     public String getDataUpdateProduct() {
-        if (getEngine() == null) {
-            return null;
-        }
         String type = getDataUpdateDownloadType();
-        String tier = getEngine().getDataSourceTier();
+        String tier = getEngine() != null ?
+            getEngine().getDataSourceTier() :
+            readProductFromFile();
         if (type == null || tier == null || tier.isEmpty()) {
             return null;
         }
@@ -61,6 +88,28 @@ public class FiftyOneDataFileDefault extends AspectEngineDataFileDefault impleme
             }
         }
         return null;
+    }
+
+    /**
+     * The product read from the header of the data file at the configured
+     * location, or null if it cannot be read.
+     */
+    private String readProductFromFile() {
+        Function<String, String> reader = productReader;
+        if (reader == null || getConfiguration() == null) {
+            return null;
+        }
+        String path = getDataFilePath();
+        if (path == null || path.isEmpty() || new File(path).isFile() == false) {
+            return null;
+        }
+        try {
+            return reader.apply(path);
+        } catch (RuntimeException | LinkageError e) {
+            // A file that cannot be read, or a native library that cannot
+            // be loaded, gives no product.
+            return null;
+        }
     }
 
     private static boolean startsWith(String value, String prefix) {

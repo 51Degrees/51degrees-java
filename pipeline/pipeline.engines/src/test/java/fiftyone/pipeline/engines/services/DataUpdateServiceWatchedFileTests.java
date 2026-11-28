@@ -131,8 +131,7 @@ public class DataUpdateServiceWatchedFileTests {
             fileWrapperFactory,
             futureFactory(timers, watcher));
 
-        OnPremiseAspectEngine<? extends AspectData,
-            ? extends AspectPropertyMetaData> engine = engine();
+        OnPremiseAspectEngine<?, ?> engine = engine();
         Path directory = Files.createTempDirectory("watched");
         Path dataFile = directory.resolve("data.dat");
         Files.write(dataFile, "Old".getBytes());
@@ -201,8 +200,7 @@ public class DataUpdateServiceWatchedFileTests {
             fileWrapperFactory,
             futureFactory(timers, watcher));
 
-        OnPremiseAspectEngine<? extends AspectData,
-            ? extends AspectPropertyMetaData> engine = engine();
+        OnPremiseAspectEngine<?, ?> engine = engine();
         Path directory = Files.createTempDirectory("watched");
         Path dataFile = directory.resolve("data.dat");
         Files.write(dataFile, "Old".getBytes());
@@ -296,8 +294,7 @@ public class DataUpdateServiceWatchedFileTests {
             fileWrapperFactory(),
             timerFactory(timers));
 
-        OnPremiseAspectEngine<? extends AspectData,
-            ? extends AspectPropertyMetaData> engine = engine();
+        OnPremiseAspectEngine<?, ?> engine = engine();
         Path directory = Files.createTempDirectory("watched");
         Path dataFile = directory.resolve("data.dat");
         Files.write(dataFile, "Old".getBytes());
@@ -515,8 +512,7 @@ public class DataUpdateServiceWatchedFileTests {
             new AtomicReference<>();
         final CountDownLatch done = new CountDownLatch(1);
         final AtomicBoolean stop = new AtomicBoolean(false);
-        final OnPremiseAspectEngine<? extends AspectData,
-            ? extends AspectPropertyMetaData> engine = engine();
+        final OnPremiseAspectEngine<?, ?> engine = engine();
         final DataUpdateServiceDefault service;
         final Path directory;
         final Path dataFile;
@@ -610,12 +606,18 @@ public class DataUpdateServiceWatchedFileTests {
         }
 
         @Override
-        public void close() throws Exception {
+        public void close() {
             // Lets an update that would not give up end, so the thread stops.
             stop.set(true);
             locked.set(false);
-            if (runner.isAlive()) {
-                runner.join(WAIT_FOR_EVENT_MILLIS);
+            try {
+                if (runner.isAlive()) {
+                    runner.join(WAIT_FOR_EVENT_MILLIS);
+                }
+            } catch (InterruptedException e) {
+                // The files are still removed, and the test thread keeps its
+                // interrupt for the test to see.
+                Thread.currentThread().interrupt();
             }
             cleanUp(file, directory, dataFile);
         }
@@ -703,9 +705,7 @@ public class DataUpdateServiceWatchedFileTests {
         return started;
     }
 
-    @SuppressWarnings("unchecked")
-    private static OnPremiseAspectEngine<? extends AspectData,
-        ? extends AspectPropertyMetaData> engine() {
+    private static OnPremiseAspectEngine<?, ?> engine() {
         return mock(OnPremiseAspectEngine.class);
     }
 

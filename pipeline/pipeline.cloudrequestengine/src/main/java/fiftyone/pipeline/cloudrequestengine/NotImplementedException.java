@@ -22,17 +22,30 @@
 
 package fiftyone.pipeline.cloudrequestengine;
 
+/** Thrown by a method that a subclass must override. */
 public class NotImplementedException extends RuntimeException{
 	
 	private static final long serialVersionUID = 1L;
 	
+    /** Create a new instance with no message. */
     public NotImplementedException() {};
 	
+    /**
+     * Create a new instance.
+     *
+     * @param message the detail message
+     */
     public NotImplementedException(String message) {
     	
     	super(message);
     };
 
+    /**
+     * Create a new instance.
+     *
+     * @param message the detail message
+     * @param cause the cause
+     */
     public NotImplementedException(String message, Throwable cause) {
         super(message, cause);
     }

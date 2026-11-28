@@ -99,6 +99,11 @@ The tables below describe the examples available in this repository.
 
 ## Running built examples from command line
 
+Build the examples with JDK 17. They compile for Java 8 and treat every
+compiler warning as an error, and javac 21 and later warn that Java 8 is
+obsolete, so the build fails on JDK 21 and later. The JARs it makes run on
+Java 8 or later.
+
 Running
 
 ```bash

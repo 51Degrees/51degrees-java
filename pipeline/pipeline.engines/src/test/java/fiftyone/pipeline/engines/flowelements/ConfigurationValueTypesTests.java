@@ -24,7 +24,6 @@ package fiftyone.pipeline.engines.flowelements;
 
 import fiftyone.pipeline.core.configuration.ElementOptions;
 import fiftyone.pipeline.core.configuration.PipelineOptions;
-import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.core.flowelements.PipelineBuilder;
 import fiftyone.pipeline.engines.testhelpers.flowelements.ConfiguredEngineBuilder;
 import org.junit.Test;
@@ -52,11 +51,10 @@ public class ConfigurationValueTypesTests {
         element.buildParameters.put(name, value);
         PipelineOptions options = new PipelineOptions();
         options.elements.add(element);
-        try (Pipeline ignored = new PipelineBuilder(
-            LoggerFactory.getILoggerFactory())
-            .buildFromConfiguration(options)) {
-            // Building is enough.
-        }
+        // Building is enough.
+        new PipelineBuilder(LoggerFactory.getILoggerFactory())
+            .buildFromConfiguration(options)
+            .close();
     }
 
     @Test

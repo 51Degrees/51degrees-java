@@ -167,7 +167,6 @@ public class DataUpdateServiceDefault implements DataUpdateService {
     /**
      * Constructor with default for everything
      */
-    @SuppressWarnings("unused")
     public DataUpdateServiceDefault() {
         this(null, null, null, null);
     }
@@ -347,8 +346,11 @@ public class DataUpdateServiceDefault implements DataUpdateService {
             // Compare the data file with the temporary file the engine uses.
             // A programmatic update always does, whether or not Automatic
             // Update from File is enabled. The timer does only when no file
-            // system watcher exists to notice a new file.
-            if ((manualUpdate ||
+            // system watcher exists to notice a new file. Before an engine
+            // exists, as at the update on start-up, no engine uses a
+            // temporary file, so the check goes on to the data update URL.
+            if (dataFile.getEngine() != null &&
+                    (manualUpdate ||
                     dataFile.getConfiguration().getWatchKey() == null) &&
                     dataFile.getDataFilePath() != null &&
                     dataFile.getDataFilePath().isEmpty() == false &&
@@ -542,9 +544,11 @@ public class DataUpdateServiceDefault implements DataUpdateService {
                                         watchedFileOpenTimeoutMillis);
                         while (fileLockable == false &&
                                 System.nanoTime() - deadline < 0) {
-                            try (BinaryReader reader = fileWrapperFactory.build(
-                                    aspectDataFile.getDataFilePath()).getReader()) {
+                            try {
+                                BinaryReader reader = fileWrapperFactory.build(
+                                    aspectDataFile.getDataFilePath()).getReader();
                                 fileLockable = true;
+                                reader.close();
                             } catch (IOException ignored) {
                                 try {
                                     Thread.sleep(WATCHED_FILE_OPEN_PAUSE_MILLIS);

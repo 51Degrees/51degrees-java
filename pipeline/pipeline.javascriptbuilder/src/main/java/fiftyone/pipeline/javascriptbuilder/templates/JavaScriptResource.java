@@ -25,6 +25,7 @@ package fiftyone.pipeline.javascriptbuilder.templates;
 import java.util.HashMap;
 
 //! [class]
+/** The values the JavaScript template is filled in with. */
 public class JavaScriptResource {
     private final String _objName;
     private final String _jsonObject;
@@ -47,11 +48,14 @@ public class JavaScriptResource {
      *                be created on the client-side by the JavaScript produced
      *                by the template.
      * @param jsonObject the JSON data payload to be inserted into the template.
+     * @param sessionId the session id sent with each callback.
+     * @param sequence the sequence number of this request in the session.
      * @param supportsPromises if true, the template will produce JavaScript
      *                         that makes use of promises. If false, promises
      *                         will not be used.
      * @param url the complete URL to use for the callback mechanism described
      *            in remarks for this constructor.
+     * @param parameters the parameters sent with each callback, as JSON.
      * @param enableCookies if false, any cookies created by JavaScript
      *                      properties that execute on the client-side and that
      *                      start with '51D_' will be deleted automatically.
@@ -90,6 +94,11 @@ public class JavaScriptResource {
         _hasDelayedProperties = hasDelayedProperties;
     }
 
+    /**
+     * The values by the names the template uses.
+     *
+     * @return the values
+     */
     public HashMap<String, Object> asMap()
     {
         HashMap<String, Object> hash = new HashMap<>();

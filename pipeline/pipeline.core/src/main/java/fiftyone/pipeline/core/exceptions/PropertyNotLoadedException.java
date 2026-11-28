@@ -32,22 +32,47 @@ public class PropertyNotLoadedException extends RuntimeException {
      */
     private static final long serialVersionUID = -8356317224796833123L;
 
+    /** Create a new instance with no message. */
     public PropertyNotLoadedException() {
         super();
     }
 
+    /**
+     * Create a new instance.
+     *
+     * @param message the detail message
+     */
     public PropertyNotLoadedException(String message) {
         super(message);
     }
 
+    /**
+     * Create a new instance.
+     *
+     * @param message the detail message
+     * @param cause the cause
+     */
     public PropertyNotLoadedException(String message, Throwable cause) {
         super(message, cause);
     }
 
+    /**
+     * Create a new instance.
+     *
+     * @param cause the cause
+     */
     public PropertyNotLoadedException(Throwable cause) {
         super(cause);
     }
 
+    /**
+     * Create a new instance.
+     *
+     * @param message the detail message
+     * @param cause the cause
+     * @param enableSuppression whether suppressed exceptions are kept
+     * @param writableStackTrace whether the stack trace can be written
+     */
     protected PropertyNotLoadedException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }

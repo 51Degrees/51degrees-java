@@ -38,6 +38,7 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeFalse;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -77,7 +78,11 @@ public class CloudRequestOriginTests {
      */
     @Test
     public void ResourceKeyWithOrigin() throws Exception {    
-                        
+        // CI sets LIVE_CLOUD_TESTS to false on the entries that leave the
+        // live cloud tests to another entry of the same operating system.
+        assumeFalse("LIVE_CLOUD_TESTS is false, so this live cloud test is "
+            + "skipped.", "false".equals(System.getenv("LIVE_CLOUD_TESTS")));
+
         String resourceKey = "AQS5HKcyVj6B8wNG2Ug";
         boolean exception = false;
 

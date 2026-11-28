@@ -49,6 +49,12 @@ import java.util.List;
 public class IPIntelligenceOnPremisePipelineBuilder
     extends PrePackagedPipelineBuilderBase<IPIntelligenceOnPremisePipelineBuilder> {
 
+    @Override
+    protected IPIntelligenceOnPremisePipelineBuilder self() {
+        return this;
+    }
+
+    /** Whether the Pipeline shares usage data with 51Degrees. */
     protected boolean shareUsageEnabled =
         fiftyone.pipeline.engines.fiftyone.flowelements.Constants
             .SHARE_USAGE_DEFAULT_ENABLED;
@@ -104,7 +110,7 @@ public class IPIntelligenceOnPremisePipelineBuilder
         this.filename = filename;
         this.createTempDataCopy = createTempDataCopy;
         if (!filename.endsWith(".ipi")) {
-            throw new Exception("Unrecognised filename. " +
+            throw new Exception("Unrecognized filename. " +
                 "Expected a '*.ipi' IP Intelligence data file.");
         }
         return this;
@@ -408,7 +414,7 @@ public class IPIntelligenceOnPremisePipelineBuilder
         if(updatePollingInterval != null) {
             builder.setUpdatePollingIntervalMillis(updatePollingInterval);
         }
-        // Configure update polling interval randomisation.
+        // Configure update polling interval randomization.
         if(updateRandomisationMax != null) {
             builder.setUpdateRandomisationMaxMillis(updateRandomisationMax);
         }

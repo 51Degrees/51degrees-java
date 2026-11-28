@@ -64,7 +64,6 @@ import org.mockito.stubbing.Answer;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 
-@SuppressWarnings("unused")
 public class JsonBuilderTests {
     private TestLoggerFactory loggerFactory;
     private EmptyEngine testEngine;
@@ -313,18 +312,18 @@ public class JsonBuilderTests {
      * Check that nested properties are serialised as expected
      * @throws Exception
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void JsonBuilder_NestedProperties() throws Exception {
 
         Map<String, Object> map = new HashMap<>();
-        map.put("property", new ArrayList<NestedData>());
-        ((List<NestedData>)map.get("property")).add(new NestedData(
+        List<NestedData> nested = new ArrayList<>();
+        map.put("property", nested);
+        nested.add(new NestedData(
             loggerFactory.getLogger(NestedData.class.getSimpleName()),
             flowData,
             "abc",
             123));
-        ((List<NestedData>)map.get("property")).add(new NestedData(
+        nested.add(new NestedData(
             loggerFactory.getLogger(NestedData.class.getSimpleName()),
             flowData,
             "xyz",
@@ -727,7 +726,6 @@ public class JsonBuilderTests {
         return testIteration(iteration, data, null);
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     private String testIteration(
         int iteration,
         Map<String, Object> data,
@@ -752,14 +750,14 @@ public class JsonBuilderTests {
         session.setValue("somesessionid");
         TryGetResult<Integer> sequence = new TryGetResult<>();
         sequence.setValue(iteration);
-        when(flowData.tryGetEvidence(eq("query.session-id"), any(Class.class))).thenReturn(session);
-        when(flowData.tryGetEvidence(eq("query.sequence"), any(Class.class))).thenReturn(sequence);
+        doReturn(session).when(flowData).tryGetEvidence(eq("query.session-id"), any());
+        doReturn(sequence).when(flowData).tryGetEvidence(eq("query.sequence"), any());
         when(flowData.getWhere(any(PropertyMatcher.class))).thenReturn(jsPropertyNames);
 
         final JsonBuilderData[] result = {null};
-        when(flowData.getOrAdd(anyString(), any(FlowElement.DataFactory.class)))
+        when(flowData.getOrAdd(anyString(), any()))
             .thenAnswer((Answer<ElementData>) invocationOnMock -> {
-                FlowElement.DataFactory f = invocationOnMock.getArgument(1);
+                FlowElement.DataFactory<?> f = invocationOnMock.getArgument(1);
                 result[0] = (JsonBuilderData)f.create(flowData);
                 return result[0];
             });

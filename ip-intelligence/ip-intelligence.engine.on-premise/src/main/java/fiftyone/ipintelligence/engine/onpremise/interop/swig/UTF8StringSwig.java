@@ -8,19 +8,40 @@
 
 package fiftyone.ipintelligence.engine.onpremise.interop.swig;
 
-public class UTF8StringSwig extends java.util.AbstractList<Short> implements AutoCloseable, java.util.RandomAccess {
+public final class UTF8StringSwig extends java.util.AbstractList<Short> implements AutoCloseable, java.util.RandomAccess {
   private transient long swigCPtr;
+
+  /** Whether deleting this proxy deletes its C++ object. */
   protected transient boolean swigCMemOwn;
 
+  /**
+   * Makes a proxy for a C++ object.
+   *
+   * @param cPtr the address of the C++ object
+   * @param cMemoryOwn whether the proxy deletes the C++ object
+   */
   protected UTF8StringSwig(long cPtr, boolean cMemoryOwn) {
     swigCMemOwn = cMemoryOwn;
     swigCPtr = cPtr;
   }
 
+  /**
+   * The address of the C++ object of a proxy, or 0 for null.
+   *
+   * @param obj the proxy, or null
+   * @return the address of its C++ object
+   */
   protected static long getCPtr(UTF8StringSwig obj) {
     return (obj == null) ? 0 : obj.swigCPtr;
   }
 
+  /**
+   * Takes the C++ object from a proxy that owns it, so the caller deletes
+   * it and the proxy can no longer be used.
+   *
+   * @param obj the proxy, or null
+   * @return the address of its C++ object, or 0 for null
+   */
   protected static long swigRelease(UTF8StringSwig obj) {
     long ptr = 0;
     if (obj != null) {
@@ -33,6 +54,10 @@ public class UTF8StringSwig extends java.util.AbstractList<Short> implements Aut
     return ptr;
   }
 
+  /**
+   * Deletes the C++ object if this proxy owns it. The proxy cannot be used
+   * after this.
+   */
   public synchronized void delete() {
     if (swigCPtr != 0) {
       if (swigCMemOwn) {
@@ -48,7 +73,6 @@ public class UTF8StringSwig extends java.util.AbstractList<Short> implements Aut
     this.delete();
   }
 
-  @SuppressWarnings("this-escape")
   public UTF8StringSwig(short[] initialElements) {
     this();
     doReserve(initialElements.length);
@@ -58,7 +82,6 @@ public class UTF8StringSwig extends java.util.AbstractList<Short> implements Aut
     }
   }
 
-  @SuppressWarnings("this-escape")
   public UTF8StringSwig(Iterable<Short> initialElements) {
     this();
     for (short element : initialElements) {
@@ -163,8 +186,8 @@ public class UTF8StringSwig extends java.util.AbstractList<Short> implements Aut
     IpIntelligenceOnPremiseEngineModuleJNI.UTF8StringSwig_doRemoveRange(swigCPtr, this, fromIndex, toIndex);
   }
 
-  public int copyToArray(SWIGTYPE_p_unsigned_char copy, int length) {
-    return IpIntelligenceOnPremiseEngineModuleJNI.UTF8StringSwig_copyToArray(swigCPtr, this, SWIGTYPE_p_unsigned_char.getCPtr(copy), length);
+  public int copyToArray(byte[] copy) {
+    return IpIntelligenceOnPremiseEngineModuleJNI.UTF8StringSwig_copyToArray(swigCPtr, this, copy);
   }
 
 }

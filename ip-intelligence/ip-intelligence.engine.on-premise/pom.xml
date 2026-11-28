@@ -120,6 +120,50 @@
                 <script.extension>.sh</script.extension>
             </properties>
         </profile>
+        <!-- SWIG writes the classes in the package named below from
+             src/main/cxx/hash_java.i. The members SWIG adds have comments,
+             but the methods of the C++ API come from the declarations in
+             cxx's .i files, which have none, so javadoc does not check that
+             package until those declarations are documented. Every other
+             package of the module is checked. JDK 8's javadoc does not
+             accept -Xdoclint/package, so on JDK 8 the package is left out of
+             the javadoc instead. -->
+        <profile>
+            <id>javadoc-swig-doclint</id>
+            <activation>
+                <jdk>[9,)</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <configuration>
+                            <additionalOptions>
+                                <additionalOption>-Xdoclint/package:-fiftyone.ipintelligence.engine.onpremise.interop.swig</additionalOption>
+                            </additionalOptions>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>javadoc-swig-jdk8</id>
+            <activation>
+                <jdk>1.8</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <configuration>
+                            <excludePackageNames>fiftyone.ipintelligence.engine.onpremise.interop.swig</excludePackageNames>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
     <build>
         <plugins>

@@ -84,13 +84,12 @@ public class PipelineIntegrationTests {
         }
     }
 
-    @SuppressWarnings("rawtypes")
     @Test
     public void PipelineIntegration_MultipleElementsParallel() throws Exception {
         MultiplyByFiveElement fiveElement = new MultiplyByFiveElement(mock(Logger.class));
         MultiplyByTenElement tenElement = new MultiplyByTenElement(mock(Logger.class));
         try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
-            .addFlowElementsParallel(new FlowElement[]{fiveElement, tenElement})
+            .addFlowElementsParallel(new FlowElement<?, ?>[]{fiveElement, tenElement})
             .build();
              FlowData flowData = pipeline.createFlowData()) {
             flowData.addEvidence(fiveElement.evidenceKeys.get(0), 2);
@@ -103,11 +102,10 @@ public class PipelineIntegrationTests {
     }
 
     @Test
-    @SuppressWarnings("rawtypes")
     public void PipelineIntegration_StopFlag() throws Exception {
         // Configure the pipeline
         StopElement stopElement = new StopElement(mock(Logger.class));
-        FlowElement testElement = mock(FlowElement.class);
+        FlowElement<?, ?> testElement = mock(FlowElement.class);
         when(testElement.getElementDataKey()).thenReturn("test");
         when(testElement.getProperties()).thenReturn(Collections.emptyList());
         try (Pipeline pipeline = new PipelineBuilder(loggerFactory)

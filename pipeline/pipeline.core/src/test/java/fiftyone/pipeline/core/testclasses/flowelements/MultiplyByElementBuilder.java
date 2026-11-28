@@ -26,10 +26,9 @@ import fiftyone.pipeline.annotations.BuildArg;
 import fiftyone.pipeline.annotations.ElementBuilder;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 
-@SuppressWarnings("rawtypes")
 @ElementBuilder(alternateName = "Multiply")
 public class MultiplyByElementBuilder {
-    public FlowElement build(@BuildArg("multiple") int multiple) {
+    public FlowElement<?, ?> build(@BuildArg("multiple") int multiple) {
         return new MultiplyByElement(multiple);
     }
 }

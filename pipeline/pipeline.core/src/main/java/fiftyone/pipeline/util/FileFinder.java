@@ -31,7 +31,12 @@ import java.util.Optional;
 
 import static java.util.Objects.isNull;
 
+/** Finds files by searching the folders below a root. */
 public class FileFinder {
+    /** Create a new instance. */
+    public FileFinder() {
+    }
+
     /**
      * MAX depth to iterate when searching for files below specified root
      */

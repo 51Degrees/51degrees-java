@@ -68,6 +68,9 @@ $script:CiNames = @(
     # The staging cloud and a Bespoke key it resolves, for the tests of what
     # only the staging cloud serves.
     'CLOUD_STAGING_ENDPOINT', 'RESOURCE_KEY_BESPOKE_STAGING'
+    # False on the entries that leave the live cloud tests to another entry
+    # of the same operating system. setup-environment.ps1 sets it.
+    'LIVE_CLOUD_TESTS'
 )
 
 # The system properties the JDK defines start with one of these.

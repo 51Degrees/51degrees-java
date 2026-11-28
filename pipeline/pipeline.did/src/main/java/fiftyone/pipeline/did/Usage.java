@@ -88,6 +88,7 @@ public enum Usage {
     }
 
     /**
+     * Returns the cloud's {@code id.usage} value for this usage.
      * @return the cloud's {@code id.usage} value for this usage
      */
     public String getIdUsage() {

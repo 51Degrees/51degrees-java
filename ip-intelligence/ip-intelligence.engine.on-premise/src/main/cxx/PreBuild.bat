@@ -60,5 +60,5 @@ if exist target\build64 rmdir /S /Q target\build64
 
 mkdir target\build64
 cd target\build64
-cmake ..\..\src\main\cxx -A x64 %additionalFlags%
-cmake --build . --target fiftyone-ip-intelligence-java --config Release
+cmake ..\..\src\main\cxx -A x64 %additionalFlags% || exit /b 1
+cmake --build . --target fiftyone-ip-intelligence-java --config Release || exit /b 1

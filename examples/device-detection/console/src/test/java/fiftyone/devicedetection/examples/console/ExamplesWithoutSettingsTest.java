@@ -37,7 +37,7 @@ import static org.junit.Assume.assumeTrue;
 
 /**
  * Runs each on-premise console example's main with no arguments and no
- * licence key, as someone who has just cloned the repository runs it, and
+ * license key, as someone who has just cloned the repository runs it, and
  * checks that it says what the Enterprise data file adds, with the link to
  * the contact page. The examples default to the free Lite data file. CI
  * gives the other tests the Enterprise data files, so nothing else tests
@@ -58,11 +58,11 @@ public class ExamplesWithoutSettingsTest {
     }
 
     /**
-     * Runs the example's main with no arguments and the licence key system
+     * Runs the example's main with no arguments and the license key system
      * property removed, and returns what it wrote to standard output.
      */
     private static String runWithoutSettings(Main main) throws Exception {
-        assumeTrue("Skipping, a licence key is set in the environment",
+        assumeTrue("Skipping, a license key is set in the environment",
                 System.getenv(LICENSE_KEY) == null);
         String licenseKey = System.clearProperty(LICENSE_KEY);
         PrintStream out = System.out;
@@ -150,7 +150,7 @@ public class ExamplesWithoutSettingsTest {
     public void updateDataFile() throws Exception {
         String output = runWithoutSettings(UpdateDataFile::main);
         assertContains(output, "The data file in use is the 'Lite' file");
-        assertContains(output, "which needs a licence key");
+        assertContains(output, "which needs a license key");
         assertContains(output, CONTACT_US);
     }
 

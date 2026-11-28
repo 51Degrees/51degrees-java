@@ -56,12 +56,16 @@ import static fiftyone.pipeline.engines.fiftyone.flowelements.Constants.SHARE_US
  * @see <a href="https://github.com/51Degrees/specifications/blob/07e1fcedc2cbd83a60cd245c137747686e58da41/pipeline-specification/pipeline-elements/usage-sharing-element.md">Specification</a>
  */
 public class ShareUsageElement extends ShareUsageBase {
-    // max time to wait to send data
-    protected int httpSendTimeout = SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT; // milliseconds
+    /** The longest wait to send data, in milliseconds. */
+    protected int httpSendTimeout = SHARE_USAGE_DEFAULT_HTTP_POST_TIMEOUT;
+    /** HTTP headers sent with the data. */
     protected Map<String, String> headers = new HashMap<>();
-    protected HttpClient httpClient; // old style HttpClient
+    /** Sends the data where it is set, in place of the uploader. */
+    protected HttpClient httpClient;
+    /** Sends the data when no HTTP client is set. */
     protected DataUploader dataUploader = new DataUploaderHttp(shareUsageUrl, headers, httpSendTimeout);
 
+    /** Creates the writers of the XML that is sent. */
     protected XMLOutputFactory xmlOutputFactory;
 
     /**
@@ -494,6 +498,12 @@ public class ShareUsageElement extends ShareUsageBase {
         logger.debug(threadMarker, "Stopping sending. Queue size is {}", evidenceCollection.size());
     }
 
+    /**
+     * Write the data as XML and send it.
+     *
+     * @param allData the data to send
+     * @throws Exception if the data could not be written or sent
+     */
     protected void sendAsXML(List<ShareUsageData> allData) throws Exception {
         logger.debug(threadMarker, "send {} usage elements", allData.size());
 
@@ -537,6 +547,7 @@ public class ShareUsageElement extends ShareUsageBase {
      *
      * @param writer an XMLWriter
      * @param data   the data to write
+     * @throws XMLStreamException if the XML could not be written
      */
     protected void writeXmlData(XMLStreamWriter writer, ShareUsageData data) throws XMLStreamException {
         writer.writeStartElement("Device");
@@ -609,6 +620,14 @@ public class ShareUsageElement extends ShareUsageBase {
         writer.writeEndElement();
     }
 
+    /**
+     * Write an element with text, or nothing when the text is null.
+     *
+     * @param writer where the XML is written
+     * @param elementName the name of the element
+     * @param elementContent the text
+     * @throws XMLStreamException if the XML could not be written
+     */
     protected void writeXmlElement(XMLStreamWriter writer,
                                    String elementName,
                                    String elementContent) throws XMLStreamException {
@@ -690,10 +709,20 @@ public class ShareUsageElement extends ShareUsageBase {
             }
         }
 
+        /**
+         * Whether a character was replaced.
+         *
+         * @return true if one was
+         */
         public boolean isReplaced() {
             return replaced;
         }
 
+        /**
+         * Whether the text was cut short.
+         *
+         * @return true if it was
+         */
         public boolean isTruncated() {
             return truncated;
         }
@@ -706,6 +735,7 @@ public class ShareUsageElement extends ShareUsageBase {
     /**
      * If there is an HttpClient we will use this as a legacy
      * @param allData data to send
+     * @throws Exception if the data could not be written or sent
      */
     protected void legacySendAsXML(List<ShareUsageData> allData) throws Exception {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();

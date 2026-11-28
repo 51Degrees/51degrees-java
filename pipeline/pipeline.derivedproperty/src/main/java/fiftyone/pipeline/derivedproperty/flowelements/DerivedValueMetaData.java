@@ -37,6 +37,7 @@ public final class DerivedValueMetaData {
     }
 
     /**
+     * Returns the string form of the value, as a rule's value is compared.
      * @return the string form of the value, as a rule's value is compared
      */
     public String getName() {
@@ -44,6 +45,7 @@ public final class DerivedValueMetaData {
     }
 
     /**
+     * Returns the description, or null where the script gives none.
      * @return the description, or null where the script gives none
      */
     public String getDescription() {

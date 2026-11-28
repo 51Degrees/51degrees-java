@@ -22,7 +22,12 @@
 
 package fiftyone.ipintelligence.engine.onpremise.interop;
 
+/** Messages used when the native library cannot be loaded. */
 public class Constants {
+    /** Create a new instance. */
+    public Constants() {
+    }
+
     private static final String USE_PACKAGE_MANAGER =
         "use your Linux " +
         "package manager to install it on your system. If this is not " +

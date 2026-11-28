@@ -48,6 +48,11 @@ import java.util.Map;
 public final class StubSourceElement
     extends FlowElementBase<ElementData, ElementPropertyMetaData> {
 
+    @Override
+    protected Class<ElementData> getDataType() {
+        return ElementData.class;
+    }
+
     private final String key;
     private final List<ElementPropertyMetaData> properties;
     private final Map<String, Object> values;

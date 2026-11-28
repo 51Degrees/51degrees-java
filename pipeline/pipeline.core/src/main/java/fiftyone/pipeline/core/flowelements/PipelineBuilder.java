@@ -54,7 +54,6 @@ import static fiftyone.pipeline.util.Types.getPrimitiveTypeMap;
  * 
  * @see <a href="https://github.com/51Degrees/specifications/blob/main/pipeline-specification/conceptual-overview.md#pipeline-builder">Specification</a>
  */
-@SuppressWarnings("rawtypes")
 public class PipelineBuilder
     extends PipelineBuilderBase<PipelineBuilder>
     implements PipelineBuilderFromConfiguration {
@@ -68,6 +67,11 @@ public class PipelineBuilder
      * constructing new ones.
      */
     private final List<Object> preparedBuilders = new ArrayList<>();
+
+    @Override
+    protected PipelineBuilder self() {
+        return this;
+    }
 
     /**
      * Construct a new builder.
@@ -181,9 +185,9 @@ public class PipelineBuilder
      * @param failure the reason building failed
      */
     private static void closeAfterFailure(
-        List<FlowElement> elements,
+        List<FlowElement<?, ?>> elements,
         Throwable failure) {
-        for (FlowElement element : elements) {
+        for (FlowElement<?, ?> element : elements) {
             try {
                 element.close();
             } catch (Exception e) {
@@ -194,10 +198,10 @@ public class PipelineBuilder
     }
 
     /**
-     * Uses reflection to populate {@link #elementBuilders} with all classes
-     * which are annotated with the {@link ElementBuilder} annotation.
+     * Uses reflection to find all classes which are annotated with the
+     * {@link ElementBuilder} annotation.
      *
-     * @return
+     * @return the classes found
      */
     public static Set<Class<?>> getAvailableElementBuilders() {
 
@@ -227,7 +231,7 @@ public class PipelineBuilder
      *                        within the {@link PipelineOptions} instance
      */
     private void addElementToList(
-        List<FlowElement> elements,
+        List<FlowElement<?, ?>> elements,
         ElementOptions elementOptions,
         String elementLocation) {
         // Check that a builder name is set
@@ -400,7 +404,7 @@ public class PipelineBuilder
         }
 
         try {
-            FlowElement element = FlowElement.class.cast(result);
+            FlowElement<?, ?> element = FlowElement.class.cast(result);
             // Add the element to the list.
             elements.add(element);
         }
@@ -422,7 +426,7 @@ public class PipelineBuilder
      *                     {@link PipelineOptions}
      */
     private void addParallelElementsToList(
-        List<FlowElement> elements,
+        List<FlowElement<?, ?>> elements,
         ElementOptions elementOptions,
         int elementIndex) {
         // Element contains further sub elements, this is not allowed.
@@ -435,7 +439,7 @@ public class PipelineBuilder
                     "SubElements and other settings values. " +
                     "This is invalid");
         }
-        List<FlowElement> parallelElements = new ArrayList<>();
+        List<FlowElement<?, ?>> parallelElements = new ArrayList<>();
 
         // Iterate through the sub elements, creating them and
         // adding them to the list.
@@ -495,11 +499,10 @@ public class PipelineBuilder
      * @param <T> the service class to be returned
      * @return service of type {@link T}, or null
      */
-    @SuppressWarnings("unchecked")
-    private <T extends PipelineService> T getService(Class<T> serviceType) {
+    private <T> T getService(Class<T> serviceType) {
         for (PipelineService service : services) {
-            if (serviceType.isAssignableFrom(service.getClass())) {
-                return (T)service;
+            if (serviceType.isInstance(service)) {
+                return serviceType.cast(service);
             }
         }
         return null;
@@ -512,7 +515,6 @@ public class PipelineBuilder
      * @return best constructor or null if none have parameters that can be
      * fulfilled
      */
-    @SuppressWarnings("unchecked")
     private Constructor<?> getBestConstructor(List<Constructor<?>> constructors) {
         Constructor<?> bestConstructor = null;
         for (Constructor<?> constructor : constructors) {
@@ -520,7 +522,7 @@ public class PipelineBuilder
                     constructor.getParameterTypes().length >
                         bestConstructor.getParameterTypes().length) {
                 boolean hasServices = true;
-                for (Class type : constructor.getParameterTypes()) {
+                for (Class<?> type : constructor.getParameterTypes()) {
                     if (type.equals(ILoggerFactory.class) == false &&
                         getService(type) == null) {
                         // The parameter is not a logger factory, and the
@@ -543,10 +545,9 @@ public class PipelineBuilder
      * @return instance returned by the constructor
      * @throws PipelineConfigurationException
      */
-    @SuppressWarnings("unchecked")
     private Object callConstructorWithServices(Constructor<?> constructor, Class<?> builderType)
         throws PipelineConfigurationException {
-        Class[] types = constructor.getParameterTypes();
+        Class<?>[] types = constructor.getParameterTypes();
         Object[] services = new Object[types.length];
         for (int i = 0; i < types.length; i++) {
             if (types[i].equals(ILoggerFactory.class)) {
@@ -589,7 +590,6 @@ public class PipelineBuilder
      * @return new builder instance
      * @throws PipelineConfigurationException
      */
-    @SuppressWarnings("deprecation")
     private Object getBuilder(Class<?> builderType)
         throws PipelineConfigurationException {
         // Get the valid constructors. This means either a default
@@ -1075,6 +1075,8 @@ public class PipelineBuilder
 
     /**
      * Evaluate strings for substitution of system properties etc.
+     * @param value the string to evaluate
+     * @return the string with each variable replaced
      */
     public static String evaluate(String value) {
         StringSubstitutor substitutor = FiftyOneLookup.getSubstitutor();

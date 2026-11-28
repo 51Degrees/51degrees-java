@@ -22,14 +22,23 @@
 
 package fiftyone.ipintelligence.engine.onpremise;
 
+/** Enumerations used by the on-premise engine. */
 public class Enums {
+    /** Create a new instance. */
+    public Enums() {
+    }
+
     /**
      * Enumeration of possible match methods used by the Hash engine.
      */
     public enum MatchMethods {
+        /** No hash nodes were matched. */
         NONE,
+        /** Every match came from the performance graph. */
         PERFORMANCE,
+        /** Matches came from both the performance and predictive graphs. */
         COMBINED,
+        /** Every match came from the predictive graph. */
         PREDICTIVE
     }
 }

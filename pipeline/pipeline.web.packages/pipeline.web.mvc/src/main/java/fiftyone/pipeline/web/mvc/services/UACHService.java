@@ -38,14 +38,27 @@ import fiftyone.pipeline.web.services.UACHServiceCore;
 @Service
 public interface UACHService extends UACHServiceCore {
 
+	/**
+	 * Set the User-Agent Client Hints response headers from the results for the
+	 * request.
+	 *
+	 * @param request the request
+	 * @param response the response to set the headers on
+	 */
 	public void setResponseHeaders(
 		HttpServletRequest request, HttpServletResponse response);
 	
+    /** Default implementation of {@link UACHService}. */
     @Service
     class Default extends UACHServiceCore.Default implements UACHService {
     	// Internal FlowData provider 
     	private final FlowDataProvider flowDataProvider;
     	
+		/**
+		 * Create a new instance.
+		 *
+		 * @param flowDataProvider gives the Flow Data for each request
+		 */
     	@Autowired
 		public Default(FlowDataProvider flowDataProvider) {
 			this.flowDataProvider = flowDataProvider;

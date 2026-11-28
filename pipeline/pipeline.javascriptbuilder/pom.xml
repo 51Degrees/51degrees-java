@@ -108,15 +108,53 @@
              that still runs on Java 8 (4.13.0) bundles a Selenium Manager that
              pairs a stale cached ChromeDriver with current Chrome, failing with
              "This version of ChromeDriver only supports Chrome version NNN".
-             There is therefore no Selenium version that both compiles on Java 8
-             and drives a current browser, so JavaScriptBuilderTests is built and
-             run on Java 11+ only. Every test in that class needs a browser: it
-             starts a ChromeDriver in Init() and quits it in Cleanup(). -->
+             No Selenium version both runs on Java 8 and drives a current
+             browser, so JavaScriptBuilderTests, which uses Selenium, is built
+             and run on Java 11 and later only. Every test in that class needs
+             a browser.
+
+             The rest of the module's tests are compiled against the Java 8
+             API, as the parent sets. JavaScriptBuilderTests is compiled on
+             its own against the Java 11 API, because Selenium marks some of
+             its classes @Deprecated(since, forRemoval), which the Java 8 API
+             has no elements for, so javac warns that it cannot find them when
+             it reads those classes for Java 8. -->
         <profile>
             <id>jdk11-selenium</id>
             <activation>
                 <jdk>[11,)</jdk>
             </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>default-testCompile</id>
+                                <configuration>
+                                    <testExcludes>
+                                        <testExclude>**/JavaScriptBuilderTests.java</testExclude>
+                                    </testExcludes>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>selenium-testCompile</id>
+                                <phase>test-compile</phase>
+                                <goals>
+                                    <goal>testCompile</goal>
+                                </goals>
+                                <configuration>
+                                    <testIncludes>
+                                        <testInclude>**/JavaScriptBuilderTests.java</testInclude>
+                                    </testIncludes>
+                                    <testRelease>11</testRelease>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
             <dependencies>
                 <dependency>
                     <groupId>org.seleniumhq.selenium</groupId>
@@ -127,11 +165,41 @@
             </dependencies>
         </profile>
 
+        <!-- When Maven runs on JDK 11 or later and the tests run on a Java 8
+             JVM, given by Surefire's jvm property, the test run leaves out
+             JavaScriptBuilderTests, as Java 8 cannot load its Java 11 class
+             file. Set fiftyone.testJava to 8 to choose this. -->
+        <profile>
+            <id>java-8-test-jvm</id>
+            <activation>
+                <property>
+                    <name>fiftyone.testJava</name>
+                    <value>8</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/*$*</exclude>
+                                <exclude>**/JavaScriptBuilderTests.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
         <!-- On Java 8 the Selenium tests are dropped at test *compilation*, not
              just from the test run: javac fails reading the Java 11 class files
              ("class file has wrong version 55.0, should be 52.0") long before
              surefire is reached, so a surefire <excludes> alone would not help.
-             The module's other tests are unaffected. -->
+             CI compiles with JDK 17 and then runs the tests with Maven on
+             JDK 8, so the class compiled for Java 11 is also left out of the
+             test run there. The module's other tests are unaffected. -->
         <profile>
             <id>jdk8-no-selenium</id>
             <activation>
@@ -146,6 +214,18 @@
                             <testExcludes>
                                 <testExclude>**/JavaScriptBuilderTests.java</testExclude>
                             </testExcludes>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <excludes>
+                                <!-- Surefire's own default, which a list
+                                     given here replaces. -->
+                                <exclude>**/*$*</exclude>
+                                <exclude>**/JavaScriptBuilderTests.java</exclude>
+                            </excludes>
                         </configuration>
                     </plugin>
                 </plugins>

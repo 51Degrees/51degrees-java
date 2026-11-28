@@ -46,8 +46,7 @@ import java.util.List;
  * @param <T> the builder type
  */
 
-@SuppressWarnings("rawtypes")
-public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
+public abstract class PipelineBuilderBase<T extends PipelineBuilderBase<T>> {
 
     /**
      * The {@link ILoggerFactory} used to create any loggers required by
@@ -64,16 +63,21 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
     /**
      * List of flow elements to add to the Pipeline.
      */
-    protected final List<FlowElement> flowElements = new ArrayList<>();
+    protected final List<FlowElement<?, ?>> flowElements = new ArrayList<>();
 
     /**
      * List of services to be managed by the Pipeline.
      */
     protected final List<PipelineService> services = new ArrayList<>();
     
+    /** Whether the Pipeline closes its elements when it is closed. */
     protected boolean autoCloseElements =
         Constants.DEFAULT_AUTO_CLOSE_ELEMENTS;
 
+    /**
+     * Whether the Pipeline records errors from processing instead of throwing
+     * them.
+     */
     protected boolean suppressProcessExceptions =
         Constants.DEFAULT_SUPPRESS_PROCESS_EXCEPTIONS;
 
@@ -97,7 +101,19 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
         this.logger = loggerFactory.getLogger(getClass().getName());
     }
 
-    protected List<FlowElement> getFlowElements() {
+    /**
+     * This builder as its own type, returned by the fluent setters so that a
+     * chain of calls keeps the type of the builder in use.
+     * @return this builder
+     */
+    protected abstract T self();
+
+    /**
+     * The elements added so far.
+     *
+     * @return the elements
+     */
+    protected List<FlowElement<?, ?>> getFlowElements() {
         return flowElements;
     }
 
@@ -145,12 +161,11 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
      * @param elements the Flow Elements of the Pipeline, in order
      * @throws PipelineConfigurationException if one is out of place
      */
-    @SuppressWarnings("rawtypes")
-    private static void checkRunsLast(List<FlowElement> elements) {
+    private static void checkRunsLast(List<FlowElement<?, ?>> elements) {
         for (int i = 0; i < elements.size(); i++) {
-            FlowElement element = elements.get(i);
+            FlowElement<?, ?> element = elements.get(i);
             if (element instanceof ParallelElements) {
-                for (FlowElement member :
+                for (FlowElement<?, ?> member :
                     ((ParallelElements) element).getFlowElements()) {
                     if (member instanceof RunsLast) {
                         throw runsLastRefused((RunsLast) member);
@@ -176,14 +191,13 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
      * @param element to add
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
-    public T addFlowElement(FlowElement element) {
+    public T addFlowElement(FlowElement<?, ?> element) {
         if (element.isClosed()) {
             throw new IllegalStateException("The element '" +
                 element.getClass().getSimpleName() + "' was closed.");
         }
         flowElements.add(element);
-        return (T) this;
+        return self();
     }
 
     /**
@@ -192,9 +206,8 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
      * @param elements to add
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
-    public T addFlowElementsParallel(FlowElement[] elements) {
-        for (FlowElement element : elements) {
+    public T addFlowElementsParallel(FlowElement<?, ?>[] elements) {
+        for (FlowElement<?, ?> element : elements) {
             if (element.isClosed()) {
                 throw new IllegalStateException("The element '" +
                     element.getClass().getSimpleName() + "' was closed.");
@@ -204,7 +217,7 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
             loggerFactory.getLogger(ParallelElements.class.getName()),
             Arrays.asList(elements));
         flowElements.add(parallelElements);
-        return (T) this;
+        return self();
     }
     
     /**
@@ -216,10 +229,9 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
      * @param service the service instance to add
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
 	public T addService(PipelineService service) {
         services.add(service);
-        return (T) this;
+        return self();
     }
     
     /**
@@ -244,12 +256,11 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
      *                  elements when it is disposed
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
     @DefaultValue(booleanValue = Constants.DEFAULT_AUTO_CLOSE_ELEMENTS)
     @AlternateName("SetAutoDisposeElements")
     public T setAutoCloseElements(boolean autoClose) {
         this.autoCloseElements = autoClose;
-        return (T) this;
+        return self();
     }
 
     /**
@@ -261,11 +272,10 @@ public abstract class PipelineBuilderBase<T extends PipelineBuilderBase> {
      *                 {@link FlowData#getErrors()}
      * @return this builder
      */
-    @SuppressWarnings("unchecked")
     @DefaultValue(booleanValue = Constants.DEFAULT_SUPPRESS_PROCESS_EXCEPTIONS)
     public T setSuppressProcessException(boolean suppress) {
         this.suppressProcessExceptions = suppress;
-        return (T) this;
+        return self();
     }
 
     /**

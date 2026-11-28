@@ -25,10 +25,20 @@ package fiftyone.caching;
 import java.io.Closeable;
 import java.io.IOException;
 
+/**
+ * A cache that holds nothing and loads the value on every call.
+ *
+ * @param <V> type of the values
+ */
 public class NoCache<V extends Closeable> implements Cache<Integer, V> {
 
     private final ValueLoader<Integer, V> loader;
 
+    /**
+     * Create a new instance.
+     *
+     * @param loader loads each value
+     */
     public NoCache(ValueLoader<Integer, V> loader) {
         this.loader = loader;
     }

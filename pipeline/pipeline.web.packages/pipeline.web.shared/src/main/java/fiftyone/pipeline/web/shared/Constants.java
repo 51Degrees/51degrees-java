@@ -22,7 +22,14 @@
 
 package fiftyone.pipeline.web.shared;
 
+/** Constants shared by the web integrations. */
 public class Constants {
+    /** Create a new instance. */
+    public Constants() {
+    }
+
+    /** Key of the element data that holds the client-side JavaScript. */
     public static final String CLIENTSIDE_JAVASCRIPT_DATA_KEY = "clientside-javascript";
+    /** Name of the property that holds the client-side JavaScript. */
     public static final String CLIENTSIDE_JAVASCRIPT_PROPERTY_NAME = "javascript";
 }

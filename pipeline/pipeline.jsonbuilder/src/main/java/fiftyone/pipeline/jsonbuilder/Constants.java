@@ -22,8 +22,16 @@
 
 package fiftyone.pipeline.jsonbuilder;
 
+/** Constants used by the JSON Builder Element. */
 public class Constants {
+    /** Create a new instance. */
+    public Constants() {
+    }
 
+    /**
+     * The request sequence number from which JavaScript properties are no
+     * longer added, so the client stops calling back.
+     */
     public static final Integer MAX_JAVASCRIPT_ITERATIONS = 10;
 
     /**

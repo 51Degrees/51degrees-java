@@ -61,10 +61,10 @@ if exist target\build64 rmdir /S /Q target\build64
 
 mkdir target\build32
 cd target\build32
-cmake ..\..\src\main\cxx -A Win32 %additionalFlags%
-cmake --build . --target fiftyone-hash-java --config Release
+cmake ..\..\src\main\cxx -A Win32 %additionalFlags% || exit /b 1
+cmake --build . --target fiftyone-hash-java --config Release || exit /b 1
 cd ..\..
 mkdir target\build64
 cd target\build64
-cmake ..\..\src\main\cxx -A x64 %additionalFlags%
-cmake --build . --target fiftyone-hash-java --config Release
+cmake ..\..\src\main\cxx -A x64 %additionalFlags% || exit /b 1
+cmake --build . --target fiftyone-hash-java --config Release || exit /b 1

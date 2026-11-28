@@ -52,6 +52,9 @@ public interface FlowDataProviderCore {
      * Default implementation of the {@link FlowDataProviderCore} service.
      */
     class Default implements FlowDataProviderCore {
+        /** Create a new instance. */
+        public Default() {
+        }
 
         @Override
         public FlowData getFlowData(HttpServletRequest request) {

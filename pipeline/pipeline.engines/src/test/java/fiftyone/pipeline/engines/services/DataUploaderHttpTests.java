@@ -76,8 +76,13 @@ public class DataUploaderHttpTests {
     public void DataUploaderHttp_NoAnswer_TimesOut() throws Exception {
         try (ServerSocket server = new ServerSocket(0)) {
             Thread holder = new Thread(() -> {
-                try (Socket socket = server.accept()) {
-                    Thread.sleep(HOLD_MILLIS);
+                try {
+                    Socket socket = server.accept();
+                    try {
+                        Thread.sleep(HOLD_MILLIS);
+                    } finally {
+                        socket.close();
+                    }
                 } catch (Exception ignored) {
                     // The test has ended and closed the server.
                 }

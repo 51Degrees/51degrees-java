@@ -262,6 +262,7 @@ public final class DidClient {
         }
 
         /**
+         * Set a license key of the account, or null.
          * @param licenceKey a licence key of the account, or null
          * @return this builder
          */
@@ -271,6 +272,8 @@ public final class DidClient {
         }
 
         /**
+         * Set the API base including {@code /api/v4/}, or null to read {@value
+         * #CLOUD_ENDPOINT_VARIABLE} and fall back to {@link #DEFAULT_ENDPOINT}.
          * @param endpoint the API base including {@code /api/v4/}, or null
          *                 to read {@value #CLOUD_ENDPOINT_VARIABLE} and
          *                 fall back to {@link #DEFAULT_ENDPOINT}
@@ -282,6 +285,8 @@ public final class DidClient {
         }
 
         /**
+         * Set the HTTP transport to send through, or null for the default
+         * {@link java.net.HttpURLConnection} one.
          * @param transport the HTTP transport to send through, or null for
          *                  the default {@link java.net.HttpURLConnection}
          *                  one
@@ -308,6 +313,8 @@ public final class DidClient {
         }
 
         /**
+         * Set the clock the key list's age is measured by, or null for the
+         * system clock.
          * @param clock the clock the key list's age is measured by, or null
          *              for the system clock
          * @return this builder
@@ -317,23 +324,35 @@ public final class DidClient {
             return this;
         }
 
-        /** @return the client */
+        /**
+         * Returns the client.
+         * @return the client
+         */
         public DidClient build() {
             return new DidClient(this);
         }
     }
 
-    /** @return the resource key the client sends */
+    /**
+     * Returns the resource key the client sends.
+     * @return the resource key the client sends
+     */
     public String getResourceKey() {
         return resourceKey;
     }
 
-    /** @return the API base every request is made under, ending in a slash */
+    /**
+     * Returns the API base every request is made under, ending in a slash.
+     * @return the API base every request is made under, ending in a slash
+     */
     public String getEndpoint() {
         return endpoint;
     }
 
-    /** @return whether the client was given a licence key */
+    /**
+     * Returns whether the client was given a license key.
+     * @return whether the client was given a license key
+     */
     public boolean hasLicenceKey() {
         return licenceKey != null;
     }

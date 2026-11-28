@@ -161,12 +161,13 @@ public class GettingStartedCloudMixed {
 
         // The engines are not closed anywhere else, so the pipeline is asked
         // to close them when it is closed.
-        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+        Pipeline pipeline = new PipelineBuilder(loggerFactory)
                 .addFlowElement(cloudRequestEngine)
                 .addFlowElement(deviceDetectionEngine)
                 .addFlowElement(ipIntelligenceEngine)
                 .setAutoCloseElements(true)
-                .build()) {
+                .build();
+        try {
 
             // carry out some sample detections
             for (Map<String, String> evidence : evidenceList) {
@@ -174,6 +175,8 @@ public class GettingStartedCloudMixed {
             }
 
             logger.info("All done");
+        } finally {
+            pipeline.close();
         }
     }
 
@@ -181,7 +184,8 @@ public class GettingStartedCloudMixed {
                                         Pipeline pipeline,
                                         OutputStream out) throws Exception {
         PrintWriter writer = new PrintWriter(out);
-        try (FlowData data = pipeline.createFlowData()) {
+        FlowData data = pipeline.createFlowData();
+        try {
 
             // List the evidence
             writer.println("===============================================================================");
@@ -229,6 +233,8 @@ public class GettingStartedCloudMixed {
             writer.println("\tIpRangeEnd: " + asIPAddressProperty(tryGet(ipData::getIpRangeEnd)));
             writer.println("\tAccuracyRadiusMin: " + asIntegerProperty(tryGet(ipData::getAccuracyRadiusMin)));
             writer.println("\tTimeZoneOffset: " + asIntegerProperty(tryGet(ipData::getTimeZoneOffset)));
+        } finally {
+            data.close();
         }
         writer.println();
         writer.flush();
