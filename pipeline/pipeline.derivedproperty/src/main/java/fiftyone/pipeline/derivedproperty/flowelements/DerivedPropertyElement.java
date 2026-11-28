@@ -58,9 +58,15 @@ import java.util.TreeSet;
  * the key {@code derived}, which every instance in a Pipeline shares.
  * <p>
  * The element holds no data file, makes no request over the network and
- * reads no evidence. Everything it holds is fixed when it is built, so
+ * accepts no evidence. Everything it holds is fixed when it is built, so
  * concurrent requests need nothing further, and per request it reads each
  * source property once, then runs each script.
+ * <p>
+ * The one evidence it reads is {@code query.humanconfidence}. On a request
+ * where that is not empty, which carries a sealed Human Confidence result
+ * this element cannot redeem, an element that writes HumanConfidence gives
+ * {@code Medium}, with HumanConfidenceSource {@code Active}, in place of
+ * the value its script works out.
  * <p>
  * Every Derived Property Element in a Pipeline writes into the same Element
  * Data, so two of them must not be members of the same parallel group.
@@ -91,6 +97,17 @@ public final class DerivedPropertyElement
         "configuration, the property not being included in the resource " +
         "key, or JavaScript that populates the property not having run yet.";
 
+    /**
+     * The evidence that carries a sealed Human Confidence result.
+     */
+    private static final String SEALED_RESULT_EVIDENCE =
+        "query.humanconfidence";
+
+    private static final String HUMAN_CONFIDENCE = "HumanConfidence";
+
+    private static final String HUMAN_CONFIDENCE_SOURCE =
+        "HumanConfidenceSource";
+
     private static final TypedKey<IDerivedPropertyData> DATA_KEY =
         new TypedKeyDefault<>(ELEMENT_DATA_KEY, IDerivedPropertyData.class);
 
@@ -99,6 +116,7 @@ public final class DerivedPropertyElement
     private final List<TypedKey<ElementData>> dataKeys;
     private final List<ElementPropertyMetaData> properties;
     private final List<DerivedPropertyMetaData> metadata;
+    private final boolean writesHumanConfidence;
     private final EvidenceKeyFilter evidenceKeyFilter =
         new EvidenceKeyFilterWhitelist(Collections.<String>emptyList());
 
@@ -121,6 +139,7 @@ public final class DerivedPropertyElement
         List<CompiledScript> compiled = new ArrayList<>();
         List<ElementPropertyMetaData> outputs = new ArrayList<>();
         List<DerivedPropertyMetaData> scriptData = new ArrayList<>();
+        boolean humanConfidence = false;
         for (DerivedScript model : models) {
             int[] scriptReads = new int[model.getProperties().size()];
             for (int i = 0; i < scriptReads.length; i++) {
@@ -149,6 +168,8 @@ public final class DerivedPropertyElement
             compiled.add(new CompiledScript(model, scriptReads));
             scriptData.add(new DerivedPropertyMetaData(model));
             OutputModel output = model.getOutput();
+            humanConfidence |= HUMAN_CONFIDENCE.equalsIgnoreCase(
+                output.getName());
             outputs.add(new ElementPropertyMetaDataDefault(
                 output.getName(),
                 this,
@@ -161,6 +182,7 @@ public final class DerivedPropertyElement
         this.dataKeys = Collections.unmodifiableList(keys);
         this.properties = Collections.unmodifiableList(outputs);
         this.metadata = Collections.unmodifiableList(scriptData);
+        this.writesHumanConfidence = humanConfidence;
     }
 
     @Override
@@ -179,8 +201,9 @@ public final class DerivedPropertyElement
     }
 
     /**
-     * The element reads properties other elements produce and nothing from
-     * the request itself, so it accepts no evidence.
+     * The element reads properties other elements produce, and from the
+     * request itself only {@code query.humanconfidence}, which no element
+     * need accept, so it accepts no evidence.
      * @return a filter that includes no key
      */
     @Override
@@ -242,6 +265,31 @@ public final class DerivedPropertyElement
         for (CompiledScript script : scripts) {
             processScript(script, slots, sources, out);
         }
+        // This element cannot redeem a sealed result, so it gives Medium
+        // and Active. See
+        // https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/human-confidence.md#where-the-sealed-result-is-not-redeemed
+        if (writesHumanConfidence && carriesSealedResult(data)) {
+            out.put(HUMAN_CONFIDENCE,
+                new AspectPropertyValueDefault<>("Medium"));
+            out.put(HUMAN_CONFIDENCE_SOURCE,
+                new AspectPropertyValueDefault<>("Active"));
+        }
+    }
+
+    /**
+     * Whether the request's evidence holds a {@code query.humanconfidence}
+     * that is not empty, matched without regard to case.
+     */
+    private static boolean carriesSealedResult(FlowData data) {
+        for (Map.Entry<String, Object> entry :
+            data.getEvidence().asKeyMap().entrySet()) {
+            if (SEALED_RESULT_EVIDENCE.equalsIgnoreCase(entry.getKey()) &&
+                entry.getValue() != null &&
+                entry.getValue().toString().isEmpty() == false) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void processScript(
