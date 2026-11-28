@@ -31,8 +31,10 @@ import fiftyone.pipeline.core.data.EvidenceKeyFilter;
 import fiftyone.pipeline.core.data.EvidenceKeyFilterWhitelist;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.data.factories.ElementDataFactory;
+import fiftyone.pipeline.core.exceptions.PipelineConfigurationException;
 import fiftyone.pipeline.core.flowelements.FlowElement;
 import fiftyone.pipeline.core.flowelements.FlowElementBase;
+import fiftyone.pipeline.core.flowelements.Pipeline;
 import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import fiftyone.pipeline.engines.data.AspectPropertyValueDefault;
 import org.json.JSONException;
@@ -48,6 +50,13 @@ import java.util.List;
  * {@code derived} Element Data from the Cloud Request Engine's JSON call,
  * and redeems a sealed Human Confidence result through that call. Add it to
  * the Pipeline after the Cloud Request Engine it is given.
+ * <p>
+ * The Derived Property Element writes the same {@code derived} Element
+ * Data. Where the Pipeline has one, add this element after it. This
+ * element then writes its two Properties into that Element Data, so a
+ * consumer reads every derived Property in one place. A Pipeline where an
+ * element that writes the {@code derived} Element Data comes after this
+ * one is refused. A member of a parallel group is not checked.
  * <p>
  * A request carries a sealed result where its Evidence holds
  * {@code query.humanconfidence} with a value that is not empty. The Cloud
@@ -264,6 +273,45 @@ public class HumanConfidenceElement
             }
         }
         return null;
+    }
+
+    /**
+     * Refuses a Pipeline where another element that writes the
+     * {@code derived} Element Data comes after this one. That element,
+     * such as the Derived Property Element, can't write into the Element
+     * Data this element made.
+     * @param pipeline the Pipeline this element is added to
+     * @throws PipelineConfigurationException where such an element comes
+     * after this one
+     */
+    @Override
+    public void addPipeline(Pipeline pipeline) {
+        if (pipeline != null) {
+            boolean after = false;
+            for (Object item : pipeline.getFlowElements()) {
+                FlowElement<?, ?> element = (FlowElement<?, ?>) item;
+                if (element == this) {
+                    after = true;
+                } else if (after && writesDerived(element)) {
+                    throw new PipelineConfigurationException(
+                        "The element '" + element.getClass().getSimpleName() +
+                        "' writes the '" + ELEMENT_DATA_KEY + "' Element " +
+                        "Data and comes after the Human Confidence " +
+                        "element. Add the Human Confidence element after " +
+                        "it.");
+                }
+            }
+        }
+        super.addPipeline(pipeline);
+    }
+
+    private static boolean writesDerived(FlowElement<?, ?> element) {
+        try {
+            return ELEMENT_DATA_KEY.equalsIgnoreCase(
+                element.getElementDataKey());
+        } catch (RuntimeException noKey) {
+            return false;
+        }
     }
 
     @Override

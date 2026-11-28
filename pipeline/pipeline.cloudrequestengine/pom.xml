@@ -52,6 +52,15 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- For the test that the Human Confidence element and the Derived
+             Property Element share the derived Element Data. -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>pipeline.derivedproperty</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
