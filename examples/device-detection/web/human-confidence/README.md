@@ -23,16 +23,20 @@ The page shows three rows, one for each step.
    level, `High`, `Medium`, or `Low`. The server reads it rather than
    reading it from the page, because a level sent by a browser can be
    forged.
-2. **Active.** The page loads the 51Degrees client script. It runs the
+2. **Active.** The page loads the 51Degrees client script from the
+   address the package gives the page, which carries a transaction the
+   package keeps for that page. It runs the
    browser tests, which take a few seconds. When the script completes,
    `HumanConfidenceSource` is `Active` and `HumanConfidence` holds a sealed
    value. The browser can't read it or change it.
 3. **Active, read by the server.** The page sends the sealed value to the
-   server as `humanconfidence`. The server adds it to the Evidence as
-   `query.humanconfidence` and processes the request with the Pipeline,
+   server as `humanconfidence`, with the page id the package gave it as
+   `humanconfidencepage`. The server adds both to the Evidence as query
+   values and processes the request with the Pipeline,
    then reads the same two properties. The example never redeems the
    sealed value itself. The Pipeline redeems it through its normal call to
-   the cloud, with the account's License Key, and never caches that call.
+   the cloud, with the account's License Key and the page's transaction,
+   and never caches that call.
    `HumanConfidenceSource` is `Active`, and `HumanConfidence` is the level
    the sealed value redeemed to. A sealed value redeems once, within ten
    seconds of the tests. Where it does not redeem, `HumanConfidence` is

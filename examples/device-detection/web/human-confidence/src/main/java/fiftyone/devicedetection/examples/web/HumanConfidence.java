@@ -27,7 +27,9 @@ import com.sun.net.httpserver.HttpServer;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
 import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngineBuilder;
 import fiftyone.pipeline.cloudrequestengine.flowelements.HumanConfidenceElement;
+import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngineDefault;
 import fiftyone.pipeline.cloudrequestengine.flowelements.HumanConfidenceElementBuilder;
+import fiftyone.pipeline.cloudrequestengine.flowelements.HumanConfidencePage;
 import fiftyone.pipeline.core.data.ElementData;
 import fiftyone.pipeline.core.data.FlowData;
 import fiftyone.pipeline.core.flowelements.Pipeline;
@@ -71,12 +73,15 @@ import java.util.concurrent.Executors;
  * carries them whatever the Resource Key's saved list of properties holds.
  * The server reads them rather than reading a level from the page, because
  * a level a browser sends can be forged.</li>
- * <li>Active. The page loads the 51Degrees client script. When the script
+ * <li>Active. The page loads the 51Degrees client script from the address
+ * the package gives the page, which carries the page's transaction. When
+ * the script
  * completes, HumanConfidenceSource is Active and HumanConfidence holds a
  * sealed value the browser can't read or change.</li>
  * <li>Read by the server. The page sends the sealed value to this server
- * as humanconfidence. The server adds it to the Evidence as
- * query.humanconfidence and processes the request with the Pipeline. The
+ * as humanconfidence, with the page id the package gave it as
+ * humanconfidencepage. The server adds both to the Evidence as query
+ * values and processes the request with the Pipeline. The
  * Pipeline redeems the sealed value with the License Key, which stays on
  * this server, and the server reads the same two Properties. A sealed
  * value redeems once, within ten seconds. Where it does not redeem,
@@ -120,6 +125,9 @@ public class HumanConfidence {
 
     /** The page's parameter that carries the sealed value. */
     public static final String SEALED_PARAMETER = "humanconfidence";
+
+    /** The parameter the page sends its page id as. */
+    public static final String PAGE_PARAMETER = "humanconfidencepage";
 
     private static final String PAGE = "/human-confidence/page.html";
     private static final String CSS = "/human-confidence/examples-main.min.css";
@@ -313,11 +321,13 @@ public class HumanConfidence {
             } else if ("/examples-main.min.css".equals(path)) {
                 reply(exchange, 200, "text/css", resourceBytes(CSS));
             } else if ("/passive".equals(path) && "GET".equals(method)) {
-                properties(exchange, null);
+                properties(exchange, null, null);
             } else if ("/active".equals(path) && "POST".equals(method)) {
-                String sealed = parseForm(readAll(exchange.getRequestBody()))
-                        .get(SEALED_PARAMETER);
-                properties(exchange, sealed == null ? "" : sealed);
+                Map<String, String> form =
+                        parseForm(readAll(exchange.getRequestBody()));
+                String sealed = form.get(SEALED_PARAMETER);
+                properties(exchange, sealed == null ? "" : sealed,
+                        form.get(PAGE_PARAMETER));
             } else {
                 reply(exchange, 404, "text/plain", bytes("Not found"));
             }
@@ -326,8 +336,14 @@ public class HumanConfidence {
         }
     }
 
-    /** Serves the page, read on each request so an edit shows at once. */
+    /**
+     * Serves the page, read on each request so an edit shows at once. The
+     * package gives each page its id and the client script's address,
+     * which carries the transaction it keeps for the page.
+     */
     private void page(HttpExchange exchange) throws IOException {
+        HumanConfidencePage humanConfidencePage =
+                ((CloudRequestEngineDefault) engine).newHumanConfidencePage();
         String notice = hasHumanConfidence ? ""
                 : "  <p class=\"c-eg-page__lead\" id=\"notice\">This Resource "
                   + "Key doesn't include HumanConfidence. <a href=\""
@@ -335,8 +351,9 @@ public class HumanConfidence {
                   + "\">Contact us</a> to add it.</p>";
         String html = new String(resourceBytes(PAGE), StandardCharsets.UTF_8)
                 .replace("__NOTICE__", notice)
-                .replace("__RESOURCE__", resource)
-                .replace("__API__", api);
+                .replace("__SCRIPT__", humanConfidencePage.scriptAddress(
+                        api + resource + ".js"))
+                .replace("__PAGE__", humanConfidencePage.getId());
         // Each load runs the browser tests, so never serve it from a cache.
         exchange.getResponseHeaders().set("Cache-Control", "no-store");
         reply(exchange, 200, "text/html; charset=utf-8", bytes(html));
@@ -352,9 +369,10 @@ public class HumanConfidence {
      * value is left out, and its reason is given instead.
      * @param sealed the sealed value the page sent, or null for the
      *               passive step
+     * @param pageId the page id the page sent, or null
      */
-    private void properties(HttpExchange exchange, String sealed)
-            throws IOException {
+    private void properties(HttpExchange exchange, String sealed,
+            String pageId) throws IOException {
         JSONObject result = new JSONObject();
         try (FlowData data = pipeline.createFlowData()) {
             for (Map.Entry<String, List<String>> header
@@ -373,6 +391,9 @@ public class HumanConfidence {
                     exchange.getRemoteAddress().getAddress().getHostAddress());
             if (sealed != null) {
                 data.addEvidence("query." + SEALED_PARAMETER, sealed);
+            }
+            if (pageId != null) {
+                data.addEvidence("query." + PAGE_PARAMETER, pageId);
             }
             data.process();
             ElementData derived = data.get(

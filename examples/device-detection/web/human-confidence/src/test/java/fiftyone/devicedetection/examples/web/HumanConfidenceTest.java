@@ -205,16 +205,19 @@ public class HumanConfidenceTest {
     }
 
     @Test
-    public void pageHasKeyAndEndpointAndIsNotCached() throws IOException {
+    public void pageHasScriptAndPageIdAndIsNotCached() throws IOException {
         String base = start(true);
         HttpURLConnection connection = open(base);
         String page = read(connection);
         assertEquals(200, connection.getResponseCode());
         assertEquals("no-store", connection.getHeaderField("Cache-Control"));
-        assertTrue(page.contains("\"" + RESOURCE + "\""));
-        assertTrue(page.contains("/api/v4/\""));
-        assertFalse(page.contains("__RESOURCE__"));
-        assertFalse(page.contains("__API__"));
+        assertTrue(page, page.contains(
+                "/api/v4/" + RESOURCE + ".js?transaction="));
+        assertFalse(pageId(page).isEmpty());
+        assertFalse("Each page gets its own id.",
+                pageId(page).equals(pageId(read(open(base)))));
+        assertFalse(page.contains("__SCRIPT__"));
+        assertFalse(page.contains("__PAGE__"));
         assertFalse(page.contains("contact-us"));
         assertFalse(page.contains(LICENSE));
     }
@@ -267,8 +270,9 @@ public class HumanConfidenceTest {
     public void activeReadsThePropertiesThePipelineRedeemed()
             throws IOException {
         String base = start(true);
+        String id = pageId(read(open(base)));
         HttpURLConnection connection = post(base + "active",
-                "humanconfidence=sealed%2Bvalue");
+                "humanconfidence=sealed%2Bvalue&humanconfidencepage=" + id);
         assertEquals(200, connection.getResponseCode());
         JSONObject answer = new JSONObject(read(connection));
         assertEquals("Active", answer.optString("source"));
@@ -278,24 +282,27 @@ public class HumanConfidenceTest {
         Map<String, String> form = sealedForms.get(0);
         assertEquals("sealed+value", form.get("humanconfidence"));
         assertEquals(LICENSE, form.get("license"));
+        assertFalse(form.get("transaction").isEmpty());
+        assertFalse(form.containsKey("humanconfidencepage"));
         assertFalse(form.containsKey("value"));
         assertFalse(form.containsKey("sealedResult"));
         assertEquals(0, hcRedeemCalls.get());
     }
 
     /**
-     * A sealed value redeems once. The same value sent again is not served
-     * from a cache, and the second answer is Medium, still Active.
+     * A page's transaction is used once, so the same value sent again is
+     * not sent to the cloud, and the second answer is Medium, still Active.
      */
     @Test
     public void activeSentTwiceIsMediumTheSecondTime() throws IOException {
         String base = start(true);
-        post(base + "active", "humanconfidence=v").getResponseCode();
-        JSONObject second = new JSONObject(read(post(base + "active",
-                "humanconfidence=v")));
+        String form = "humanconfidence=v&humanconfidencepage="
+                + pageId(read(open(base)));
+        post(base + "active", form).getResponseCode();
+        JSONObject second = new JSONObject(read(post(base + "active", form)));
         assertEquals("Active", second.optString("source"));
         assertEquals("Medium", second.optString("humanConfidence"));
-        assertEquals(2, sealedForms.size());
+        assertEquals(1, sealedForms.size());
         assertEquals(0, hcRedeemCalls.get());
     }
 
@@ -304,7 +311,8 @@ public class HumanConfidenceTest {
     public void activeWithoutALicenseKeyIsMedium() throws IOException {
         String base = start(true, null);
         JSONObject answer = new JSONObject(read(post(base + "active",
-                "humanconfidence=v")));
+                "humanconfidence=v&humanconfidencepage="
+                + pageId(read(open(base))))));
         assertEquals("Active", answer.optString("source"));
         assertEquals("Medium", answer.optString("humanConfidence"));
         assertEquals(0, hcRedeemCalls.get());
@@ -324,6 +332,7 @@ public class HumanConfidenceTest {
         }
         assertTrue(page.contains("fetch(\"active\""));
         assertTrue(page.contains("body.set(\"humanconfidence\", value)"));
+        assertTrue(page.contains("body.set(\"humanconfidencepage\", PAGE)"));
         assertFalse(page.contains("fetch(\"redeem\""));
         assertFalse(page.contains("sealedResult"));
         assertFalse(page.contains("answer.status"));
@@ -409,6 +418,14 @@ public class HumanConfidenceTest {
                     request.toString().getBytes(StandardCharsets.UTF_8));
             return readAll(socket.getInputStream());
         }
+    }
+
+    /** The page id the example put in a page. */
+    private static String pageId(String page) {
+        Matcher id = Pattern.compile("var PAGE = \"([^\"]*)\"")
+                .matcher(page);
+        assertTrue(page, id.find());
+        return id.group(1);
     }
 
     private static HttpURLConnection open(String url) throws IOException {
