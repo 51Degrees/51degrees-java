@@ -730,7 +730,7 @@ public class CloudRequestEngineDefault
         // neither the sealed result nor any transaction is sent, and the
         // Human Confidence element gives Medium.
         String transaction = null;
-        List<String> hidden = null;
+        List<String> hidden = valuesNeverShown(data);
         if (carriesSealedResult(data)) {
             if (hasLicenseKey()) {
                 transaction = humanConfidencePages.take(
@@ -739,8 +739,6 @@ public class CloudRequestEngineDefault
             if (transaction != null) {
                 request.setRedeeming();
             }
-            hidden = new ArrayList<>(getLicenseKeys());
-            hidden.add(evidenceValue(data, SEALED_HUMAN_CONFIDENCE_EVIDENCE));
             hidden.add(transaction);
         }
 
@@ -759,6 +757,25 @@ public class CloudRequestEngineDefault
         request.setJsonResponseTask(
             CompletableFuture.supplyAsync(
                 () -> send(connection, headers, content, hide), requests));
+    }
+
+    /**
+     * The values no message may hold on this request, being the License
+     * Key and the value of each Evidence named humanconfidence,
+     * transaction or challenge, under any prefix. The cloud's text can
+     * quote any of them.
+     */
+    private List<String> valuesNeverShown(FlowData data) {
+        List<String> values = new ArrayList<>(getLicenseKeys());
+        for (Map.Entry<String, Object> entry :
+            data.getEvidence().asKeyMap().entrySet()) {
+            if (HIDDEN_FIELDS.contains(
+                    keySuffix(entry.getKey()).toLowerCase(Locale.ROOT)) &&
+                entry.getValue() != null) {
+                values.add(entry.getValue().toString());
+            }
+        }
+        return values;
     }
 
     /**

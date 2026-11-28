@@ -679,6 +679,32 @@ public class HumanConfidenceTransactionTests
         }
     }
 
+    /**
+     * A transaction or challenge the request gives is not in a log entry
+     * or error, on a request without a sealed result too.
+     */
+    @Test
+    public void messages_HoldNoTransactionOnAnyRequest() throws Exception {
+        answer = "{'errors':['No match for TXN-FROM-THE-REQUEST.']," +
+            "'warnings':['Seen CHALLENGE-FROM-A-COOKIE']}";
+        List<String> messages;
+        try (Pipeline pipeline = pipeline();
+             FlowData data = pipeline.createFlowData()) {
+            data.addEvidence("header.user-agent", "Mozilla/5.0");
+            data.addEvidence("query.transaction", "TXN-FROM-THE-REQUEST");
+            data.addEvidence("cookie.challenge", "CHALLENGE-FROM-A-COOKIE");
+            data.process();
+            messages = logged();
+            addErrors(messages, data);
+        }
+        for (String message : messages) {
+            assertFalse(message.contains("TXN-FROM"), message);
+            assertFalse(message.contains("CHALLENGE-FROM"), message);
+        }
+        assertTrue(messages.stream().anyMatch(m -> m.contains("[hidden]")),
+            "The cloud's text was not given: " + messages);
+    }
+
     // A credential that leaves the Properties out.
 
     @Test
