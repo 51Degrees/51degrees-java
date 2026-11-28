@@ -25,21 +25,32 @@ is a web page and a server. The flow against the cloud has three steps:
    page has not finished and is given nothing.
 2. **Verify** it with `verify-full`, which returns both the signature
    outcome and the creator context verdict only as an encrypted
-   `result` that the caller cannot read or forge. (A deployment
+   `sealedResult` that the caller cannot read or forge. (A deployment
    holding no context secret answers in the open instead.) The page
    sends what the snippets collected with this call as well, because
    the service compares this browser against the creator from those
    values and gives no verdict without them.
 3. **Redeem** the encrypted result with `redeem`, presenting the 51Did,
    the encrypted result and the account's licence key, and receive the
-   true creator context verdict, when the verification happened
-   (`verifiedAt`) and how long ago that was (`secondsSinceVerified`).
+   `status` of the redemption, the true creator context verdict, when
+   the verification happened (`verifiedAt`) and how long ago that was
+   (`secondsSinceVerified`).
 
 Steps 1 and 2 run in the visitor's browser, so the cloud observes the
 browser's live connection, and the page relays the encrypted result to
 your server. Step 3 runs on your server, which is the party holding
-the licence key. A single-use `challenge` issued by the server per page
-load is bound through both steps by the cloud.
+the licence key. A single-use `transaction` value issued by the server
+per page load is bound through both steps by the cloud. `transaction`
+replaces the obsolete name `challenge`, and `sealedResult` replaces the
+obsolete name `result`. The cloud still accepts and returns the obsolete
+names. The page sends the transaction value under both names to
+`verify-full`, so a service that reads only `challenge` still binds it.
+The page reads `sealedResult` from the answer, and reads `result` only
+where the answer has no `sealedResult` member. The demo's `/redeem`
+route works the same way. It reads `sealedResult` and `transaction`
+wherever the request holds them, even empty, and reads `result` and
+`challenge` only where the current names are not there. So a page that
+sends only the obsolete names still redeems.
 
 The demo server uses the web server that ships with the JDK, the
 `pipeline.did` package from this repository for the 51Did handling, and
@@ -52,8 +63,8 @@ the licence key the browser never sees. The `redeem` method in
 `CreatorContextDemoServer.java` is that call, and these are its
 essential lines. `DidClient` is built once at start-up from the
 resource key and the licence key (it reads `_51DEGREES_CLOUD_ENDPOINT` itself
-and falls back to the public cloud), and `did`, `result` and
-`challenge` are what the page passed on from `verify-full`:
+and falls back to the public cloud), and `did`, `sealedResult` and
+`transaction` are what the page passed on from `verify-full`:
 
 ```java
 DidClient client = new DidClient(resourceKey, licenceKey);
@@ -69,20 +80,26 @@ FodId fodId = FodId.fromBase64(did);
 // because the client holds the keys. Then server side, with the licence
 // key, which is one use.
 CompletableFuture<Answer> answer = client.verifySignature(fodId)
-    .thenCompose(genuine -> client.redeem(fodId, result, challenge)
+    .thenCompose(genuine -> client.redeem(fodId, sealedResult, transaction)
         .thenApply(redeemed -> toAnswer(redeemed, genuine)))
     .exceptionally(CreatorContextDemoServer::failed);
 ```
 
-The handler answers the page in the cloud's own shape, `signature`,
-`context`, `factors` when present, `verifiedAt` and
+The handler answers the page in the cloud's own shape, `status`,
+`signature`, `context`, `factors` when present, `verifiedAt` and
 `secondsSinceVerified`, built from the typed result, with one field
-added, `serverSignature`, being the offline check. A failure the client
+added, `serverSignature`, being the offline check. `status` is
+`success`, `expired`, `replayed`, `unconfirmed` or `unreadable`, and only
+`success` carries a verdict. On success to a call that presents a
+License Key valid for Human Confidence, the typed result also carries the
+Human Confidence Value the 51Did carries, `High`, `Medium`, `Low` or
+`Absent`. That Value is for your server to act on, so the handler never
+sends it, or the reason it is missing, to the page. A failure the client
 reports arrives at the demo's `failed` method as the cause of a
 `CompletionException` and is mapped there. A malformed 51Did
 answers 400, a host without the creator context answers 404 with a
 text body, and an unreachable cloud answers 502 with `{ "error": ... }`.
-A production server would also remember the challenge it issued and
+A production server would also remember the transaction value it issued and
 reject a redemption carrying any other, which the demo keeps out of
 scope.
 
@@ -132,8 +149,8 @@ keys it holds run out or a signature fails, at most once a minute.
 
 ### The web demo, and the copy-and-paste proof
 
-The demo server serves `page.html`, injecting a fresh challenge per
-page load, and holds the licence key. The browser creates the 51Did
+The demo server serves `page.html`, injecting a fresh transaction value
+per page load, and holds the licence key. The browser creates the 51Did
 and calls `verify-full`, the first verification step, so the cloud
 observes the browser's live connection, then the page hands the
 encrypted result to its own server, which redeems it with the licence

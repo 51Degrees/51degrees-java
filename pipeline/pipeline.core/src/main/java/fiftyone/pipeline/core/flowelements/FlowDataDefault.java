@@ -232,9 +232,11 @@ class FlowDataDefault implements FlowData {
     public FlowData addEvidence(String key, Object value) {
         checkNotFinished();
         evidence.put(key, value);
+        // The value is not logged, as Evidence can hold a key or a sealed
+        // result that no log entry may hold.
         if (logger.isDebugEnabled()) {
             logger.debug("FlowData '" + hashCode() + "' set evidence " +
-                "'" + key + "' to '" + value.toString() + "'.");
+                "'" + key + "'.");
         }
         return this;
     }

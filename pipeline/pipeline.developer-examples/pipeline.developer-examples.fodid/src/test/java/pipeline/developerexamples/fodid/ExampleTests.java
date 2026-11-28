@@ -40,6 +40,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -112,9 +113,143 @@ public class ExampleTests {
         assertEquals(ENDPOINT + "id/redeem", redeem.getUrl());
         String form = new String(redeem.getBody(), StandardCharsets.UTF_8);
         assertTrue(form.startsWith("resource=resource&51did="));
+        assertTrue(form.contains("&sealedResult=sealed"));
+        assertTrue(form.contains("&transaction=abc"));
         assertTrue(form.contains("&result=sealed"));
         assertTrue(form.contains("&challenge=abc"));
         assertTrue(form.contains("&license=licence"));
+    }
+
+    /**
+     * The Human Confidence Value a licensed redemption returns stays on the
+     * server. The page is told the status and the verdict, never the Value
+     * or the reason it is missing.
+     */
+    @Test
+    public void Redeem_Route_Relays_Status_But_Never_Human_Confidence() {
+        transport.queue(200, keyList(crypto));
+        transport.queue(200, "{\"signature\":\"verified\","
+            + "\"context\":\"verified\",\"humanConfidence\":\"High\","
+            + "\"status\":\"success\","
+            + "\"verifiedAt\":\"2026-08-07T09:15:32Z\","
+            + "\"secondsSinceVerified\":2}");
+
+        CreatorContextDemoServer.Answer answer =
+            CreatorContextDemoServer.redeem(client, did, "sealed", "abc")
+                .join();
+
+        JSONObject json = new JSONObject(answer.bodyText());
+        assertEquals("success", json.getString("status"));
+        assertEquals("verified", json.getString("context"));
+        assertFalse(json.has("humanConfidence"));
+        assertFalse(json.has("humanConfidenceNullReason"));
+        assertFalse(answer.bodyText().contains("High"));
+    }
+
+    @Test
+    public void Redeem_Route_Never_Sends_The_Null_Reason_To_The_Page() {
+        transport.queue(200, keyList(crypto));
+        transport.queue(200, "{\"signature\":\"verified\","
+            + "\"context\":\"verified\","
+            + "\"humanConfidenceNullReason\":\"not entitled\","
+            + "\"status\":\"success\"}");
+
+        CreatorContextDemoServer.Answer answer =
+            CreatorContextDemoServer.redeem(client, did, "sealed", "abc")
+                .join();
+
+        JSONObject json = new JSONObject(answer.bodyText());
+        assertEquals("success", json.getString("status"));
+        assertFalse(json.has("humanConfidence"));
+        assertFalse(json.has("humanConfidenceNullReason"));
+    }
+
+    /**
+     * The route reads the current name wherever the request holds it, even
+     * empty, and reads the obsolete name only where the current one is not
+     * there at all. So a page that sends only result and challenge still
+     * redeems.
+     */
+    @Test
+    public void Redeem_Route_Reads_Current_Names_Then_Obsolete_Ones() {
+        Map<String, String> older = CreatorContextDemoServer.parse(
+            "51did=x&result=old-sealed&challenge=old-transaction");
+        assertEquals("old-sealed", CreatorContextDemoServer.named(
+            older, "sealedResult", "result"));
+        assertEquals("old-transaction", CreatorContextDemoServer.named(
+            older, "transaction", "challenge"));
+
+        Map<String, String> both = CreatorContextDemoServer.parse(
+            "51did=x&sealedResult=new-sealed&result=old-sealed"
+                + "&transaction=new-transaction&challenge=old-transaction");
+        assertEquals("new-sealed", CreatorContextDemoServer.named(
+            both, "sealedResult", "result"));
+        assertEquals("new-transaction", CreatorContextDemoServer.named(
+            both, "transaction", "challenge"));
+
+        Map<String, String> current = CreatorContextDemoServer.parse(
+            "51did=x&sealedResult=new-sealed&transaction=new-transaction");
+        assertEquals("new-sealed", CreatorContextDemoServer.named(
+            current, "sealedResult", "result"));
+        assertEquals("new-transaction", CreatorContextDemoServer.named(
+            current, "transaction", "challenge"));
+
+        Map<String, String> emptyCurrent = CreatorContextDemoServer.parse(
+            "51did=x&sealedResult=&result=old-sealed"
+                + "&transaction=&challenge=old-transaction");
+        assertEquals("", CreatorContextDemoServer.named(
+            emptyCurrent, "sealedResult", "result"));
+        assertEquals("", CreatorContextDemoServer.named(
+            emptyCurrent, "transaction", "challenge"));
+    }
+
+    /**
+     * A request from a page cached from before the current names reaches
+     * the cloud with the sealed result and the transaction value it sent,
+     * under both names.
+     */
+    @Test
+    public void Redeem_Route_Redeems_A_Request_From_An_Older_Page() {
+        transport.queue(200, keyList(crypto));
+        transport.queue(200, "{\"signature\":\"verified\","
+            + "\"context\":\"verified\"}");
+        Map<String, String> older = CreatorContextDemoServer.parse(
+            "51did=" + did + "&result=old-sealed&challenge=old-transaction");
+
+        CreatorContextDemoServer.Answer answer = CreatorContextDemoServer
+            .redeem(
+                client,
+                CreatorContextDemoServer.decode(
+                    CreatorContextDemoServer.valueOr(older, "51did")),
+                CreatorContextDemoServer.decode(CreatorContextDemoServer
+                    .named(older, "sealedResult", "result")),
+                CreatorContextDemoServer.decode(CreatorContextDemoServer
+                    .named(older, "transaction", "challenge")))
+            .join();
+
+        assertEquals(200, answer.status);
+        String form = new String(
+            transport.requests.get(1).getBody(), StandardCharsets.UTF_8);
+        assertTrue(form.contains("&sealedResult=old-sealed&"));
+        assertTrue(form.contains("&transaction=old-transaction&"));
+        assertTrue(form.contains("&result=old-sealed&"));
+        assertTrue(form.contains("&challenge=old-transaction&"));
+    }
+
+    @Test
+    public void Redeem_Route_Relays_A_Failure_Status() {
+        transport.queue(200, keyList(crypto));
+        transport.queue(200,
+            "{\"context\":\"replayed\",\"status\":\"replayed\"}");
+
+        CreatorContextDemoServer.Answer answer =
+            CreatorContextDemoServer.redeem(client, did, "sealed", "abc")
+                .join();
+
+        JSONObject json = new JSONObject(answer.bodyText());
+        assertEquals("replayed", json.getString("status"));
+        assertEquals("replayed", json.getString("context"));
+        assertFalse(json.has("humanConfidence"));
     }
 
     @Test

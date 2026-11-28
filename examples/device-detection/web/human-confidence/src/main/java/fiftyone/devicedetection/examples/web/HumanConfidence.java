@@ -24,50 +24,64 @@ package fiftyone.devicedetection.examples.web;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
-import org.json.JSONArray;
-import org.json.JSONException;
+import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngine;
+import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngineBuilder;
+import fiftyone.pipeline.cloudrequestengine.flowelements.HumanConfidenceElement;
+import fiftyone.pipeline.cloudrequestengine.flowelements.CloudRequestEngineDefault;
+import fiftyone.pipeline.cloudrequestengine.flowelements.HumanConfidenceElementBuilder;
+import fiftyone.pipeline.cloudrequestengine.flowelements.HumanConfidencePage;
+import fiftyone.pipeline.core.data.AccessiblePropertyMetaData;
+import fiftyone.pipeline.core.data.ElementData;
+import fiftyone.pipeline.core.data.FlowData;
+import fiftyone.pipeline.core.flowelements.Pipeline;
+import fiftyone.pipeline.core.flowelements.PipelineBuilder;
+import fiftyone.pipeline.engines.data.AspectPropertyValue;
 import org.json.JSONObject;
+import org.slf4j.ILoggerFactory;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.URL;
 import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Executors;
 
 /**
- * Human Confidence demo server. It uses only the JDK's own HTTP server and
- * client, and org.json to read the cloud's answers.
+ * Human Confidence demo server. It uses the JDK's own HTTP server, and a
+ * 51Degrees Pipeline with the Cloud Request Engine and the Human Confidence
+ * element to get the HumanConfidence and HumanConfidenceSource Properties.
  * <p>
  * Human Confidence says how likely it is that a person is looking at the
  * page. The demo shows it in three steps.
  * <ol>
- * <li>Passive. This server asks the cloud itself, passing on the visitor's
- * request headers and IP address, and reads HumanConfidenceSource and
- * HumanConfidence from the answer. The request names both properties, so
- * the answer carries them whatever the Resource Key's saved list of
- * properties holds. The server asks rather than reading a
- * level from the page, because a level a browser sends can be forged.</li>
- * <li>Active. The page loads the 51Degrees client script. When the script
+ * <li>Passive. This server processes the visitor's request headers and IP
+ * address with the Pipeline, and reads HumanConfidenceSource and
+ * HumanConfidence. The Pipeline names both properties, so the answer
+ * carries them whatever the Resource Key's saved list of properties holds.
+ * The server reads them rather than reading a level from the page, because
+ * a level a browser sends can be forged.</li>
+ * <li>Active. The page loads the 51Degrees client script from the address
+ * the package gives the page, which carries the page's transaction. When
+ * the script
  * completes, HumanConfidenceSource is Active and HumanConfidence holds a
  * sealed value the browser can't read or change.</li>
- * <li>Redeem. The page hands the sealed value to this server, which sends
- * it with the License Key to hc/redeem and returns the cloud's answer as it
- * came. A sealed value redeems once, within ten seconds. The License Key
- * stays on this server.</li>
+ * <li>Read by the server. The page sends the sealed value to this server
+ * as humanconfidence, with the page id the package gave it as
+ * humanconfidencepage. The server adds both to the Evidence as query
+ * values and processes the request with the Pipeline. The
+ * Pipeline redeems the sealed value with the License Key, which stays on
+ * this server, and the server reads the same two Properties. A sealed
+ * value redeems once, within ten seconds. Where it does not redeem,
+ * HumanConfidence is Medium.</li>
  * </ol>
  * Environment variables:
  * <ul>
@@ -105,15 +119,22 @@ public class HumanConfidence {
     /** A short limit, so a slow cloud can't hang the demo. */
     private static final int TIMEOUT_MS = 10000;
 
+    /** The page's parameter that carries the sealed value. */
+    public static final String SEALED_PARAMETER = "humanconfidence";
+
+    /** The parameter the page sends its page id as. */
+    public static final String PAGE_PARAMETER = "humanconfidencepage";
+
     private static final String PAGE = "/human-confidence/page.html";
     private static final String CSS = "/human-confidence/examples-main.min.css";
 
     private final String api;
     private final String resource;
     private final String license;
-    private volatile Set<String> headerNames;
     private boolean hasHumanConfidence = true;
     private HttpServer server;
+    private CloudRequestEngine engine;
+    private Pipeline pipeline;
 
     /**
      * @param api the cloud API base ending in /api/v4/
@@ -143,8 +164,9 @@ public class HumanConfidence {
         String license = env.get("_51DEGREES_LICENSE_KEY");
         if (isBlank(license)) {
             System.out.println("No _51DEGREES_LICENSE_KEY set. The page still "
-                    + "shows Passive and Active, but redeeming needs a "
-                    + "License Key.");
+                    + "shows Passive and Active. The sealed value redeems "
+                    + "only with a License Key, so the third row shows "
+                    + "Medium.");
             license = null;
         }
         String endpoint = env.get("_51DEGREES_CLOUD_ENDPOINT");
@@ -175,6 +197,7 @@ public class HumanConfidence {
      * @throws IOException when the server can't start
      */
     public int start(int port) throws IOException {
+        buildPipeline();
         checkProperties();
         server = HttpServer.create(
                 new InetSocketAddress(InetAddress.getLoopbackAddress(), port), 0);
@@ -184,10 +207,50 @@ public class HumanConfidence {
         return server.getAddress().getPort();
     }
 
-    /** Stops the server. */
+    /** Stops the server and closes the Pipeline. */
     public void stop() {
         if (server != null) {
             server.stop(0);
+        }
+        if (pipeline != null) {
+            try {
+                pipeline.close();
+            } catch (Exception e) {
+                System.out.println("Couldn't close the Pipeline. "
+                        + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Builds the Pipeline: the Cloud Request Engine with the Resource Key,
+     * the License Key where there is one, and the two properties named,
+     * then the Human Confidence element that gives them.
+     */
+    private void buildPipeline() throws IOException {
+        ILoggerFactory loggers = LoggerFactory.getILoggerFactory();
+        try {
+            CloudRequestEngineBuilder builder =
+                    new CloudRequestEngineBuilder(loggers)
+                            .setResourceKey(resource);
+            if (license != null) {
+                builder.setLicenseKey(license);
+            }
+            engine = builder
+                    .setEndpoint(api)
+                    .setRequestedProperties(PASSIVE_VALUES)
+                    .setTimeOutSeconds(TIMEOUT_MS / 1000)
+                    .build();
+            pipeline = new PipelineBuilder(loggers)
+                    .setSuppressProcessException(true)
+                    .addFlowElement(engine)
+                    .addFlowElement(new HumanConfidenceElementBuilder(loggers)
+                            .setRequestEngine(engine)
+                            .build())
+                    .build();
+        } catch (Exception e) {
+            throw new IOException("Couldn't build the Pipeline. "
+                    + e.getMessage(), e);
         }
     }
 
@@ -200,49 +263,36 @@ public class HumanConfidence {
     }
 
     /**
-     * Asks the cloud which properties the Resource Key has. When
-     * HumanConfidence isn't one of them, the console and the page say so.
+     * Looks for HumanConfidence in the properties the Cloud Request Engine
+     * found for the keys when it was built, so the example makes no call
+     * of its own. When it isn't one of them, the console and the page say
+     * so.
      */
     private void checkProperties() {
-        try {
-            Answer answer = send("GET", api + "accessibleproperties?resource="
-                    + encode(resource), null);
-            if (answer.status == 200) {
-                hasHumanConfidence = hasProperty(
-                        new JSONObject(answer.body), "humanconfidence");
+        Map<String, AccessiblePropertyMetaData.ProductMetaData> products =
+                engine.getPublicProperties();
+        if (products == null) {
+            System.out.println("Couldn't check the Resource Key's "
+                    + "properties. The cloud didn't answer.");
+            return;
+        }
+        hasHumanConfidence = false;
+        for (AccessiblePropertyMetaData.ProductMetaData product
+                : products.values()) {
+            if (product.properties == null) {
+                continue;
             }
-        } catch (IOException | JSONException e) {
-            System.out.println("Couldn't check the Resource Key's properties. "
-                    + e.getMessage());
+            for (AccessiblePropertyMetaData.PropertyMetaData property
+                    : product.properties) {
+                if ("HumanConfidence".equalsIgnoreCase(property.name)) {
+                    hasHumanConfidence = true;
+                }
+            }
         }
         if (hasHumanConfidence == false) {
             System.out.println("This Resource Key doesn't include "
                     + "HumanConfidence. Contact us to add it. " + CONTACT_URL);
         }
-    }
-
-    /** Looks for a property Name anywhere in the answer. */
-    private static boolean hasProperty(Object node, String name) {
-        if (node instanceof JSONObject) {
-            JSONObject object = (JSONObject) node;
-            Object value = object.opt("Name");
-            if (value instanceof String
-                    && name.equalsIgnoreCase((String) value)) {
-                return true;
-            }
-            for (String key : object.keySet()) {
-                if (hasProperty(object.get(key), name)) {
-                    return true;
-                }
-            }
-        } else if (node instanceof JSONArray) {
-            for (Object item : (JSONArray) node) {
-                if (hasProperty(item, name)) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     private void handle(HttpExchange exchange) throws IOException {
@@ -254,9 +304,13 @@ public class HumanConfidence {
             } else if ("/examples-main.min.css".equals(path)) {
                 reply(exchange, 200, "text/css", resourceBytes(CSS));
             } else if ("/passive".equals(path) && "GET".equals(method)) {
-                passive(exchange);
-            } else if ("/redeem".equals(path) && "POST".equals(method)) {
-                redeem(exchange);
+                properties(exchange, null, null);
+            } else if ("/active".equals(path) && "POST".equals(method)) {
+                Map<String, String> form =
+                        parseForm(readAll(exchange.getRequestBody()));
+                String sealed = form.get(SEALED_PARAMETER);
+                properties(exchange, sealed == null ? "" : sealed,
+                        form.get(PAGE_PARAMETER));
             } else {
                 reply(exchange, 404, "text/plain", bytes("Not found"));
             }
@@ -265,8 +319,14 @@ public class HumanConfidence {
         }
     }
 
-    /** Serves the page, read on each request so an edit shows at once. */
+    /**
+     * Serves the page, read on each request so an edit shows at once. The
+     * package gives each page its id and the client script's address,
+     * which carries the transaction it keeps for the page.
+     */
     private void page(HttpExchange exchange) throws IOException {
+        HumanConfidencePage humanConfidencePage =
+                ((CloudRequestEngineDefault) engine).newHumanConfidencePage();
         String notice = hasHumanConfidence ? ""
                 : "  <p class=\"c-eg-page__lead\" id=\"notice\">This Resource "
                   + "Key doesn't include HumanConfidence. <a href=\""
@@ -274,143 +334,95 @@ public class HumanConfidence {
                   + "\">Contact us</a> to add it.</p>";
         String html = new String(resourceBytes(PAGE), StandardCharsets.UTF_8)
                 .replace("__NOTICE__", notice)
-                .replace("__RESOURCE__", resource)
-                .replace("__API__", api);
+                .replace("__SCRIPT__", humanConfidencePage.scriptAddress(
+                        api + resource + ".js"))
+                .replace("__PAGE__", humanConfidencePage.getId());
         // Each load runs the browser tests, so never serve it from a cache.
         exchange.getResponseHeaders().set("Cache-Control", "no-store");
         reply(exchange, 200, "text/html; charset=utf-8", bytes(html));
     }
 
     /**
-     * Passes the visitor's headers that the cloud reads, and the visitor's
-     * IP address, to the cloud, naming {@link #PASSIVE_VALUES}, and returns
-     * source and humanConfidence from its answer.
+     * Processes the visitor's request with the Pipeline, and returns source
+     * and humanConfidence from the HumanConfidenceSource and
+     * HumanConfidence Properties. The Evidence is the visitor's headers
+     * that the cloud reads, the visitor's IP address, and the sealed value
+     * where the page sent one. The Pipeline redeems a sealed value itself,
+     * so this server only reads the two Properties. A Property with no
+     * value is left out, and its reason is given instead.
+     * @param sealed the sealed value the page sent, or null for the
+     *               passive step
+     * @param pageId the page id the page sent, or null
      */
-    private void passive(HttpExchange exchange) throws IOException {
+    private void properties(HttpExchange exchange, String sealed,
+            String pageId) throws IOException {
         JSONObject result = new JSONObject();
-        try {
-            Set<String> names = cloudHeaders();
-            Map<String, String> fields = new LinkedHashMap<>();
+        try (FlowData data = pipeline.createFlowData()) {
             for (Map.Entry<String, List<String>> header
                     : exchange.getRequestHeaders().entrySet()) {
-                String name = header.getKey().toLowerCase(Locale.ROOT);
-                if (names.contains(name)) {
-                    fields.put(name, String.join(",", header.getValue()));
+                String key = "header."
+                        + header.getKey().toLowerCase(Locale.ROOT);
+                // Only the headers the cloud reads, so headers such as
+                // Authorization stay on this server.
+                if (engine.getEvidenceKeyFilter().include(key)) {
+                    data.addEvidence(key, String.join(",", header.getValue()));
                 }
             }
             // Behind a load balancer or CDN, use the visitor's address it
-            // passes on. Set after the headers, so no header can replace
-            // it or the properties named.
-            fields.put("client-ip",
+            // passes on.
+            data.addEvidence("server.client-ip",
                     exchange.getRemoteAddress().getAddress().getHostAddress());
-            fields.put("values", PASSIVE_VALUES);
-            Answer answer = send("POST", api + resource + ".json",
-                    form(fields));
-            if (answer.status / 100 != 2) {
-                result.put("error", "HTTP " + answer.status + ": "
-                        + trim(answer.body));
-            } else {
-                JSONObject derived = new JSONObject(answer.body)
-                        .optJSONObject("derived");
-                if (derived != null) {
-                    result.put("source",
-                            derived.optString("humanconfidencesource", null));
-                    result.put("humanConfidence",
-                            derived.optString("humanconfidence", null));
-                }
+            if (sealed != null) {
+                data.addEvidence("query." + SEALED_PARAMETER, sealed);
             }
-        } catch (IOException | JSONException e) {
-            result = new JSONObject().put("error", String.valueOf(e.getMessage()));
+            if (pageId != null) {
+                data.addEvidence("query." + PAGE_PARAMETER, pageId);
+            }
+            data.process();
+            ElementData derived = data.get(
+                    HumanConfidenceElement.ELEMENT_DATA_KEY);
+            put(result, "source", derived.get(
+                    HumanConfidenceElement.HUMAN_CONFIDENCE_SOURCE));
+            put(result, "humanConfidence", derived.get(
+                    HumanConfidenceElement.HUMAN_CONFIDENCE));
+        } catch (Exception e) {
+            result = failed(e);
         }
         reply(exchange, 200, "application/json", bytes(result.toString()));
     }
 
+    /** What the page is told when the properties can't be read. */
+    static final String READ_FAILED =
+            "The properties could not be read. See the server's console.";
+
     /**
-     * Sends the sealed value and the License Key to hc/redeem, and returns
-     * the cloud's answer unchanged.
+     * The answer the page gets when reading the properties fails. It holds
+     * a fixed text and never the exception's, which can quote what the
+     * cloud sent back. The details go to the console instead.
      */
-    private void redeem(HttpExchange exchange) throws IOException {
-        Map<String, String> fields = new LinkedHashMap<>();
-        String value = parseForm(readAll(exchange.getRequestBody())).get("value");
-        fields.put("value", value == null ? "" : value);
-        if (license != null) {
-            fields.put("license", license);
-        }
-        try {
-            Answer answer = send("POST", api + "hc/redeem", form(fields));
-            if (answer.status == 404) {
-                reply(exchange, 200, "application/json", bytes(new JSONObject()
-                        .put("error", "The service at " + api
-                                + " doesn't redeem Human Confidence.")
-                        .toString()));
-                return;
-            }
-            reply(exchange, answer.status, "application/json",
-                    bytes(answer.body));
-        } catch (IOException e) {
-            reply(exchange, 502, "application/json", bytes(new JSONObject()
-                    .put("error", String.valueOf(e.getMessage())).toString()));
-        }
+    JSONObject failed(Exception e) {
+        System.out.println("Couldn't read the properties. "
+                + withoutLicenseKey(String.valueOf(e)));
+        return new JSONObject().put("error", READ_FAILED);
+    }
+
+    /** The text with the License Key taken out, for the console. */
+    private String withoutLicenseKey(String text) {
+        return license == null ? text : text.replace(license, "[hidden]");
     }
 
     /**
-     * The request headers the cloud reads, from its own evidencekeys list,
-     * fetched once. Only these are passed on, so headers such as
-     * Authorization stay here.
+     * Puts a Property's value in the answer under the name, or its reason
+     * under the name followed by Reason where it has no value.
      */
-    private Set<String> cloudHeaders() throws IOException {
-        Set<String> names = headerNames;
-        if (names == null) {
-            Answer answer = send("GET", api + "evidencekeys", null);
-            if (answer.status != 200) {
-                throw new IOException("evidencekeys answered HTTP "
-                        + answer.status);
+    private static void put(JSONObject result, String name, Object property) {
+        if (property instanceof AspectPropertyValue) {
+            AspectPropertyValue<?> value = (AspectPropertyValue<?>) property;
+            if (value.hasValue()) {
+                result.put(name, String.valueOf(value.getValue()));
+            } else {
+                result.put(name + "Reason", value.getNoValueMessage());
             }
-            names = new HashSet<>();
-            for (Object key : new JSONArray(answer.body)) {
-                String text = String.valueOf(key).toLowerCase(Locale.ROOT);
-                if (text.startsWith("header.")) {
-                    names.add(text.substring(7));
-                }
-            }
-            headerNames = names;
-        }
-        return names;
-    }
-
-    /** A status code and body from the cloud. */
-    private static class Answer {
-        final int status;
-        final String body;
-
-        Answer(int status, String body) {
-            this.status = status;
-            this.body = body;
-        }
-    }
-
-    private static Answer send(String method, String url, String form)
-            throws IOException {
-        HttpURLConnection connection =
-                (HttpURLConnection) new URL(url).openConnection();
-        try {
-            connection.setConnectTimeout(TIMEOUT_MS);
-            connection.setReadTimeout(TIMEOUT_MS);
-            connection.setRequestMethod(method);
-            if (form != null) {
-                connection.setDoOutput(true);
-                connection.setRequestProperty("Content-Type",
-                        "application/x-www-form-urlencoded");
-                try (OutputStream out = connection.getOutputStream()) {
-                    out.write(bytes(form));
-                }
-            }
-            int status = connection.getResponseCode();
-            InputStream in = status >= 400
-                    ? connection.getErrorStream() : connection.getInputStream();
-            return new Answer(status, in == null ? "" : readAll(in));
-        } finally {
-            connection.disconnect();
         }
     }
 
@@ -431,26 +443,6 @@ public class HumanConfidence {
             fields.put(decode(name), decode(value));
         }
         return fields;
-    }
-
-    private static String form(Map<String, String> fields) {
-        StringBuilder text = new StringBuilder();
-        for (Map.Entry<String, String> field : fields.entrySet()) {
-            if (text.length() > 0) {
-                text.append('&');
-            }
-            text.append(encode(field.getKey())).append('=')
-                    .append(encode(field.getValue()));
-        }
-        return text.toString();
-    }
-
-    private static String encode(String text) {
-        try {
-            return URLEncoder.encode(text, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new IllegalStateException(e);
-        }
     }
 
     private static String decode(String text) {
@@ -503,10 +495,6 @@ public class HumanConfidence {
 
     private static byte[] bytes(String text) {
         return text.getBytes(StandardCharsets.UTF_8);
-    }
-
-    private static String trim(String text) {
-        return text.length() > 200 ? text.substring(0, 200) : text;
     }
 
     private static boolean isBlank(String text) {

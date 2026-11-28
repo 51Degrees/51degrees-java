@@ -156,7 +156,7 @@
 (function () {
   "use strict";
   var RESOURCE = "__RESOURCE__";
-  var CHALLENGE = "__CHALLENGE__";
+  var TRANSACTION = "__TRANSACTION__";
   // The cloud API base ending in /api/v4/, as the server read it from
   // its endpoint environment variable.
   var API = "__API__";
@@ -428,12 +428,22 @@
 
   owidPromise.then(function (owid) {
     // 2. Verify from THIS browser, so the cloud observes this live
-    // connection. The verdict returns only as an encrypted result.
+    // connection. The verdict returns only as an encrypted result. The
+    // transaction value goes under both names, transaction and the
+    // obsolete challenge, so a service that reads only challenge still
+    // binds it.
     return fetch(API + "id/verify-full/" + RESOURCE + "/"
-        + owid + "?challenge=" + CHALLENGE + snippetQuery())
+        + owid + "?transaction=" + TRANSACTION
+        + "&challenge=" + TRANSACTION + snippetQuery())
       .then(asJson)
       .then(function (verified) {
-        if (!verified.result) {
+        // sealedResult, and result only where the answer has no
+        // sealedResult member at all.
+        var sealed = Object.prototype.hasOwnProperty.call(
+            verified, "sealedResult")
+          ? verified.sealedResult
+          : verified.result;
+        if (!sealed) {
           // A deployment holding no context secret answers in the
           // open, so there is nothing to redeem and both answers
           // are already here.
@@ -451,8 +461,8 @@
         // 3. Redeem on OUR server, which adds the licence key the
         // browser never sees.
         return fetch("/redeem?51did=" + owid
-            + "&result=" + encodeURIComponent(verified.result)
-            + "&challenge=" + CHALLENGE)
+            + "&sealedResult=" + encodeURIComponent(sealed)
+            + "&transaction=" + TRANSACTION)
           .then(asJson)
           .then(function (redeemed) {
             // The signature outcome comes out of the seal with the

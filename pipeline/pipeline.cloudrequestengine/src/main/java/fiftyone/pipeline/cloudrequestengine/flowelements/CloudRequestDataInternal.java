@@ -57,6 +57,28 @@ public class CloudRequestDataInternal extends AspectDataBase
     private final AtomicBoolean failureMet = new AtomicBoolean(false);
 
     /**
+     * Whether the cloud request redeems a sealed Human Confidence result,
+     * with the License Key and the transaction kept for the page.
+     */
+    private volatile boolean redeeming = false;
+
+    /**
+     * @return true if the cloud request redeems a sealed Human Confidence
+     * result
+     */
+    boolean isRedeeming() {
+        return redeeming;
+    }
+
+    /**
+     * Record that the cloud request redeems a sealed Human Confidence
+     * result.
+     */
+    void setRedeeming() {
+        redeeming = true;
+    }
+
+    /**
      * The JSON response from the cloud. Where the engine started a request,
      * this waits for it to finish, and every caller gets the same response
      * or the same failure.
@@ -126,6 +148,15 @@ public class CloudRequestDataInternal extends AspectDataBase
      */
     boolean firstToMeetFailure() {
         return failureMet.compareAndSet(false, true);
+    }
+
+    /**
+     * Clear the redeeming flag, so a reused instance starts as a new one.
+     */
+    @Override
+    protected void onReuse() {
+        super.onReuse();
+        redeeming = false;
     }
 
     /**

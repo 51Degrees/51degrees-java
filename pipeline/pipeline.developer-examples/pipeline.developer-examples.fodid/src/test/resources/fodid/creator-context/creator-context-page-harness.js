@@ -6,6 +6,14 @@
 // The optional second argument is the identifier the page is opened with,
 // which is the transplant path. Without it the page creates one.
 //
+// With HARNESS_LEGACY_SERVICE=1 in the environment, the verify endpoints
+// answer as a service from before the current names: they read only
+// challenge and answer only result, sealed for the challenge they read.
+//
+// With HARNESS_EMPTY_SEALED_RESULT=1, the verify endpoints answer with an
+// empty sealedResult beside a result that is not empty, and with the
+// outcomes in the open.
+//
 // The stand in gives the page a document, a window, a location and a
 // fetch. Inserting a script element stands for loading the 51Degrees
 // client script: the harness answers it by putting an object on the
@@ -34,7 +42,7 @@ if (!match) {
 }
 const source = match[1]
     .replace(/__RESOURCE__/g, 'TEST-RESOURCE-KEY')
-    .replace(/__CHALLENGE__/g, 'test-challenge')
+    .replace(/__TRANSACTION__/g, 'test-transaction')
     .replace(/__API__/g, 'https://cloud.51degrees.com/api/v4/');
 
 // The identifiers the stand in client script reports. Base64 with a plus
@@ -120,11 +128,33 @@ function response(body) {
     });
 }
 
+const legacyService = process.env.HARNESS_LEGACY_SERVICE === '1';
+const emptySealedResult = process.env.HARNESS_EMPTY_SEALED_RESULT === '1';
+
 function fetchStub(url) {
     record.fetches.push(url);
+    if (legacyService && (url.indexOf('id/verify-full') !== -1
+        || url.indexOf('id/verify-context') !== -1)) {
+        const query = new URLSearchParams(url.split('?')[1] || '');
+        return response({
+            result: 'sealed-for-' + (query.get('challenge') || 'nothing')
+        });
+    }
+    if (emptySealedResult && (url.indexOf('id/verify-full') !== -1
+        || url.indexOf('id/verify-context') !== -1)) {
+        return response({
+            sealedResult: '',
+            result: 'sealed-result',
+            signature: 'verified',
+            context: 'verified'
+        });
+    }
     if (url.indexOf('id/verify-full') !== -1
         || url.indexOf('id/verify-context') !== -1) {
-        return response({ result: 'sealed-result' });
+        return response({
+            sealedResult: 'sealed-result',
+            result: 'sealed-result'
+        });
     }
     if (url.indexOf('/redeem') !== -1) {
         return response({

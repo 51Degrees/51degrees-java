@@ -141,7 +141,10 @@ public class DidClientLiveTests {
         }
 
         assertEquals(200, result.getStatusCode());
-        assertEquals(RedeemResult.Context.UNREADABLE, result.getContext());
+        assertEquals(Outcome.UNREADABLE, result.getOutcome());
+        // The cloud still writes the reason to context, as it did before
+        // status was added.
+        assertEquals("unreadable", result.getContextValue());
     }
 
     /**
@@ -190,6 +193,8 @@ public class DidClientLiveTests {
 
         assertEquals("Redeeming: " + redeemed.getRaw(),
             200, redeemed.getStatusCode());
+        assertEquals("Redeeming: " + redeemed.getRaw(),
+            Outcome.SUCCESS, redeemed.getOutcome());
         assertEquals("The identifier was just created by this client, so "
             + "its signature has to read as genuine: " + redeemed.getRaw(),
             RedeemResult.Signature.VERIFIED, redeemed.getSignature());
@@ -199,6 +204,9 @@ public class DidClientLiveTests {
             RedeemResult.Context.VERIFIED, redeemed.getContext());
         assertNotNull("A redeemed verdict says when it was made.",
             redeemed.getVerifiedAt());
+        assertNoValueOrAbsent("redeem: " + redeemed.getRaw(),
+            redeemed.getHumanConfidence(),
+            redeemed.getHumanConfidenceNullReason());
         // A verified verdict matched everywhere, so the service sends no
         // factor breakdown with it and there is nothing to read. Where it
         // does send one, every name in it is read.
@@ -289,13 +297,87 @@ public class DidClientLiveTests {
     }
 
     /**
+     * A 51Did made without HumanConfidence carries no Value. A cloud that
+     * knows the Value answers Absent to a License Key valid for Human
+     * Confidence, or no Value and its reason to any other call. A cloud
+     * from before the Value answers as it always has, and the client gives
+     * no Value and says the cloud did not return one. Either way the
+     * answer is valid and nothing throws.
+     */
+    @Test
+    public void verifyDetailed_A51DidMadeWithoutHumanConfidenceHasNoValue()
+            throws Exception {
+        FodId fodId = create();
+
+        Verification verification = client.verifyDetailed(fodId).join();
+
+        assertTrue(verification.toString(), verification.isValid());
+        assertEquals(200, verification.getStatusCode());
+        assertNoValueOrAbsent("verify: " + verification.getRaw(),
+            verification.getHumanConfidence(),
+            verification.getHumanConfidenceNullReason());
+        assertTrue(client.verify(fodId).join());
+    }
+
+    /**
+     * The sealed result from {@code verify-context} redeems as the one
+     * from {@code verify-full} does, carrying both outcomes and, for a
+     * 51Did made without HumanConfidence, no Value or Absent.
+     */
+    @Test
+    public void verifyContextThenRedeem_ReadsTheOutcomeAndNoValue()
+            throws Exception {
+        Assume.assumeTrue(
+            LiveCloudKeys.noLicenseKey(licenseKeyName),
+            client.hasLicenceKey());
+        FodId fodId = create();
+        String sealed = sealedFrom("verify-context", fodId.asBase64());
+
+        RedeemResult redeemed = client.redeem(fodId, sealed, null).join();
+
+        assertEquals("Redeeming: " + redeemed.getRaw(),
+            200, redeemed.getStatusCode());
+        assertEquals("Redeeming: " + redeemed.getRaw(),
+            Outcome.SUCCESS, redeemed.getOutcome());
+        assertNoValueOrAbsent("redeem: " + redeemed.getRaw(),
+            redeemed.getHumanConfidence(),
+            redeemed.getHumanConfidenceNullReason());
+    }
+
+    /**
+     * Absent from a cloud that knows the Value, or no Value with a reason
+     * from one that does not return it.
+     */
+    private static void assertNoValueOrAbsent(
+            String label, HumanConfidence value, String reason) {
+        if (value == null) {
+            assertNotNull(label + ": no Value has to come with a reason",
+                reason);
+        } else {
+            assertEquals(label, HumanConfidence.ABSENT, value);
+        }
+    }
+
+    /**
      * The sealed verdict for one identifier, fetched as a page fetches it.
      *
      * @param fodId the identifier as base64
      * @return the sealed result to redeem
      */
     private String verifyFull(String fodId) throws Exception {
-        String url = client.getEndpoint() + "id/verify-full/"
+        return sealedFrom("verify-full", fodId);
+    }
+
+    /**
+     * The sealed result the named verify endpoint, {@code verify-context}
+     * or {@code verify-full}, gives for one identifier.
+     *
+     * @param name  the endpoint
+     * @param fodId the identifier as base64
+     * @return the sealed result to redeem
+     */
+    private String sealedFrom(String name, String fodId) throws Exception {
+        String url = client.getEndpoint() + "id/" + name + "/"
             + DidClient.encode(resourceKey)
             + "?51did=" + DidClient.encode(fodId);
         HttpURLConnection connection = (HttpURLConnection)
@@ -305,10 +387,13 @@ public class DidClientLiveTests {
         String body = readAll(status >= 400
             ? connection.getErrorStream()
             : connection.getInputStream());
-        assertEquals("Verifying in full: " + body, 200, status);
-        String sealed = new JSONObject(body).optString("result", null);
+        assertEquals("Calling " + name + ": " + body, 200, status);
+        // sealedResult, or result from a host before that name.
+        JSONObject verified = new JSONObject(body);
+        String sealed = verified.optString("sealedResult",
+            verified.optString("result", null));
         Assume.assumeTrue(
-            "This host answered verify-full in the open, so it holds no "
+            "This host answered " + name + " in the open, so it holds no "
             + "context secret and there is nothing to redeem: " + body,
             sealed != null && sealed.isEmpty() == false);
         return sealed;

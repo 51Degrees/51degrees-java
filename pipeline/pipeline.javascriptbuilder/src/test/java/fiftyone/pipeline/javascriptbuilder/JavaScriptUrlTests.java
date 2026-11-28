@@ -31,6 +31,7 @@ import fiftyone.pipeline.core.flowelements.PipelineBuilder;
 import fiftyone.pipeline.engines.fiftyone.flowelements.SequenceElementBuilder;
 import fiftyone.pipeline.javascriptbuilder.flowelements.JavaScriptBuilderElement;
 import fiftyone.pipeline.javascriptbuilder.flowelements.JavaScriptBuilderElementBuilder;
+import fiftyone.pipeline.jsonbuilder.flowelements.JsonBuilderElement;
 import fiftyone.pipeline.jsonbuilder.flowelements.JsonBuilderElementBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -184,6 +185,44 @@ public class JavaScriptUrlTests {
             "QUERY.Other is not in the parameters: " + parameters);
         assertFalse(parameters.toLowerCase().contains("session-id"),
             "The session id is in the parameters: " + parameters);
+    }
+
+    /**
+     * A sealed Human Confidence result is never in the JavaScript Builder's
+     * output, nor in the JSON it carries, and nor is the page id sent with
+     * it, in any case.
+     */
+    @Test
+    public void Parameters_LeaveOutHumanConfidence() throws Exception {
+        JavaScriptBuilderElement jsElement =
+            new JavaScriptBuilderElementBuilder(loggerFactory)
+                .setEndpoint("/json")
+                .setHost("example.com")
+                .setProtocol("https")
+                .setMinify(false)
+                .build();
+        JsonBuilderElement jsonElement =
+            new JsonBuilderElementBuilder(loggerFactory).build();
+        String javaScript;
+        String json;
+        try (Pipeline pipeline = new PipelineBuilder(loggerFactory)
+            .addFlowElement(new SequenceElementBuilder(loggerFactory).build())
+            .addFlowElement(jsonElement)
+            .addFlowElement(jsElement)
+            .build();
+             FlowData flowData = pipeline.createFlowData()) {
+            flowData.addEvidence("query.humanconfidence", "a-sealed-result");
+            flowData.addEvidence("Query.HumanConfidencePage", "a-page-id");
+            flowData.addEvidence("query.mark", "kept");
+            flowData.process();
+            javaScript = flowData.getFromElement(jsElement).getJavaScript();
+            json = flowData.getFromElement(jsonElement).getJson();
+        }
+        assertTrue(javaScript.contains("\"mark\":\"kept\""), javaScript);
+        for (String output : new String[] { javaScript, json }) {
+            assertFalse(output.contains("a-sealed-result"), output);
+            assertFalse(output.contains("a-page-id"), output);
+        }
     }
 
     /**

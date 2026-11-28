@@ -72,10 +72,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <li>{@link #verifySignature(FodId)} checks a 51Did's signature offline
  * against that key.</li>
  * <li>{@link #verify(FodId)} checks a 51Did's signature through the cloud's
- * verify endpoint.</li>
+ * verify endpoint, and {@link #verifyDetailed(FodId)} also returns the
+ * Human Confidence Value the 51Did carries.</li>
  * <li>{@link #redeem(FodId, String, String)} redeems a sealed creator
  * context result, with the licence key, and returns a typed
- * {@link RedeemResult}.</li>
+ * {@link RedeemResult} with the {@link Outcome} and, on success, the
+ * unsealed result and the Human Confidence Value.</li>
  * </ol>
  * Every one of those may reach the cloud, so every one of them returns at
  * once with a {@link CompletableFuture} and never blocks the calling
@@ -96,8 +98,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Credentials never appear in a query string, because a query string is
  * written to access logs. The resource key travels in the route of the GET
  * calls ({@code id/key/{resource}}, {@code id/verify/{resource}}) and in
- * the form body of the POST to {@code id/redeem}, whose route has no
- * resource segment, and the licence key travels only in that form body.
+ * the form body of the POSTs to {@code id/redeem} and {@code id/verify},
+ * whose routes have no resource segment, and the licence key travels only
+ * in those form bodies.
  * <p>
  * One instance is safe to share across threads. The key list is kept per
  * instance, so share the instance rather than creating one per request.
@@ -838,6 +841,33 @@ public final class DidClient {
     }
 
     /**
+     * Checks the identifier's signature through the cloud's verify
+     * endpoint, as {@link #verify(FodId)} does, and also returns the Human
+     * Confidence Value the 51Did carries where the cloud returns it. The
+     * cloud returns the Value for a 51Did whose signature verifies, to a
+     * call that presents a License Key valid for Human Confidence, and the
+     * reason it is not there otherwise. One use against the resource key.
+     * <p>
+     * A client built with a licence key sends this call as a POST to
+     * {@code id/verify}, with the resource key, the identifier and the
+     * licence key in the form body, so the licence key never reaches a URL.
+     * A client without one sends the same GET as {@link #verify(FodId)}.
+     * The licence key is shown masked in the message of every error.
+     *
+     * @param fodId the identifier
+     * @return the typed answer, or a future failed as
+     *         {@link #verify(FodId)} describes
+     */
+    public CompletableFuture<Verification> verifyDetailed(FodId fodId) {
+        try {
+            Objects.requireNonNull(fodId, "fodId");
+            return verifyDetailed(base64Url(fodId));
+        } catch (RuntimeException refused) {
+            return failed(refused);
+        }
+    }
+
+    /**
      * Whether the identifier's signature verifies according to the cloud's
      * verify endpoint. The identifier may be in either base64 alphabet. It
      * is sent under both parameter names the endpoint accepts, {@code 51did}
@@ -855,6 +885,32 @@ public final class DidClient {
      *         invalid
      */
     public CompletableFuture<Boolean> verify(String fodId) {
+        return verifyRequest(fodId, false).thenApply(Verification::isValid);
+    }
+
+    /**
+     * Checks the identifier's signature through the cloud's verify
+     * endpoint, and also returns the Human Confidence Value the 51Did
+     * carries where the cloud returns it. The identifier may be in either
+     * base64 alphabet. See {@link #verify(String)} for how the request is
+     * made and how the future fails, and {@link #verifyDetailed(FodId)} for
+     * when the Value is returned and how the licence key is sent.
+     *
+     * @param fodId the identifier as base64
+     * @return the typed answer
+     */
+    public CompletableFuture<Verification> verifyDetailed(String fodId) {
+        return verifyRequest(fodId, licenceKey != null);
+    }
+
+    /**
+     * Calls the verify endpoint. Without the licence key it is a GET with
+     * the resource key in the route. With it, it is a POST with the
+     * resource key, the identifier and the licence key in the form body, so
+     * the licence key never reaches a URL.
+     */
+    private CompletableFuture<Verification> verifyRequest(
+            String fodId, boolean withLicence) {
         try {
             Objects.requireNonNull(fodId, "fodId");
             ensureEncodedLength(fodId);
@@ -863,31 +919,50 @@ public final class DidClient {
             // either parameter. Hosts that recognise both prefer 51did and
             // keep owid as a compatibility alias.
             String encoded = encode(fodId);
-            String url = endpoint + "id/verify/" + encode(resourceKey)
-                + "?51did=" + encoded + "&owid=" + encoded;
-            return send("GET", url, null).thenApply(DidClient::readVerify);
+            final String licence = withLicence ? licenceKey : null;
+            CompletableFuture<HttpTransport.Response> sent;
+            if (licence != null) {
+                String form = "resource=" + encode(resourceKey)
+                    + "&51did=" + encoded + "&owid=" + encoded
+                    + "&license=" + encode(licence);
+                sent = send("POST", endpoint + "id/verify",
+                    form.getBytes(StandardCharsets.UTF_8));
+            } else {
+                sent = send("GET", endpoint + "id/verify/"
+                    + encode(resourceKey)
+                    + "?51did=" + encoded + "&owid=" + encoded, null);
+            }
+            return sent.thenApply(response -> readVerify(response, licence));
         } catch (RuntimeException refused) {
             return failed(refused);
         }
     }
 
-    /** The verdict a verify endpoint answer carries. */
-    private static boolean readVerify(HttpTransport.Response response) {
+    /**
+     * The typed answer a verify endpoint answer carries, with the licence
+     * key the request sent, or null, masked in the message of any error.
+     */
+    private static Verification readVerify(
+            HttpTransport.Response response, String licence) {
         JSONObject json = asObject(response.getBody());
         int status = response.getStatusCode();
+        // Only a 200 can say valid. The cloud answers a signature that
+        // fails with a 400 holding valid false, so a 400 holding valid is
+        // invalid whatever valid says, and nothing else is read from it.
         if (status == 200 && json != null && json.has("valid")) {
-            return json.getBoolean("valid");
+            return Verification.parse(json, response.getBody());
         }
         if (status == 400 && json != null) {
             if (json.has("valid")) {
-                return json.getBoolean("valid");
+                return Verification.invalid(response.getBody());
             }
             if (json.has("errors")) {
-                throw new IllegalArgumentException(errorsText(json));
+                throw new IllegalArgumentException(
+                    maskLicence(errorsText(json), licence));
             }
         }
         throw new CompletionException(
-            httpError("Signature verification", response));
+            httpError("Signature verification", response, licence));
     }
 
     // ----- Redeem -----
@@ -898,25 +973,43 @@ public final class DidClient {
      * given. One use against the resource key, the second of the two a
      * browser-based context check costs.
      * <p>
+     * The sealed result is sent as {@code sealedResult} and the transaction
+     * as {@code transaction}. Each is also sent under its obsolete name,
+     * {@code result} and {@code challenge}, so that a host from before the
+     * new names still reads them. A host that knows both names reads the new
+     * ones.
+     * <p>
+     * {@link RedeemResult#getOutcome()} says what happened. On
+     * {@link Outcome#SUCCESS} the answer carries the unsealed result and,
+     * for a call that presents a License Key valid for Human Confidence, the
+     * Human Confidence Value the 51Did carries. A 503 answer is always
+     * {@link Outcome#UNCONFIRMED}, whatever its body says, and the caller
+     * may retry. A 200 answer whose body is not a JSON object, or holds
+     * neither {@code status} nor {@code context}, is
+     * {@link Outcome#UNREADABLE}, with the Signature outcome
+     * {@link RedeemResult.Signature#UNKNOWN}.
+     * <p>
      * The future fails with {@link IllegalArgumentException} where the
      * cloud says the identifier is not a 51Did, with the cloud's message,
      * with {@link DidNotSupportedException} where the host does not offer
      * the creator context, with {@link DidHttpException} where the cloud
-     * answers with any other status or a body that is not its own shape,
-     * and with {@link IOException} where the cloud cannot be reached.
+     * answers with any other status, or a 400 that holds no
+     * {@code errors}, and with
+     * {@link IOException} where the cloud cannot be reached.
      *
-     * @param fodId     the identifier the sealed result was made for
-     * @param result    the sealed result exactly as the verify endpoint
-     *                  returned it
-     * @param challenge the single-use challenge given to the verify
-     *                  endpoint, or null where none was
+     * @param fodId        the identifier the sealed result was made for
+     * @param sealedResult the sealed result exactly as the verify endpoint
+     *                     returned it, in {@code sealedResult} or, from a
+     *                     host before that name, {@code result}
+     * @param transaction  the single-use transaction value given to the
+     *                     verify endpoint, or null where none was
      * @return the typed result, for a 200 or a 503 answer
      */
     public CompletableFuture<RedeemResult> redeem(
-            FodId fodId, String result, String challenge) {
+            FodId fodId, String sealedResult, String transaction) {
         try {
             Objects.requireNonNull(fodId, "fodId");
-            return redeem(base64(fodId), result, challenge);
+            return redeem(base64(fodId), sealedResult, transaction);
         } catch (RuntimeException refused) {
             return failed(refused);
         }
@@ -930,24 +1023,32 @@ public final class DidClient {
      * 51Did, with the {@link FodIdParseStatus} in the message, and
      * otherwise as {@link #redeem(FodId, String, String)}.
      *
-     * @param fodId     the identifier as base64
-     * @param result    the sealed result
-     * @param challenge the challenge, or null
+     * @param fodId        the identifier as base64
+     * @param sealedResult the sealed result
+     * @param transaction  the transaction value, or null
      * @return the typed result, for a 200 or a 503 answer
      */
     public CompletableFuture<RedeemResult> redeem(
-            String fodId, String result, String challenge) {
+            String fodId, String sealedResult, String transaction) {
         try {
             Objects.requireNonNull(fodId, "fodId");
             ensureEncodedLength(fodId);
             ensureReadsAs51Did(fodId);
             // The POST route has no {resource} segment, so the resource key
-            // goes in the form with everything else.
+            // goes in the form with everything else. The sealed result and
+            // the transaction go under their current names and again under
+            // their obsolete ones, so a host from before the current names
+            // still reads them. A host that knows both reads the current
+            // names.
+            String sealed = encode(nullToEmpty(sealedResult));
+            String bound = encode(nullToEmpty(transaction));
             StringBuilder form = new StringBuilder()
                 .append("resource=").append(encode(resourceKey))
                 .append("&51did=").append(encode(fodId))
-                .append("&result=").append(encode(nullToEmpty(result)))
-                .append("&challenge=").append(encode(nullToEmpty(challenge)));
+                .append("&sealedResult=").append(sealed)
+                .append("&transaction=").append(bound)
+                .append("&result=").append(sealed)
+                .append("&challenge=").append(bound);
             if (licenceKey != null) {
                 form.append("&license=").append(encode(licenceKey));
             }
@@ -971,11 +1072,11 @@ public final class DidClient {
         switch (status) {
             case 200:
             case 503:
-                if (json == null) {
-                    throw new CompletionException(
-                        httpError("Redemption", response, licenceKey));
-                }
-                return RedeemResult.parse(status, json, response.getBody());
+                // RedeemResult.fromResponse reads nothing from a 503 body,
+                // and reads a 200 body that is not a JSON object as
+                // unreadable, so neither fails the future.
+                return RedeemResult.fromResponse(
+                    status, json, response.getBody());
             case 400:
                 if (json != null && json.has("errors")) {
                     throw new IllegalArgumentException(

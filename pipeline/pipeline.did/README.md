@@ -417,30 +417,69 @@ In the order a server uses them:
    CompletableFuture<Boolean> genuine = client.verify(fodId);
    ```
 
-4. **Redeem.** A page checks the creator context from the browser with
-   `verify-full` or `verify-context` and relays the sealed `result` to your
-   server. Your server redeems it, with the licence key, against the
-   identifier it knows independently. One use against the resource key.
+   `verifyDetailed` also returns the Human Confidence Value the 51Did
+   carries, `HIGH`, `MEDIUM`, `LOW` or `ABSENT`. The cloud returns the
+   Value for a 51Did whose signature verifies, to a call that presents a
+   License Key valid for Human Confidence. Any other call gets the reason
+   it isn't there. A 51Did made before the Value was added reads as
+   `ABSENT`. A client built with a licence key sends this call as a POST to
+   `id/verify`, with the resource key, the 51Did and the licence key in the
+   form body, so the licence key never reaches a URL. A client without one
+   makes the same GET as `verify`.
 
    ```java
-   client.redeem(fodId, result, challenge).thenAccept(redeemed -> {
+   client.verifyDetailed(fodId).thenAccept(verification -> {
+       verification.isValid();
+       verification.getHumanConfidence();           // null where not returned
+       verification.getHumanConfidenceNullReason(); // why not, or null
+   });
+   ```
+
+4. **Redeem.** A page checks the creator context from the browser with
+   `verify-full` or `verify-context` and relays the `sealedResult` to your
+   server, with the `transaction` value where the page was given one. Your
+   server redeems it, with the licence key, against the identifier it
+   knows independently. One use against the resource key.
+
+   ```java
+   client.redeem(fodId, sealedResult, transaction).thenAccept(redeemed -> {
+       switch (redeemed.getOutcome()) {
+           case SUCCESS:     // the unsealed result below stands
+           case EXPIRED:     // redeemed outside the freshness window
+           case REPLAYED:    // already redeemed
+           case UNREADABLE:  // tampered, wrong identifier, transaction or key
+           case UNCONFIRMED: // answered 503, retry
+       }
+       // On SUCCESS, the unsealed result.
        switch (redeemed.getContext()) {
            case VERIFIED:      // presented from where it was created
            case MISMATCH:      // redeemed.getFactors() says which differs
            case NO_CONTEXT:    // the identifier carries no creator context
            case MISCONFIGURED: // the checking service is at fault
            case INVALID_DATE:  // a creation date the scheme cannot produce
-           case EXPIRED:       // redeemed outside the freshness window
-           case REPLAYED:      // already redeemed
-           case UNREADABLE:    // tampered, wrong identifier, challenge or key
-           case UNCONFIRMED:   // answered 503, retry
            case NOT_CHECKABLE: // no longer sent by the cloud
        }
        redeemed.getSignature();            // VERIFIED, INVALID or UNKNOWN
+       redeemed.getHumanConfidence();      // HIGH, MEDIUM, LOW, ABSENT or null
        redeemed.getVerifiedAt();           // when the cloud sealed the result
        redeemed.getSecondsSinceVerified(); // how long before this redemption
    });
    ```
+
+   `getOutcome()` reads the cloud's `status`. A cloud from before `status`
+   gave the outcome in `context`, and the client reads it from there. The
+   `EXPIRED`, `REPLAYED`, `UNREADABLE` and `UNCONFIRMED` members of
+   `RedeemResult.Context` are obsolete, because they aren't verdicts. They
+   keep working, because the cloud still writes those words to `context`.
+   `getHumanConfidence()` is the Human Confidence Value the 51Did carries,
+   returned on success to a call that presents a License Key valid for
+   Human Confidence. Any other successful call gets
+   `getHumanConfidenceNullReason()` instead.
+
+   The client sends the sealed result as `sealedResult` and the
+   transaction as `transaction`, and again under their obsolete names,
+   `result` and `challenge`, so a host from before the new names still
+   reads them.
 
    On a mismatch, on a misconfigured result where the transport was
    compared, and whenever any factor is `NOT_RECORDED`, whatever the

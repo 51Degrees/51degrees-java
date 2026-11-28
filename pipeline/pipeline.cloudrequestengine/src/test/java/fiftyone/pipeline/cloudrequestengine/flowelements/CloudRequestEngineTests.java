@@ -112,13 +112,13 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
 
     /**
      * The cloud answers a refused license key with an error that names it.
-     * The exception the engine raises, and every log entry, show the key
-     * only by its last 4 characters.
+     * The exception the engine raises, and every log entry, show no part
+     * of the key.
      */
     @Test
-    public void Process_LicenseKeyInCloudError_Masked() throws Exception {
+    public void Process_LicenseKeyInCloudError_Hidden() throws Exception {
         final String licenseKey = "TESTKEYNOTREALABCDEFGHIJ1234";
-        final String masked = "************************1234";
+        final String hidden = "supplied: [hidden]";
         jsonResponse = "{\"errors\":[\"Invalid license key(s) supplied: " +
             licenseKey + "\"]}";
         configureMockedClient();
@@ -162,7 +162,9 @@ public class CloudRequestEngineTests extends CloudRequestEngineTestsBase {
             }
             assertFalse(reported.toString().contains(licenseKey),
                     reported.toString());
-            assertTrue(reported.toString().contains(masked),
+            assertTrue(reported.toString().contains(hidden),
+                    reported.toString());
+            assertFalse(reported.toString().contains("*1234"),
                     reported.toString());
         }
     }
