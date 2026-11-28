@@ -41,6 +41,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -65,6 +67,9 @@ public class HumanConfidenceElementTests extends CloudRequestEngineTestsBase {
 
     /** The form of each JSON call, in order. */
     private final List<Map<String, String>> calls = new ArrayList<>();
+
+    /** Each name a call gave twice, with the call. */
+    private final List<String> repeated = new CopyOnWriteArrayList<>();
 
     /** The answer to each JSON call, or null to fail the call. */
     private String answer;
@@ -93,13 +98,24 @@ public class HumanConfidenceElementTests extends CloudRequestEngineTestsBase {
         }).when(httpClient).postData(any(), anyMap(), (byte[]) any());
     }
 
-    private static Map<String, String> form(String body) throws Exception {
-        Map<String, String> fields = new LinkedHashMap<>();
+    /**
+     * The fields of a form. A name given twice, in any case, is recorded
+     * in {@link #repeated}, and {@link #process} fails the test on it, so a
+     * second transaction or license cannot hide behind the first.
+     */
+    private Map<String, String> form(String body) throws Exception {
+        Map<String, String> fields =
+            new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
         for (String pair : body.split("&")) {
             int at = pair.indexOf('=');
-            fields.put(
-                URLDecoder.decode(pair.substring(0, at), "UTF-8"),
-                URLDecoder.decode(pair.substring(at + 1), "UTF-8"));
+            String name = URLDecoder.decode(
+                at < 0 ? pair : pair.substring(0, at), "UTF-8");
+            String value = at < 0 ? "" :
+                URLDecoder.decode(pair.substring(at + 1), "UTF-8");
+            if (fields.containsKey(name)) {
+                repeated.add(name + " in " + body);
+            }
+            fields.put(name, value);
         }
         return fields;
     }
@@ -141,6 +157,8 @@ public class HumanConfidenceElementTests extends CloudRequestEngineTestsBase {
             data.addEvidence(evidence);
             data.process();
             read(data, read);
+            assertTrue(repeated.isEmpty(),
+                "A call holds a name twice: " + repeated);
             data.getErrors().forEach(read.errors::add);
         }
         return read;
@@ -345,6 +363,7 @@ public class HumanConfidenceElementTests extends CloudRequestEngineTestsBase {
         evidence.put("query.transaction", "from-the-page");
         evidence.put("header.Transaction", "from-a-header");
         evidence.put("cookie.CHALLENGE", "from-a-cookie");
+        evidence.put("query.51D_x&transaction", "named-in-the-key");
 
         process(engine, evidence);
 
@@ -358,6 +377,7 @@ public class HumanConfidenceElementTests extends CloudRequestEngineTestsBase {
         }
 
         evidence.remove("query.humanconfidence");
+        evidence.remove("query.51D_x&transaction");
         process(engine, evidence);
         assertEquals("from-the-page", calls.get(1).get("transaction"));
     }
