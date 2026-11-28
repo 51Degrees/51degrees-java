@@ -38,6 +38,7 @@ import java.net.MalformedURLException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -409,13 +410,15 @@ public class HumanConfidenceElementTests extends CloudRequestEngineTestsBase {
     }
 
     /**
-     * No log entry and no error message holds the sealed result, the
-     * License Key, or the transaction, here where two prefixes give the
-     * same names and the engine logs the conflict.
+     * No log entry and no error message holds any part of the sealed
+     * result, the License Key, or the transaction, here where the cloud
+     * quotes the first two in an error and a warning, and other prefixes
+     * give the same names.
      */
     @Test
     public void noLogEntryHoldsTheSealedResultOrTransaction() throws Exception {
-        answer = null;
+        answer = "{'errors':['Bad " + SEALED + " for " + LICENSE + "']," +
+            "'warnings':['Seen " + SEALED + " with " + LICENSE + "']}";
         answerJsonCalls();
         Map<String, String> evidence = sealed();
         evidence.put("cookie.humanconfidence", SEALED + "-COOKIE");
@@ -432,12 +435,17 @@ public class HumanConfidenceElementTests extends CloudRequestEngineTestsBase {
         for (FlowError error : read.errors) {
             logged.add(String.valueOf(error.getThrowable().getMessage()));
         }
-        assertFalse(logged.isEmpty(), "the conflict was logged");
         for (String entry : logged) {
-            assertFalse(entry.contains(SEALED), entry);
-            assertFalse(entry.contains(LICENSE), entry);
+            for (String secret : Arrays.asList(SEALED, LICENSE)) {
+                for (int i = 0; i + 4 <= secret.length(); i++) {
+                    assertFalse(entry.contains(secret.substring(i, i + 4)),
+                        entry);
+                }
+            }
             assertFalse(entry.contains("TRANSACTION-VALUE"), entry);
         }
+        assertTrue(logged.stream().anyMatch(m -> m.contains("Seen [hidden]")),
+            "The cloud's warning was not logged: " + logged);
     }
 
     /**
