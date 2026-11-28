@@ -403,10 +403,29 @@ public class HumanConfidence {
             put(result, "humanConfidence", derived.get(
                     HumanConfidenceElement.HUMAN_CONFIDENCE));
         } catch (Exception e) {
-            result = new JSONObject().put("error",
-                    String.valueOf(e.getMessage()));
+            result = failed(e);
         }
         reply(exchange, 200, "application/json", bytes(result.toString()));
+    }
+
+    /** What the page is told when the properties can't be read. */
+    static final String READ_FAILED =
+            "The properties could not be read. See the server's console.";
+
+    /**
+     * The answer the page gets when reading the properties fails. It holds
+     * a fixed text and never the exception's, which can quote what the
+     * cloud sent back. The details go to the console instead.
+     */
+    JSONObject failed(Exception e) {
+        System.out.println("Couldn't read the properties. "
+                + withoutLicenseKey(String.valueOf(e)));
+        return new JSONObject().put("error", READ_FAILED);
+    }
+
+    /** The text with the License Key taken out, for the console. */
+    private String withoutLicenseKey(String text) {
+        return license == null ? text : text.replace(license, "[hidden]");
     }
 
     /**

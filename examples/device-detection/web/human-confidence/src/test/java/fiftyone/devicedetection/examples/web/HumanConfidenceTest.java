@@ -338,6 +338,20 @@ public class HumanConfidenceTest {
         assertFalse(page.contains("answer.status"));
     }
 
+    /**
+     * A failed read gives the page a fixed text, never the exception's,
+     * which can quote the cloud's answer.
+     */
+    @Test
+    public void failedReadGivesThePageAFixedText() throws IOException {
+        start(true);
+        JSONObject answer = example.failed(new IllegalStateException(
+                "The cloud said: key " + LICENSE + " is not valid."));
+        assertEquals(HumanConfidence.READ_FAILED, answer.getString("error"));
+        assertFalse(answer.toString(), answer.toString().contains("cloud said"));
+        assertFalse(answer.toString(), answer.toString().contains("-key"));
+    }
+
     @Test
     public void missingPropertyLinksToContactUs() throws IOException {
         String base = start(false);
