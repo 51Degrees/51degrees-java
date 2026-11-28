@@ -519,6 +519,96 @@ public class HumanConfidenceElementTests extends CloudRequestEngineTestsBase {
         assertNull(calls.get(0).get("humanconfidence"));
     }
 
+    /**
+     * On a request that carries a sealed result, a HumanConfidence in the
+     * response other than exactly High, Medium or Low gives Medium and
+     * Active. That covers a fresh sealed result, a word in another case,
+     * Unknown, an empty value and a value that is not a JSON string.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "'SEALED-RESULT-FROM-THE-CLOUD'",
+        "'high'",
+        "'Unknown'",
+        "''",
+        "1",
+        "true",
+        "{'value':'High'}",
+        "['High']",
+    })
+    public void sealedValueOutsideHighMediumAndLowGivesMediumAndActive(
+        String value) throws Exception {
+        answer = "{'derived':{'humanconfidence':" + value
+            + ",'humanconfidencesource':'Passive'}}";
+        answerJsonCalls();
+
+        Read read = process(builder().setLicenseKey(LICENSE).build(), sealed());
+
+        assertEquals("Medium", read.humanConfidence);
+        assertEquals("Active", read.source);
+        for (FlowError error : read.errors) {
+            assertFalse(error.getFlowElement()
+                instanceof HumanConfidenceElement, error.toString());
+        }
+    }
+
+    /**
+     * On a request without a sealed result, each of the HumanConfidence
+     * Property's values in the response is given as it is. Unknown is one
+     * of them.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = { "High", "Medium", "Low", "Unknown" })
+    public void unsealedPropertyValueIsGiven(String value) throws Exception {
+        answer = "{'derived':{'humanconfidence':'" + value
+            + "','humanconfidencesource':'Passive'}}";
+        answerJsonCalls();
+
+        Read read = process(builder().setLicenseKey(LICENSE).build(), plain());
+
+        assertEquals(value, read.humanConfidence);
+        assertEquals("Passive", read.source);
+    }
+
+    /**
+     * On a request without a sealed result, a HumanConfidence in the
+     * response that is not one of the Property's values has no value and
+     * the reason for a Property the response leaves out.
+     * HumanConfidenceSource is still the one in the response.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "'SEALED-RESULT-FROM-THE-CLOUD'",
+        "'high'",
+        "'UNKNOWN'",
+        "''",
+        "1",
+        "true",
+        "{'value':'High'}",
+        "['High']",
+    })
+    public void unsealedValueOutsideThePropertyValuesHasNoValue(String value)
+        throws Exception {
+        answer = "{'derived':{'humanconfidence':" + value
+            + ",'humanconfidencesource':'Passive'}}";
+        answerJsonCalls();
+
+        Read read = process(builder().setLicenseKey(LICENSE).build(), plain());
+
+        assertNull(read.humanConfidence);
+        assertEquals(
+            String.format(HumanConfidenceElement.MISSING,
+                HumanConfidenceElement.HUMAN_CONFIDENCE),
+            read.humanConfidenceReason);
+        assertEquals("Passive", read.source);
+    }
+
+    private static Map<String, String> plain() {
+        Map<String, String> evidence = new LinkedHashMap<>();
+        evidence.put("query.User-Agent", "iPhone");
+        return evidence;
+    }
+
     private List<String> warnings() {
         List<String> warnings = new ArrayList<>();
         for (TestLogger logger : loggerFactory.loggers) {

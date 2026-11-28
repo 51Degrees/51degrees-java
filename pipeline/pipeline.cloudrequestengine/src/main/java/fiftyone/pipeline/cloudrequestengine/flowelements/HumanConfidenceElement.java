@@ -65,7 +65,10 @@ import java.util.List;
  * is always {@code Active}, and HumanConfidence is the redeemed Value, or
  * {@code Medium} wherever the sealed result was not redeemed. Reading either
  * Property never throws. On any other request the two Properties are the
- * ones in the answer's {@code derived} member.
+ * ones in the answer's {@code derived} member. There, a HumanConfidence
+ * other than exactly {@code High}, {@code Medium}, {@code Low} or
+ * {@code Unknown} has no value, with the reason for a Property the answer
+ * leaves out.
  * <p>
  * A consumer reads only the two Properties. It never reads a Value from a
  * sealed result and never redeems one itself. See the Human Confidence
@@ -95,7 +98,7 @@ public class HumanConfidenceElement
     /** The key of the Element Data this element adds. */
     public static final String ELEMENT_DATA_KEY = "derived";
 
-    /** The Property that holds High, Medium or Low. */
+    /** The Property that holds High, Medium, Low or Unknown. */
     public static final String HUMAN_CONFIDENCE = "HumanConfidence";
 
     /** The Property that holds Active or Passive. */
@@ -118,6 +121,10 @@ public class HumanConfidenceElement
 
     private static final List<String> REDEEMED_VALUES =
         Arrays.asList("High", "Medium", "Low");
+
+    /** The values of HumanConfidence on a request without a sealed result. */
+    private static final List<String> HUMAN_CONFIDENCE_VALUES =
+        Arrays.asList("High", "Medium", "Low", "Unknown");
 
     private final CloudRequestEngine requestEngine;
 
@@ -170,7 +177,7 @@ public class HumanConfidenceElement
                 new AspectPropertyValueDefault<>(ACTIVE));
         } else {
             result.put(HUMAN_CONFIDENCE,
-                fromResponse(derived, HUMAN_CONFIDENCE));
+                humanConfidenceFromResponse(derived));
             result.put(HUMAN_CONFIDENCE_SOURCE,
                 fromResponse(derived, HUMAN_CONFIDENCE_SOURCE));
         }
@@ -244,6 +251,29 @@ public class HumanConfidenceElement
     private static String redeemedValue(JSONObject derived) {
         String value = member(derived, HUMAN_CONFIDENCE);
         return value != null && REDEEMED_VALUES.contains(value) ? value : null;
+    }
+
+    /**
+     * HumanConfidence as the answer's {@code derived} member gives it,
+     * where that is a string being exactly one of the Property's values.
+     * Any other value has no value and the reason for a Property the
+     * response leaves out.
+     */
+    private static AspectPropertyValue<String> humanConfidenceFromResponse(
+        JSONObject derived) {
+        AspectPropertyValue<String> value =
+            fromResponse(derived, HUMAN_CONFIDENCE);
+        if (value.hasValue()) {
+            Object raw =
+                derived.get(keyIgnoringCase(derived, HUMAN_CONFIDENCE));
+            if ((raw instanceof String &&
+                HUMAN_CONFIDENCE_VALUES.contains(raw)) == false) {
+                value = new AspectPropertyValueDefault<>();
+                value.setNoValueMessage(
+                    String.format(MISSING, HUMAN_CONFIDENCE));
+            }
+        }
+        return value;
     }
 
     /**
