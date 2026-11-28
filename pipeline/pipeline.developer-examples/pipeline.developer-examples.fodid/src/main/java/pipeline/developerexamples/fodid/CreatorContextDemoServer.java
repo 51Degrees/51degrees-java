@@ -231,15 +231,16 @@ public class CreatorContextDemoServer {
     }
 
     /**
-     * The value under the current name, or under the obsolete name where
-     * the current one is missing or empty. A page cached from before the
-     * current names still sends {@code result} and {@code challenge}, and
-     * an empty value means the name was not sent.
+     * The value under the current name wherever the request holds that
+     * name, even empty. The obsolete name is read only where the current
+     * name is not there at all, so a page that sends only {@code result}
+     * and {@code challenge} still redeems.
      */
     static String named(
             Map<String, String> query, String current, String obsolete) {
-        String value = valueOr(query, current);
-        return value.isEmpty() ? valueOr(query, obsolete) : value;
+        return query.containsKey(current)
+            ? valueOr(query, current)
+            : valueOr(query, obsolete);
     }
 
     /** Writes one answer to the page and closes the exchange. */

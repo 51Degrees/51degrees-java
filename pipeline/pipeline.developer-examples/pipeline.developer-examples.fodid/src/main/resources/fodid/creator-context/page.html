@@ -437,8 +437,12 @@
         + "&challenge=" + TRANSACTION + snippetQuery())
       .then(asJson)
       .then(function (verified) {
-        // sealedResult, or result from a service before that name.
-        var sealed = verified.sealedResult || verified.result;
+        // sealedResult, and result only where the answer has no
+        // sealedResult member at all.
+        var sealed = Object.prototype.hasOwnProperty.call(
+            verified, "sealedResult")
+          ? verified.sealedResult
+          : verified.result;
         if (!sealed) {
           // A deployment holding no context secret answers in the
           // open, so there is nothing to redeem and both answers

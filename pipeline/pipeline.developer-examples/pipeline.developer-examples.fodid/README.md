@@ -45,9 +45,12 @@ replaces the obsolete name `challenge`, and `sealedResult` replaces the
 obsolete name `result`. The cloud still accepts and returns the obsolete
 names. The page sends the transaction value under both names to
 `verify-full`, so a service that reads only `challenge` still binds it.
-The demo's `/redeem` route reads `sealedResult` and `transaction` first
-and falls back to `result` and `challenge`, so a page cached from before
-the current names still redeems.
+The page reads `sealedResult` from the answer, and reads `result` only
+where the answer has no `sealedResult` member. The demo's `/redeem`
+route works the same way. It reads `sealedResult` and `transaction`
+wherever the request holds them, even empty, and reads `result` and
+`challenge` only where the current names are not there. So a page that
+sends only the obsolete names still redeems.
 
 The demo server uses the web server that ships with the JDK, the
 `pipeline.did` package from this repository for the 51Did handling, and

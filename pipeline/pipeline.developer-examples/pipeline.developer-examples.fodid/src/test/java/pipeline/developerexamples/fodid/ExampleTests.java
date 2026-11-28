@@ -165,9 +165,10 @@ public class ExampleTests {
     }
 
     /**
-     * The route reads the current names first and falls back to the
-     * obsolete ones, so a page cached from before the current names, which
-     * sends result and challenge, still redeems.
+     * The route reads the current name wherever the request holds it, even
+     * empty, and reads the obsolete name only where the current one is not
+     * there at all. So a page that sends only result and challenge still
+     * redeems.
      */
     @Test
     public void Redeem_Route_Reads_Current_Names_Then_Obsolete_Ones() {
@@ -194,9 +195,12 @@ public class ExampleTests {
             current, "transaction", "challenge"));
 
         Map<String, String> emptyCurrent = CreatorContextDemoServer.parse(
-            "51did=x&sealedResult=&result=old-sealed");
-        assertEquals("old-sealed", CreatorContextDemoServer.named(
+            "51did=x&sealedResult=&result=old-sealed"
+                + "&transaction=&challenge=old-transaction");
+        assertEquals("", CreatorContextDemoServer.named(
             emptyCurrent, "sealedResult", "result"));
+        assertEquals("", CreatorContextDemoServer.named(
+            emptyCurrent, "transaction", "challenge"));
     }
 
     /**

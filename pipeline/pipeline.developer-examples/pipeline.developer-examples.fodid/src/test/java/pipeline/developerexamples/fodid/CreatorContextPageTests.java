@@ -103,15 +103,21 @@ public class CreatorContextPageTests {
      * checked rather than reporting a pass.
      */
     private static String run(List<String> command) throws Exception {
-        return run(command, false);
+        return run(command, null);
     }
 
-    private static String run(List<String> command, boolean legacyService)
+    /**
+     * Runs a program as {@link #run(List)} does, with the harness answering
+     * in the way the named environment variable selects.
+     *
+     * @param harnessMode the variable set to 1 for the harness, or null
+     */
+    private static String run(List<String> command, String harnessMode)
         throws Exception {
         ProcessBuilder builder = new ProcessBuilder(command);
         builder.redirectErrorStream(true);
-        if (legacyService) {
-            builder.environment().put("HARNESS_LEGACY_SERVICE", "1");
+        if (harnessMode != null) {
+            builder.environment().put(harnessMode, "1");
         }
         Process process;
         try {
@@ -163,12 +169,25 @@ public class CreatorContextPageTests {
      */
     private static JSONObject runPage(String given, boolean legacyService)
         throws Exception {
+        return runPage(given,
+            legacyService ? "HARNESS_LEGACY_SERVICE" : null);
+    }
+
+    /**
+     * Runs the page's script and returns what the harness recorded.
+     *
+     * @param given       the identifier the page is opened with, or null
+     * @param harnessMode the environment variable that selects how the
+     *                    harness answers, or null for a current service
+     */
+    private static JSONObject runPage(String given, String harnessMode)
+        throws Exception {
         List<String> command = new ArrayList<>(Arrays.asList(
             "node", harness().toString(), page().toString()));
         if (given != null) {
             command.add(given);
         }
-        String[] lines = run(command, legacyService).trim().split("\\r?\\n");
+        String[] lines = run(command, harnessMode).trim().split("\\r?\\n");
         return new JSONObject(lines[lines.length - 1].trim());
     }
 
@@ -337,6 +356,27 @@ public class CreatorContextPageTests {
         assertTrue(redeem.get(0).contains("&transaction=test-transaction"),
             redeem.get(0));
         assertEquals("verified", row(record, "s-context"));
+    }
+
+    /**
+     * An answer that holds {@code sealedResult}, even empty, gives the
+     * sealed result, and {@code result} is read only where the answer has
+     * no {@code sealedResult} at all. So an empty {@code sealedResult} is
+     * nothing to redeem, and the page shows the answer it holds in the
+     * open.
+     */
+    @Test
+    public void An_Empty_Sealed_Result_Is_Not_Taken_From_Result()
+        throws Exception {
+        JSONObject record = runPage(null, "HARNESS_EMPTY_SEALED_RESULT");
+        for (String address : strings(record, "fetches")) {
+            assertFalse(address.startsWith("/redeem?"), address);
+            assertFalse(address.contains("sealed-result"), address);
+        }
+        assertEquals("verified", row(record, "s-signature"));
+        assertTrue(row(record, "s-context").startsWith("verified"),
+            row(record, "s-context"));
+        assertEquals(0, strings(record, "errors").size());
     }
 
     /**
