@@ -187,10 +187,11 @@ public class HumanConfidenceTransactionTests
             new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
         for (String pair : body.split("&")) {
             int equals = pair.indexOf('=');
+            String name = equals < 0 ? pair : pair.substring(0, equals);
+            String value = equals < 0 ? "" : pair.substring(equals + 1);
             fields.computeIfAbsent(
-                URLDecoder.decode(pair.substring(0, equals), "UTF-8"),
-                k -> new ArrayList<>())
-                .add(URLDecoder.decode(pair.substring(equals + 1), "UTF-8"));
+                URLDecoder.decode(name, "UTF-8"), k -> new ArrayList<>())
+                .add(URLDecoder.decode(value, "UTF-8"));
         }
         return fields;
     }
@@ -506,6 +507,38 @@ public class HumanConfidenceTransactionTests
             }
         }
         return messages;
+    }
+
+    // The form.
+
+    /**
+     * An Evidence name holding '&' or '=' is encoded with its value, so it
+     * cannot add a second license, transaction or humanconfidence field.
+     */
+    @Test
+    public void form_EvidenceNameCannotAddAField() throws Exception {
+        try (Pipeline pipeline = pipeline()) {
+            HumanConfidencePage page = engine.newHumanConfidencePage();
+            try (FlowData data = pipeline.createFlowData()) {
+                data.addEvidence("query.humanconfidence", SEALED);
+                data.addEvidence("query.humanconfidencepage", page.getId());
+                data.addEvidence("query.51D_a&license", "EVIL");
+                data.addEvidence("query.51D_b&transaction", "EVIL");
+                data.addEvidence("query.51D_c&humanconfidence=EVIL&x", "y");
+                data.process();
+            }
+            Map<String, List<String>> call = form(calls.get(0));
+            assertEquals(Collections.singletonList(LICENSE),
+                call.get("license"));
+            assertEquals(Collections.singletonList(page.getTransaction()),
+                call.get("transaction"));
+            assertEquals(Collections.singletonList(SEALED),
+                call.get("humanconfidence"));
+            assertEquals(Collections.singletonList("EVIL"),
+                call.get("51D_a&license"));
+            assertEquals(Collections.singletonList("y"),
+                call.get("51D_c&humanconfidence=EVIL&x"));
+        }
     }
 
     // A credential that leaves the Properties out.

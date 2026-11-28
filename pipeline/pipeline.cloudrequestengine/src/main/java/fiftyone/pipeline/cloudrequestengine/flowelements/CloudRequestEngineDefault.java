@@ -896,11 +896,13 @@ public class CloudRequestEngineDefault
                 stringJoin(valuesFor(data), ","), "UTF-8"));
         }
 
+        // The name is encoded as well as the value, so a name holding '&'
+        // or '=' cannot add a field of its own, such as a second license.
         List<String> formKeys = Arrays.asList(formData.keySet().toArray(new String[0]));
         Collections.sort(formKeys, Collections.reverseOrder());
         for (String key : formKeys) {
-            formItems.add(key + "=" + URLEncoder.encode(formData.get(key).toString(), "UTF-8"));
-
+            formItems.add(URLEncoder.encode(key, "UTF-8") + "=" +
+                URLEncoder.encode(formData.get(key).toString(), "UTF-8"));
         }
 
         String string = stringJoin(formItems, "&");
