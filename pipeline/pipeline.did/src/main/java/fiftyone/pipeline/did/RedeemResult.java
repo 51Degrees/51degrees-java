@@ -26,10 +26,13 @@ import org.json.JSONObject;
 
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * The typed answer to {@link DidClient#redeem(FodId, String, String)}: the
@@ -404,11 +407,25 @@ public final class RedeemResult {
     }
 
     /**
-     * The outcome a cloud from before {@code status} gave in
-     * {@code context}: one of the four failure words, or a verdict, which
-     * it wrote only on success. Anything else, including no word at all,
-     * is {@link Outcome#UNREADABLE}, so an answer this client does not know
-     * fails closed.
+     * The verdicts the check reached, which a cloud without {@code status}
+     * wrote to {@code context} only on success. {@code notcheckable} is not
+     * one of them, so it does not read as success.
+     */
+    private static final Set<String> SUCCESS_VERDICTS =
+        Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
+            Context.VERIFIED.getValue(),
+            Context.MISMATCH.getValue(),
+            Context.NO_CONTEXT.getValue(),
+            Context.MISCONFIGURED.getValue(),
+            Context.INVALID_DATE.getValue())));
+
+    /**
+     * The outcome a cloud without {@code status} gave in {@code context}.
+     * One of the four failure words gives that failure, and a verdict the
+     * check reached gives success. Anything else, including no word at
+     * all, is {@link Outcome#UNREADABLE}, so an answer this client does not
+     * know fails closed. See the package surface section "The Redemption
+     * outcome".
      */
     private static Outcome outcomeFromContext(String contextValue) {
         if (contextValue == null) {
@@ -420,10 +437,8 @@ public final class RedeemResult {
                 return failure;
             }
         }
-        for (Context verdict : Context.values()) {
-            if (verdict.getValue().equals(contextValue)) {
-                return Outcome.SUCCESS;
-            }
+        if (SUCCESS_VERDICTS.contains(contextValue)) {
+            return Outcome.SUCCESS;
         }
         return Outcome.UNREADABLE;
     }
@@ -434,7 +449,8 @@ public final class RedeemResult {
      * client does not know is {@link Outcome#UNREADABLE}. A cloud from
      * before {@code status} sent the outcome in {@code context} instead,
      * and it is read from there: a failure word gives that failure, a
-     * verdict gives success, and anything else is unreadable.
+     * verdict the check reached gives success, and anything else, such as
+     * {@code notcheckable}, is unreadable.
      *
      * @return the outcome
      */

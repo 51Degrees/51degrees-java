@@ -1727,8 +1727,10 @@ public class DidClientTests {
 
     /**
      * A cloud from before {@code status} gave the outcome in
-     * {@code context}, so the outcome is read from there: a failure word is
-     * that failure, a verdict is success, and anything else fails closed.
+     * {@code context}, so the outcome is read from there. Each of the four
+     * failure words is that failure. Only a verdict the check reached is
+     * success, and {@code notcheckable} is not one of them. Anything else
+     * fails closed.
      */
     @Test
     public void redeem_WithoutStatusReadsTheOutcomeFromContext()
@@ -1740,7 +1742,7 @@ public class DidClientTests {
         };
         Outcome[] outcomes = {
             Outcome.SUCCESS, Outcome.SUCCESS, Outcome.SUCCESS,
-            Outcome.SUCCESS, Outcome.SUCCESS, Outcome.SUCCESS,
+            Outcome.SUCCESS, Outcome.SUCCESS, Outcome.UNREADABLE,
             Outcome.EXPIRED, Outcome.REPLAYED, Outcome.UNREADABLE,
             Outcome.UNCONFIRMED, Outcome.UNREADABLE,
         };
