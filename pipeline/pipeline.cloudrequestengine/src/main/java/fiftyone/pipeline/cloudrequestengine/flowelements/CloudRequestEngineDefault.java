@@ -949,9 +949,12 @@ public class CloudRequestEngineDefault
         List<String> formItems = new ArrayList<>();
 
         formItems.addAll(credentialItems());
-        if (requestedProperties.isEmpty() == false) {
+        // A request that carries a sealed result always names values, even
+        // with no configured Requested Properties.
+        List<String> values = valuesFor(data);
+        if (values.isEmpty() == false) {
             formItems.add("values=" + URLEncoder.encode(
-                stringJoin(valuesFor(data), ","), "UTF-8"));
+                stringJoin(values, ","), "UTF-8"));
         }
 
         // The name is encoded as well as the value, so a name holding '&'

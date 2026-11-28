@@ -458,6 +458,33 @@ public class HumanConfidenceElementTests extends CloudRequestEngineTestsBase {
     }
 
     /**
+     * With no configured Requested Properties, a call that carries a sealed
+     * result still names derived.humanconfidence, and the report of
+     * Properties the answer left out does not name it. A call without a
+     * sealed result names no values.
+     */
+    @Test
+    public void sealedCallNamesHumanConfidenceWithNoRequestedProperties()
+        throws Exception {
+        answer = "{'device':{'value':'1'}}";
+        answerJsonCalls();
+        CloudRequestEngine engine = builder().setLicenseKey(LICENSE).build();
+
+        process(engine, sealed());
+
+        assertEquals("derived.humanconfidence", calls.get(0).get("values"));
+        for (String warning : warnings()) {
+            assertFalse(warning.toLowerCase().contains("humanconfidence"),
+                warning);
+        }
+
+        Map<String, String> evidence = sealed();
+        evidence.remove("query.humanconfidence");
+        process(engine, evidence);
+        assertNull(calls.get(1).get("values"));
+    }
+
+    /**
      * No log entry and no error message holds any part of the sealed
      * result, the License Key, or the transaction, here where the cloud
      * quotes the first two in an error and a warning, and other prefixes
